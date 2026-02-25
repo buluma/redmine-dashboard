@@ -4,7 +4,6 @@ import { env } from "@/src/lib/env";
 import { runSyncJob } from "@/src/lib/sync";
 
 declare global {
-  // eslint-disable-next-line no-var
   var __poller_started__: boolean | undefined;
 }
 
@@ -74,6 +73,13 @@ async function pollTick(): Promise<void> {
 }
 
 export function ensurePollerStarted(): void {
+  if (
+    process.env.NEXT_PHASE === "phase-production-build" ||
+    process.env.npm_lifecycle_event === "build"
+  ) {
+    return;
+  }
+
   if (global.__poller_started__) {
     return;
   }

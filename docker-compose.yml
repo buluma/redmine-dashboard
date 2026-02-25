@@ -1,0 +1,15 @@
+version: "3.9"
+services:
+  dashboard:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: file:./dev.db
+      APP_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      SESSION_SECRET: change-me-session-secret
+      POLL_INTERVAL_MS: "60000"
+      LEADER_LOCK_TTL_MS: "90000"
+      NODE_ENV: production
+    volumes:
+      - ./prisma/dev.db:/app/prisma/dev.db

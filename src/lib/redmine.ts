@@ -31,26 +31,56 @@ export class RedmineClient {
   ) {}
 
   private async request<T>(path: string, init?: RequestInit): Promise<T> {
-    const res = await fetch(`${trimBaseUrl(this.baseUrl)}${path}`, {
-      ...init,
-      headers: {
-        "Content-Type": "application/json",
-        "X-Redmine-API-Key": this.apiKey,
-        ...(init?.headers ?? {}),
-      },
-      cache: "no-store",
-    });
+    const maxAttempts = 3;
+    const timeoutMs = 12000;
 
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Redmine request failed (${res.status}): ${body.slice(0, 300)}`);
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(`${trimBaseUrl(this.baseUrl)}${path}`, {
+          ...init,
+          headers: {
+            "Content-Type": "application/json",
+            "X-Redmine-API-Key": this.apiKey,
+            ...(init?.headers ?? {}),
+          },
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          const body = await res.text();
+          const retryable = res.status >= 500 || res.status === 429;
+          if (retryable && attempt < maxAttempts) {
+            await new Promise((resolve) => setTimeout(resolve, 300 * 2 ** (attempt - 1)));
+            continue;
+          }
+          throw new Error(`Redmine request failed (${res.status}): ${body.slice(0, 300)}`);
+        }
+
+        if (res.status === 204) {
+          return null as T;
+        }
+
+        return (await res.json()) as T;
+      } catch (error) {
+        const isAbort = error instanceof Error && error.name === "AbortError";
+        if (attempt < maxAttempts && isAbort) {
+          await new Promise((resolve) => setTimeout(resolve, 300 * 2 ** (attempt - 1)));
+          continue;
+        }
+        if (attempt < maxAttempts && error instanceof TypeError) {
+          await new Promise((resolve) => setTimeout(resolve, 300 * 2 ** (attempt - 1)));
+          continue;
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+      }
     }
 
-    if (res.status === 204) {
-      return null as T;
-    }
-
-    return (await res.json()) as T;
+    throw new Error("Redmine request failed after retries");
   }
 
   async getCurrentUser(): Promise<RedmineCurrentUser> {

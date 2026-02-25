@@ -251,7 +251,7 @@ export async function executeSyncJob(jobId: string): Promise<void> {
       runningJobId: null,
       error: null,
       full: job.jobType === "full_manual",
-      incremental: true,
+      incremental: job.jobType === "incremental",
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown sync error";

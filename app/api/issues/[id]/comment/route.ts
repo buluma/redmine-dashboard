@@ -1,5 +1,6 @@
 import { requireRedmineClient } from "@/src/lib/auth";
 import { jsonError, parseJson } from "@/src/lib/http";
+import { isRateLimited } from "@/src/lib/rate-limit";
 import { commentSchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
 
@@ -17,6 +18,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const issueId = parseIssueId(id);
     const body = await parseJson(request, commentSchema);
     const { user, client } = await requireRedmineClient();
+    const limiter = isRateLimited({
+      key: `${user.id}:issue-comment`,
+      max: 20,
+      windowMs: 60_000,
+    });
+    if (limiter.limited) {
+      return jsonError("Rate limit exceeded. Try again shortly.", 429);
+    }
 
     await client.addComment(issueId, body.comment);
     const issue = await syncSingleIssue(user.id, client, issueId);

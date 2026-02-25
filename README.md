@@ -1,36 +1,95 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Redmine Assigned Issues Dashboard
 
-## Getting Started
+A Next.js + SQLite dashboard for Redmine issues assigned to the current user.
 
-First, run the development server:
+## Features
+
+- Connect to Redmine with per-user API key.
+- Cached issue list for assigned issues with filters, sorting, and search.
+- Update issue status from the table.
+- Post issue comments from detail drawer.
+- Add time logs (`hours + activity + comment + spent_on`).
+- Automated polling every 60 seconds.
+- Manual full refresh (`Force Refresh`) to sync all assigned issues immediately.
+
+## Stack
+
+- Next.js App Router
+- Prisma Client (SQLite)
+- Zod validation
+- In-process poller with leader lock table
+
+## API Endpoints
+
+- `POST /api/redmine/connect`
+- `GET /api/session/me`
+- `DELETE /api/session/me`
+- `GET /api/issues`
+- `POST /api/issues/:id/status`
+- `GET /api/issues/:id/status` (allowed transitions for the issue)
+- `POST /api/issues/:id/comment`
+- `POST /api/issues/:id/timelog`
+- `POST /api/sync/manual-pull`
+- `GET /api/sync/status`
+- `GET /api/internal/activities`
+
+## Local Setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Copy env file and update secrets:
+
+```bash
+cp .env.example .env
+```
+
+3. Generate Prisma client:
+
+```bash
+npm run prisma:generate
+```
+
+4. Initialize SQLite schema:
+
+```bash
+npm run db:init
+```
+
+This initializes `prisma/dev.db` (the SQLite file used by Prisma for this project).
+
+5. Start development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Docker
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+docker compose up --build
+```
 
-## Learn More
+The app is served at [http://localhost:3000](http://localhost:3000).
 
-To learn more about Next.js, take a look at the following resources:
+## Tests and Checks
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run lint
+npm run test
+npm run build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Notes
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Redmine API key is encrypted at rest with `APP_ENCRYPTION_KEY`.
+- Session is an HMAC-signed HTTP-only cookie.
+- Sync jobs are stored in `SyncJob` and summarized in `SyncState`.
+- Polling cadence is 60 seconds (`POLL_INTERVAL_MS=60000`).
+- Mutation endpoints include basic per-user rate limits.
+- This MVP uses local SQLite and in-process polling; production migration can move to Postgres + external scheduler.

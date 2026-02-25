@@ -51,6 +51,8 @@ type SyncState = {
   runningJobId: string | null;
 } | null;
 
+const POLL_INTERVAL_MS = 60_000;
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -64,6 +66,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [manualRefreshBusy, setManualRefreshBusy] = useState(false);
+  const [allowedStatusIdsByIssue, setAllowedStatusIdsByIssue] = useState<Record<number, number[]>>({});
 
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -172,9 +175,11 @@ export default function Home() {
 
     const id = setInterval(() => {
       void refreshAll();
-    }, 60000);
+    }, POLL_INTERVAL_MS);
 
     return () => clearInterval(id);
+    // refreshAll/loadActivities intentionally depend on current query + user snapshot.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryString, user]);
 
   async function connectRedmine(event: React.FormEvent) {
@@ -241,6 +246,12 @@ export default function Home() {
   }
 
   async function updateStatus(issue: Issue, nextStatusId: number) {
+    const allowed = allowedStatusIdsByIssue[issue.redmineIssueId];
+    if (allowed && allowed.length > 0 && !allowed.includes(nextStatusId)) {
+      setError("Selected status is not allowed for this issue.");
+      return;
+    }
+
     const previous = [...issues];
     const nextStatus = statuses.find((s) => s.id === nextStatusId);
     setIssues((current) =>
@@ -271,6 +282,24 @@ export default function Home() {
       setIssues(previous);
       setError(e instanceof Error ? e.message : "Status update failed");
     }
+  }
+
+  async function loadAllowedStatuses(issueId: number) {
+    if (allowedStatusIdsByIssue[issueId]) {
+      return;
+    }
+
+    const res = await fetch(`/api/issues/${issueId}/status`, { cache: "no-store" });
+    if (!res.ok) {
+      return;
+    }
+
+    const data = await res.json();
+    const ids = Array.isArray(data.allowedStatusIds) ? data.allowedStatusIds : [];
+    setAllowedStatusIdsByIssue((current) => ({
+      ...current,
+      [issueId]: ids,
+    }));
   }
 
   async function submitComment(event: React.FormEvent) {
@@ -442,15 +471,29 @@ export default function Home() {
             </thead>
             <tbody>
               {issues.map((issue) => (
-                <tr key={issue.id} onClick={() => setSelectedIssueId(issue.redmineIssueId)}>
+                <tr
+                  key={issue.id}
+                  onClick={() => {
+                    setSelectedIssueId(issue.redmineIssueId);
+                    void loadAllowedStatuses(issue.redmineIssueId);
+                  }}
+                >
                   <td>#{issue.redmineIssueId}</td>
                   <td>{issue.subject}</td>
                   <td onClick={(e) => e.stopPropagation()}>
                     <select
                       value={issue.statusId}
                       onChange={(e) => updateStatus(issue, Number(e.target.value))}
+                      onFocus={() => {
+                        void loadAllowedStatuses(issue.redmineIssueId);
+                      }}
                     >
-                      {statuses.map((status) => (
+                      {(allowedStatusIdsByIssue[issue.redmineIssueId]?.length
+                        ? statuses.filter((s) =>
+                            allowedStatusIdsByIssue[issue.redmineIssueId].includes(s.id),
+                          )
+                        : statuses
+                      ).map((status) => (
                         <option key={status.id} value={status.id}>
                           {status.name}
                         </option>
