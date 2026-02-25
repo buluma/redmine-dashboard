@@ -218,6 +218,9 @@ export default function Home() {
   const [viewDraftName, setViewDraftName] = useState("");
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [opsAlertsOpen, setOpsAlertsOpen] = useState(false);
+  const [activityFeedOpen, setActivityFeedOpen] = useState(false);
+  const [issueQueueOpen, setIssueQueueOpen] = useState(true);
 
   const [comment, setComment] = useState("");
   const [hours, setHours] = useState("1");
@@ -1128,7 +1131,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="insights-grid insights-grid-advanced">
+      <section className="insights-grid">
         <article className="card">
           <h2>Status Mix</h2>
           <p className="muted">Click a status to filter quickly.</p>
@@ -1164,175 +1167,210 @@ export default function Home() {
             ))}
           </div>
         </article>
-
-        <article className="card">
-          <h2>Ops Alerts</h2>
-          <p className="muted">Highest risk issues based on overdue, blocked, and stale signals.</p>
-          <div className="alert-list">
-            {summary.atRisk.length === 0 && <p className="muted">No active risk alerts.</p>}
-            {summary.atRisk.map(({ issue, reason }) => (
-              <button
-                key={issue.id}
-                type="button"
-                className="alert-row"
-                onClick={() => {
-                  setSelectedIssueId(issue.redmineIssueId);
-                  void loadAllowedStatuses(issue.redmineIssueId);
-                }}
-              >
-                <span>
-                  #{issue.redmineIssueId} {issue.subject}
-                </span>
-                <span>{reason}</span>
-              </button>
-            ))}
-          </div>
-        </article>
-      </section>
-
-      <section className="card activity-card">
-        <div className="table-toolbar">
-          <h2>Recent Activity Feed</h2>
-          <p className="muted">Last {summary.recentActivity.length} events from updates, comments, and timelogs.</p>
-        </div>
-        <div className="activity-feed">
-          {summary.recentActivity.map((event, idx) => (
-            <button
-              key={`${event.issueId}-${event.timestamp}-${idx}`}
-              type="button"
-              className="activity-row"
-              onClick={() => {
-                setSelectedIssueId(event.issueId);
-                void loadAllowedStatuses(event.issueId);
-              }}
-            >
-              <span>
-                #{event.issueId} {event.issueSubject}
-              </span>
-              <span>{event.detail}</span>
-              <span>{new Date(event.timestamp).toLocaleString()}</span>
-            </button>
-          ))}
-        </div>
       </section>
 
       {error && <p className="error-banner">{error}</p>}
       {infoMessage && <p className="info-banner">{infoMessage}</p>}
 
-      <section className="workspace-grid">
-        <article className="card issues-panel">
-          <div className="table-toolbar">
-            <h2>Issue Queue</h2>
-            <p className="muted">{loading ? "Refreshing..." : `${issues.length} loaded`}</p>
-          </div>
-
-          <div className="bulk-toolbar">
-            <p className="muted">
-              Selected: <strong>{selectedIssueIds.length}</strong>
-              {summary.dueToday > 0 ? ` • Due today: ${summary.dueToday}` : ""}
-            </p>
-            <div className="bulk-controls">
-              <label className="inline-field">
-                Bulk Status
-                <select value={bulkStatusId} onChange={(e) => setBulkStatusId(Number(e.target.value))}>
-                  {statuses.map((status) => (
-                    <option key={status.id} value={status.id}>
-                      {status.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                onClick={updateBulkStatus}
-                disabled={selectedIssueIds.length === 0 || bulkUpdating || bulkStatusId <= 0}
-              >
-                {bulkUpdating ? "Applying..." : "Apply to Selected"}
-              </button>
-              <button type="button" className="secondary-button" onClick={() => setSelectedIssueIds([])}>
-                Clear Selection
-              </button>
+      <section className="collapsible-stack">
+        <article className="card">
+          <div className="collapsible-head">
+            <div>
+              <h2>Ops Alerts</h2>
+              <p className="muted">Highest risk issues based on overdue, blocked, and stale signals.</p>
             </div>
+            <button type="button" className="secondary-button" onClick={() => setOpsAlertsOpen((current) => !current)}>
+              {opsAlertsOpen ? "Collapse" : "Expand"}
+            </button>
           </div>
 
-          <table className="issues-table">
-            <thead>
-              <tr>
-                <th>
-                  <input
-                    type="checkbox"
-                    checked={selectedAllVisible}
-                    onChange={toggleSelectAllVisible}
-                    aria-label="Select all visible issues"
-                  />
-                </th>
-                <th>ID</th>
-                <th>Subject</th>
-                <th>Status</th>
-                <th>Priority</th>
-                <th>Due</th>
-                <th>Progress</th>
-                <th>Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {issues.map((issue) => {
-                const urgency = issueUrgency(issue);
-                const allowedStatusIds = allowedStatusIdsByIssue[issue.redmineIssueId];
-                const selectableStatuses =
-                  allowedStatusIds && allowedStatusIds.length > 0
-                    ? statuses.filter((s) => allowedStatusIds.includes(s.id))
-                    : statuses;
+          {opsAlertsOpen ? (
+            <div className="alert-list">
+              {summary.atRisk.length === 0 && <p className="muted">No active risk alerts.</p>}
+              {summary.atRisk.map(({ issue, reason }) => (
+                <button
+                  key={issue.id}
+                  type="button"
+                  className="alert-row"
+                  onClick={() => {
+                    setSelectedIssueId(issue.redmineIssueId);
+                    void loadAllowedStatuses(issue.redmineIssueId);
+                  }}
+                >
+                  <span>
+                    #{issue.redmineIssueId} {issue.subject}
+                  </span>
+                  <span>{reason}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="muted collapsible-meta">{summary.atRisk.length} alert item(s).</p>
+          )}
+        </article>
 
-                return (
-                  <tr
-                    key={issue.id}
-                    className={`issue-row ${selectedIssueId === issue.redmineIssueId ? "selected" : ""}`}
-                    onClick={() => {
-                      setSelectedIssueId(issue.redmineIssueId);
-                      void loadAllowedStatuses(issue.redmineIssueId);
-                    }}
+        <article className="card activity-card">
+          <div className="collapsible-head">
+            <div>
+              <h2>Recent Activity Feed</h2>
+              <p className="muted">Last {summary.recentActivity.length} events from updates, comments, and timelogs.</p>
+            </div>
+            <button type="button" className="secondary-button" onClick={() => setActivityFeedOpen((current) => !current)}>
+              {activityFeedOpen ? "Collapse" : "Expand"}
+            </button>
+          </div>
+
+          {activityFeedOpen ? (
+            <div className="activity-feed">
+              {summary.recentActivity.map((event, idx) => (
+                <button
+                  key={`${event.issueId}-${event.timestamp}-${idx}`}
+                  type="button"
+                  className="activity-row"
+                  onClick={() => {
+                    setSelectedIssueId(event.issueId);
+                    void loadAllowedStatuses(event.issueId);
+                  }}
+                >
+                  <span>
+                    #{event.issueId} {event.issueSubject}
+                  </span>
+                  <span>{event.detail}</span>
+                  <span>{new Date(event.timestamp).toLocaleString()}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="muted collapsible-meta">Hidden feed. {summary.recentActivity.length} event(s) available.</p>
+          )}
+        </article>
+
+        <article className="card issues-panel">
+          <div className="collapsible-head">
+            <div>
+              <h2>Issue Queue</h2>
+              <p className="muted">{loading ? "Refreshing..." : `${issues.length} loaded`}</p>
+            </div>
+            <button type="button" className="secondary-button" onClick={() => setIssueQueueOpen((current) => !current)}>
+              {issueQueueOpen ? "Collapse" : "Expand"}
+            </button>
+          </div>
+
+          {issueQueueOpen ? (
+            <>
+              <div className="bulk-toolbar">
+                <p className="muted">
+                  Selected: <strong>{selectedIssueIds.length}</strong>
+                  {summary.dueToday > 0 ? ` • Due today: ${summary.dueToday}` : ""}
+                </p>
+                <div className="bulk-controls">
+                  <label className="inline-field">
+                    Bulk Status
+                    <select value={bulkStatusId} onChange={(e) => setBulkStatusId(Number(e.target.value))}>
+                      {statuses.map((status) => (
+                        <option key={status.id} value={status.id}>
+                          {status.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={updateBulkStatus}
+                    disabled={selectedIssueIds.length === 0 || bulkUpdating || bulkStatusId <= 0}
                   >
-                    <td onClick={(e) => e.stopPropagation()}>
+                    {bulkUpdating ? "Applying..." : "Apply to Selected"}
+                  </button>
+                  <button type="button" className="secondary-button" onClick={() => setSelectedIssueIds([])}>
+                    Clear Selection
+                  </button>
+                </div>
+              </div>
+
+              <table className="issues-table">
+                <thead>
+                  <tr>
+                    <th>
                       <input
                         type="checkbox"
-                        checked={selectedIssueIds.includes(issue.redmineIssueId)}
-                        onChange={() => toggleIssueSelection(issue.redmineIssueId)}
-                        aria-label={`Select issue ${issue.redmineIssueId}`}
+                        checked={selectedAllVisible}
+                        onChange={toggleSelectAllVisible}
+                        aria-label="Select all visible issues"
                       />
-                    </td>
-                    <td>#{issue.redmineIssueId}</td>
-                    <td>
-                      <div className="subject-cell">
-                        <p>{issue.subject}</p>
-                        <span className={`urgency-pill ${urgency}`}>{urgency}</span>
-                      </div>
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <select
-                        className="status-select"
-                        value={issue.statusId}
-                        onChange={(e) => updateStatus(issue, Number(e.target.value))}
-                        onFocus={() => {
+                    </th>
+                    <th>ID</th>
+                    <th>Subject</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Due</th>
+                    <th>Progress</th>
+                    <th>Updated</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {issues.map((issue) => {
+                    const urgency = issueUrgency(issue);
+                    const allowedStatusIds = allowedStatusIdsByIssue[issue.redmineIssueId];
+                    const selectableStatuses =
+                      allowedStatusIds && allowedStatusIds.length > 0
+                        ? statuses.filter((s) => allowedStatusIds.includes(s.id))
+                        : statuses;
+
+                    return (
+                      <tr
+                        key={issue.id}
+                        className={`issue-row ${selectedIssueId === issue.redmineIssueId ? "selected" : ""}`}
+                        onClick={() => {
+                          setSelectedIssueId(issue.redmineIssueId);
                           void loadAllowedStatuses(issue.redmineIssueId);
                         }}
                       >
-                        {selectableStatuses.map((status) => (
-                          <option key={status.id} value={status.id}>
-                            {status.name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>{issue.priority ?? "-"}</td>
-                    <td>{issue.dueDate ? new Date(issue.dueDate).toLocaleDateString() : "-"}</td>
-                    <td>{issue.doneRatio ?? 0}%</td>
-                    <td>{new Date(issue.updatedOnRemote).toLocaleString()}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIssueIds.includes(issue.redmineIssueId)}
+                            onChange={() => toggleIssueSelection(issue.redmineIssueId)}
+                            aria-label={`Select issue ${issue.redmineIssueId}`}
+                          />
+                        </td>
+                        <td>#{issue.redmineIssueId}</td>
+                        <td>
+                          <div className="subject-cell">
+                            <p>{issue.subject}</p>
+                            <span className={`urgency-pill ${urgency}`}>{urgency}</span>
+                          </div>
+                        </td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <select
+                            className="status-select"
+                            value={issue.statusId}
+                            onChange={(e) => updateStatus(issue, Number(e.target.value))}
+                            onFocus={() => {
+                              void loadAllowedStatuses(issue.redmineIssueId);
+                            }}
+                          >
+                            {selectableStatuses.map((status) => (
+                              <option key={status.id} value={status.id}>
+                                {status.name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>{issue.priority ?? "-"}</td>
+                        <td>{issue.dueDate ? new Date(issue.dueDate).toLocaleDateString() : "-"}</td>
+                        <td>{issue.doneRatio ?? 0}%</td>
+                        <td>{new Date(issue.updatedOnRemote).toLocaleString()}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </>
+          ) : (
+            <p className="muted collapsible-meta">
+              Queue hidden. {issues.length} issue(s) loaded, {selectedIssueIds.length} selected.
+            </p>
+          )}
         </article>
       </section>
 

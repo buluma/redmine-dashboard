@@ -363,6 +363,23 @@ label {
   grid-template-columns: repeat(3, minmax(220px, 1fr));
 }
 
+.collapsible-stack {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.collapsible-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.collapsible-meta {
+  margin-top: 0.55rem;
+}
+
 .alert-list {
   margin-top: 0.55rem;
   display: grid;
