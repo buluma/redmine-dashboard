@@ -1,0 +1,148 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum SyncJobType {
+  incremental
+  full_manual
+}
+
+enum SyncJobStatus {
+  pending
+  running
+  success
+  failed
+}
+
+enum SyncStateStatus {
+  idle
+  running
+  success
+  failed
+}
+
+model User {
+  id                String                  @id @default(cuid())
+  emailOrUsername   String                  @unique
+  displayName       String
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  credential        UserRedmineCredential?
+  issues            Issue[]
+  timeEntries       TimeEntry[]
+  syncState         SyncState?
+  syncJobs          SyncJob[]
+}
+
+model UserRedmineCredential {
+  userId           String   @id
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  baseUrl          String
+  apiKeyEncrypted  String
+  apiKeyIv         String
+  isActive         Boolean  @default(true)
+  lastValidatedAt  DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Issue {
+  id               String         @id @default(cuid())
+  redmineIssueId   Int            @unique
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject          String
+  description      String?
+  projectName      String?
+  tracker          String?
+  priority         String?
+  statusId         Int
+  statusName       String
+  assignedToId     Int?
+  assignedToName   String?
+  updatedOnRemote  DateTime
+  dueDate          DateTime?
+  doneRatio        Int?
+  journals         IssueJournal[]
+  timeEntries      TimeEntry[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([userId, statusId])
+  @@index([userId, updatedOnRemote])
+}
+
+model IssueJournal {
+  id               String   @id @default(cuid())
+  redmineJournalId Int      @unique
+  issueId          String
+  issue            Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  author           String?
+  notes            String?
+  createdOnRemote  DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([issueId, createdOnRemote])
+}
+
+model TimeEntry {
+  id                 String    @id @default(cuid())
+  redmineTimeEntryId Int?      @unique
+  issueId            String
+  issue              Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hours              Float
+  activityId         Int
+  activityName       String?
+  comments           String?
+  spentOn            DateTime
+  createdAt          DateTime  @default(now())
+
+  @@index([userId, spentOn])
+  @@index([issueId])
+}
+
+model SyncState {
+  userId                String          @id
+  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastIncrementalSyncAt DateTime?
+  lastFullSyncAt        DateTime?
+  lastSyncStatus        SyncStateStatus @default(idle)
+  lastError             String?
+  runningJobId          String?
+  updatedAt             DateTime        @updatedAt
+}
+
+model SyncJob {
+  id         String       @id @default(cuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobType    SyncJobType
+  status     SyncJobStatus @default(pending)
+  startedAt  DateTime?
+  endedAt    DateTime?
+  error      String?
+  createdAt  DateTime      @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model StatusCatalog {
+  id        Int      @id
+  name      String
+  isClosed  Boolean
+  updatedAt DateTime @updatedAt
+}
+
+model LeaderLock {
+  name       String   @id
+  ownerId    String
+  heartbeatAt DateTime
+  expiresAt  DateTime
+}
