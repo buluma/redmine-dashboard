@@ -55,7 +55,15 @@ type Drilldown =
   | { type: "updated_day"; value: string }
   | { type: "comment_day"; value: string }
   | { type: "timelog_day"; value: string }
+  | { type: "activity_day"; value: string }
   | null;
+
+type ActivityEvent = {
+  timestamp: string;
+  issueId: number;
+  issueSubject: string;
+  detail: string;
+};
 
 function dateKey(dateLike: string | Date): string {
   const date = dateLike instanceof Date ? dateLike : new Date(dateLike);
@@ -76,6 +84,15 @@ function buildDayKeys(days: number): string[] {
     out.push(dateKey(d));
   }
   return out;
+}
+
+function csvEscape(value: string | number | null): string {
+  if (value === null) return "";
+  const str = String(value);
+  if (str.includes(",") || str.includes("\"") || str.includes("\n")) {
+    return `"${str.replaceAll("\"", "\"\"")}"`;
+  }
+  return str;
 }
 
 function Sparkline({
@@ -135,6 +152,21 @@ function parentBucket(issue: Issue): string {
   return `${issue.parentIssueLabel ?? `#${issue.parentIssueId}`} (#${issue.parentIssueId})`;
 }
 
+function isClosedStatus(statusName: string): boolean {
+  const s = statusName.toLowerCase();
+  return s.includes("closed") || s.includes("resolved") || s.includes("done");
+}
+
+function activityCountForIssueOnDay(issue: Issue, day: string): number {
+  let count = 0;
+  if (dateKey(issue.updatedOnRemote) === day) {
+    count += 1;
+  }
+  count += issue.journals.filter((j) => dateKey(j.createdOnRemote) === day).length;
+  count += issue.timeEntries.filter((t) => dateKey(t.spentOn) === day).length;
+  return count;
+}
+
 export default function ReportsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -191,25 +223,50 @@ export default function ReportsPage() {
 
   const reports = useMemo(() => {
     const keys = buildDayKeys(trendWindowDays);
+    const heatKeys = buildDayKeys(56);
+
     const updatesByDay = new Map<string, number>();
     const commentsByDay = new Map<string, number>();
     const hoursByDay = new Map<string, number>();
+    const activityByDay = new Map<string, number>();
+    const activityFeed: ActivityEvent[] = [];
 
     for (const key of keys) {
       updatesByDay.set(key, 0);
       commentsByDay.set(key, 0);
       hoursByDay.set(key, 0);
     }
+    for (const key of heatKeys) {
+      activityByDay.set(key, 0);
+    }
 
     for (const issue of issues) {
       const key = dateKey(issue.updatedOnRemote);
       if (updatesByDay.has(key)) updatesByDay.set(key, (updatesByDay.get(key) ?? 0) + 1);
+      if (activityByDay.has(key)) activityByDay.set(key, (activityByDay.get(key) ?? 0) + 1);
+
+      activityFeed.push({
+        timestamp: issue.updatedOnRemote,
+        issueId: issue.redmineIssueId,
+        issueSubject: issue.subject,
+        detail: `Issue updated (${issue.statusName})`,
+      });
 
       for (const journal of issue.journals) {
         const journalKey = dateKey(journal.createdOnRemote);
         if (commentsByDay.has(journalKey)) {
           commentsByDay.set(journalKey, (commentsByDay.get(journalKey) ?? 0) + 1);
         }
+        if (activityByDay.has(journalKey)) {
+          activityByDay.set(journalKey, (activityByDay.get(journalKey) ?? 0) + 1);
+        }
+
+        activityFeed.push({
+          timestamp: journal.createdOnRemote,
+          issueId: issue.redmineIssueId,
+          issueSubject: issue.subject,
+          detail: `${journal.author ?? "Unknown"} commented`,
+        });
       }
 
       for (const entry of issue.timeEntries) {
@@ -217,15 +274,25 @@ export default function ReportsPage() {
         if (hoursByDay.has(entryKey)) {
           hoursByDay.set(entryKey, Number((hoursByDay.get(entryKey) ?? 0) + entry.hours));
         }
+        if (activityByDay.has(entryKey)) {
+          activityByDay.set(entryKey, (activityByDay.get(entryKey) ?? 0) + 1);
+        }
+
+        activityFeed.push({
+          timestamp: entry.spentOn,
+          issueId: issue.redmineIssueId,
+          issueSubject: issue.subject,
+          detail: `${entry.hours.toFixed(1)}h logged${entry.activityName ? ` (${entry.activityName})` : ""}`,
+        });
       }
     }
 
-    const issueUpdateTrend = keys.map((key) => ({ key, label: formatDayLabel(key), value: updatesByDay.get(key) ?? 0 }));
-    const commentTrend = keys.map((key) => ({ key, label: formatDayLabel(key), value: commentsByDay.get(key) ?? 0 }));
-    const hourTrend = keys.map((key) => ({
-      key,
-      label: formatDayLabel(key),
-      value: Number((hoursByDay.get(key) ?? 0).toFixed(1)),
+    const issueUpdateTrend = keys.map((entryKey) => ({ key: entryKey, label: formatDayLabel(entryKey), value: updatesByDay.get(entryKey) ?? 0 }));
+    const commentTrend = keys.map((entryKey) => ({ key: entryKey, label: formatDayLabel(entryKey), value: commentsByDay.get(entryKey) ?? 0 }));
+    const hourTrend = keys.map((entryKey) => ({
+      key: entryKey,
+      label: formatDayLabel(entryKey),
+      value: Number((hoursByDay.get(entryKey) ?? 0).toFixed(1)),
     }));
 
     const updatesTotal = issueUpdateTrend.reduce((sum, p) => sum + p.value, 0);
@@ -252,11 +319,27 @@ export default function ReportsPage() {
     for (const issue of issues) {
       if (!issue.dueDate) continue;
       if (new Date(issue.dueDate).getTime() >= new Date().setHours(0, 0, 0, 0)) continue;
-      if (issue.statusName.toLowerCase().includes("closed") || issue.statusName.toLowerCase().includes("resolved")) continue;
+      if (isClosedStatus(issue.statusName)) continue;
 
       const parent = parentBucket(issue);
       overdueByParent.set(parent, (overdueByParent.get(parent) ?? 0) + 1);
     }
+
+    const heatCells = heatKeys.map((heatKey) => ({
+      key: heatKey,
+      label: formatDayLabel(heatKey),
+      value: activityByDay.get(heatKey) ?? 0,
+    }));
+    const heatMax = Math.max(...heatCells.map((cell) => cell.value), 1);
+
+    const heatByWeeks: Array<Array<{ key: string; label: string; value: number }>> = [];
+    for (let i = 0; i < heatCells.length; i += 7) {
+      heatByWeeks.push(heatCells.slice(i, i + 7));
+    }
+
+    const recentActivity = activityFeed
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 14);
 
     return {
       issueUpdateTrend,
@@ -270,6 +353,9 @@ export default function ReportsPage() {
       peakComments,
       peakHours,
       overdueParents: Array.from(overdueByParent.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6),
+      heatByWeeks,
+      heatMax,
+      recentActivity,
     };
   }, [issues, trendWindowDays]);
 
@@ -290,8 +376,11 @@ export default function ReportsPage() {
     if (drilldown.type === "comment_day") {
       return issues.filter((issue) => issue.journals.some((j) => dateKey(j.createdOnRemote) === drilldown.value));
     }
+    if (drilldown.type === "timelog_day") {
+      return issues.filter((issue) => issue.timeEntries.some((t) => dateKey(t.spentOn) === drilldown.value));
+    }
 
-    return issues.filter((issue) => issue.timeEntries.some((t) => dateKey(t.spentOn) === drilldown.value));
+    return issues.filter((issue) => activityCountForIssueOnDay(issue, drilldown.value) > 0);
   }, [drilldown, issues]);
 
   function drillTitle(): string {
@@ -300,7 +389,8 @@ export default function ReportsPage() {
     if (drilldown.type === "parent") return `Parent Issue: ${drilldown.value}`;
     if (drilldown.type === "updated_day") return `Updated On: ${formatDayLabel(drilldown.value)}`;
     if (drilldown.type === "comment_day") return `Comments On: ${formatDayLabel(drilldown.value)}`;
-    return `Time Logged On: ${formatDayLabel(drilldown.value)}`;
+    if (drilldown.type === "timelog_day") return `Time Logged On: ${formatDayLabel(drilldown.value)}`;
+    return `Activity On: ${formatDayLabel(drilldown.value)}`;
   }
 
   function drillSignal(issue: Issue): string {
@@ -313,11 +403,41 @@ export default function ReportsPage() {
       const count = issue.journals.filter((j) => dateKey(j.createdOnRemote) === drilldown.value).length;
       return `${count} comment(s)`;
     }
+    if (drilldown.type === "timelog_day") {
+      const hours = issue.timeEntries
+        .filter((t) => dateKey(t.spentOn) === drilldown.value)
+        .reduce((sum, t) => sum + t.hours, 0);
+      return `${hours.toFixed(1)}h`;
+    }
 
-    const hours = issue.timeEntries
-      .filter((t) => dateKey(t.spentOn) === drilldown.value)
-      .reduce((sum, t) => sum + t.hours, 0);
-    return `${hours.toFixed(1)}h`;
+    return `${activityCountForIssueOnDay(issue, drilldown.value)} event(s)`;
+  }
+
+  function exportCsv(data: Issue[], fileBase: string) {
+    const rows = [
+      ["Issue ID", "Subject", "Status", "Priority", "Due Date", "Updated", "Parent", "Signal"],
+      ...data.map((issue) => [
+        `#${issue.redmineIssueId}`,
+        issue.subject,
+        issue.statusName,
+        issue.priority ?? "",
+        issue.dueDate ? new Date(issue.dueDate).toLocaleDateString() : "",
+        new Date(issue.updatedOnRemote).toLocaleString(),
+        parentBucket(issue),
+        drilldown ? drillSignal(issue) : "",
+      ]),
+    ];
+
+    const csv = rows.map((line) => line.map((value) => csvEscape(value)).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const href = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = href;
+    anchor.download = `${fileBase}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(href);
   }
 
   return (
@@ -326,7 +446,7 @@ export default function ReportsPage() {
         <div className="hero-top">
           <div>
             <p className="kicker">NRCC Analytics</p>
-            <h1>Reports & Drilldowns</h1>
+            <h1>NRCC Reports and Drilldowns</h1>
             <p className="muted">
               {user ? `Reporting view for ${user.displayName} (${user.username})` : "Loading report context..."}
             </p>
@@ -458,6 +578,47 @@ export default function ReportsPage() {
             ))}
           </article>
         </div>
+
+        <article className="report-card heatmap-card">
+          <div>
+            <p className="report-label">Activity Heatmap (8 Weeks)</p>
+            <p className="muted">Includes issue updates, comments, and timelog entries. Click a day to drill down.</p>
+          </div>
+          <div className="heatmap-grid">
+            {reports.heatByWeeks.map((week, weekIndex) => (
+              <div key={`week-${weekIndex}`} className="heatmap-column">
+                {week.map((cell) => {
+                  const ratio = cell.value / reports.heatMax;
+                  const tone = ratio === 0 ? 0 : ratio < 0.25 ? 1 : ratio < 0.5 ? 2 : ratio < 0.75 ? 3 : 4;
+                  return (
+                    <button
+                      key={cell.key}
+                      type="button"
+                      className={`heatmap-cell tone-${tone} ${drilldown?.type === "activity_day" && drilldown.value === cell.key ? "active" : ""}`}
+                      title={`${cell.label}: ${cell.value} events`}
+                      onClick={() => setDrilldown({ type: "activity_day", value: cell.key })}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="report-card">
+          <p className="report-label">Recent Activity Trail</p>
+          <div className="activity-feed">
+            {reports.recentActivity.map((event, idx) => (
+              <div key={`${event.issueId}-${event.timestamp}-${idx}`} className="activity-row static">
+                <span>
+                  #{event.issueId} {event.issueSubject}
+                </span>
+                <span>{event.detail}</span>
+                <span>{new Date(event.timestamp).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </article>
       </section>
 
       <section className="card drilldown-card">
@@ -468,11 +629,14 @@ export default function ReportsPage() {
               {drilldown ? `${drillTitle()} • ${drilledIssues.length} issue(s)` : "Choose a trend point or distribution bucket above."}
             </p>
           </div>
-          {drilldown && (
-            <button type="button" className="secondary-button" onClick={() => setDrilldown(null)}>
-              Clear Drilldown
-            </button>
-          )}
+          <div className="hero-actions">
+            <button type="button" className="secondary-button" onClick={() => exportCsv(drilldown ? drilledIssues : issues, drilldown ? "nrcc-drilldown" : "nrcc-reports")}>Export CSV</button>
+            {drilldown && (
+              <button type="button" className="secondary-button" onClick={() => setDrilldown(null)}>
+                Clear Drilldown
+              </button>
+            )}
+          </div>
         </div>
 
         {drilldown && (

@@ -73,6 +73,35 @@ describe("API mutation routes", () => {
     expect(body.error).toMatch(/not allowed/i);
   });
 
+  it("bulk updates statuses and reports partial failures", async () => {
+    const client = {
+      getIssue: vi
+        .fn()
+        .mockResolvedValueOnce({ issue: { allowed_statuses: [{ id: 2 }] } })
+        .mockResolvedValueOnce({ issue: { allowed_statuses: [{ id: 1 }] } }),
+      updateIssueStatus: vi.fn().mockResolvedValue(undefined),
+    };
+
+    mockRequireRedmineClient.mockResolvedValue({ user: { id: "u1" }, client });
+    mockSyncSingleIssue.mockResolvedValue({ id: "i1" });
+
+    const { POST } = await import("@/app/api/issues/bulk-status/route");
+    const response = await POST(
+      new Request("http://localhost", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ issueIds: [101, 102], statusId: 2 }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.updatedCount).toBe(1);
+    expect(body.failedCount).toBe(1);
+    expect(client.updateIssueStatus).toHaveBeenCalledWith(101, 2, undefined);
+    expect(mockSyncSingleIssue).toHaveBeenCalledWith("u1", client, 101);
+  });
+
   it("posts comment and syncs issue", async () => {
     const client = {
       addComment: vi.fn().mockResolvedValue(undefined),

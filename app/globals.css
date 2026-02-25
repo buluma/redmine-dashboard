@@ -240,7 +240,7 @@ label {
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  grid-template-columns: repeat(6, minmax(150px, 1fr));
   gap: 0.7rem;
 }
 
@@ -300,10 +300,131 @@ label {
   grid-column: span 1;
 }
 
+.saved-view-row {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: minmax(220px, 340px) auto 1fr;
+  gap: 0.7rem;
+  align-items: end;
+}
+
+.view-name-field {
+  margin: 0;
+}
+
+.saved-view-chips {
+  margin-top: 0;
+  align-items: center;
+}
+
+.saved-view-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #f2eee5;
+  overflow: hidden;
+}
+
+.saved-view-pill.active {
+  border-color: rgba(0, 109, 119, 0.35);
+  background: #dbecf0;
+}
+
+.saved-view-apply,
+.saved-view-delete {
+  background: transparent;
+  color: var(--ink);
+  border: none;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.saved-view-apply:hover,
+.saved-view-delete:hover {
+  transform: none;
+  filter: none;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.saved-view-delete {
+  border-left: 1px solid var(--line);
+  min-width: 28px;
+}
+
 .insights-grid {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 0.85rem;
+}
+
+.insights-grid-advanced {
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+}
+
+.alert-list {
+  margin-top: 0.55rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.alert-row {
+  width: 100%;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff8ee;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 0.48rem 0.56rem;
+}
+
+.alert-row span:last-child {
+  color: #91592f;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.activity-card {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.activity-feed {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.activity-row {
+  width: 100%;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fffcf7;
+  text-align: left;
+  display: grid;
+  grid-template-columns: 1.4fr 1.2fr auto;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.45rem 0.58rem;
+}
+
+.activity-row.static {
+  cursor: default;
+}
+
+.activity-row span:nth-child(2) {
+  color: var(--ink-soft);
+}
+
+.activity-row span:last-child {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
 }
 
 .reports-shell {
@@ -412,6 +533,58 @@ label {
   text-align: left;
 }
 
+.heatmap-card {
+  gap: 0.7rem;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: min-content;
+  gap: 0.3rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+}
+
+.heatmap-column {
+  display: grid;
+  grid-template-rows: repeat(7, 14px);
+  gap: 0.3rem;
+}
+
+.heatmap-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.heatmap-cell.tone-0 {
+  background: #ece7dc;
+}
+
+.heatmap-cell.tone-1 {
+  background: #d8eff1;
+}
+
+.heatmap-cell.tone-2 {
+  background: #8ec7cc;
+}
+
+.heatmap-cell.tone-3 {
+  background: #3d939c;
+}
+
+.heatmap-cell.tone-4 {
+  background: #0b6670;
+}
+
+.heatmap-cell.active {
+  border-color: #1d2a3a;
+}
+
 .drilldown-card {
   display: grid;
   gap: 0.75rem;
@@ -503,6 +676,15 @@ label {
   font-weight: 700;
 }
 
+.info-banner {
+  border: 1px solid rgba(42, 127, 82, 0.25);
+  border-radius: 12px;
+  padding: 0.7rem;
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-weight: 700;
+}
+
 .workspace-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -520,6 +702,30 @@ label {
   margin-bottom: 0.6rem;
 }
 
+.bulk-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+  align-items: end;
+}
+
+.bulk-controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: end;
+}
+
+.inline-field {
+  min-width: 190px;
+}
+
+.inline-field select {
+  min-width: 180px;
+}
+
 .issues-table {
   width: 100%;
   border-collapse: collapse;
@@ -532,6 +738,11 @@ label {
   vertical-align: middle;
   text-align: left;
   font-size: 0.92rem;
+}
+
+.issues-table td:first-child,
+.issues-table th:first-child {
+  width: 42px;
 }
 
 .issues-table th {
@@ -644,6 +855,29 @@ label {
   border-top: 1px solid var(--line);
   display: grid;
   gap: 0.65rem;
+}
+
+.timer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.timer-pill {
+  border-radius: 999px;
+  border: 1px solid rgba(0, 109, 119, 0.35);
+  padding: 0.2rem 0.58rem;
+  background: #d8eff1;
+  color: #084b52;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.quick-hours {
+  display: inline-flex;
+  gap: 0.45rem;
+  margin-left: auto;
 }
 
 .timeline {
@@ -767,6 +1001,30 @@ label {
   align-items: start;
 }
 
+.shortcut-modal {
+  width: min(460px, 96vw);
+  display: grid;
+  gap: 0.8rem;
+}
+
+.shortcut-grid {
+  display: grid;
+  gap: 0.4rem;
+}
+
+kbd {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #f2ede2;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  display: inline-block;
+  min-width: 24px;
+  text-align: center;
+  padding: 0.08rem 0.35rem;
+  font-size: 0.8rem;
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 @media (max-width: 1220px) {
   .metrics-grid {
     grid-template-columns: repeat(3, minmax(150px, 1fr));
@@ -807,6 +1065,16 @@ label {
   .auth-grid {
     grid-template-columns: 1fr;
   }
+
+  .saved-view-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .activity-row {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
 }
 
 @media (max-width: 680px) {
@@ -826,8 +1094,27 @@ label {
     width: 100%;
   }
 
-  .hero-actions button {
+  .hero-actions button,
+  .hero-actions .primary-link {
     flex: 1;
+  }
+
+  .quick-hours {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .quick-hours button {
+    flex: 1;
+  }
+
+  .bulk-controls {
+    width: 100%;
+  }
+
+  .bulk-controls button,
+  .bulk-controls label {
+    width: 100%;
   }
 
   .issues-table th,

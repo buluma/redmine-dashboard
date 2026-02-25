@@ -19,7 +19,6 @@ export async function GET(request: Request) {
       userId: user.id,
       ...(q.status ? { statusName: q.status } : {}),
       ...(q.priority ? { priority: q.priority } : {}),
-      ...(q.project ? { projectName: q.project } : {}),
       ...(q.search
         ? {
             OR: [
@@ -40,7 +39,7 @@ export async function GET(request: Request) {
             ? [{ dueDate: "asc" }, { updatedOnRemote: "desc" }]
             : [{ updatedOnRemote: "desc" }];
 
-    const [total, issues, statusCatalog, projects, priorities] = await Promise.all([
+    const [total, issues, statusCatalog, priorities] = await Promise.all([
       prisma.issue.count({ where }),
       prisma.issue.findMany({
         where,
@@ -61,11 +60,6 @@ export async function GET(request: Request) {
       prisma.statusCatalog.findMany({ orderBy: { name: "asc" } }),
       prisma.issue.findMany({
         where: { userId: user.id },
-        distinct: ["projectName"],
-        select: { projectName: true },
-      }),
-      prisma.issue.findMany({
-        where: { userId: user.id },
         distinct: ["priority"],
         select: { priority: true },
       }),
@@ -78,7 +72,6 @@ export async function GET(request: Request) {
       pageSize: q.pageSize,
       filters: {
         statuses: statusCatalog,
-        projects: projects.map((p) => p.projectName).filter((v): v is string => Boolean(v)),
         priorities: priorities.map((p) => p.priority).filter((v): v is string => Boolean(v)),
       },
     });

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -65,7 +65,24 @@ type BootstrapInfo = {
   activeCredentials: number;
 } | null;
 
+type SavedView = {
+  id: string;
+  name: string;
+  statusFilter: string;
+  priorityFilter: string;
+  search: string;
+  sort: string;
+};
+
+type ActivityEvent = {
+  issueId: number;
+  issueSubject: string;
+  timestamp: string;
+  detail: string;
+};
+
 const POLL_INTERVAL_MS = 60_000;
+const SAVED_VIEWS_KEY = "nrcc.savedViews.v1";
 
 function MarkdownBlock({ content }: { content: string }) {
   return (
@@ -137,6 +154,38 @@ function syncTone(status: string | undefined): "idle" | "running" | "success" | 
   return "idle";
 }
 
+function dayDiffFromNow(dateLike: string): number {
+  const target = new Date(dateLike).getTime();
+  if (Number.isNaN(target)) return 0;
+  return Math.floor((Date.now() - target) / (24 * 60 * 60 * 1000));
+}
+
+function matchesView(view: SavedView, state: {
+  statusFilter: string;
+  priorityFilter: string;
+  search: string;
+  sort: string;
+}): boolean {
+  return (
+    view.statusFilter === state.statusFilter
+    && view.priorityFilter === state.priorityFilter
+    && view.search === state.search
+    && view.sort === state.sort
+  );
+}
+
+function formatDurationFromMs(durationMs: number): string {
+  const safe = Math.max(0, durationMs);
+  const totalSeconds = Math.floor(safe / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${seconds}s`;
+  }
+  return `${minutes}m ${seconds}s`;
+}
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -145,10 +194,14 @@ export default function Home() {
   const [priorities, setPriorities] = useState<string[]>([]);
   const [activities, setActivities] = useState<Array<{ id: number; name: string }>>([]);
   const [selectedIssueId, setSelectedIssueId] = useState<number | null>(null);
+  const [selectedIssueIds, setSelectedIssueIds] = useState<number[]>([]);
+  const [bulkStatusId, setBulkStatusId] = useState(0);
   const [syncState, setSyncState] = useState<SyncState>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [manualRefreshBusy, setManualRefreshBusy] = useState(false);
+  const [bulkUpdating, setBulkUpdating] = useState(false);
   const [allowedStatusIdsByIssue, setAllowedStatusIdsByIssue] = useState<Record<number, number[]>>({});
   const [bootstrapInfo, setBootstrapInfo] = useState<BootstrapInfo>(null);
   const [bootstrapBusy, setBootstrapBusy] = useState(false);
@@ -161,20 +214,47 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("updated_desc");
 
+  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+  const [viewDraftName, setViewDraftName] = useState("");
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
+  const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+
   const [comment, setComment] = useState("");
   const [hours, setHours] = useState("1");
   const [activityId, setActivityId] = useState(0);
   const [timeComment, setTimeComment] = useState("");
   const [spentOn, setSpentOn] = useState(new Date().toISOString().slice(0, 10));
 
+  const [timerIssueId, setTimerIssueId] = useState<number | null>(null);
+  const [timerStartedAtMs, setTimerStartedAtMs] = useState<number | null>(null);
+  const [timerNowMs, setTimerNowMs] = useState(Date.now());
+
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
   const selectedIssue = useMemo(
     () => issues.find((i) => i.redmineIssueId === selectedIssueId) ?? null,
     [issues, selectedIssueId],
   );
 
+  const timerElapsedMs = useMemo(() => {
+    if (!timerStartedAtMs || !timerIssueId) {
+      return 0;
+    }
+    return Math.max(0, timerNowMs - timerStartedAtMs);
+  }, [timerIssueId, timerNowMs, timerStartedAtMs]);
+
+  const allVisibleIssueIds = useMemo(() => issues.map((i) => i.redmineIssueId), [issues]);
+
+  const selectedAllVisible = useMemo(
+    () => allVisibleIssueIds.length > 0 && allVisibleIssueIds.every((id) => selectedIssueIds.includes(id)),
+    [allVisibleIssueIds, selectedIssueIds],
+  );
+
   const summary = useMemo(() => {
     const byStatus = new Map<string, number>();
     const byPriority = new Map<string, number>();
+    const atRiskCandidates: Array<{ issue: Issue; severity: number; reason: string }> = [];
+    const activityFeed: ActivityEvent[] = [];
 
     let open = 0;
     let inProgress = 0;
@@ -182,22 +262,77 @@ export default function Home() {
     let blocked = 0;
     let overdue = 0;
     let dueSoon = 0;
+    let stale = 0;
+    let dueToday = 0;
     let totalProgress = 0;
+    let openAgeDays = 0;
 
     for (const issue of issues) {
       byStatus.set(issue.statusName, (byStatus.get(issue.statusName) ?? 0) + 1);
       byPriority.set(issue.priority ?? "Unspecified", (byPriority.get(issue.priority ?? "Unspecified") ?? 0) + 1);
 
-      if (isOpenStatus(issue.statusName)) open += 1;
+      const openState = isOpenStatus(issue.statusName);
+      const blockedState = isBlockedStatus(issue.statusName);
+      const urgency = issueUrgency(issue);
+      const ageDays = dayDiffFromNow(issue.updatedOnRemote);
+      const daysToDue = dueInDays(issue.dueDate);
+
+      if (openState) {
+        open += 1;
+        openAgeDays += ageDays;
+      }
       if (isInProgressStatus(issue.statusName)) inProgress += 1;
       if (isDoneStatus(issue.statusName)) done += 1;
-      if (isBlockedStatus(issue.statusName)) blocked += 1;
-
-      const urgency = issueUrgency(issue);
+      if (blockedState) blocked += 1;
       if (urgency === "overdue") overdue += 1;
       if (urgency === "soon") dueSoon += 1;
+      if (openState && ageDays >= 3) stale += 1;
+      if (openState && daysToDue === 0) dueToday += 1;
 
       totalProgress += issue.doneRatio ?? 0;
+
+      let severity = 0;
+      const reasons: string[] = [];
+      if (urgency === "overdue") {
+        severity += 3;
+        reasons.push("overdue");
+      }
+      if (blockedState) {
+        severity += 2;
+        reasons.push("blocked");
+      }
+      if (openState && ageDays >= 3) {
+        severity += 1;
+        reasons.push(`stale ${ageDays}d`);
+      }
+      if (severity > 0) {
+        atRiskCandidates.push({ issue, severity, reason: reasons.join(" + ") });
+      }
+
+      activityFeed.push({
+        issueId: issue.redmineIssueId,
+        issueSubject: issue.subject,
+        timestamp: issue.updatedOnRemote,
+        detail: `Issue updated (${issue.statusName})`,
+      });
+
+      for (const journal of issue.journals.slice(0, 3)) {
+        activityFeed.push({
+          issueId: issue.redmineIssueId,
+          issueSubject: issue.subject,
+          timestamp: journal.createdOnRemote,
+          detail: `${journal.author ?? "Unknown"} commented`,
+        });
+      }
+
+      for (const entry of issue.timeEntries.slice(0, 2)) {
+        activityFeed.push({
+          issueId: issue.redmineIssueId,
+          issueSubject: issue.subject,
+          timestamp: entry.spentOn,
+          detail: `${entry.hours.toFixed(1)}h logged${entry.activityName ? ` (${entry.activityName})` : ""}`,
+        });
+      }
     }
 
     const topStatuses = Array.from(byStatus.entries())
@@ -212,6 +347,17 @@ export default function Home() {
     const completion = Math.round((done / count) * 100);
     const avgDoneRatio = Math.round(totalProgress / count);
 
+    const atRisk = atRiskCandidates
+      .sort((a, b) => {
+        if (b.severity !== a.severity) return b.severity - a.severity;
+        return new Date(a.issue.updatedOnRemote).getTime() - new Date(b.issue.updatedOnRemote).getTime();
+      })
+      .slice(0, 7);
+
+    const recentActivity = activityFeed
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 12);
+
     return {
       totalVisible: issues.length,
       total,
@@ -221,10 +367,15 @@ export default function Home() {
       blocked,
       overdue,
       dueSoon,
+      stale,
+      dueToday,
       completion,
       avgDoneRatio,
+      avgOpenAgeDays: open > 0 ? Math.round(openAgeDays / open) : 0,
       topStatuses,
       priorityMix,
+      atRisk,
+      recentActivity,
     };
   }, [issues, total]);
 
@@ -238,6 +389,50 @@ export default function Home() {
     params.set("pageSize", "100");
     return params.toString();
   }, [priorityFilter, search, sort, statusFilter]);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(SAVED_VIEWS_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as SavedView[];
+      if (Array.isArray(parsed)) {
+        setSavedViews(parsed.filter((item) => typeof item?.id === "string" && typeof item?.name === "string"));
+      }
+    } catch {
+      window.localStorage.removeItem(SAVED_VIEWS_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(SAVED_VIEWS_KEY, JSON.stringify(savedViews));
+  }, [savedViews]);
+
+  useEffect(() => {
+    if (!timerStartedAtMs || !timerIssueId) {
+      return;
+    }
+    const id = window.setInterval(() => {
+      setTimerNowMs(Date.now());
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [timerIssueId, timerStartedAtMs]);
+
+  useEffect(() => {
+    setSelectedIssueIds((current) => current.filter((id) => allVisibleIssueIds.includes(id)));
+  }, [allVisibleIssueIds]);
+
+  useEffect(() => {
+    if (!activeViewId) return;
+    const active = savedViews.find((v) => v.id === activeViewId);
+    if (!active) {
+      setActiveViewId(null);
+      return;
+    }
+    const stillMatch = matchesView(active, { statusFilter, priorityFilter, search, sort });
+    if (!stillMatch) {
+      setActiveViewId(null);
+    }
+  }, [activeViewId, priorityFilter, savedViews, search, sort, statusFilter]);
 
   async function loadSession() {
     const res = await fetch("/api/session/me", { cache: "no-store" });
@@ -330,15 +525,72 @@ export default function Home() {
   }, [queryString, user]);
 
   useEffect(() => {
-    if (!selectedIssueId) return;
     const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const inTypingField = Boolean(
+        target
+        && (target.tagName === "INPUT"
+          || target.tagName === "TEXTAREA"
+          || target.tagName === "SELECT"
+          || target.isContentEditable),
+      );
+
       if (event.key === "Escape") {
-        setSelectedIssueId(null);
+        if (showShortcutHelp) {
+          setShowShortcutHelp(false);
+          return;
+        }
+        if (selectedIssueId) {
+          setSelectedIssueId(null);
+        }
+        return;
+      }
+
+      if (inTypingField) {
+        return;
+      }
+
+      if (event.key === "/") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
+      if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        resetFilters();
+        return;
+      }
+
+      if (event.key.toLowerCase() === "r" && !manualRefreshBusy) {
+        event.preventDefault();
+        void handleManualPull();
+        return;
+      }
+
+      if (event.key.toLowerCase() === "g") {
+        event.preventDefault();
+        window.location.assign("/reports");
+        return;
+      }
+
+      if (event.key === "?") {
+        event.preventDefault();
+        setShowShortcutHelp((current) => !current);
       }
     };
+
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedIssueId]);
+    // keyboard handlers intentionally bind to latest reactive state snapshot.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manualRefreshBusy, selectedIssueId, showShortcutHelp]);
+
+  useEffect(() => {
+    if (statuses.length === 0) return;
+    if (bulkStatusId > 0) return;
+    setBulkStatusId(statuses[0].id);
+  }, [bulkStatusId, statuses]);
 
   async function connectRedmine(event: React.FormEvent) {
     event.preventDefault();
@@ -370,6 +622,7 @@ export default function Home() {
   async function handleManualPull() {
     setManualRefreshBusy(true);
     setError(null);
+    setInfoMessage(null);
 
     try {
       const res = await fetch("/api/sync/manual-pull", { method: "POST" });
@@ -396,6 +649,7 @@ export default function Home() {
       }
 
       await refreshAll();
+      setInfoMessage("Manual full refresh completed.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Manual pull failed");
     } finally {
@@ -416,6 +670,7 @@ export default function Home() {
       await refreshAll();
       await loadActivities();
       await loadBootstrapInfo();
+      setInfoMessage("Connected using .env configuration.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to bootstrap from environment");
     } finally {
@@ -459,6 +714,45 @@ export default function Home() {
     } catch (e) {
       setIssues(previous);
       setError(e instanceof Error ? e.message : "Status update failed");
+    }
+  }
+
+  async function updateBulkStatus() {
+    if (selectedIssueIds.length === 0 || bulkStatusId <= 0) {
+      return;
+    }
+
+    setBulkUpdating(true);
+    setError(null);
+    setInfoMessage(null);
+
+    try {
+      const res = await fetch("/api/issues/bulk-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ issueIds: selectedIssueIds, statusId: bulkStatusId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Bulk status update failed");
+      }
+
+      const failedCount = Number(data.failedCount ?? 0);
+      const updatedCount = Number(data.updatedCount ?? 0);
+      if (failedCount > 0) {
+        setError(`Updated ${updatedCount} issue(s), ${failedCount} failed. Open browser console for details.`);
+        // keep a compact breadcrumb for deeper troubleshooting.
+        console.error("Bulk update failures", data.failures ?? []);
+      } else {
+        setInfoMessage(`Updated ${updatedCount} issue(s).`);
+      }
+
+      await refreshAll();
+      setSelectedIssueIds([]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Bulk status update failed");
+    } finally {
+      setBulkUpdating(false);
     }
   }
 
@@ -525,9 +819,93 @@ export default function Home() {
       }
       setTimeComment("");
       await refreshAll();
+      setInfoMessage("Time entry added.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Timelog failed");
     }
+  }
+
+  function startTimerForIssue(issueId: number) {
+    setTimerIssueId(issueId);
+    const now = Date.now();
+    setTimerStartedAtMs(now);
+    setTimerNowMs(now);
+    setInfoMessage(`Started timer for issue #${issueId}.`);
+  }
+
+  function stopTimerAndApply() {
+    if (!selectedIssue || timerIssueId !== selectedIssue.redmineIssueId || !timerStartedAtMs) {
+      return;
+    }
+    const elapsedHours = Math.max(0.1, (Date.now() - timerStartedAtMs) / (60 * 60 * 1000));
+    setHours(elapsedHours.toFixed(1));
+    setTimerIssueId(null);
+    setTimerStartedAtMs(null);
+    setTimerNowMs(Date.now());
+    setInfoMessage(`Timer stopped. Hours prefilled to ${elapsedHours.toFixed(1)}.`);
+  }
+
+  function applySavedView(view: SavedView) {
+    setStatusFilter(view.statusFilter);
+    setPriorityFilter(view.priorityFilter);
+    setSearch(view.search);
+    setSort(view.sort);
+    setActiveViewId(view.id);
+  }
+
+  function saveCurrentView() {
+    const name = viewDraftName.trim() || `View ${savedViews.length + 1}`;
+    const existing = savedViews.find((v) => v.name.toLowerCase() === name.toLowerCase());
+    const nextView: SavedView = {
+      id: existing?.id ?? `${Date.now()}`,
+      name,
+      statusFilter,
+      priorityFilter,
+      search,
+      sort,
+    };
+
+    if (existing) {
+      setSavedViews((current) => current.map((v) => (v.id === existing.id ? nextView : v)));
+      setInfoMessage(`Saved changes to view "${name}".`);
+      setActiveViewId(existing.id);
+    } else {
+      setSavedViews((current) => [nextView, ...current].slice(0, 12));
+      setInfoMessage(`Saved view "${name}".`);
+      setActiveViewId(nextView.id);
+    }
+
+    setViewDraftName("");
+  }
+
+  function deleteSavedView(viewId: string) {
+    const target = savedViews.find((view) => view.id === viewId);
+    setSavedViews((current) => current.filter((view) => view.id !== viewId));
+    if (activeViewId === viewId) {
+      setActiveViewId(null);
+    }
+    if (target) {
+      setInfoMessage(`Removed view "${target.name}".`);
+    }
+  }
+
+  function toggleIssueSelection(issueId: number) {
+    setSelectedIssueIds((current) =>
+      current.includes(issueId) ? current.filter((id) => id !== issueId) : [...current, issueId],
+    );
+  }
+
+  function toggleSelectAllVisible() {
+    setSelectedIssueIds((current) => {
+      if (allVisibleIssueIds.length === 0) {
+        return [];
+      }
+      if (selectedAllVisible) {
+        return current.filter((id) => !allVisibleIssueIds.includes(id));
+      }
+      const combined = new Set([...current, ...allVisibleIssueIds]);
+      return Array.from(combined);
+    });
   }
 
   function resetFilters() {
@@ -535,6 +913,7 @@ export default function Home() {
     setPriorityFilter("");
     setSearch("");
     setSort("updated_desc");
+    setActiveViewId(null);
   }
 
   if (!user) {
@@ -597,6 +976,7 @@ export default function Home() {
   }
 
   const syncStateTone = syncTone(syncState?.lastSyncStatus);
+  const timerRunningOnSelected = selectedIssue && timerIssueId === selectedIssue.redmineIssueId && Boolean(timerStartedAtMs);
 
   return (
     <main className="dashboard">
@@ -626,6 +1006,9 @@ export default function Home() {
           </Link>
           <button className="secondary-button" type="button" onClick={resetFilters}>
             Reset Filters
+          </button>
+          <button className="secondary-button" type="button" onClick={() => setShowShortcutHelp(true)}>
+            Shortcuts
           </button>
         </div>
 
@@ -661,6 +1044,11 @@ export default function Home() {
             <p className="metric-label">Blocked</p>
             <p className="metric-value">{summary.blocked}</p>
             <p className="metric-foot">Status contains blocked/hold/waiting</p>
+          </article>
+          <article className="card metric-card">
+            <p className="metric-label">Stale Queue</p>
+            <p className="metric-value">{summary.stale}</p>
+            <p className="metric-foot">No update in 3+ days • Avg open age: {summary.avgOpenAgeDays}d</p>
           </article>
         </section>
       </header>
@@ -704,15 +1092,43 @@ export default function Home() {
           <label className="filter-field search-field">
             Search
             <input
+              ref={searchInputRef}
               placeholder="Subject, description, assignee"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </label>
         </div>
+
+        <div className="saved-view-row">
+          <label className="view-name-field">
+            Save Current Filter Set
+            <input
+              placeholder="e.g. Blocked + High Priority"
+              value={viewDraftName}
+              onChange={(e) => setViewDraftName(e.target.value)}
+            />
+          </label>
+          <button type="button" className="secondary-button" onClick={saveCurrentView}>
+            Save View
+          </button>
+          <div className="chip-row saved-view-chips">
+            {savedViews.length === 0 && <span className="muted">No saved views yet.</span>}
+            {savedViews.map((view) => (
+              <div key={view.id} className={`saved-view-pill ${activeViewId === view.id ? "active" : ""}`}>
+                <button type="button" className="saved-view-apply" onClick={() => applySavedView(view)}>
+                  {view.name}
+                </button>
+                <button type="button" className="saved-view-delete" onClick={() => deleteSavedView(view.id)} aria-label={`Delete ${view.name}`}>
+                  x
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
-      <section className="insights-grid">
+      <section className="insights-grid insights-grid-advanced">
         <article className="card">
           <h2>Status Mix</h2>
           <p className="muted">Click a status to filter quickly.</p>
@@ -748,9 +1164,60 @@ export default function Home() {
             ))}
           </div>
         </article>
+
+        <article className="card">
+          <h2>Ops Alerts</h2>
+          <p className="muted">Highest risk issues based on overdue, blocked, and stale signals.</p>
+          <div className="alert-list">
+            {summary.atRisk.length === 0 && <p className="muted">No active risk alerts.</p>}
+            {summary.atRisk.map(({ issue, reason }) => (
+              <button
+                key={issue.id}
+                type="button"
+                className="alert-row"
+                onClick={() => {
+                  setSelectedIssueId(issue.redmineIssueId);
+                  void loadAllowedStatuses(issue.redmineIssueId);
+                }}
+              >
+                <span>
+                  #{issue.redmineIssueId} {issue.subject}
+                </span>
+                <span>{reason}</span>
+              </button>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="card activity-card">
+        <div className="table-toolbar">
+          <h2>Recent Activity Feed</h2>
+          <p className="muted">Last {summary.recentActivity.length} events from updates, comments, and timelogs.</p>
+        </div>
+        <div className="activity-feed">
+          {summary.recentActivity.map((event, idx) => (
+            <button
+              key={`${event.issueId}-${event.timestamp}-${idx}`}
+              type="button"
+              className="activity-row"
+              onClick={() => {
+                setSelectedIssueId(event.issueId);
+                void loadAllowedStatuses(event.issueId);
+              }}
+            >
+              <span>
+                #{event.issueId} {event.issueSubject}
+              </span>
+              <span>{event.detail}</span>
+              <span>{new Date(event.timestamp).toLocaleString()}</span>
+            </button>
+          ))}
+        </div>
       </section>
 
       {error && <p className="error-banner">{error}</p>}
+      {infoMessage && <p className="info-banner">{infoMessage}</p>}
 
       <section className="workspace-grid">
         <article className="card issues-panel">
@@ -759,9 +1226,46 @@ export default function Home() {
             <p className="muted">{loading ? "Refreshing..." : `${issues.length} loaded`}</p>
           </div>
 
+          <div className="bulk-toolbar">
+            <p className="muted">
+              Selected: <strong>{selectedIssueIds.length}</strong>
+              {summary.dueToday > 0 ? ` • Due today: ${summary.dueToday}` : ""}
+            </p>
+            <div className="bulk-controls">
+              <label className="inline-field">
+                Bulk Status
+                <select value={bulkStatusId} onChange={(e) => setBulkStatusId(Number(e.target.value))}>
+                  {statuses.map((status) => (
+                    <option key={status.id} value={status.id}>
+                      {status.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={updateBulkStatus}
+                disabled={selectedIssueIds.length === 0 || bulkUpdating || bulkStatusId <= 0}
+              >
+                {bulkUpdating ? "Applying..." : "Apply to Selected"}
+              </button>
+              <button type="button" className="secondary-button" onClick={() => setSelectedIssueIds([])}>
+                Clear Selection
+              </button>
+            </div>
+          </div>
+
           <table className="issues-table">
             <thead>
               <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={selectedAllVisible}
+                    onChange={toggleSelectAllVisible}
+                    aria-label="Select all visible issues"
+                  />
+                </th>
                 <th>ID</th>
                 <th>Subject</th>
                 <th>Status</th>
@@ -789,6 +1293,14 @@ export default function Home() {
                       void loadAllowedStatuses(issue.redmineIssueId);
                     }}
                   >
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIssueIds.includes(issue.redmineIssueId)}
+                        onChange={() => toggleIssueSelection(issue.redmineIssueId)}
+                        aria-label={`Select issue ${issue.redmineIssueId}`}
+                      />
+                    </td>
                     <td>#{issue.redmineIssueId}</td>
                     <td>
                       <div className="subject-cell">
@@ -876,6 +1388,33 @@ export default function Home() {
 
             <section className="detail-section">
               <h3>Time Logs</h3>
+
+              <div className="timer-row">
+                {!timerRunningOnSelected && (
+                  <button type="button" className="secondary-button" onClick={() => startTimerForIssue(selectedIssue.redmineIssueId)}>
+                    Start Timer
+                  </button>
+                )}
+                {timerRunningOnSelected && (
+                  <>
+                    <span className="timer-pill">Running: {formatDurationFromMs(timerElapsedMs)}</span>
+                    <button type="button" className="secondary-button" onClick={stopTimerAndApply}>
+                      Stop and Fill Hours
+                    </button>
+                  </>
+                )}
+                {timerIssueId && timerIssueId !== selectedIssue.redmineIssueId && (
+                  <span className="muted">Timer is currently running on issue #{timerIssueId}.</span>
+                )}
+                <div className="quick-hours">
+                  {[0.5, 1, 2, 4].map((value) => (
+                    <button key={value} type="button" className="secondary-button" onClick={() => setHours(value.toFixed(1))}>
+                      {value}h
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <form className="form" onSubmit={submitTimelog}>
                 <label>
                   Hours
@@ -934,6 +1473,25 @@ export default function Home() {
                 ))}
               </div>
             </section>
+          </aside>
+        </div>
+      )}
+
+      {showShortcutHelp && (
+        <div className="issue-modal-backdrop" onClick={() => setShowShortcutHelp(false)}>
+          <aside className="card shortcut-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Keyboard Shortcuts</h2>
+            <div className="shortcut-grid">
+              <p><kbd>/</kbd> Focus search</p>
+              <p><kbd>R</kbd> Force refresh all issues</p>
+              <p><kbd>F</kbd> Reset filters</p>
+              <p><kbd>G</kbd> Open reports page</p>
+              <p><kbd>Esc</kbd> Close modal/popup</p>
+              <p><kbd>?</kbd> Toggle this help</p>
+            </div>
+            <button type="button" className="secondary-button" onClick={() => setShowShortcutHelp(false)}>
+              Close
+            </button>
           </aside>
         </div>
       )}

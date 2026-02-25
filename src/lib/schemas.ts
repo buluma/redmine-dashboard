@@ -21,10 +21,15 @@ export const timeLogSchema = z.object({
   spentOn: z.string().date().optional(),
 });
 
+export const bulkStatusUpdateSchema = z.object({
+  issueIds: z.array(z.number().int().positive()).min(1).max(50),
+  statusId: z.number().int().positive(),
+  note: z.string().trim().max(5000).optional(),
+});
+
 export const issueQuerySchema = z.object({
   status: z.string().optional(),
   priority: z.string().optional(),
-  project: z.string().optional(),
   search: z.string().optional(),
   sort: z.enum(["updated_desc", "updated_asc", "priority", "due_date"]).default("updated_desc"),
   page: z.coerce.number().int().min(1).default(1),
