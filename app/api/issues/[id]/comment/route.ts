@@ -12,6 +12,12 @@ function parseIssueId(id: string): number {
   return n;
 }
 
+function statusFromRedmineError(message: string): number | null {
+  const match = message.match(/Redmine request failed \\((\\d{3})\\):/);
+  if (!match) return null;
+  return Number(match[1]);
+}
+
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
@@ -33,7 +39,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return Response.json({ ok: true, issue });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to post comment";
-    const status = message === "Unauthorized" ? 401 : 400;
+    const status = message === "Unauthorized" ? 401 : (statusFromRedmineError(message) ?? 400);
     return jsonError(message, status);
   }
 }

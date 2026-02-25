@@ -19,8 +19,11 @@ type Journal = {
 
 type TimeEntry = {
   id: string;
+  redmineTimeEntryId: number | null;
   hours: number;
   activityId: number;
+  activityName: string | null;
+  authorName: string | null;
   comments: string | null;
   spentOn: string;
 };
@@ -51,6 +54,12 @@ type SyncState = {
   lastFullSyncAt: string | null;
   lastError: string | null;
   runningJobId: string | null;
+} | null;
+
+type BootstrapInfo = {
+  configured: boolean;
+  canBootstrap: boolean;
+  activeCredentials: number;
 } | null;
 
 const POLL_INTERVAL_MS = 60_000;
@@ -139,6 +148,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [manualRefreshBusy, setManualRefreshBusy] = useState(false);
   const [allowedStatusIdsByIssue, setAllowedStatusIdsByIssue] = useState<Record<number, number[]>>({});
+  const [bootstrapInfo, setBootstrapInfo] = useState<BootstrapInfo>(null);
+  const [bootstrapBusy, setBootstrapBusy] = useState(false);
 
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -241,6 +252,15 @@ export default function Home() {
     setUser(data.user ?? null);
   }
 
+  async function loadBootstrapInfo() {
+    const res = await fetch("/api/redmine/bootstrap", { cache: "no-store" });
+    if (!res.ok) {
+      return;
+    }
+    const data = await res.json();
+    setBootstrapInfo(data);
+  }
+
   async function loadSyncStatus() {
     if (!user) return;
     const res = await fetch("/api/sync/status", { cache: "no-store" });
@@ -295,7 +315,7 @@ export default function Home() {
   useEffect(() => {
     void (async () => {
       try {
-        await loadSession();
+        await Promise.all([loadSession(), loadBootstrapInfo()]);
       } finally {
         setLoading(false);
       }
@@ -377,6 +397,26 @@ export default function Home() {
       setError(e instanceof Error ? e.message : "Manual pull failed");
     } finally {
       setManualRefreshBusy(false);
+    }
+  }
+
+  async function bootstrapFromEnv() {
+    setBootstrapBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/redmine/bootstrap", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Unable to bootstrap from environment");
+      }
+      setUser(data.user);
+      await refreshAll();
+      await loadActivities();
+      await loadBootstrapInfo();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to bootstrap from environment");
+    } finally {
+      setBootstrapBusy(false);
     }
   }
 
@@ -530,6 +570,22 @@ export default function Home() {
               <button type="submit" disabled={loading}>
                 {loading ? "Connecting..." : "Launch Dashboard"}
               </button>
+              {bootstrapInfo?.configured && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={bootstrapFromEnv}
+                  disabled={bootstrapBusy || !bootstrapInfo.canBootstrap}
+                >
+                  {bootstrapBusy ? "Using .env..." : "Use .env Configuration"}
+                </button>
+              )}
+              {bootstrapInfo?.configured && !bootstrapInfo.canBootstrap && (
+                <p className="muted">
+                  .env bootstrap is available only on first run (active credentials:{" "}
+                  {bootstrapInfo.activeCredentials}).
+                </p>
+              )}
             </form>
           </div>
           {error && <p className="error-banner">{error}</p>}
@@ -892,8 +948,17 @@ export default function Home() {
                   {selectedIssue.timeEntries.length === 0 && <p className="muted">No time entries yet.</p>}
                   {selectedIssue.timeEntries.map((t) => (
                     <div key={t.id} className="timeline-item">
-                      <p className="muted">
-                        <strong>{t.hours}h</strong> • {new Date(t.spentOn).toLocaleDateString()}
+                      <div className="entry-head">
+                        <p className="muted">
+                          <strong>{t.hours}h</strong> • {new Date(t.spentOn).toLocaleDateString()}
+                        </p>
+                        <span className={`entry-source ${t.redmineTimeEntryId ? "synced" : "local"}`}>
+                          {t.redmineTimeEntryId ? "Synced from Redmine" : "Local entry"}
+                        </span>
+                      </div>
+                      <p className="muted entry-meta">
+                        {t.authorName ?? "Unknown author"}
+                        {t.activityName ? ` • ${t.activityName}` : ""}
                       </p>
                       {t.comments ? <MarkdownBlock content={t.comments} /> : <p>(no comment)</p>}
                     </div>

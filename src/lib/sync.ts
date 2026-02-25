@@ -97,6 +97,70 @@ async function upsertJournals(issueId: string, issueRaw: Record<string, unknown>
   }
 }
 
+async function upsertTimeEntriesForIssue(
+  userId: string,
+  issueId: string,
+  remoteIssueId: number,
+  client: RedmineClient,
+  pruneMissing: boolean,
+) {
+  const remoteEntries = await client.listIssueTimeEntries(remoteIssueId);
+  const seenIds: number[] = [];
+
+  for (const entryRaw of remoteEntries) {
+    const entry = asObject(entryRaw);
+    const remoteId = asNumber(entry.id);
+    if (!remoteId) {
+      continue;
+    }
+
+    seenIds.push(remoteId);
+    await prisma.timeEntry.upsert({
+      where: { redmineTimeEntryId: remoteId },
+      update: {
+        issueId,
+        userId,
+        hours: asNumber(entry.hours) ?? 0,
+        activityId: nestedId(entry.activity) ?? 0,
+        activityName: nestedName(entry.activity),
+        authorName: nestedName(entry.user),
+        comments: asString(entry.comments),
+        spentOn: asDate(entry.spent_on) ?? new Date(),
+      },
+      create: {
+        redmineTimeEntryId: remoteId,
+        issueId,
+        userId,
+        hours: asNumber(entry.hours) ?? 0,
+        activityId: nestedId(entry.activity) ?? 0,
+        activityName: nestedName(entry.activity),
+        authorName: nestedName(entry.user),
+        comments: asString(entry.comments),
+        spentOn: asDate(entry.spent_on) ?? new Date(),
+      },
+    });
+  }
+
+  if (!pruneMissing) {
+    return;
+  }
+
+  if (seenIds.length === 0) {
+    await prisma.timeEntry.deleteMany({
+      where: { issueId, userId },
+    });
+    return;
+  }
+
+  await prisma.timeEntry.deleteMany({
+    where: {
+      issueId,
+      userId,
+      OR: [{ redmineTimeEntryId: null }, { redmineTimeEntryId: { notIn: seenIds } }],
+    },
+  });
+}
+
 export async function syncStatusCatalog(client: RedmineClient): Promise<void> {
   const statuses = await client.getIssueStatuses();
   for (const status of statuses) {
@@ -115,10 +179,22 @@ export async function syncStatusCatalog(client: RedmineClient): Promise<void> {
   }
 }
 
-export async function syncSingleIssue(userId: string, client: RedmineClient, remoteIssueId: number) {
+export async function syncSingleIssue(
+  userId: string,
+  client: RedmineClient,
+  remoteIssueId: number,
+  options?: { pruneTimeEntries?: boolean },
+) {
   const detail = await client.getIssue(remoteIssueId, ["journals"]);
   const issue = await upsertIssueFromRemote(userId, detail.issue);
   await upsertJournals(issue.id, detail.issue);
+  await upsertTimeEntriesForIssue(
+    userId,
+    issue.id,
+    remoteIssueId,
+    client,
+    Boolean(options?.pruneTimeEntries),
+  );
   return issue;
 }
 
@@ -222,9 +298,9 @@ export async function executeSyncJob(jobId: string): Promise<void> {
       }
       seenRemoteIssueIds.add(remoteId);
 
-      const detail = await client.getIssue(remoteId, ["journals"]);
-      const issue = await upsertIssueFromRemote(job.userId, detail.issue);
-      await upsertJournals(issue.id, detail.issue);
+      await syncSingleIssue(job.userId, client, remoteId, {
+        pruneTimeEntries: job.jobType === "full_manual",
+      });
     }
 
     if (job.jobType === "full_manual") {

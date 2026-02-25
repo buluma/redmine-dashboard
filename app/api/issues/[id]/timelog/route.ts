@@ -1,4 +1,3 @@
-import { prisma } from "@/src/lib/db";
 import { requireRedmineClient } from "@/src/lib/auth";
 import { jsonError, parseJson } from "@/src/lib/http";
 import { isRateLimited } from "@/src/lib/rate-limit";
@@ -11,6 +10,12 @@ function parseIssueId(id: string): number {
     throw new Error("Invalid issue id");
   }
   return n;
+}
+
+function statusFromRedmineError(message: string): number | null {
+  const match = message.match(/Redmine request failed \\((\\d{3})\\):/);
+  if (!match) return null;
+  return Number(match[1]);
 }
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -37,28 +42,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       spentOn,
     });
 
-    const issue = await syncSingleIssue(user.id, client, issueId);
-    const localIssue = await prisma.issue.findUnique({ where: { id: issue.id } });
+    await syncSingleIssue(user.id, client, issueId);
 
-    if (localIssue) {
-      await prisma.timeEntry.create({
-        data: {
-          redmineTimeEntryId: res.time_entry.id,
-          issueId: localIssue.id,
-          userId: user.id,
-          hours: body.hours,
-          activityId: body.activityId,
-          activityName: null,
-          comments: body.comment,
-          spentOn: new Date(spentOn),
-        },
-      });
-    }
-
-    return Response.json({ ok: true });
+    return Response.json({ ok: true, timeEntryId: res?.time_entry?.id ?? null });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to add timelog";
-    const status = message === "Unauthorized" ? 401 : 400;
+    const status = message === "Unauthorized" ? 401 : (statusFromRedmineError(message) ?? 400);
     return jsonError(message, status);
   }
 }

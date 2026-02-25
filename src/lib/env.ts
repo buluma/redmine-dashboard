@@ -12,4 +12,6 @@ export const env = {
   sessionSecret: process.env.SESSION_SECRET!,
   pollIntervalMs: Number(process.env.POLL_INTERVAL_MS ?? 60000),
   leaderLockTtlMs: Number(process.env.LEADER_LOCK_TTL_MS ?? 90000),
+  redmineBaseUrl: process.env.REDMINE_BASE_URL,
+  redmineApiKey: process.env.REDMINE_API_KEY,
 };

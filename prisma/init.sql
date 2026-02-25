@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS "TimeEntry" (
   "hours" REAL NOT NULL,
   "activityId" INTEGER NOT NULL,
   "activityName" TEXT,
+  "authorName" TEXT,
   "comments" TEXT,
   "spentOn" DATETIME NOT NULL,
   "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

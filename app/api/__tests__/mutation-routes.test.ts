@@ -6,15 +6,6 @@ const mockRequireCurrentUser = vi.fn();
 const mockSyncSingleIssue = vi.fn();
 const mockRunSyncJob = vi.fn();
 
-const mockPrisma = {
-  issue: {
-    findUnique: vi.fn(),
-  },
-  timeEntry: {
-    create: vi.fn(),
-  },
-};
-
 vi.mock("@/src/lib/auth", () => ({
   requireRedmineClient: mockRequireRedmineClient,
   requireCurrentUser: mockRequireCurrentUser,
@@ -23,10 +14,6 @@ vi.mock("@/src/lib/auth", () => ({
 vi.mock("@/src/lib/sync", () => ({
   syncSingleIssue: mockSyncSingleIssue,
   runSyncJob: mockRunSyncJob,
-}));
-
-vi.mock("@/src/lib/db", () => ({
-  prisma: mockPrisma,
 }));
 
 describe("API mutation routes", () => {
@@ -109,15 +96,13 @@ describe("API mutation routes", () => {
     expect(mockSyncSingleIssue).toHaveBeenCalled();
   });
 
-  it("adds timelog and writes local entry", async () => {
+  it("adds timelog and triggers issue resync", async () => {
     const client = {
       addTimeEntry: vi.fn().mockResolvedValue({ time_entry: { id: 999 } }),
     };
 
     mockRequireRedmineClient.mockResolvedValue({ user: { id: "u1" }, client });
     mockSyncSingleIssue.mockResolvedValue({ id: "local-issue-1" });
-    mockPrisma.issue.findUnique.mockResolvedValue({ id: "local-issue-1" });
-    mockPrisma.timeEntry.create.mockResolvedValue({ id: "te1" });
 
     const { POST } = await import("@/app/api/issues/[id]/timelog/route");
     const response = await POST(
@@ -136,7 +121,7 @@ describe("API mutation routes", () => {
 
     expect(response.status).toBe(200);
     expect(client.addTimeEntry).toHaveBeenCalled();
-    expect(mockPrisma.timeEntry.create).toHaveBeenCalled();
+    expect(mockSyncSingleIssue).toHaveBeenCalledWith("u1", client, 123);
   });
 
   it("rate limits manual pull after three requests per minute", async () => {

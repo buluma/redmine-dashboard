@@ -509,6 +509,36 @@ label {
   gap: 0.35rem;
 }
 
+.entry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.entry-source {
+  border-radius: 999px;
+  padding: 0.12rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.entry-source.synced {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.entry-source.local {
+  background: #ebe6db;
+  color: #5f6f82;
+}
+
+.entry-meta {
+  font-size: 0.82rem;
+}
+
 .markdown {
   overflow-wrap: anywhere;
   line-height: 1.5;

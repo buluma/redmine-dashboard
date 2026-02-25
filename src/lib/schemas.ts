@@ -17,7 +17,7 @@ export const commentSchema = z.object({
 export const timeLogSchema = z.object({
   hours: z.number().positive().max(24),
   activityId: z.number().int().positive(),
-  comment: z.string().trim().max(2000).optional(),
+  comment: z.string().trim().max(255).optional(),
   spentOn: z.string().date().optional(),
 });
 

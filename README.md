@@ -22,6 +22,8 @@ A Next.js + SQLite dashboard for Redmine issues assigned to the current user.
 ## API Endpoints
 
 - `POST /api/redmine/connect`
+- `GET /api/redmine/bootstrap` (checks if first-run `.env` bootstrap is available)
+- `POST /api/redmine/bootstrap` (connects from `REDMINE_BASE_URL` + `REDMINE_API_KEY` on first run)
 - `GET /api/session/me`
 - `DELETE /api/session/me`
 - `GET /api/issues`
@@ -46,6 +48,10 @@ npm install
 ```bash
 cp .env.example .env
 ```
+
+Optional first-run shortcut:
+- Set `REDMINE_BASE_URL` and `REDMINE_API_KEY` in `.env`.
+- On the connect screen, use **Use .env Configuration**.
 
 3. Generate Prisma client:
 

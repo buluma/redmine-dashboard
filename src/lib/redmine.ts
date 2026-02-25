@@ -12,6 +12,13 @@ type RedmineIssueListResponse = {
   limit: number;
 };
 
+type RedmineTimeEntryListResponse = {
+  time_entries: Array<Record<string, unknown>>;
+  total_count: number;
+  offset: number;
+  limit: number;
+};
+
 export type RedmineIssueDetail = {
   issue: Record<string, unknown>;
 };
@@ -63,7 +70,12 @@ export class RedmineClient {
           return null as T;
         }
 
-        return (await res.json()) as T;
+        const raw = await res.text();
+        if (!raw.trim()) {
+          return null as T;
+        }
+
+        return JSON.parse(raw) as T;
       } catch (error) {
         const isAbort = error instanceof Error && error.name === "AbortError";
         if (attempt < maxAttempts && isAbort) {
@@ -98,6 +110,25 @@ export class RedmineClient {
       "/enumerations/time_entry_activities.json",
     );
     return data.time_entry_activities;
+  }
+
+  async listIssueTimeEntries(issueId: number): Promise<Array<Record<string, unknown>>> {
+    const limit = 100;
+    const out: Array<Record<string, unknown>> = [];
+    let offset = 0;
+
+    while (true) {
+      const path = `/time_entries.json?issue_id=${issueId}&limit=${limit}&offset=${offset}`;
+      const data = await this.request<RedmineTimeEntryListResponse>(path);
+      out.push(...data.time_entries);
+      offset += data.time_entries.length;
+
+      if (offset >= data.total_count || data.time_entries.length === 0) {
+        break;
+      }
+    }
+
+    return out;
   }
 
   async listAssignedIssues(updatedOnOrAfter?: Date): Promise<Array<Record<string, unknown>>> {
@@ -149,8 +180,8 @@ export class RedmineClient {
     activityId: number;
     comments?: string;
     spentOn: string;
-  }): Promise<{ time_entry: { id: number } }> {
-    return this.request<{ time_entry: { id: number } }>("/time_entries.json", {
+  }): Promise<{ time_entry?: { id: number } } | null> {
+    return this.request<{ time_entry?: { id: number } } | null>("/time_entries.json", {
       method: "POST",
       body: JSON.stringify({
         time_entry: {

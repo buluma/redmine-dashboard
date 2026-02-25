@@ -27,4 +27,15 @@ describe("validation schemas", () => {
     });
     expect(out.hours).toBe(1.5);
   });
+
+  it("rejects time log comments over Redmine limit", () => {
+    expect(() =>
+      timeLogSchema.parse({
+        hours: 1,
+        activityId: 1,
+        comment: "x".repeat(256),
+        spentOn: "2026-02-25",
+      }),
+    ).toThrow();
+  });
 });
