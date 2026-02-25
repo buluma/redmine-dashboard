@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS "Issue" (
   "priority" TEXT,
   "statusId" INTEGER NOT NULL,
   "statusName" TEXT NOT NULL,
+  "parentIssueId" INTEGER,
+  "parentIssueLabel" TEXT,
   "assignedToId" INTEGER,
   "assignedToName" TEXT,
   "updatedOnRemote" DATETIME NOT NULL,

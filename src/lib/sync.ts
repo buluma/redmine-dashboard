@@ -22,6 +22,19 @@ function nestedId(value: unknown): number | null {
   return asNumber(asObject(value).id);
 }
 
+function parentIssueLabel(value: unknown): string | null {
+  const obj = asObject(value);
+  const subject = asString(obj.subject);
+  const id = asNumber(obj.id);
+  if (subject) {
+    return subject;
+  }
+  if (id) {
+    return `#${id}`;
+  }
+  return null;
+}
+
 function asDate(value: unknown): Date | null {
   const s = asString(value);
   if (!s) {
@@ -48,6 +61,8 @@ async function upsertIssueFromRemote(userId: string, issueRaw: Record<string, un
     priority: nestedName(issueRaw.priority),
     statusId: nestedId(issueRaw.status) ?? 0,
     statusName: nestedName(issueRaw.status) ?? "Unknown",
+    parentIssueId: nestedId(issueRaw.parent),
+    parentIssueLabel: parentIssueLabel(issueRaw.parent),
     assignedToId: nestedId(issueRaw.assigned_to),
     assignedToName: nestedName(issueRaw.assigned_to),
     updatedOnRemote: updatedOn,

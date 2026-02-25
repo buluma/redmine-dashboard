@@ -27,6 +27,7 @@ A Next.js + SQLite dashboard for Redmine issues assigned to the current user.
 - `GET /api/session/me`
 - `DELETE /api/session/me`
 - `GET /api/issues`
+- `GET /api/reports` (reporting dataset for trends/drilldowns)
 - `POST /api/issues/:id/status`
 - `GET /api/issues/:id/status` (allowed transitions for the issue)
 - `POST /api/issues/:id/comment`

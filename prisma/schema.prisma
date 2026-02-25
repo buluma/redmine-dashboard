@@ -44,6 +44,8 @@ model Issue {
   priority         String?
   statusId         Int
   statusName       String
+  parentIssueId    Int?
+  parentIssueLabel String?
   assignedToId     Int?
   assignedToName   String?
   updatedOnRemote  DateTime

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -34,6 +35,8 @@ type Issue = {
   subject: string;
   description: string | null;
   projectName: string | null;
+  parentIssueId: number | null;
+  parentIssueLabel: string | null;
   tracker: string | null;
   priority: string | null;
   statusId: number;
@@ -61,11 +64,6 @@ type BootstrapInfo = {
   canBootstrap: boolean;
   activeCredentials: number;
 } | null;
-
-type TrendPoint = {
-  label: string;
-  value: number;
-};
 
 const POLL_INTERVAL_MS = 60_000;
 
@@ -139,65 +137,6 @@ function syncTone(status: string | undefined): "idle" | "running" | "success" | 
   return "idle";
 }
 
-function dateKey(dateLike: string | Date): string {
-  const date = dateLike instanceof Date ? dateLike : new Date(dateLike);
-  return date.toISOString().slice(0, 10);
-}
-
-function formatDayLabel(key: string): string {
-  const d = new Date(`${key}T00:00:00`);
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-function buildDayKeys(days: number): string[] {
-  const out: string[] = [];
-  const now = new Date();
-  for (let i = days - 1; i >= 0; i -= 1) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
-    out.push(dateKey(d));
-  }
-  return out;
-}
-
-function Sparkline({
-  points,
-  stroke,
-  fill,
-}: {
-  points: TrendPoint[];
-  stroke: string;
-  fill: string;
-}) {
-  const width = 320;
-  const height = 86;
-  const pad = 10;
-  const max = Math.max(...points.map((p) => p.value), 1);
-
-  const coords = points.map((p, i) => {
-    const x = pad + (i * (width - pad * 2)) / Math.max(1, points.length - 1);
-    const y = height - pad - (p.value / max) * (height - pad * 2);
-    return { x, y };
-  });
-
-  const line = coords.map((c) => `${c.x},${c.y}`).join(" ");
-  const area = [
-    `${pad},${height - pad}`,
-    ...coords.map((c) => `${c.x},${c.y}`),
-    `${width - pad},${height - pad}`,
-  ].join(" ");
-
-  return (
-    <svg className="sparkline" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="trend line">
-      <polyline points={area} fill={fill} stroke="none" />
-      <polyline points={line} fill="none" stroke={stroke} strokeWidth="2.5" strokeLinecap="round" />
-      {coords.map((c, i) => (
-        <circle key={`${points[i].label}-${i}`} cx={c.x} cy={c.y} r="2.8" fill={stroke} />
-      ))}
-    </svg>
-  );
-}
-
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -213,7 +152,6 @@ export default function Home() {
   const [allowedStatusIdsByIssue, setAllowedStatusIdsByIssue] = useState<Record<number, number[]>>({});
   const [bootstrapInfo, setBootstrapInfo] = useState<BootstrapInfo>(null);
   const [bootstrapBusy, setBootstrapBusy] = useState(false);
-  const [trendWindowDays, setTrendWindowDays] = useState(14);
 
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -236,7 +174,7 @@ export default function Home() {
 
   const summary = useMemo(() => {
     const byStatus = new Map<string, number>();
-    const byProject = new Map<string, number>();
+    const byParent = new Map<string, number>();
     const byPriority = new Map<string, number>();
 
     let open = 0;
@@ -249,7 +187,10 @@ export default function Home() {
 
     for (const issue of issues) {
       byStatus.set(issue.statusName, (byStatus.get(issue.statusName) ?? 0) + 1);
-      byProject.set(issue.projectName ?? "Unassigned Project", (byProject.get(issue.projectName ?? "Unassigned Project") ?? 0) + 1);
+      const parentKey = issue.parentIssueId
+        ? `${issue.parentIssueLabel ?? `#${issue.parentIssueId}`} (#${issue.parentIssueId})`
+        : "No Parent";
+      byParent.set(parentKey, (byParent.get(parentKey) ?? 0) + 1);
       byPriority.set(issue.priority ?? "Unspecified", (byPriority.get(issue.priority ?? "Unspecified") ?? 0) + 1);
 
       if (isOpenStatus(issue.statusName)) open += 1;
@@ -268,7 +209,7 @@ export default function Home() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 6);
 
-    const topProjects = Array.from(byProject.entries())
+    const topParents = Array.from(byParent.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
 
@@ -292,97 +233,10 @@ export default function Home() {
       completion,
       avgDoneRatio,
       topStatuses,
-      topProjects,
+      topParents,
       priorityMix,
     };
   }, [issues, total]);
-
-  const reports = useMemo(() => {
-    const keys = buildDayKeys(trendWindowDays);
-    const updatesByDay = new Map<string, number>();
-    const commentsByDay = new Map<string, number>();
-    const hoursByDay = new Map<string, number>();
-
-    for (const key of keys) {
-      updatesByDay.set(key, 0);
-      commentsByDay.set(key, 0);
-      hoursByDay.set(key, 0);
-    }
-
-    for (const issue of issues) {
-      const key = dateKey(issue.updatedOnRemote);
-      if (updatesByDay.has(key)) {
-        updatesByDay.set(key, (updatesByDay.get(key) ?? 0) + 1);
-      }
-
-      for (const journal of issue.journals) {
-        const journalKey = dateKey(journal.createdOnRemote);
-        if (commentsByDay.has(journalKey)) {
-          commentsByDay.set(journalKey, (commentsByDay.get(journalKey) ?? 0) + 1);
-        }
-      }
-
-      for (const entry of issue.timeEntries) {
-        const entryKey = dateKey(entry.spentOn);
-        if (hoursByDay.has(entryKey)) {
-          hoursByDay.set(entryKey, Number((hoursByDay.get(entryKey) ?? 0) + entry.hours));
-        }
-      }
-    }
-
-    const issueUpdateTrend = keys.map((key) => ({
-      label: formatDayLabel(key),
-      value: updatesByDay.get(key) ?? 0,
-    }));
-    const commentTrend = keys.map((key) => ({
-      label: formatDayLabel(key),
-      value: commentsByDay.get(key) ?? 0,
-    }));
-    const hourTrend = keys.map((key) => ({
-      label: formatDayLabel(key),
-      value: Number((hoursByDay.get(key) ?? 0).toFixed(1)),
-    }));
-
-    const updatesTotal = issueUpdateTrend.reduce((sum, p) => sum + p.value, 0);
-    const commentsTotal = commentTrend.reduce((sum, p) => sum + p.value, 0);
-    const hoursTotal = Number(hourTrend.reduce((sum, p) => sum + p.value, 0).toFixed(1));
-
-    const peakUpdates = issueUpdateTrend.reduce((acc, point) => (point.value > acc.value ? point : acc), {
-      label: "-",
-      value: 0,
-    });
-    const peakComments = commentTrend.reduce((acc, point) => (point.value > acc.value ? point : acc), {
-      label: "-",
-      value: 0,
-    });
-    const peakHours = hourTrend.reduce((acc, point) => (point.value > acc.value ? point : acc), {
-      label: "-",
-      value: 0,
-    });
-
-    const overdueByProject = new Map<string, number>();
-    for (const issue of issues) {
-      if (issueUrgency(issue) !== "overdue") continue;
-      const project = issue.projectName ?? "Unassigned Project";
-      overdueByProject.set(project, (overdueByProject.get(project) ?? 0) + 1);
-    }
-
-    return {
-      issueUpdateTrend,
-      commentTrend,
-      hourTrend,
-      updatesTotal,
-      commentsTotal,
-      hoursTotal,
-      avgHoursPerDay: Number((hoursTotal / Math.max(1, trendWindowDays)).toFixed(1)),
-      peakUpdates,
-      peakComments,
-      peakHours,
-      overdueProjects: Array.from(overdueByProject.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5),
-    };
-  }, [issues, trendWindowDays]);
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -766,6 +620,9 @@ export default function Home() {
           <button onClick={handleManualPull} disabled={manualRefreshBusy}>
             {manualRefreshBusy ? "Refreshing..." : "Force Refresh"}
           </button>
+          <Link href="/reports" className="primary-link nav-link">
+            Open Reports
+          </Link>
           <button className="secondary-button" type="button" onClick={resetFilters}>
             Reset Filters
           </button>
@@ -874,10 +731,10 @@ export default function Home() {
         </article>
 
         <article className="card">
-          <h2>Project Load</h2>
+          <h2>Parent Issue Load</h2>
           <div className="bars-list">
-            {summary.topProjects.length === 0 && <span className="muted">No project data yet.</span>}
-            {summary.topProjects.map(([name, count]) => (
+            {summary.topParents.length === 0 && <span className="muted">No parent issue data yet.</span>}
+            {summary.topParents.map(([name, count]) => (
               <div key={name} className="bar-row">
                 <div className="bar-label-row">
                   <span>{name}</span>
@@ -908,81 +765,6 @@ export default function Home() {
             ))}
           </div>
         </article>
-      </section>
-
-      <section className="card reports-shell">
-        <div className="reports-head">
-          <div>
-            <h2>Reports & Trends</h2>
-            <p className="muted">Operational activity over the selected time window.</p>
-          </div>
-          <div className="window-toggle">
-            {[7, 14, 30].map((days) => (
-              <button
-                key={days}
-                type="button"
-                className={`window-btn ${trendWindowDays === days ? "active" : ""}`}
-                onClick={() => setTrendWindowDays(days)}
-              >
-                {days}d
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="reports-grid">
-          <article className="report-card">
-            <p className="report-label">Issue Updates</p>
-            <p className="report-value">{reports.updatesTotal}</p>
-            <p className="report-foot">
-              Peak {reports.peakUpdates.value} on {reports.peakUpdates.label}
-            </p>
-            <Sparkline
-              points={reports.issueUpdateTrend}
-              stroke="#1f7a87"
-              fill="rgba(31, 122, 135, 0.17)"
-            />
-          </article>
-
-          <article className="report-card">
-            <p className="report-label">Comments Added</p>
-            <p className="report-value">{reports.commentsTotal}</p>
-            <p className="report-foot">
-              Peak {reports.peakComments.value} on {reports.peakComments.label}
-            </p>
-            <Sparkline
-              points={reports.commentTrend}
-              stroke="#8a5b24"
-              fill="rgba(180, 117, 52, 0.19)"
-            />
-          </article>
-
-          <article className="report-card">
-            <p className="report-label">Time Logged (h)</p>
-            <p className="report-value">{reports.hoursTotal}</p>
-            <p className="report-foot">
-              Avg {reports.avgHoursPerDay}h/day • Peak {reports.peakHours.value}h on {reports.peakHours.label}
-            </p>
-            <Sparkline
-              points={reports.hourTrend}
-              stroke="#2e8558"
-              fill="rgba(46, 133, 88, 0.17)"
-            />
-          </article>
-        </div>
-
-        <div className="reports-list">
-          <h3>Overdue By Project</h3>
-          {reports.overdueProjects.length === 0 && (
-            <p className="muted">No overdue issues in the selected set.</p>
-          )}
-          {reports.overdueProjects.map(([project, count]) => (
-            <div key={project} className="report-list-row">
-              <span>{project}</span>
-              <strong>{count}</strong>
-            </div>
-          ))}
-        </div>
       </section>
 
       {error && <p className="error-banner">{error}</p>}

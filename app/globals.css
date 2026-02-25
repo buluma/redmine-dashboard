@@ -161,13 +161,15 @@ h3 {
 }
 
 button,
+.primary-link,
 select,
 input,
 textarea {
   font: inherit;
 }
 
-button {
+button,
+.primary-link {
   border: none;
   border-radius: 12px;
   padding: 0.62rem 0.95rem;
@@ -176,9 +178,14 @@ button {
   background: linear-gradient(145deg, var(--accent), var(--accent-strong));
   cursor: pointer;
   transition: transform 0.15s ease, filter 0.15s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-button:hover {
+button:hover,
+.primary-link:hover {
   transform: translateY(-1px);
   filter: brightness(1.04);
 }
@@ -193,6 +200,10 @@ button:disabled {
   color: var(--ink);
   background: #f0ece2;
   border: 1px solid var(--line);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .secondary-button:hover {
@@ -365,6 +376,16 @@ label {
   height: 92px;
 }
 
+.spark-point {
+  cursor: pointer;
+  transition: r 0.14s ease;
+}
+
+.spark-point.active {
+  stroke: #fff;
+  stroke-width: 1.6px;
+}
+
 .reports-list {
   border-top: 1px dashed var(--line);
   padding-top: 0.75rem;
@@ -381,6 +402,31 @@ label {
   border-radius: 10px;
   background: #fffcf6;
   padding: 0.42rem 0.55rem;
+}
+
+.report-btn {
+  width: 100%;
+  color: var(--ink);
+  background: #fffcf6;
+  border: 1px solid var(--line);
+  text-align: left;
+}
+
+.drilldown-card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.drilldown-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.drill-table-wrap {
+  overflow: auto;
 }
 
 .chip-row {
