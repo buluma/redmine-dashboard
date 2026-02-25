@@ -31,6 +31,10 @@ function trimBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/$/, "");
 }
 
+function redmineDate(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
+
 export class RedmineClient {
   constructor(
     private readonly baseUrl: string,
@@ -138,12 +142,23 @@ export class RedmineClient {
 
     while (true) {
       const filterUpdated = updatedOnOrAfter
-        ? `&updated_on=%3E%3D${encodeURIComponent(updatedOnOrAfter.toISOString())}`
+        ? `&updated_on=%3E%3D${encodeURIComponent(redmineDate(updatedOnOrAfter))}`
         : "";
 
       const path = `/issues.json?assigned_to_id=me&status_id=*&sort=updated_on:desc&limit=${limit}&offset=${offset}${filterUpdated}`;
 
-      const data = await this.request<RedmineIssueListResponse>(path);
+      let data: RedmineIssueListResponse;
+      try {
+        data = await this.request<RedmineIssueListResponse>(path);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "";
+        const invalidUpdatedFilter = message.includes("Redmine request failed (422)") && /updated is invalid/i.test(message);
+        if (updatedOnOrAfter && invalidUpdatedFilter) {
+          // Some Redmine instances reject strict updated_on syntax. Fall back to full assigned-issues fetch.
+          return this.listAssignedIssues();
+        }
+        throw error;
+      }
       out.push(...data.issues);
       offset += data.issues.length;
 

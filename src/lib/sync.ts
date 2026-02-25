@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/src/lib/db";
+import { env } from "@/src/lib/env";
 import { RedmineClient } from "@/src/lib/redmine";
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -248,6 +249,7 @@ export async function runSyncJob(
   userId: string,
   jobType: "incremental" | "full_manual",
 ): Promise<{ jobId: string }> {
+  const now = new Date();
   const existing = await prisma.syncJob.findFirst({
     where: {
       userId,
@@ -257,7 +259,28 @@ export async function runSyncJob(
   });
 
   if (existing) {
-    return { jobId: existing.id };
+    const ageMs = now.getTime() - (existing.startedAt ?? existing.createdAt).getTime();
+    if (ageMs < env.syncJobStaleMs) {
+      return { jobId: existing.id };
+    }
+
+    const staleMessage = `Sync job was stale after ${Math.round(ageMs / 1000)}s and was reset automatically`;
+    await prisma.syncJob.update({
+      where: { id: existing.id },
+      data: {
+        status: "failed",
+        endedAt: now,
+        error: staleMessage,
+      },
+    });
+
+    await markSyncState(userId, {
+      status: "failed",
+      runningJobId: null,
+      error: staleMessage,
+      full: false,
+      incremental: false,
+    });
   }
 
   const job = await prisma.syncJob.create({

@@ -154,6 +154,15 @@ h3 {
   border-color: rgba(159, 47, 47, 0.3);
 }
 
+.sync-error-inline {
+  border: 1px solid rgba(159, 47, 47, 0.25);
+  border-radius: 11px;
+  background: #fff4f4;
+  color: #892525;
+  padding: 0.52rem 0.66rem;
+  font-size: 0.86rem;
+}
+
 .hero-actions {
   display: flex;
   gap: 0.55rem;

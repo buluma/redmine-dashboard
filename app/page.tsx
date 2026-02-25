@@ -154,6 +154,45 @@ function syncTone(status: string | undefined): "idle" | "running" | "success" | 
   return "idle";
 }
 
+function summarizeSyncError(message: string | null | undefined): string {
+  if (!message) {
+    return "Sync failed with no detail from the server.";
+  }
+
+  if (message.includes("Unknown argument `parentIssueId`")) {
+    return "Local Prisma client is outdated. Run `npm run prisma:generate` and restart the app.";
+  }
+
+  const firstLine = message
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => line.length > 0);
+
+  if (!firstLine) {
+    return "Sync failed with no detail from the server.";
+  }
+
+  const redmine = firstLine.match(/Redmine request failed \(\d{3}\):\s*(.+)$/i);
+  if (redmine?.[1]) {
+    return redmine[1].slice(0, 220);
+  }
+
+  return firstLine.slice(0, 220);
+}
+
+function latestSyncTimestamp(state: SyncState): string | null {
+  if (!state) {
+    return null;
+  }
+  const candidates = [state.lastIncrementalSyncAt, state.lastFullSyncAt].filter(
+    (value): value is string => Boolean(value),
+  );
+  if (candidates.length === 0) {
+    return null;
+  }
+  return candidates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+}
+
 function dayDiffFromNow(dateLike: string): number {
   const target = new Date(dateLike).getTime();
   if (Number.isNaN(target)) return 0;
@@ -457,7 +496,11 @@ export default function Home() {
     const res = await fetch("/api/sync/status", { cache: "no-store" });
     if (res.ok) {
       const data = await res.json();
-      setSyncState(data.state ?? null);
+      const state = (data.state ?? null) as SyncState;
+      if (state && !state.lastError && data.latestJob?.error) {
+        state.lastError = String(data.latestJob.error);
+      }
+      setSyncState(state);
     }
   }
 
@@ -980,6 +1023,7 @@ export default function Home() {
 
   const syncStateTone = syncTone(syncState?.lastSyncStatus);
   const timerRunningOnSelected = selectedIssue && timerIssueId === selectedIssue.redmineIssueId && Boolean(timerStartedAtMs);
+  const lastSyncAt = latestSyncTimestamp(syncState);
 
   return (
     <main className="dashboard">
@@ -994,11 +1038,16 @@ export default function Home() {
           </div>
           <div className={`sync-pill sync-${syncStateTone}`}>
             Sync: {syncState?.lastSyncStatus ?? "idle"}
-            {syncState?.lastIncrementalSyncAt
-              ? ` • ${new Date(syncState.lastIncrementalSyncAt).toLocaleString()}`
+            {lastSyncAt
+              ? ` • ${new Date(lastSyncAt).toLocaleString()}`
               : " • Waiting for first sync"}
           </div>
         </div>
+        {syncState?.lastSyncStatus === "failed" && (
+          <p className="sync-error-inline">
+            Last sync error: {summarizeSyncError(syncState.lastError)}
+          </p>
+        )}
 
         <div className="hero-actions">
           <button onClick={handleManualPull} disabled={manualRefreshBusy}>
