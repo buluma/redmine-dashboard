@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prisma:generate": "prisma generate",
-    "db:init": "sqlite3 prisma/dev.db < prisma/init.sql"
+    "db:init": "sqlite3 dev.db < prisma/init.sql"
   },
   "dependencies": {
     "@prisma/client": "^6.16.0",

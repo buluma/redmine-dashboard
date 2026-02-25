@@ -1,39 +1,60 @@
 # NRCC - Nasc Redmine Command Center
 
-A Next.js + SQLite dashboard for Redmine issues assigned to the current user.
+NRCC is a Next.js + Prisma dashboard for Redmine issues assigned to the signed-in user.
+It provides fast local reads from a synced cache, with all final state owned by Redmine.
 
-## Features
+See [CHANGELOG.md](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/CHANGELOG.md) for release history.
 
-- Connect to Redmine with per-user API key.
-- Cached issue list for assigned issues with filters, sorting, and search.
-- Update issue status from the table.
-- Post issue comments from detail drawer.
-- Add time logs (`hours + activity + comment + spent_on`).
-- Automated polling every 60 seconds.
-- Manual full refresh (`Force Refresh`) to sync all assigned issues immediately.
+## What It Does
+
+- Connect a user to Redmine using `baseUrl + apiKey`.
+- Show assigned issues with filtering, sorting, search, and saved views.
+- Update issue status (single issue and bulk selected issues).
+- Add comments and time logs from issue detail popup.
+- Render issue descriptions/comments/time-log notes as Markdown.
+- Run automated sync polling every 60 seconds.
+- Run manual full sync with `Force Refresh`.
+- Show sync health/status and the latest sync error directly in the header.
+- Provide reports page with trends, heatmap, drilldowns, and CSV export.
 
 ## Stack
 
 - Next.js App Router
-- Prisma Client (SQLite)
+- Prisma Client + SQLite (MVP)
 - Zod validation
-- In-process poller with leader lock table
+- In-process sync poller + leader lock
 
-## API Endpoints
+## API Routes
 
-- `POST /api/redmine/connect`
-- `GET /api/redmine/bootstrap` (checks if first-run `.env` bootstrap is available)
-- `POST /api/redmine/bootstrap` (connects from `REDMINE_BASE_URL` + `REDMINE_API_KEY` on first run)
+### Session and Connection
+
 - `GET /api/session/me`
+  - Returns the current session user or `null`.
 - `DELETE /api/session/me`
+  - Clears session cookie.
+- `POST /api/redmine/connect`
+  - Connect Redmine account, create session, trigger full sync.
+- `GET /api/redmine/bootstrap`
+  - Checks whether first-run `.env` bootstrap can be used.
+- `POST /api/redmine/bootstrap`
+  - Connects from `REDMINE_BASE_URL` + `REDMINE_API_KEY` on first run.
+
+### Issue Data and Mutations
+
 - `GET /api/issues`
-- `GET /api/reports` (reporting dataset for trends/drilldowns)
-- `POST /api/issues/:id/status`
-- `GET /api/issues/:id/status` (allowed transitions for the issue)
-- `POST /api/issues/:id/comment`
-- `POST /api/issues/:id/timelog`
+  - Query params: `status`, `priority`, `search`, `sort`, `page`, `pageSize`
+- `POST /api/issues/[id]/status`
+- `GET /api/issues/[id]/status`
+  - Allowed workflow transitions for issue.
+- `POST /api/issues/[id]/comment`
+- `POST /api/issues/[id]/timelog`
+- `POST /api/issues/bulk-status`
+
+### Sync and Reporting
+
 - `POST /api/sync/manual-pull`
 - `GET /api/sync/status`
+- `GET /api/reports`
 - `GET /api/internal/activities`
 
 ## Local Setup
@@ -44,31 +65,30 @@ A Next.js + SQLite dashboard for Redmine issues assigned to the current user.
 npm install
 ```
 
-2. Copy env file and update secrets:
+2. Copy env file and set values:
 
 ```bash
 cp .env.example .env
 ```
 
-Optional first-run shortcut:
-- Set `REDMINE_BASE_URL` and `REDMINE_API_KEY` in `.env`.
-- On the connect screen, use **Use .env Configuration**.
+Required:
 
-3. Generate Prisma client:
+- `DATABASE_URL` (default: `file:./dev.db`)
+- `APP_ENCRYPTION_KEY`
+- `SESSION_SECRET`
 
-```bash
-npm run prisma:generate
-```
+Optional Redmine bootstrap:
 
-4. Initialize SQLite schema:
+- `REDMINE_BASE_URL`
+- `REDMINE_API_KEY`
+
+3. Initialize local SQLite schema:
 
 ```bash
 npm run db:init
 ```
 
-This initializes `prisma/dev.db` (the SQLite file used by Prisma for this project).
-
-5. Start development server:
+4. Start app:
 
 ```bash
 npm run dev
@@ -76,27 +96,56 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Docker
+## Environment Variables
+
+- `DATABASE_URL`: SQLite file path (`file:./dev.db` by default).
+- `APP_ENCRYPTION_KEY`: encryption key for stored Redmine API keys.
+- `SESSION_SECRET`: HMAC secret for session cookie signing.
+- `POLL_INTERVAL_MS`: poll cadence in ms (default `60000`).
+- `LEADER_LOCK_TTL_MS`: leader lock TTL in ms (default `90000`).
+- `SYNC_JOB_STALE_MS`: stale running/pending job timeout in ms (default `600000`).
+- `REDMINE_BASE_URL`: optional first-run bootstrap.
+- `REDMINE_API_KEY`: optional first-run bootstrap.
+
+## Scripts
 
 ```bash
-docker compose up --build
-```
-
-The app is served at [http://localhost:3000](http://localhost:3000).
-
-## Tests and Checks
-
-```bash
+npm run dev
+npm run build
+npm run start
 npm run lint
 npm run test
-npm run build
+npm run prisma:generate
+npm run db:init
 ```
+
+## Troubleshooting
+
+### Sync stuck at `running`
+
+- Confirm you are on latest code and restart server.
+- Check `GET /api/sync/status`.
+- Stale jobs are auto-reset after `SYNC_JOB_STALE_MS`.
+
+### `Updated is invalid` from Redmine
+
+- Some Redmine setups reject strict incremental filter forms.
+- Client falls back to a full assigned-issues fetch when this occurs.
+
+### `Unknown argument parentIssueId` (Prisma)
+
+- Prisma client is out of date for current schema.
+
+```bash
+npm run prisma:generate
+```
+
+Then restart the app.
 
 ## Notes
 
-- Redmine API key is encrypted at rest with `APP_ENCRYPTION_KEY`.
-- Session is an HMAC-signed HTTP-only cookie.
-- Sync jobs are stored in `SyncJob` and summarized in `SyncState`.
-- Polling cadence is 60 seconds (`POLL_INTERVAL_MS=60000`).
-- Mutation endpoints include basic per-user rate limits.
-- This MVP uses local SQLite and in-process polling; production migration can move to Postgres + external scheduler.
+- Redmine API keys are encrypted at rest.
+- Decrypted API keys are never sent to the client.
+- Sync source of truth is Redmine; DB is an operational cache.
+- Rate limits are applied to mutation endpoints.
+- Current MVP uses SQLite + in-process poller; production path is Postgres + external scheduler.
