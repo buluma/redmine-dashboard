@@ -13,9 +13,9 @@
     "prisma:migrate": "prisma migrate dev --name init"
   },
   "dependencies": {
-    "@prisma/client": "^7.4.1",
+    "@prisma/client": "^6.16.0",
     "next": "16.1.6",
-    "prisma": "^7.4.1",
+    "prisma": "^6.16.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "zod": "^4.3.6"

@@ -7,25 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum SyncJobType {
-  incremental
-  full_manual
-}
-
-enum SyncJobStatus {
-  pending
-  running
-  success
-  failed
-}
-
-enum SyncStateStatus {
-  idle
-  running
-  success
-  failed
-}
-
 model User {
   id                String                  @id @default(cuid())
   emailOrUsername   String                  @unique
@@ -113,7 +94,7 @@ model SyncState {
   user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   lastIncrementalSyncAt DateTime?
   lastFullSyncAt        DateTime?
-  lastSyncStatus        SyncStateStatus @default(idle)
+  lastSyncStatus        String          @default("idle")
   lastError             String?
   runningJobId          String?
   updatedAt             DateTime        @updatedAt
@@ -123,8 +104,8 @@ model SyncJob {
   id         String       @id @default(cuid())
   userId     String
   user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobType    SyncJobType
-  status     SyncJobStatus @default(pending)
+  jobType    String
+  status     String        @default("pending")
   startedAt  DateTime?
   endedAt    DateTime?
   error      String?
