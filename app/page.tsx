@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type User = {
   id: string;
@@ -53,6 +55,29 @@ type SyncState = {
 
 const POLL_INTERVAL_MS = 60_000;
 
+function MarkdownBlock({ content }: { content: string }) {
+  return (
+    <div className="markdown">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    </div>
+  );
+}
+
+function isOpenStatus(statusName: string): boolean {
+  const s = statusName.toLowerCase();
+  return !s.includes("closed") && !s.includes("resolved") && !s.includes("done");
+}
+
+function isInProgressStatus(statusName: string): boolean {
+  const s = statusName.toLowerCase();
+  return s.includes("progress") || s.includes("in dev") || s.includes("ongoing");
+}
+
+function isDoneStatus(statusName: string): boolean {
+  const s = statusName.toLowerCase();
+  return s.includes("resolved") || s.includes("closed") || s.includes("done");
+}
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -87,6 +112,24 @@ export default function Home() {
     () => issues.find((i) => i.redmineIssueId === selectedIssueId) ?? null,
     [issues, selectedIssueId],
   );
+  const summary = useMemo(() => {
+    const byStatus = new Map<string, number>();
+    for (const issue of issues) {
+      byStatus.set(issue.statusName, (byStatus.get(issue.statusName) ?? 0) + 1);
+    }
+
+    const topStatuses = Array.from(byStatus.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4);
+
+    return {
+      total: issues.length,
+      open: issues.filter((i) => isOpenStatus(i.statusName)).length,
+      inProgress: issues.filter((i) => isInProgressStatus(i.statusName)).length,
+      done: issues.filter((i) => isDoneStatus(i.statusName)).length,
+      topStatuses,
+    };
+  }, [issues]);
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -352,6 +395,14 @@ export default function Home() {
     }
   }
 
+  function resetFilters() {
+    setStatusFilter("");
+    setProjectFilter("");
+    setPriorityFilter("");
+    setSearch("");
+    setSort("updated_desc");
+  }
+
   if (!user) {
     return (
       <main className="container auth-shell">
@@ -447,7 +498,39 @@ export default function Home() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <button type="button" onClick={resetFilters}>
+          Reset Filters
+        </button>
       </section>
+
+      <section className="summary-grid">
+        <article className="card summary-card">
+          <p className="muted">Total Issues</p>
+          <h2>{summary.total}</h2>
+        </article>
+        <article className="card summary-card">
+          <p className="muted">Open</p>
+          <h2>{summary.open}</h2>
+        </article>
+        <article className="card summary-card">
+          <p className="muted">In Progress</p>
+          <h2>{summary.inProgress}</h2>
+        </article>
+        <article className="card summary-card">
+          <p className="muted">Done/Closed</p>
+          <h2>{summary.done}</h2>
+        </article>
+      </section>
+
+      {summary.topStatuses.length > 0 && (
+        <section className="card status-chips">
+          {summary.topStatuses.map(([name, count]) => (
+            <span key={name} className="chip">
+              {name}: {count}
+            </span>
+          ))}
+        </section>
+      )}
 
       {error && <p className="error">{error}</p>}
 
@@ -521,7 +604,13 @@ export default function Home() {
                 {selectedIssue.projectName ?? "No Project"} | {selectedIssue.statusName} |{" "}
                 {selectedIssue.priority ?? "No Priority"}
               </p>
-              <p className="description">{selectedIssue.description ?? "No description."}</p>
+              {selectedIssue.description ? (
+                <div className="description">
+                  <MarkdownBlock content={selectedIssue.description} />
+                </div>
+              ) : (
+                <p className="description">No description.</p>
+              )}
 
               <div className="section">
                 <h3>Comments</h3>
@@ -541,7 +630,7 @@ export default function Home() {
                       <p>
                         <strong>{j.author ?? "Unknown"}</strong> • {new Date(j.createdOnRemote).toLocaleString()}
                       </p>
-                      <p>{j.notes ?? "(empty note)"}</p>
+                      {j.notes ? <MarkdownBlock content={j.notes} /> : <p>(empty note)</p>}
                     </div>
                   ))}
                 </div>
@@ -593,7 +682,7 @@ export default function Home() {
                       <p>
                         <strong>{t.hours}h</strong> • {new Date(t.spentOn).toLocaleDateString()}
                       </p>
-                      <p>{t.comments ?? "(no comment)"}</p>
+                      {t.comments ? <MarkdownBlock content={t.comments} /> : <p>(no comment)</p>}
                     </div>
                   ))}
                 </div>

@@ -122,6 +122,32 @@ label {
   gap: 0.7rem;
 }
 
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 0.7rem;
+}
+
+.summary-card h2 {
+  margin: 0.15rem 0 0;
+}
+
+.status-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  background: #f8fbf8;
+  font-size: 0.9rem;
+}
+
 .layout-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -189,6 +215,66 @@ label {
   background: #fcfefd;
 }
 
+.markdown {
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
+.markdown p {
+  margin: 0.35rem 0;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  margin: 0.5rem 0 0.35rem;
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 0.35rem 0 0.35rem 1.2rem;
+}
+
+.markdown code {
+  background: #edf3ea;
+  border-radius: 6px;
+  padding: 0.08rem 0.25rem;
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.markdown pre {
+  background: #edf3ea;
+  border-radius: 10px;
+  padding: 0.6rem;
+  overflow: auto;
+}
+
+.markdown pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.markdown blockquote {
+  border-left: 3px solid #b9c9b1;
+  margin: 0.5rem 0;
+  padding: 0.25rem 0.6rem;
+  color: #425042;
+}
+
+.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+}
+
+.markdown th,
+.markdown td {
+  border: 1px solid var(--line);
+  padding: 0.35rem 0.45rem;
+  text-align: left;
+}
+
 .auth-shell {
   min-height: 100vh;
   place-content: center;
@@ -211,6 +297,10 @@ label {
   .filters {
     grid-template-columns: repeat(2, minmax(150px, 1fr));
   }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
 }
 
 @media (max-width: 680px) {
@@ -220,6 +310,10 @@ label {
   }
 
   .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-grid {
     grid-template-columns: 1fr;
   }
 }
