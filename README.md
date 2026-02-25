@@ -1,4 +1,4 @@
-# Redmine Assigned Issues Dashboard
+# NRCC - Nasc Redmine Command Center
 
 A Next.js + SQLite dashboard for Redmine issues assigned to the current user.
 

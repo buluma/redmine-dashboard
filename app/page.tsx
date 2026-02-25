@@ -749,7 +749,7 @@ export default function Home() {
         <div className="hero-top">
           <div>
             <p className="kicker">Redmine Control Room</p>
-            <h1>Assigned Issue Command Center</h1>
+            <h1>NRCC - Nasc Redmine Command Center</h1>
             <p className="muted">
               Signed in as <strong>{user.displayName}</strong> ({user.username})
             </p>

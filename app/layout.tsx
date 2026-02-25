@@ -14,7 +14,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Redmine Assigned Issues Dashboard",
+  title: "NRCC - Nasc Redmine Command Center",
   description: "Dashboard for assigned Redmine issues with status, comments, timelog, and sync.",
 };
 
