@@ -63,19 +63,66 @@ function MarkdownBlock({ content }: { content: string }) {
   );
 }
 
+function normalizeStatus(statusName: string): string {
+  return statusName.toLowerCase();
+}
+
 function isOpenStatus(statusName: string): boolean {
-  const s = statusName.toLowerCase();
+  const s = normalizeStatus(statusName);
   return !s.includes("closed") && !s.includes("resolved") && !s.includes("done");
 }
 
 function isInProgressStatus(statusName: string): boolean {
-  const s = statusName.toLowerCase();
+  const s = normalizeStatus(statusName);
   return s.includes("progress") || s.includes("in dev") || s.includes("ongoing");
 }
 
 function isDoneStatus(statusName: string): boolean {
-  const s = statusName.toLowerCase();
+  const s = normalizeStatus(statusName);
   return s.includes("resolved") || s.includes("closed") || s.includes("done");
+}
+
+function isBlockedStatus(statusName: string): boolean {
+  const s = normalizeStatus(statusName);
+  return s.includes("blocked") || s.includes("hold") || s.includes("waiting");
+}
+
+function dueInDays(dueDate: string | null): number | null {
+  if (!dueDate) {
+    return null;
+  }
+  const due = new Date(dueDate);
+  if (Number.isNaN(due.getTime())) {
+    return null;
+  }
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  return Math.round((target.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+}
+
+function issueUrgency(issue: Issue): "overdue" | "soon" | "done" | "normal" {
+  if (isDoneStatus(issue.statusName)) {
+    return "done";
+  }
+  const days = dueInDays(issue.dueDate);
+  if (days === null) {
+    return "normal";
+  }
+  if (days < 0) {
+    return "overdue";
+  }
+  if (days <= 3) {
+    return "soon";
+  }
+  return "normal";
+}
+
+function syncTone(status: string | undefined): "idle" | "running" | "success" | "failed" {
+  if (status === "running") return "running";
+  if (status === "success") return "success";
+  if (status === "failed") return "failed";
+  return "idle";
 }
 
 export default function Home() {
@@ -112,24 +159,69 @@ export default function Home() {
     () => issues.find((i) => i.redmineIssueId === selectedIssueId) ?? null,
     [issues, selectedIssueId],
   );
+
   const summary = useMemo(() => {
     const byStatus = new Map<string, number>();
+    const byProject = new Map<string, number>();
+    const byPriority = new Map<string, number>();
+
+    let open = 0;
+    let inProgress = 0;
+    let done = 0;
+    let blocked = 0;
+    let overdue = 0;
+    let dueSoon = 0;
+    let totalProgress = 0;
+
     for (const issue of issues) {
       byStatus.set(issue.statusName, (byStatus.get(issue.statusName) ?? 0) + 1);
+      byProject.set(issue.projectName ?? "Unassigned Project", (byProject.get(issue.projectName ?? "Unassigned Project") ?? 0) + 1);
+      byPriority.set(issue.priority ?? "Unspecified", (byPriority.get(issue.priority ?? "Unspecified") ?? 0) + 1);
+
+      if (isOpenStatus(issue.statusName)) open += 1;
+      if (isInProgressStatus(issue.statusName)) inProgress += 1;
+      if (isDoneStatus(issue.statusName)) done += 1;
+      if (isBlockedStatus(issue.statusName)) blocked += 1;
+
+      const urgency = issueUrgency(issue);
+      if (urgency === "overdue") overdue += 1;
+      if (urgency === "soon") dueSoon += 1;
+
+      totalProgress += issue.doneRatio ?? 0;
     }
 
     const topStatuses = Array.from(byStatus.entries())
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 4);
+      .slice(0, 6);
+
+    const topProjects = Array.from(byProject.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    const priorityMix = Array.from(byPriority.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    const count = issues.length || 1;
+    const completion = Math.round((done / count) * 100);
+    const avgDoneRatio = Math.round(totalProgress / count);
 
     return {
-      total: issues.length,
-      open: issues.filter((i) => isOpenStatus(i.statusName)).length,
-      inProgress: issues.filter((i) => isInProgressStatus(i.statusName)).length,
-      done: issues.filter((i) => isDoneStatus(i.statusName)).length,
+      totalVisible: issues.length,
+      total,
+      open,
+      inProgress,
+      done,
+      blocked,
+      overdue,
+      dueSoon,
+      completion,
+      avgDoneRatio,
       topStatuses,
+      topProjects,
+      priorityMix,
     };
-  }, [issues]);
+  }, [issues, total]);
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -405,140 +497,235 @@ export default function Home() {
 
   if (!user) {
     return (
-      <main className="container auth-shell">
-        <section className="card auth-card">
-          <h1>Connect Redmine</h1>
-          <p className="muted">Connect your Redmine API key to load issues assigned to you.</p>
-          <form className="form" onSubmit={connectRedmine}>
-            <label>
-              Base URL
-              <input
-                value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder="https://redmine.example.com"
-                required
-              />
-            </label>
-            <label>
-              API Key
-              <input
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="your-redmine-api-key"
-                required
-              />
-            </label>
-            <button type="submit" disabled={loading}>
-              {loading ? "Connecting..." : "Connect"}
-            </button>
-          </form>
-          {error && <p className="error">{error}</p>}
+      <main className="dashboard auth-shell">
+        <section className="card auth-panel">
+          <div className="auth-grid">
+            <div>
+              <p className="kicker">Redmine Operations</p>
+              <h1>Mission Control Dashboard</h1>
+              <p className="muted">
+                Connect your Redmine account and run issue triage, status transitions, comments, and
+                time logging from one place.
+              </p>
+            </div>
+            <form className="form" onSubmit={connectRedmine}>
+              <label>
+                Base URL
+                <input
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  placeholder="https://redmine.example.com"
+                  required
+                />
+              </label>
+              <label>
+                API Key
+                <input
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="your-redmine-api-key"
+                  required
+                />
+              </label>
+              <button type="submit" disabled={loading}>
+                {loading ? "Connecting..." : "Launch Dashboard"}
+              </button>
+            </form>
+          </div>
+          {error && <p className="error-banner">{error}</p>}
         </section>
       </main>
     );
   }
 
+  const syncStateTone = syncTone(syncState?.lastSyncStatus);
+
   return (
-    <main className="container">
-      <header className="topbar card">
-        <div>
-          <h1>Assigned Issues Dashboard</h1>
-          <p className="muted">
-            Signed in as <strong>{user.displayName}</strong> ({user.username})
-          </p>
-          <p className="muted">
+    <main className="dashboard">
+      <header className="card hero">
+        <div className="hero-top">
+          <div>
+            <p className="kicker">Redmine Control Room</p>
+            <h1>Assigned Issue Command Center</h1>
+            <p className="muted">
+              Signed in as <strong>{user.displayName}</strong> ({user.username})
+            </p>
+          </div>
+          <div className={`sync-pill sync-${syncStateTone}`}>
             Sync: {syncState?.lastSyncStatus ?? "idle"}
             {syncState?.lastIncrementalSyncAt
-              ? ` | Last update ${new Date(syncState.lastIncrementalSyncAt).toLocaleString()}`
-              : " | No sync yet"}
-          </p>
+              ? ` • ${new Date(syncState.lastIncrementalSyncAt).toLocaleString()}`
+              : " • Waiting for first sync"}
+          </div>
         </div>
-        <button onClick={handleManualPull} disabled={manualRefreshBusy}>
-          {manualRefreshBusy ? "Refreshing..." : "Force Refresh"}
-        </button>
+
+        <div className="hero-actions">
+          <button onClick={handleManualPull} disabled={manualRefreshBusy}>
+            {manualRefreshBusy ? "Refreshing..." : "Force Refresh"}
+          </button>
+          <button className="secondary-button" type="button" onClick={resetFilters}>
+            Reset Filters
+          </button>
+        </div>
+
+        <section className="metrics-grid">
+          <article className="card metric-card">
+            <p className="metric-label">Visible / Total</p>
+            <p className="metric-value">
+              {summary.totalVisible} <span>/ {summary.total}</span>
+            </p>
+            <div className="progress-track">
+              <span
+                className="progress-fill"
+                style={{ width: `${Math.min(100, Math.round((summary.totalVisible / Math.max(1, summary.total)) * 100))}%` }}
+              />
+            </div>
+          </article>
+          <article className="card metric-card">
+            <p className="metric-label">Open</p>
+            <p className="metric-value">{summary.open}</p>
+            <p className="metric-foot">In progress: {summary.inProgress}</p>
+          </article>
+          <article className="card metric-card">
+            <p className="metric-label">Risk Bucket</p>
+            <p className="metric-value">{summary.overdue}</p>
+            <p className="metric-foot">Overdue issues • Due soon: {summary.dueSoon}</p>
+          </article>
+          <article className="card metric-card">
+            <p className="metric-label">Delivery Health</p>
+            <p className="metric-value">{summary.completion}%</p>
+            <p className="metric-foot">Done: {summary.done} • Avg done ratio: {summary.avgDoneRatio}%</p>
+          </article>
+          <article className="card metric-card">
+            <p className="metric-label">Blocked</p>
+            <p className="metric-value">{summary.blocked}</p>
+            <p className="metric-foot">Status contains blocked/hold/waiting</p>
+          </article>
+        </section>
       </header>
 
-      <section className="card filters">
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">All Statuses</option>
-          {statuses.map((s) => (
-            <option key={s.id} value={s.name}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+      <section className="card filters-panel">
+        <div className="filters-grid">
+          <label className="filter-field">
+            Status
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="">All Statuses</option>
+              {statuses.map((s) => (
+                <option key={s.id} value={s.name}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
-          <option value="">All Projects</option>
-          {projects.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
+          <label className="filter-field">
+            Project
+            <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
+              <option value="">All Projects</option>
+              {projects.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
-          <option value="">All Priorities</option>
-          {priorities.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
+          <label className="filter-field">
+            Priority
+            <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
+              <option value="">All Priorities</option>
+              {priorities.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <select value={sort} onChange={(e) => setSort(e.target.value)}>
-          <option value="updated_desc">Updated (Newest)</option>
-          <option value="updated_asc">Updated (Oldest)</option>
-          <option value="priority">Priority</option>
-          <option value="due_date">Due Date</option>
-        </select>
+          <label className="filter-field">
+            Sort
+            <select value={sort} onChange={(e) => setSort(e.target.value)}>
+              <option value="updated_desc">Updated (Newest)</option>
+              <option value="updated_asc">Updated (Oldest)</option>
+              <option value="priority">Priority</option>
+              <option value="due_date">Due Date</option>
+            </select>
+          </label>
 
-        <input
-          placeholder="Search subject/description"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <button type="button" onClick={resetFilters}>
-          Reset Filters
-        </button>
+          <label className="filter-field search-field">
+            Search
+            <input
+              placeholder="Subject, description, assignee"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </label>
+        </div>
       </section>
 
-      <section className="summary-grid">
-        <article className="card summary-card">
-          <p className="muted">Total Issues</p>
-          <h2>{summary.total}</h2>
+      <section className="insights-grid">
+        <article className="card">
+          <h2>Status Mix</h2>
+          <p className="muted">Click a status to filter quickly.</p>
+          <div className="chip-row">
+            {summary.topStatuses.length === 0 && <span className="muted">No status data yet.</span>}
+            {summary.topStatuses.map(([name, count]) => (
+              <button
+                key={name}
+                type="button"
+                className={`status-chip ${statusFilter === name ? "active" : ""}`}
+                onClick={() => setStatusFilter(statusFilter === name ? "" : name)}
+              >
+                {name} <span>{count}</span>
+              </button>
+            ))}
+          </div>
         </article>
-        <article className="card summary-card">
-          <p className="muted">Open</p>
-          <h2>{summary.open}</h2>
+
+        <article className="card">
+          <h2>Project Load</h2>
+          <div className="bars-list">
+            {summary.topProjects.length === 0 && <span className="muted">No project data yet.</span>}
+            {summary.topProjects.map(([name, count]) => (
+              <div key={name} className="bar-row">
+                <div className="bar-label-row">
+                  <span>{name}</span>
+                  <strong>{count}</strong>
+                </div>
+                <div className="bar-track">
+                  <span className="bar-fill" style={{ width: `${Math.round((count / Math.max(1, summary.totalVisible)) * 100)}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
         </article>
-        <article className="card summary-card">
-          <p className="muted">In Progress</p>
-          <h2>{summary.inProgress}</h2>
-        </article>
-        <article className="card summary-card">
-          <p className="muted">Done/Closed</p>
-          <h2>{summary.done}</h2>
+
+        <article className="card">
+          <h2>Priority Mix</h2>
+          <div className="bars-list">
+            {summary.priorityMix.length === 0 && <span className="muted">No priority data yet.</span>}
+            {summary.priorityMix.map(([name, count]) => (
+              <div key={name} className="bar-row">
+                <div className="bar-label-row">
+                  <span>{name}</span>
+                  <strong>{count}</strong>
+                </div>
+                <div className="bar-track">
+                  <span className="bar-fill priority" style={{ width: `${Math.round((count / Math.max(1, summary.totalVisible)) * 100)}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
         </article>
       </section>
 
-      {summary.topStatuses.length > 0 && (
-        <section className="card status-chips">
-          {summary.topStatuses.map(([name, count]) => (
-            <span key={name} className="chip">
-              {name}: {count}
-            </span>
-          ))}
-        </section>
-      )}
+      {error && <p className="error-banner">{error}</p>}
 
-      {error && <p className="error">{error}</p>}
-
-      <section className="layout-grid">
-        <article className="card issues-table-wrap">
-          <div className="table-head">
-            <h2>Issues ({total})</h2>
-            {loading && <span className="muted">Refreshing...</span>}
+      <section className="workspace-grid">
+        <article className="card issues-panel">
+          <div className="table-toolbar">
+            <h2>Issue Queue</h2>
+            <p className="muted">{loading ? "Refreshing..." : `${issues.length} loaded`}</p>
           </div>
 
           <table className="issues-table">
@@ -548,77 +735,103 @@ export default function Home() {
                 <th>Subject</th>
                 <th>Status</th>
                 <th>Priority</th>
-                <th>Project</th>
+                <th>Due</th>
+                <th>Progress</th>
                 <th>Updated</th>
               </tr>
             </thead>
             <tbody>
-              {issues.map((issue) => (
-                <tr
-                  key={issue.id}
-                  onClick={() => {
-                    setSelectedIssueId(issue.redmineIssueId);
-                    void loadAllowedStatuses(issue.redmineIssueId);
-                  }}
-                >
-                  <td>#{issue.redmineIssueId}</td>
-                  <td>{issue.subject}</td>
-                  <td onClick={(e) => e.stopPropagation()}>
-                    <select
-                      value={issue.statusId}
-                      onChange={(e) => updateStatus(issue, Number(e.target.value))}
-                      onFocus={() => {
-                        void loadAllowedStatuses(issue.redmineIssueId);
-                      }}
-                    >
-                      {(allowedStatusIdsByIssue[issue.redmineIssueId]?.length
-                        ? statuses.filter((s) =>
-                            allowedStatusIdsByIssue[issue.redmineIssueId].includes(s.id),
-                          )
-                        : statuses
-                      ).map((status) => (
-                        <option key={status.id} value={status.id}>
-                          {status.name}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>{issue.priority ?? "-"}</td>
-                  <td>{issue.projectName ?? "-"}</td>
-                  <td>{new Date(issue.updatedOnRemote).toLocaleString()}</td>
-                </tr>
-              ))}
+              {issues.map((issue) => {
+                const urgency = issueUrgency(issue);
+                const allowedStatusIds = allowedStatusIdsByIssue[issue.redmineIssueId];
+                const selectableStatuses =
+                  allowedStatusIds && allowedStatusIds.length > 0
+                    ? statuses.filter((s) => allowedStatusIds.includes(s.id))
+                    : statuses;
+
+                return (
+                  <tr
+                    key={issue.id}
+                    className={`issue-row ${selectedIssueId === issue.redmineIssueId ? "selected" : ""}`}
+                    onClick={() => {
+                      setSelectedIssueId(issue.redmineIssueId);
+                      void loadAllowedStatuses(issue.redmineIssueId);
+                    }}
+                  >
+                    <td>#{issue.redmineIssueId}</td>
+                    <td>
+                      <div className="subject-cell">
+                        <p>{issue.subject}</p>
+                        <span className={`urgency-pill ${urgency}`}>{urgency}</span>
+                      </div>
+                    </td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <select
+                        className="status-select"
+                        value={issue.statusId}
+                        onChange={(e) => updateStatus(issue, Number(e.target.value))}
+                        onFocus={() => {
+                          void loadAllowedStatuses(issue.redmineIssueId);
+                        }}
+                      >
+                        {selectableStatuses.map((status) => (
+                          <option key={status.id} value={status.id}>
+                            {status.name}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>{issue.priority ?? "-"}</td>
+                    <td>{issue.dueDate ? new Date(issue.dueDate).toLocaleDateString() : "-"}</td>
+                    <td>{issue.doneRatio ?? 0}%</td>
+                    <td>{new Date(issue.updatedOnRemote).toLocaleString()}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </article>
 
-        <aside className="card drawer">
-          {!selectedIssue && <p className="muted">Select an issue to see details.</p>}
+        <aside className="card drawer-panel">
+          {!selectedIssue && (
+            <div className="drawer-empty">
+              <h3>No Issue Selected</h3>
+              <p className="muted">Pick an issue from the queue to inspect details, add notes, and log time.</p>
+            </div>
+          )}
 
           {selectedIssue && (
             <>
-              <h2>
-                #{selectedIssue.redmineIssueId} {selectedIssue.subject}
-              </h2>
-              <p className="muted">
-                {selectedIssue.projectName ?? "No Project"} | {selectedIssue.statusName} |{" "}
-                {selectedIssue.priority ?? "No Priority"}
-              </p>
-              {selectedIssue.description ? (
-                <div className="description">
-                  <MarkdownBlock content={selectedIssue.description} />
+              <div className="drawer-header">
+                <div>
+                  <h2>
+                    #{selectedIssue.redmineIssueId} {selectedIssue.subject}
+                  </h2>
+                  <p className="issue-meta">
+                    {selectedIssue.projectName ?? "No Project"} • {selectedIssue.statusName} • {selectedIssue.priority ?? "No Priority"}
+                  </p>
                 </div>
-              ) : (
-                <p className="description">No description.</p>
-              )}
+                <button className="secondary-button" type="button" onClick={() => setSelectedIssueId(null)}>
+                  Close
+                </button>
+              </div>
 
-              <div className="section">
+              <section className="detail-section">
+                <h3>Description</h3>
+                {selectedIssue.description ? (
+                  <MarkdownBlock content={selectedIssue.description} />
+                ) : (
+                  <p className="muted">No description.</p>
+                )}
+              </section>
+
+              <section className="detail-section">
                 <h3>Comments</h3>
                 <form className="form" onSubmit={submitComment}>
                   <textarea
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
-                    placeholder="Add a comment"
+                    placeholder="Share an update"
                     rows={3}
                   />
                   <button type="submit">Post Comment</button>
@@ -627,16 +840,16 @@ export default function Home() {
                   {selectedIssue.journals.length === 0 && <p className="muted">No comments yet.</p>}
                   {selectedIssue.journals.map((j) => (
                     <div key={j.id} className="timeline-item">
-                      <p>
+                      <p className="muted">
                         <strong>{j.author ?? "Unknown"}</strong> • {new Date(j.createdOnRemote).toLocaleString()}
                       </p>
                       {j.notes ? <MarkdownBlock content={j.notes} /> : <p>(empty note)</p>}
                     </div>
                   ))}
                 </div>
-              </div>
+              </section>
 
-              <div className="section">
+              <section className="detail-section">
                 <h3>Time Logs</h3>
                 <form className="form" onSubmit={submitTimelog}>
                   <label>
@@ -668,7 +881,7 @@ export default function Home() {
                     <textarea
                       value={timeComment}
                       onChange={(e) => setTimeComment(e.target.value)}
-                      placeholder="What did you work on?"
+                      placeholder="Summarize the work"
                       rows={2}
                     />
                   </label>
@@ -679,14 +892,14 @@ export default function Home() {
                   {selectedIssue.timeEntries.length === 0 && <p className="muted">No time entries yet.</p>}
                   {selectedIssue.timeEntries.map((t) => (
                     <div key={t.id} className="timeline-item">
-                      <p>
+                      <p className="muted">
                         <strong>{t.hours}h</strong> • {new Date(t.spentOn).toLocaleDateString()}
                       </p>
                       {t.comments ? <MarkdownBlock content={t.comments} /> : <p>(no comment)</p>}
                     </div>
                   ))}
                 </div>
-              </div>
+              </section>
             </>
           )}
         </aside>
