@@ -174,7 +174,6 @@ export default function Home() {
 
   const summary = useMemo(() => {
     const byStatus = new Map<string, number>();
-    const byParent = new Map<string, number>();
     const byPriority = new Map<string, number>();
 
     let open = 0;
@@ -187,10 +186,6 @@ export default function Home() {
 
     for (const issue of issues) {
       byStatus.set(issue.statusName, (byStatus.get(issue.statusName) ?? 0) + 1);
-      const parentKey = issue.parentIssueId
-        ? `${issue.parentIssueLabel ?? `#${issue.parentIssueId}`} (#${issue.parentIssueId})`
-        : "No Parent";
-      byParent.set(parentKey, (byParent.get(parentKey) ?? 0) + 1);
       byPriority.set(issue.priority ?? "Unspecified", (byPriority.get(issue.priority ?? "Unspecified") ?? 0) + 1);
 
       if (isOpenStatus(issue.statusName)) open += 1;
@@ -208,10 +203,6 @@ export default function Home() {
     const topStatuses = Array.from(byStatus.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 6);
-
-    const topParents = Array.from(byParent.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
 
     const priorityMix = Array.from(byPriority.entries())
       .sort((a, b) => b[1] - a[1])
@@ -233,7 +224,6 @@ export default function Home() {
       completion,
       avgDoneRatio,
       topStatuses,
-      topParents,
       priorityMix,
     };
   }, [issues, total]);
@@ -338,6 +328,17 @@ export default function Home() {
     // refreshAll/loadActivities intentionally depend on current query + user snapshot.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryString, user]);
+
+  useEffect(() => {
+    if (!selectedIssueId) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedIssueId(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedIssueId]);
 
   async function connectRedmine(event: React.FormEvent) {
     event.preventDefault();
@@ -731,24 +732,6 @@ export default function Home() {
         </article>
 
         <article className="card">
-          <h2>Parent Issue Load</h2>
-          <div className="bars-list">
-            {summary.topParents.length === 0 && <span className="muted">No parent issue data yet.</span>}
-            {summary.topParents.map(([name, count]) => (
-              <div key={name} className="bar-row">
-                <div className="bar-label-row">
-                  <span>{name}</span>
-                  <strong>{count}</strong>
-                </div>
-                <div className="bar-track">
-                  <span className="bar-fill" style={{ width: `${Math.round((count / Math.max(1, summary.totalVisible)) * 100)}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="card">
           <h2>Priority Mix</h2>
           <div className="bars-list">
             {summary.priorityMix.length === 0 && <span className="muted">No priority data yet.</span>}
@@ -839,128 +822,121 @@ export default function Home() {
             </tbody>
           </table>
         </article>
-
-        <aside className="card drawer-panel">
-          {!selectedIssue && (
-            <div className="drawer-empty">
-              <h3>No Issue Selected</h3>
-              <p className="muted">Pick an issue from the queue to inspect details, add notes, and log time.</p>
-            </div>
-          )}
-
-          {selectedIssue && (
-            <>
-              <div className="drawer-header">
-                <div>
-                  <h2>
-                    #{selectedIssue.redmineIssueId} {selectedIssue.subject}
-                  </h2>
-                  <p className="issue-meta">
-                    {selectedIssue.projectName ?? "No Project"} • {selectedIssue.statusName} • {selectedIssue.priority ?? "No Priority"}
-                  </p>
-                </div>
-                <button className="secondary-button" type="button" onClick={() => setSelectedIssueId(null)}>
-                  Close
-                </button>
-              </div>
-
-              <section className="detail-section">
-                <h3>Description</h3>
-                {selectedIssue.description ? (
-                  <MarkdownBlock content={selectedIssue.description} />
-                ) : (
-                  <p className="muted">No description.</p>
-                )}
-              </section>
-
-              <section className="detail-section">
-                <h3>Comments</h3>
-                <form className="form" onSubmit={submitComment}>
-                  <textarea
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder="Share an update"
-                    rows={3}
-                  />
-                  <button type="submit">Post Comment</button>
-                </form>
-                <div className="timeline">
-                  {selectedIssue.journals.length === 0 && <p className="muted">No comments yet.</p>}
-                  {selectedIssue.journals.map((j) => (
-                    <div key={j.id} className="timeline-item">
-                      <p className="muted">
-                        <strong>{j.author ?? "Unknown"}</strong> • {new Date(j.createdOnRemote).toLocaleString()}
-                      </p>
-                      {j.notes ? <MarkdownBlock content={j.notes} /> : <p>(empty note)</p>}
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section className="detail-section">
-                <h3>Time Logs</h3>
-                <form className="form" onSubmit={submitTimelog}>
-                  <label>
-                    Hours
-                    <input
-                      type="number"
-                      min="0.1"
-                      step="0.1"
-                      value={hours}
-                      onChange={(e) => setHours(e.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Activity
-                    <select value={activityId} onChange={(e) => setActivityId(Number(e.target.value))}>
-                      {activities.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Date
-                    <input type="date" value={spentOn} onChange={(e) => setSpentOn(e.target.value)} />
-                  </label>
-                  <label>
-                    Comment
-                    <textarea
-                      value={timeComment}
-                      onChange={(e) => setTimeComment(e.target.value)}
-                      placeholder="Summarize the work"
-                      rows={2}
-                    />
-                  </label>
-                  <button type="submit">Add Time Log</button>
-                </form>
-
-                <div className="timeline">
-                  {selectedIssue.timeEntries.length === 0 && <p className="muted">No time entries yet.</p>}
-                  {selectedIssue.timeEntries.map((t) => (
-                    <div key={t.id} className="timeline-item">
-                      <div className="entry-head">
-                        <p className="muted">
-                          <strong>{t.hours}h</strong> • {new Date(t.spentOn).toLocaleDateString()}
-                        </p>
-                        <span className={`entry-source ${t.redmineTimeEntryId ? "synced" : "local"}`}>
-                          {t.redmineTimeEntryId ? "Synced from Redmine" : "Local entry"}
-                        </span>
-                      </div>
-                      <p className="muted entry-meta">
-                        {t.authorName ?? "Unknown author"}
-                        {t.activityName ? ` • ${t.activityName}` : ""}
-                      </p>
-                      {t.comments ? <MarkdownBlock content={t.comments} /> : <p>(no comment)</p>}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </>
-          )}
-        </aside>
       </section>
+
+      {selectedIssue && (
+        <div className="issue-modal-backdrop" onClick={() => setSelectedIssueId(null)}>
+          <aside className="card issue-modal-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="drawer-header">
+              <div>
+                <h2>
+                  #{selectedIssue.redmineIssueId} {selectedIssue.subject}
+                </h2>
+                <p className="issue-meta">
+                  {selectedIssue.projectName ?? "No Project"} • {selectedIssue.statusName} • {selectedIssue.priority ?? "No Priority"}
+                </p>
+              </div>
+              <button className="secondary-button" type="button" onClick={() => setSelectedIssueId(null)}>
+                Close
+              </button>
+            </div>
+
+            <section className="detail-section">
+              <h3>Description</h3>
+              {selectedIssue.description ? (
+                <MarkdownBlock content={selectedIssue.description} />
+              ) : (
+                <p className="muted">No description.</p>
+              )}
+            </section>
+
+            <section className="detail-section">
+              <h3>Comments</h3>
+              <form className="form" onSubmit={submitComment}>
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Share an update"
+                  rows={3}
+                />
+                <button type="submit">Post Comment</button>
+              </form>
+              <div className="timeline">
+                {selectedIssue.journals.length === 0 && <p className="muted">No comments yet.</p>}
+                {selectedIssue.journals.map((j) => (
+                  <div key={j.id} className="timeline-item">
+                    <p className="muted">
+                      <strong>{j.author ?? "Unknown"}</strong> • {new Date(j.createdOnRemote).toLocaleString()}
+                    </p>
+                    {j.notes ? <MarkdownBlock content={j.notes} /> : <p>(empty note)</p>}
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="detail-section">
+              <h3>Time Logs</h3>
+              <form className="form" onSubmit={submitTimelog}>
+                <label>
+                  Hours
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    value={hours}
+                    onChange={(e) => setHours(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Activity
+                  <select value={activityId} onChange={(e) => setActivityId(Number(e.target.value))}>
+                    {activities.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Date
+                  <input type="date" value={spentOn} onChange={(e) => setSpentOn(e.target.value)} />
+                </label>
+                <label>
+                  Comment
+                  <textarea
+                    value={timeComment}
+                    onChange={(e) => setTimeComment(e.target.value)}
+                    placeholder="Summarize the work"
+                    rows={2}
+                  />
+                </label>
+                <button type="submit">Add Time Log</button>
+              </form>
+
+              <div className="timeline">
+                {selectedIssue.timeEntries.length === 0 && <p className="muted">No time entries yet.</p>}
+                {selectedIssue.timeEntries.map((t) => (
+                  <div key={t.id} className="timeline-item">
+                    <div className="entry-head">
+                      <p className="muted">
+                        <strong>{t.hours}h</strong> • {new Date(t.spentOn).toLocaleDateString()}
+                      </p>
+                      <span className={`entry-source ${t.redmineTimeEntryId ? "synced" : "local"}`}>
+                        {t.redmineTimeEntryId ? "Synced from Redmine" : "Local entry"}
+                      </span>
+                    </div>
+                    <p className="muted entry-meta">
+                      {t.authorName ?? "Unknown author"}
+                      {t.activityName ? ` • ${t.activityName}` : ""}
+                    </p>
+                    {t.comments ? <MarkdownBlock content={t.comments} /> : <p>(no comment)</p>}
+                  </div>
+                ))}
+              </div>
+            </section>
+          </aside>
+        </div>
+      )}
     </main>
   );
 }

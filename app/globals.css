@@ -302,7 +302,7 @@ label {
 
 .insights-grid {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
+  grid-template-columns: 1.4fr 1fr;
   gap: 0.85rem;
 }
 
@@ -505,7 +505,7 @@ label {
 
 .workspace-grid {
   display: grid;
-  grid-template-columns: 1.72fr 1fr;
+  grid-template-columns: 1fr;
   gap: 1rem;
 }
 
@@ -597,6 +597,23 @@ label {
 
 .drawer-panel {
   max-height: calc(100vh - 4.5rem);
+  overflow: auto;
+}
+
+.issue-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 23, 31, 0.52);
+  backdrop-filter: blur(2px);
+  display: grid;
+  place-items: center;
+  padding: 1.2rem;
+  z-index: 60;
+}
+
+.issue-modal-panel {
+  width: min(980px, 94vw);
+  max-height: 92vh;
   overflow: auto;
 }
 
@@ -761,6 +778,11 @@ label {
 
   .drawer-panel {
     max-height: none;
+  }
+
+  .issue-modal-panel {
+    width: min(1000px, 96vw);
+    max-height: 94vh;
   }
 }
 
