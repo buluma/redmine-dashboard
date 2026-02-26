@@ -6,8 +6,10 @@ const REDMINE_COLLAPSE_RE = /\{\{collapse(?:\(([^)]*)\))?\s*\n([\s\S]*?)\n\}\}/g
 const REDMINE_COLLAPSE_INLINE_RE = /\{\{collapse(?:\(([^)]*)\))?\s*\|([\s\S]*?)\}\}/g;
 const TEXTILE_CODE_RE = /(^|[^\w`])@([^\n@]+?)@(?=[^\w`]|$)/g;
 const REDMINE_NOTEXTILE_RE = /<\/?notextile>/gim;
-const REDMINE_PRE_CODE_RE = /<pre>\s*<code(?:\s+class=["']?([^"'>\s]+)["']?)?>([\s\S]*?)<\/(?:code>\s*<\/pre>|pre>\s*<\/code>)/gim;
-const REDMINE_ESCAPED_PRE_CODE_RE = /&lt;pre&gt;\s*&lt;code(?:\s+class=(?:&quot;|["'])?([^"'>\s&]+)(?:&quot;|["'])?)?&gt;([\s\S]*?)&lt;\/(?:code&gt;\s*&lt;\/pre&gt;|pre&gt;\s*&lt;\/code&gt;)/gim;
+const REDMINE_PRE_CODE_RE = /<pre(?:\s+[^>]*)?>\s*<code(?:\s+class=["']?([^"'>\s]+)["']?)?>([\s\S]*?)<\/(?:code>\s*<\/pre>|pre>\s*<\/code>)/gim;
+const REDMINE_ESCAPED_PRE_CODE_RE = /&lt;pre(?:\s+.*?)?&gt;\s*&lt;code(?:\s+class=(?:&quot;|["'])?([^"'>\s&]+)(?:&quot;|["'])?)?&gt;([\s\S]*?)&lt;\/(?:code&gt;\s*&lt;\/pre&gt;|pre&gt;\s*&lt;\/code&gt;)/gim;
+const REDMINE_PRE_ONLY_RE = /<pre(?:\s+[^>]*)?>([\s\S]*?)<\/pre>/gim;
+const REDMINE_ESCAPED_PRE_ONLY_RE = /&lt;pre(?:\s+.*?)?&gt;([\s\S]*?)&lt;\/pre&gt;/gim;
 const SRC_ISSUE_REF_RE = /\[SRC\s+#(\d+)\s+from\s+([^\]\s]+)\]/gi;
 const SRC_ISSUE_REF_SINGLE_RE = /\[SRC\s+#(\d+)\s+from\s+([^\]\s]+)\]/i;
 const SRC_JOURNAL_REF_RE = /\[SRC-JOURNAL\s+#(\d+)\]/gi;
@@ -94,10 +96,21 @@ function normalizeCollapse(titleRaw: string | undefined, contentRaw: string): st
   return `> **${title}**\n>\n${toBlockQuote(content)}`;
 }
 
+function decodeEscapedWhitespace(input: string): string {
+  return input
+    .replaceAll("\\r\\n", "\n")
+    .replaceAll("\\n", "\n")
+    .replaceAll("\\r", "\n")
+    .replaceAll("\\t", "\t");
+}
+
 export function normalizeRedmineText(input: string): string {
-  let out = convertSourceRefs(input);
+  let out = decodeEscapedWhitespace(input);
+  out = convertSourceRefs(out);
   out = out.replace(REDMINE_ESCAPED_PRE_CODE_RE, (_all, cls: string | undefined, code: string) => asFence(code, cls, true));
   out = out.replace(REDMINE_PRE_CODE_RE, (_all, cls: string | undefined, code: string) => asFence(code, cls));
+  out = out.replace(REDMINE_ESCAPED_PRE_ONLY_RE, (_all, code: string) => asFence(code, undefined, true));
+  out = out.replace(REDMINE_PRE_ONLY_RE, (_all, code: string) => asFence(code, undefined));
   out = out.replace(REDMINE_NOTEXTILE_RE, "");
   out = out.replace(TOC_MACRO_RE, "");
   out = out.replace(REDMINE_COLLAPSE_RE, (_, title: string | undefined, body: string) =>

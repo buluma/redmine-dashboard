@@ -984,6 +984,22 @@ label {
   font-weight: 700;
 }
 
+.issue-collapsible > summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--ink-soft);
+  user-select: none;
+  margin-bottom: 0.5rem;
+}
+
+.issue-collapsible > summary .muted {
+  margin-left: 0.3rem;
+}
+
+.issue-collapsible[open] > summary {
+  margin-bottom: 0.75rem;
+}
+
 @media (max-width: 780px) {
   .issue-overview-grid {
     grid-template-columns: 1fr;
@@ -1074,11 +1090,18 @@ label {
   border-radius: 10px;
   padding: 0.6rem;
   overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .markdown pre code {
+  display: block;
   background: transparent;
   padding: 0;
+  white-space: inherit;
+  overflow-wrap: inherit;
+  word-break: inherit;
 }
 
 .markdown .md-collapsible-code {

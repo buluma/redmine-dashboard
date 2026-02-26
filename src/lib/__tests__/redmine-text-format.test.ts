@@ -45,6 +45,18 @@ describe("normalizeRedmineText", () => {
     expect(output).toContain("```");
   });
 
+  it("converts pre-only blocks (including attributes) to fenced markdown", () => {
+    const rawInput = `payload:\n<pre class="prettyprint">{\"long\":\"value\"}</pre>`;
+    const rawOutput = normalizeRedmineText(rawInput);
+    expect(rawOutput).toContain("```");
+    expect(rawOutput).toContain("{\"long\":\"value\"}");
+
+    const escapedInput = `payload:\n&lt;pre class=&quot;prettyprint&quot;&gt;{\"long\":\"value\"}&lt;/pre&gt;`;
+    const escapedOutput = normalizeRedmineText(escapedInput);
+    expect(escapedOutput).toContain("```");
+    expect(escapedOutput).toContain("{\"long\":\"value\"}");
+  });
+
   it("converts SRC refs to clickable source links", () => {
     const input = `[SRC #71243 from redmine.nasctech.com]\n[SRC-JOURNAL #921156]\nhttps://streamline.staging.vodacomsa-battery.nasctech.com/admin/custom/objects/86/rules/db/336/edit?_tab_id=8m0nwg`;
     const output = normalizeRedmineText(input);
@@ -58,5 +70,13 @@ describe("normalizeRedmineText", () => {
     const output = normalizeRedmineText(input);
 
     expect(output).toContain("[SRC-JOURNAL #921156](https://streamline.staging.vodacomsa-battery.nasctech.com/admin/custom/objects/86/rules/db/336/edit?_tab_id=8m0nwg)");
+  });
+
+  it("decodes literal escaped newlines and tabs from Redmine text", () => {
+    const input = `SRC #99614\\n\\nLine one\\n\\tLine two`;
+    const output = normalizeRedmineText(input);
+
+    expect(output).toContain("SRC #99614\n\nLine one\n\tLine two");
+    expect(output).not.toContain("\\n");
   });
 });

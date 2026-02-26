@@ -172,6 +172,23 @@ export default function IssueDetailPage() {
   const [issue, setIssue] = useState<Issue | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [githubBusy, setGithubBusy] = useState(false);
+  const [githubRepo, setGithubRepo] = useState("");
+  const [githubIssueNumber, setGithubIssueNumber] = useState("");
+  const [githubPrNumber, setGithubPrNumber] = useState("");
+  const [githubUrl, setGithubUrl] = useState("");
+  const [githubTitle, setGithubTitle] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionInfo, setActionInfo] = useState<string | null>(null);
+
+  async function reloadIssue() {
+    const res = await fetch(`/api/issues/${issueId}`, { cache: "no-store" });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error ?? "Failed to load issue");
+    }
+    setIssue(data.issue ?? null);
+  }
 
   useEffect(() => {
     if (!Number.isInteger(issueId) || issueId <= 0) {
@@ -206,6 +223,64 @@ export default function IssueDetailPage() {
       mounted = false;
     };
   }, [issueId]);
+
+  async function submitGithubLink(event: React.FormEvent) {
+    event.preventDefault();
+    setGithubBusy(true);
+    setActionError(null);
+    setActionInfo(null);
+    try {
+      const issueNo = githubIssueNumber.trim();
+      const prNo = githubPrNumber.trim();
+      const payload = {
+        repositoryFullName: githubRepo.trim(),
+        githubIssueNumber: issueNo ? Number(issueNo) : undefined,
+        githubPrNumber: prNo ? Number(prNo) : undefined,
+        url: githubUrl.trim() || undefined,
+        title: githubTitle.trim() || undefined,
+      };
+      const res = await fetch(`/api/issues/${issueId}/github-links`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Unable to link GitHub reference");
+      }
+      await reloadIssue();
+      setGithubIssueNumber("");
+      setGithubPrNumber("");
+      setGithubUrl("");
+      setGithubTitle("");
+      setActionInfo("GitHub link added.");
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Unable to link GitHub reference");
+    } finally {
+      setGithubBusy(false);
+    }
+  }
+
+  async function deleteGithubLink(linkId: string) {
+    setGithubBusy(true);
+    setActionError(null);
+    setActionInfo(null);
+    try {
+      const res = await fetch(`/api/issues/${issueId}/github-links/${linkId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Unable to remove GitHub link");
+      }
+      await reloadIssue();
+      setActionInfo("GitHub link removed.");
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Unable to remove GitHub link");
+    } finally {
+      setGithubBusy(false);
+    }
+  }
 
   const totalSpent = useMemo(() => {
     if (!issue) return 0;
@@ -321,6 +396,101 @@ export default function IssueDetailPage() {
               </div>
             ))}
           </div>
+        </article>
+
+        <article className="report-card">
+          <details className="issue-collapsible">
+            <summary>
+              GitHub Links
+              <span className="muted">({issue.githubLinks.length})</span>
+            </summary>
+            {actionError && <p className="error-banner">{actionError}</p>}
+            {actionInfo && <p className="muted">{actionInfo}</p>}
+            <form className="form" onSubmit={submitGithubLink}>
+              <label>
+                Repository (`owner/repo`)
+                <input
+                  value={githubRepo}
+                  onChange={(e) => setGithubRepo(e.target.value)}
+                  placeholder="acme/platform"
+                  required
+                />
+              </label>
+              <label>
+                GitHub Issue #
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={githubIssueNumber}
+                  onChange={(e) => setGithubIssueNumber(e.target.value)}
+                  placeholder="123"
+                />
+              </label>
+              <label>
+                GitHub PR #
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={githubPrNumber}
+                  onChange={(e) => setGithubPrNumber(e.target.value)}
+                  placeholder="456"
+                />
+              </label>
+              <label>
+                Direct URL (optional)
+                <input
+                  value={githubUrl}
+                  onChange={(e) => setGithubUrl(e.target.value)}
+                  placeholder="https://github.com/acme/platform/issues/123"
+                />
+              </label>
+              <label>
+                Title (optional)
+                <input
+                  value={githubTitle}
+                  onChange={(e) => setGithubTitle(e.target.value)}
+                  placeholder="Investigate API timeout"
+                />
+              </label>
+              <button type="submit" disabled={githubBusy}>
+                {githubBusy ? "Linking..." : "Add GitHub Link"}
+              </button>
+            </form>
+
+            <div className="timeline">
+              {issue.githubLinks.length === 0 && <p className="muted">No GitHub links yet.</p>}
+              {issue.githubLinks.map((link) => (
+                <article key={link.id} className="timeline-item">
+                  <div className="entry-head">
+                    <a href={link.url} target="_blank" rel="noreferrer">
+                      {link.title
+                        ?? (link.githubPrNumber
+                          ? `${link.repositoryFullName}#PR-${link.githubPrNumber}`
+                          : link.githubIssueNumber
+                            ? `${link.repositoryFullName}#${link.githubIssueNumber}`
+                            : link.repositoryFullName)}
+                    </a>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => void deleteGithubLink(link.id)}
+                      disabled={githubBusy}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <p className="muted entry-meta">
+                    {link.repositoryFullName}
+                    {link.githubIssueNumber ? ` • Issue #${link.githubIssueNumber}` : ""}
+                    {link.githubPrNumber ? ` • PR #${link.githubPrNumber}` : ""}
+                  </p>
+                  <p className="muted">{link.url}</p>
+                </article>
+              ))}
+            </div>
+          </details>
         </article>
 
         <div className="issue-tabs">
