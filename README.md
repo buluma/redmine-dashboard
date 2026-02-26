@@ -17,6 +17,8 @@ The documentation includes:
 - **[Codebase Summary](./docs/codebase-summary.md)**
 - **[Design Guidelines](./docs/design-guidelines.md)**
 
+Mobile/Android integration is available through token-authenticated endpoints under `/api/mobile/v1/*`.
+
 ## Quick Start
 
 ### Local Setup

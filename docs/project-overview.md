@@ -7,6 +7,7 @@ The system works by syncing Redmine issues to a local database, providing fast l
 ## Core Features
 
 - **Redmine Integration:** Connect to a Redmine instance using a base URL and API key.
+- **Android/Native Pairing:** Pair mobile clients via token-based authentication (`/api/mobile/v1/pair/connect`) without browser cookies.
 - **Issue Management:**
   - View issues assigned to the logged-in user.
   - Filter, sort, and search through issues.
@@ -17,6 +18,7 @@ The system works by syncing Redmine issues to a local database, providing fast l
 - **Collaboration:**
   - Add comments to issues.
   - Log time spent on issues.
+  - Post comments and manage GitHub links from Android/native clients.
 - **GitHub Integration:** Link Redmine issues to GitHub repositories, issues, and pull requests.
 - **Markdown Support:** Renders issue descriptions, comments, and time-log notes as Markdown for better readability.
 - **Automated Sync:**

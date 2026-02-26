@@ -94,6 +94,7 @@ A full list of helper targets is available in the [Makefile](/Users/shadowwalker
 - `POLL_INTERVAL_MS`: The interval for the sync poller in milliseconds (default: `60000`).
 - `LEADER_LOCK_TTL_MS`: The time-to-live for the leader lock in milliseconds (default: `90000`).
 - `SYNC_JOB_STALE_MS`: Timeout in milliseconds for resetting stale running or pending sync jobs (default: `600000`).
+- `MOBILE_API_ENABLED`: Enables the mobile API surface (`true` by default; set to `false` to disable `/api/mobile/v1/*`).
 - `REDMINE_BASE_URL`: Optional. Used for first-run bootstrap to pre-configure the Redmine connection.
 - `REDMINE_API_KEY`: Optional. Used for first-run bootstrap.
 

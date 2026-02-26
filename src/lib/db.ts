@@ -36,6 +36,29 @@ async function ensureRuntimeTables(): Promise<void> {
     CREATE INDEX IF NOT EXISTS "IssueGithubLink_userId_createdAt_idx"
     ON "IssueGithubLink"("userId", "createdAt");
   `);
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "MobileApiToken" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "userId" TEXT NOT NULL,
+      "name" TEXT,
+      "tokenHash" TEXT NOT NULL,
+      "tokenPrefix" TEXT NOT NULL,
+      "lastUsedAt" DATETIME,
+      "expiresAt" DATETIME,
+      "revokedAt" DATETIME,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL,
+      CONSTRAINT "MobileApiToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    );
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE UNIQUE INDEX IF NOT EXISTS "MobileApiToken_tokenHash_key"
+    ON "MobileApiToken"("tokenHash");
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS "MobileApiToken_userId_revokedAt_idx"
+    ON "MobileApiToken"("userId", "revokedAt");
+  `);
 }
 
 void ensureRuntimeTables().catch((error) => {

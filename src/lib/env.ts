@@ -15,4 +15,5 @@ export const env = {
   syncJobStaleMs: Number(process.env.SYNC_JOB_STALE_MS ?? 10 * 60 * 1000),
   redmineBaseUrl: process.env.REDMINE_BASE_URL,
   redmineApiKey: process.env.REDMINE_API_KEY,
+  mobileApiEnabled: process.env.MOBILE_API_ENABLED !== "false",
 };

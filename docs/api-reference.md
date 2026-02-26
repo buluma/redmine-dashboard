@@ -358,6 +358,85 @@ curl -X GET http://localhost:3000/api/internal/activities
 
 A health check endpoint for monitoring the application.
 
+## Mobile API (Android / Native)
+
+All endpoints under `/api/mobile/v1/*` require `Authorization: Bearer <token>` except pairing.
+
+### POST /api/mobile/v1/pair/connect
+
+Pairs an Android/native client by validating Redmine credentials and issuing a mobile token.
+
+**Request Body**
+
+```json
+{
+  "baseUrl": "https://redmine.example.com",
+  "apiKey": "your-redmine-api-key",
+  "deviceName": "Pixel 9"
+}
+```
+
+**cURL Example**
+
+```bash
+curl -X POST http://localhost:3000/api/mobile/v1/pair/connect \
+  -H "Content-Type: application/json" \
+  -d '{"baseUrl":"https://redmine.example.com","apiKey":"your-redmine-api-key","deviceName":"Pixel 9"}'
+```
+
+---
+
+### GET /api/mobile/v1/me
+
+Returns the authenticated mobile user profile and token metadata.
+
+---
+
+### GET /api/mobile/v1/issues
+
+Returns assigned issues for the authenticated mobile user.
+Supports `status`, `priority`, `search`, `sort`, `page`, `pageSize`.
+
+---
+
+### GET /api/mobile/v1/issues/[id]
+
+Returns a single issue detail including journals, time entries, and GitHub links.
+
+---
+
+### POST /api/mobile/v1/issues/[id]/comment
+
+Adds a comment to a Redmine issue from mobile and syncs the issue cache.
+
+**Request Body**
+
+```json
+{
+  "comment": "Posted from Android."
+}
+```
+
+---
+
+### GET /api/mobile/v1/issues/[id]/github-links
+### POST /api/mobile/v1/issues/[id]/github-links
+### DELETE /api/mobile/v1/issues/[id]/github-links/[linkId]
+
+Mobile GitHub-link management endpoints aligned with web behavior.
+
+---
+
+### POST /api/mobile/v1/tokens/rotate
+
+Revokes the current token and returns a replacement token.
+
+---
+
+### DELETE /api/mobile/v1/tokens/current
+
+Revokes the current token (mobile logout).
+
 **Response (200)**
 
 ```json

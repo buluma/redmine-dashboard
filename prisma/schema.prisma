@@ -16,6 +16,7 @@ model User {
   credential        UserRedmineCredential?
   issues            Issue[]
   githubLinks       IssueGithubLink[]
+  mobileApiTokens   MobileApiToken[]
   timeEntries       TimeEntry[]
   syncState         SyncState?
   syncJobs          SyncJob[]
@@ -150,4 +151,20 @@ model LeaderLock {
   ownerId    String
   heartbeatAt DateTime
   expiresAt  DateTime
+}
+
+model MobileApiToken {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String?
+  tokenHash   String    @unique
+  tokenPrefix String
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, revokedAt])
 }

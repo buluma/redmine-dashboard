@@ -14,6 +14,10 @@ This document provides a high-level overview of the system architecture for the 
                  ┌───────────────────┐
                  │   User's Browser  │
                  └─────────┬─────────┘
+                           │
+                 ┌───────────────────┐
+                 │   Android Client  │
+                 └─────────┬─────────┘
                            │ (HTTPS)
                            ▼
 ┌─────────────────────────────────────────────┐
@@ -54,6 +58,7 @@ This document provides a high-level overview of the system architecture for the 
 - **Functionality:**
   - Handles all communication between the frontend and the backend.
   - Exposes endpoints for session management, issue data, mutations, and synchronization.
+  - Exposes token-authenticated mobile endpoints under `/api/mobile/v1/*` for Android/native clients.
   - Enforces rate limiting on mutation endpoints.
 - **Validation:** Zod schemas are used to validate incoming request data.
 

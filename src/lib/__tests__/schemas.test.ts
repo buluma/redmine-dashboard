@@ -3,6 +3,7 @@ import {
   commentSchema,
   connectSchema,
   githubLinkCreateSchema,
+  mobilePairConnectSchema,
   statusUpdateSchema,
   timeLogSchema,
 } from "@/src/lib/schemas";
@@ -62,5 +63,14 @@ describe("validation schemas", () => {
         githubPrNumber: 34,
       }),
     ).toThrow();
+  });
+
+  it("accepts mobile pair payload with device name", () => {
+    const out = mobilePairConnectSchema.parse({
+      baseUrl: "https://redmine.example.com",
+      apiKey: "abcdef123456",
+      deviceName: "Pixel 9",
+    });
+    expect(out.deviceName).toBe("Pixel 9");
   });
 });

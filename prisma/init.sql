@@ -134,3 +134,19 @@ CREATE TABLE IF NOT EXISTS "LeaderLock" (
   "heartbeatAt" DATETIME NOT NULL,
   "expiresAt" DATETIME NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS "MobileApiToken" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "userId" TEXT NOT NULL,
+  "name" TEXT,
+  "tokenHash" TEXT NOT NULL,
+  "tokenPrefix" TEXT NOT NULL,
+  "lastUsedAt" DATETIME,
+  "expiresAt" DATETIME,
+  "revokedAt" DATETIME,
+  "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" DATETIME NOT NULL,
+  CONSTRAINT "MobileApiToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "MobileApiToken_tokenHash_key" ON "MobileApiToken"("tokenHash");
+CREATE INDEX IF NOT EXISTS "MobileApiToken_userId_revokedAt_idx" ON "MobileApiToken"("userId", "revokedAt");

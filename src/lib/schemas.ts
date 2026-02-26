@@ -5,6 +5,12 @@ export const connectSchema = z.object({
   apiKey: z.string().min(8),
 });
 
+export const mobilePairConnectSchema = z.object({
+  baseUrl: z.string().url(),
+  apiKey: z.string().min(8),
+  deviceName: z.string().trim().min(1).max(120).optional(),
+});
+
 export const statusUpdateSchema = z.object({
   statusId: z.number().int().positive(),
   note: z.string().trim().max(5000).optional(),

@@ -28,6 +28,15 @@ type SyncJob = {
   durationMs: number | null;
 };
 
+type MobileToken = {
+  id: string;
+  name: string | null;
+  tokenPrefix: string;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+};
+
 type HealthPayload = {
   status: "ok" | "degraded";
   timestamp: string;
@@ -79,8 +88,10 @@ export default function OpsPage() {
   const [latestJob, setLatestJob] = useState<SyncJob | null>(null);
   const [jobs, setJobs] = useState<SyncJob[]>([]);
   const [health, setHealth] = useState<HealthPayload | null>(null);
+  const [mobileTokens, setMobileTokens] = useState<MobileToken[]>([]);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
+  const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
@@ -96,13 +107,15 @@ export default function OpsPage() {
       setLatestJob(null);
       setJobs([]);
       setHealth(null);
+      setMobileTokens([]);
       return;
     }
 
-    const [statusRes, jobsRes, healthRes] = await Promise.all([
+    const [statusRes, jobsRes, healthRes, tokensRes] = await Promise.all([
       fetch("/api/sync/status", { cache: "no-store" }),
       fetch("/api/sync/jobs?limit=60", { cache: "no-store" }),
       fetch("/api/health", { cache: "no-store" }),
+      fetch("/api/mobile/tokens", { cache: "no-store" }),
     ]);
 
     if (!statusRes.ok) {
@@ -122,6 +135,13 @@ export default function OpsPage() {
 
     const healthData = await healthRes.json();
     setHealth(healthData);
+
+    if (!tokensRes.ok) {
+      const data = await tokensRes.json();
+      throw new Error(data.error ?? "Failed to load mobile tokens");
+    }
+    const tokensData = await tokensRes.json();
+    setMobileTokens(tokensData.items ?? []);
   }
 
   useEffect(() => {
@@ -158,6 +178,27 @@ export default function OpsPage() {
       setError(e instanceof Error ? e.message : "Manual sync failed");
     } finally {
       setRetrying(false);
+    }
+  }
+
+  async function revokeToken(tokenId: string) {
+    setRevokingTokenId(tokenId);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await fetch(`/api/mobile/tokens/${tokenId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Failed to revoke token");
+      }
+      setInfo("Mobile token revoked.");
+      await loadData();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to revoke token");
+    } finally {
+      setRevokingTokenId(null);
     }
   }
 
@@ -301,6 +342,53 @@ export default function OpsPage() {
                       <td>{formatDateTime(job.endedAt)}</td>
                       <td>{formatDuration(job.durationMs)}</td>
                       <td>{job.error ? job.error.slice(0, 140) : "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section className="card">
+            <div className="table-toolbar">
+              <h2>Active Mobile Tokens</h2>
+              <p className="muted">{mobileTokens.length} active</p>
+            </div>
+            <div className="drill-table-wrap">
+              <table className="issues-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Prefix</th>
+                    <th>Created</th>
+                    <th>Last Used</th>
+                    <th>Expires</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mobileTokens.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="muted">No active mobile tokens.</td>
+                    </tr>
+                  )}
+                  {mobileTokens.map((token) => (
+                    <tr key={token.id}>
+                      <td>{token.name ?? "-"}</td>
+                      <td>{token.tokenPrefix}</td>
+                      <td>{formatDateTime(token.createdAt)}</td>
+                      <td>{formatDateTime(token.lastUsedAt)}</td>
+                      <td>{formatDateTime(token.expiresAt)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          disabled={revokingTokenId === token.id}
+                          onClick={() => void revokeToken(token.id)}
+                        >
+                          {revokingTokenId === token.id ? "Revoking..." : "Revoke"}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

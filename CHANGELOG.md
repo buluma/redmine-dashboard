@@ -26,6 +26,12 @@ All notable changes to this project are documented in this file.
   - new `IssueGithubLink` model in Prisma/SQLite cache,
   - `GET/POST/DELETE` endpoints under `/api/issues/[id]/github-links`,
   - dashboard issue popup UI to add/remove GitHub repo/issue/PR links.
+- Android/native mobile API v1 with Bearer-token auth:
+  - pairing endpoint `POST /api/mobile/v1/pair/connect`,
+  - mobile profile/issues/detail/comment routes,
+  - mobile GitHub-link CRUD routes,
+  - token rotation/revoke routes.
+- Mobile token management in Sync Ops page with revoke controls.
 - Dashboard productivity enhancements:
   - Saved views (status/priority/search/sort snapshots).
   - Keyboard shortcuts (`/`, `R`, `F`, `G`, `?`, `Esc`).
