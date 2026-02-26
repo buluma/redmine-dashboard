@@ -11,6 +11,7 @@ See [CHANGELOG.md](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/CHANGE
 - Show assigned issues with filtering, sorting, search, and saved views.
 - Update issue status (single issue and bulk selected issues).
 - Add comments and time logs from issue detail popup.
+- Link Redmine issues to GitHub repos/issues/PRs from issue detail popup.
 - Render issue descriptions/comments/time-log notes as Markdown.
 - Run automated sync polling every 60 seconds.
 - Run manual full sync with `Force Refresh`.
@@ -49,6 +50,9 @@ See [CHANGELOG.md](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/CHANGE
   - Allowed workflow transitions for issue.
 - `POST /api/issues/[id]/comment`
 - `POST /api/issues/[id]/timelog`
+- `GET /api/issues/[id]/github-links`
+- `POST /api/issues/[id]/github-links`
+- `DELETE /api/issues/[id]/github-links/[linkId]`
 - `POST /api/issues/bulk-status`
 
 ### Sync and Reporting

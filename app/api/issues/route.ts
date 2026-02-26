@@ -51,6 +51,10 @@ export async function GET(request: Request) {
             orderBy: { createdOnRemote: "desc" },
             take: 20,
           },
+          githubLinks: {
+            orderBy: { createdAt: "desc" },
+            take: 20,
+          },
           timeEntries: {
             orderBy: { spentOn: "desc" },
             take: 20,

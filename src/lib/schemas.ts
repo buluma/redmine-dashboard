@@ -35,3 +35,25 @@ export const issueQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
+
+export const githubLinkCreateSchema = z
+  .object({
+    repositoryFullName: z
+      .string()
+      .trim()
+      .min(3)
+      .max(120)
+      .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/, "Repository must look like owner/repo"),
+    githubIssueNumber: z.number().int().positive().optional(),
+    githubPrNumber: z.number().int().positive().optional(),
+    url: z.string().trim().url().optional(),
+    title: z.string().trim().max(200).optional(),
+  })
+  .refine(
+    (value) => !(value.githubIssueNumber && value.githubPrNumber),
+    "Provide either githubIssueNumber or githubPrNumber, not both",
+  );
+
+export const githubLinkDeleteSchema = z.object({
+  linkId: z.string().trim().min(1),
+});

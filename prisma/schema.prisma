@@ -15,6 +15,7 @@ model User {
   updatedAt         DateTime                @updatedAt
   credential        UserRedmineCredential?
   issues            Issue[]
+  githubLinks       IssueGithubLink[]
   timeEntries       TimeEntry[]
   syncState         SyncState?
   syncJobs          SyncJob[]
@@ -53,11 +54,31 @@ model Issue {
   doneRatio        Int?
   journals         IssueJournal[]
   timeEntries      TimeEntry[]
+  githubLinks      IssueGithubLink[]
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
   @@index([userId, statusId])
   @@index([userId, updatedOnRemote])
+}
+
+model IssueGithubLink {
+  id                String   @id @default(cuid())
+  issueId           String
+  issue             Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repositoryFullName String
+  githubIssueNumber Int?
+  githubPrNumber    Int?
+  url               String
+  title             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([issueId, createdAt])
+  @@index([userId, createdAt])
+  @@unique([issueId, url])
 }
 
 model IssueJournal {

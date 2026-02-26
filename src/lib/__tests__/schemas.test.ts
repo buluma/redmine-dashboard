@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { commentSchema, connectSchema, statusUpdateSchema, timeLogSchema } from "@/src/lib/schemas";
+import {
+  commentSchema,
+  connectSchema,
+  githubLinkCreateSchema,
+  statusUpdateSchema,
+  timeLogSchema,
+} from "@/src/lib/schemas";
 
 describe("validation schemas", () => {
   it("accepts valid connect input", () => {
@@ -35,6 +41,25 @@ describe("validation schemas", () => {
         activityId: 1,
         comment: "x".repeat(256),
         spentOn: "2026-02-25",
+      }),
+    ).toThrow();
+  });
+
+  it("accepts github link payload with repository and issue", () => {
+    const out = githubLinkCreateSchema.parse({
+      repositoryFullName: "acme/platform",
+      githubIssueNumber: 123,
+    });
+    expect(out.repositoryFullName).toBe("acme/platform");
+    expect(out.githubIssueNumber).toBe(123);
+  });
+
+  it("rejects github link payload when issue and pr numbers are both provided", () => {
+    expect(() =>
+      githubLinkCreateSchema.parse({
+        repositoryFullName: "acme/platform",
+        githubIssueNumber: 12,
+        githubPrNumber: 34,
       }),
     ).toThrow();
   });

@@ -22,6 +22,10 @@ All notable changes to this project are documented in this file.
 ### Added
 
 - Bulk issue status updates via `POST /api/issues/bulk-status` with per-issue transition checks and partial-failure reporting.
+- GitHub linkage support for issues:
+  - new `IssueGithubLink` model in Prisma/SQLite cache,
+  - `GET/POST/DELETE` endpoints under `/api/issues/[id]/github-links`,
+  - dashboard issue popup UI to add/remove GitHub repo/issue/PR links.
 - Dashboard productivity enhancements:
   - Saved views (status/priority/search/sort snapshots).
   - Keyboard shortcuts (`/`, `R`, `F`, `G`, `?`, `Esc`).

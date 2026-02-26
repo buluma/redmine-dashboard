@@ -29,6 +29,16 @@ type TimeEntry = {
   spentOn: string;
 };
 
+type GithubLink = {
+  id: string;
+  repositoryFullName: string;
+  githubIssueNumber: number | null;
+  githubPrNumber: number | null;
+  url: string;
+  title: string | null;
+  createdAt: string;
+};
+
 type Issue = {
   id: string;
   redmineIssueId: number;
@@ -45,6 +55,7 @@ type Issue = {
   updatedOnRemote: string;
   dueDate: string | null;
   doneRatio: number | null;
+  githubLinks: GithubLink[];
   journals: Journal[];
   timeEntries: TimeEntry[];
 };
@@ -266,6 +277,12 @@ export default function Home() {
   const [activityId, setActivityId] = useState(0);
   const [timeComment, setTimeComment] = useState("");
   const [spentOn, setSpentOn] = useState(new Date().toISOString().slice(0, 10));
+  const [githubRepo, setGithubRepo] = useState("");
+  const [githubIssueNumber, setGithubIssueNumber] = useState("");
+  const [githubPrNumber, setGithubPrNumber] = useState("");
+  const [githubUrl, setGithubUrl] = useState("");
+  const [githubTitle, setGithubTitle] = useState("");
+  const [githubBusy, setGithubBusy] = useState(false);
 
   const [timerIssueId, setTimerIssueId] = useState<number | null>(null);
   const [timerStartedAtMs, setTimerStartedAtMs] = useState<number | null>(null);
@@ -644,6 +661,14 @@ export default function Home() {
     setBulkStatusId(statuses[0].id);
   }, [bulkStatusId, statuses]);
 
+  useEffect(() => {
+    setGithubRepo("");
+    setGithubIssueNumber("");
+    setGithubPrNumber("");
+    setGithubUrl("");
+    setGithubTitle("");
+  }, [selectedIssueId]);
+
   async function connectRedmine(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
@@ -874,6 +899,68 @@ export default function Home() {
       setInfoMessage("Time entry added.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Timelog failed");
+    }
+  }
+
+  async function submitGithubLink(event: React.FormEvent) {
+    event.preventDefault();
+    if (!selectedIssue) return;
+
+    setGithubBusy(true);
+    setError(null);
+    try {
+      const issueNo = githubIssueNumber.trim();
+      const prNo = githubPrNumber.trim();
+      const payload = {
+        repositoryFullName: githubRepo.trim(),
+        githubIssueNumber: issueNo ? Number(issueNo) : undefined,
+        githubPrNumber: prNo ? Number(prNo) : undefined,
+        url: githubUrl.trim() || undefined,
+        title: githubTitle.trim() || undefined,
+      };
+
+      const res = await fetch(`/api/issues/${selectedIssue.redmineIssueId}/github-links`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Unable to link GitHub reference");
+      }
+
+      setGithubIssueNumber("");
+      setGithubPrNumber("");
+      setGithubUrl("");
+      setGithubTitle("");
+      await refreshAll();
+      setInfoMessage("GitHub link added.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to link GitHub reference");
+    } finally {
+      setGithubBusy(false);
+    }
+  }
+
+  async function deleteGithubLink(linkId: string) {
+    if (!selectedIssue) return;
+
+    setGithubBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/issues/${selectedIssue.redmineIssueId}/github-links/${linkId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Unable to remove GitHub link");
+      }
+      await refreshAll();
+      setInfoMessage("GitHub link removed.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to remove GitHub link");
+    } finally {
+      setGithubBusy(false);
     }
   }
 
@@ -1395,6 +1482,9 @@ export default function Home() {
                         <td>
                           <div className="subject-cell">
                             <p>{issue.subject}</p>
+                            {issue.githubLinks.length > 0 && (
+                              <span className="muted">GH: {issue.githubLinks.length} link(s)</span>
+                            )}
                             <span className={`urgency-pill ${urgency}`}>{urgency}</span>
                           </div>
                         </td>
@@ -1448,6 +1538,94 @@ export default function Home() {
                 Close
               </button>
             </div>
+
+            <section className="detail-section">
+              <h3>GitHub Links</h3>
+              <form className="form" onSubmit={submitGithubLink}>
+                <label>
+                  Repository (`owner/repo`)
+                  <input
+                    value={githubRepo}
+                    onChange={(e) => setGithubRepo(e.target.value)}
+                    placeholder="acme/platform"
+                    required
+                  />
+                </label>
+                <label>
+                  GitHub Issue #
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={githubIssueNumber}
+                    onChange={(e) => setGithubIssueNumber(e.target.value)}
+                    placeholder="123"
+                  />
+                </label>
+                <label>
+                  GitHub PR #
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={githubPrNumber}
+                    onChange={(e) => setGithubPrNumber(e.target.value)}
+                    placeholder="456"
+                  />
+                </label>
+                <label>
+                  Direct URL (optional)
+                  <input
+                    value={githubUrl}
+                    onChange={(e) => setGithubUrl(e.target.value)}
+                    placeholder="https://github.com/acme/platform/issues/123"
+                  />
+                </label>
+                <label>
+                  Title (optional)
+                  <input
+                    value={githubTitle}
+                    onChange={(e) => setGithubTitle(e.target.value)}
+                    placeholder="Investigate API timeout"
+                  />
+                </label>
+                <button type="submit" disabled={githubBusy}>
+                  {githubBusy ? "Linking..." : "Add GitHub Link"}
+                </button>
+              </form>
+
+              <div className="timeline">
+                {selectedIssue.githubLinks.length === 0 && <p className="muted">No GitHub links yet.</p>}
+                {selectedIssue.githubLinks.map((link) => (
+                  <div key={link.id} className="timeline-item">
+                    <div className="entry-head">
+                      <a href={link.url} target="_blank" rel="noreferrer">
+                        {link.title
+                          ?? (link.githubPrNumber
+                            ? `${link.repositoryFullName}#PR-${link.githubPrNumber}`
+                            : link.githubIssueNumber
+                              ? `${link.repositoryFullName}#${link.githubIssueNumber}`
+                              : link.repositoryFullName)}
+                      </a>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => void deleteGithubLink(link.id)}
+                        disabled={githubBusy}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <p className="muted entry-meta">
+                      {link.repositoryFullName}
+                      {link.githubIssueNumber ? ` • Issue #${link.githubIssueNumber}` : ""}
+                      {link.githubPrNumber ? ` • PR #${link.githubPrNumber}` : ""}
+                    </p>
+                    <p className="muted">{link.url}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
 
             <section className="detail-section">
               <h3>Description</h3>

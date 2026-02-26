@@ -60,6 +60,24 @@ CREATE TABLE IF NOT EXISTS "IssueJournal" (
 CREATE UNIQUE INDEX IF NOT EXISTS "IssueJournal_redmineJournalId_key" ON "IssueJournal"("redmineJournalId");
 CREATE INDEX IF NOT EXISTS "IssueJournal_issueId_createdOnRemote_idx" ON "IssueJournal"("issueId", "createdOnRemote");
 
+CREATE TABLE IF NOT EXISTS "IssueGithubLink" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "issueId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "repositoryFullName" TEXT NOT NULL,
+  "githubIssueNumber" INTEGER,
+  "githubPrNumber" INTEGER,
+  "url" TEXT NOT NULL,
+  "title" TEXT,
+  "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" DATETIME NOT NULL,
+  CONSTRAINT "IssueGithubLink_issueId_fkey" FOREIGN KEY ("issueId") REFERENCES "Issue" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT "IssueGithubLink_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "IssueGithubLink_issueId_url_key" ON "IssueGithubLink"("issueId", "url");
+CREATE INDEX IF NOT EXISTS "IssueGithubLink_issueId_createdAt_idx" ON "IssueGithubLink"("issueId", "createdAt");
+CREATE INDEX IF NOT EXISTS "IssueGithubLink_userId_createdAt_idx" ON "IssueGithubLink"("userId", "createdAt");
+
 CREATE TABLE IF NOT EXISTS "TimeEntry" (
   "id" TEXT NOT NULL PRIMARY KEY,
   "redmineTimeEntryId" INTEGER,
