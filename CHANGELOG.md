@@ -32,6 +32,7 @@ All notable changes to this project are documented in this file.
   - mobile GitHub-link CRUD routes,
   - token rotation/revoke routes.
 - Mobile token management in Sync Ops page with revoke controls.
+- Android client starter kit documentation and Kotlin templates under `docs/android/*`.
 - Dashboard productivity enhancements:
   - Saved views (status/priority/search/sort snapshots).
   - Keyboard shortcuts (`/`, `R`, `F`, `G`, `?`, `Esc`).
