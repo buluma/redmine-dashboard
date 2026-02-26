@@ -1,17 +1,45 @@
 import "package:flutter/material.dart";
+import "package:flutter_dotenv/flutter_dotenv.dart";
+import "package:sentry_flutter/sentry_flutter.dart";
 
 import "src/nrcc_api_client.dart";
 import "src/repositories.dart";
 import "src/screens.dart";
 import "src/token_store.dart";
 
-const String kNrccBaseUrl = String.fromEnvironment(
-  "NRCC_BASE_URL",
-  defaultValue: "http://10.0.2.2:3000",
-);
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
 
-void main() {
-  runApp(const NrccApp());
+  final dsn = _env("SENTRY_DSN");
+  final tracesSampleRate = _envDouble("SENTRY_TRACES_SAMPLE_RATE", 0.2);
+  final profilesSampleRate = _envDouble("SENTRY_PROFILES_SAMPLE_RATE", 0.1);
+  final sendDefaultPii = _envBool("SENTRY_SEND_DEFAULT_PII", true);
+  final enableLogs = _envBool("SENTRY_ENABLE_LOGS", false);
+
+  await SentryFlutter.init((options) {
+    options.dsn = dsn.isEmpty ? null : dsn;
+    options.sendDefaultPii = sendDefaultPii;
+    options.tracesSampleRate = tracesSampleRate;
+    options.profilesSampleRate = profilesSampleRate;
+    options.enableLogs = enableLogs;
+  }, appRunner: () => runApp(SentryWidget(child: const NrccApp())));
+}
+
+String _env(String key, [String fallback = ""]) {
+  return dotenv.env[key]?.trim() ?? fallback;
+}
+
+double _envDouble(String key, double fallback) {
+  final raw = _env(key);
+  return double.tryParse(raw) ?? fallback;
+}
+
+bool _envBool(String key, bool fallback) {
+  final raw = _env(key).toLowerCase();
+  if (raw == "true" || raw == "1" || raw == "yes") return true;
+  if (raw == "false" || raw == "0" || raw == "no") return false;
+  return fallback;
 }
 
 class NrccApp extends StatefulWidget {
@@ -34,7 +62,10 @@ class _NrccAppState extends State<NrccApp> {
   void initState() {
     super.initState();
     _tokenStore = TokenStore();
-    _apiClient = NrccApiClient(baseUrl: kNrccBaseUrl, tokenStore: _tokenStore);
+    _apiClient = NrccApiClient(
+      baseUrl: _env("NRCC_BASE_URL", "http://100.100.245.3:3000"),
+      tokenStore: _tokenStore,
+    );
     _authRepository = AuthRepository(_apiClient, _tokenStore);
     _issuesRepository = IssuesRepository(_apiClient);
     _actionsRepository = IssueActionsRepository(_apiClient);

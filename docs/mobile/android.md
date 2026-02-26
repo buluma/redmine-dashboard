@@ -4,7 +4,7 @@ This guide provides information for developers working with the native Android c
 
 ## Base URL Configuration
 
-- **Android Emulator:** Use `http://10.0.2.2:3000` to connect to the local development server running on the host machine.
+- **Android Emulator:** Use `http://100.100.245.3:3000` to connect to the local development server running on the host machine.
 - **Physical Device:** If using a physical device for testing, ensure it is on the same network as the development machine and use `http://<your-lan-ip>:3000`, replacing `<your-lan-ip>` with the local IP address of your machine.
 
 All mobile-specific endpoints are located under the `/api/mobile/v1/` path.

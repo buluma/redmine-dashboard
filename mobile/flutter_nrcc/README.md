@@ -9,21 +9,31 @@ Build-ready Flutter Android client for NRCC mobile APIs.
 
 ## Configure NRCC Base URL
 
-By default the app targets Android emulator loopback:
-
-- `http://10.0.2.2:3000`
-
-Override at run time:
+Use local environment configuration:
 
 ```bash
-flutter run --dart-define=NRCC_BASE_URL=http://10.0.2.2:3000
+cp .env.example .env
 ```
 
-For physical device, use your machine LAN IP:
+Set `NRCC_BASE_URL` in `.env`.
 
-```bash
-flutter run --dart-define=NRCC_BASE_URL=http://192.168.1.50:3000
-```
+Default emulator value:
+
+- `http://100.100.245.3:3000`
+
+For physical devices, use your machine LAN IP (example):
+
+- `http://192.168.1.50:3000`
+
+## Configure Sentry (Optional)
+
+Set the following in `.env`:
+
+- `SENTRY_DSN`
+- `SENTRY_SEND_DEFAULT_PII`
+- `SENTRY_TRACES_SAMPLE_RATE`
+- `SENTRY_PROFILES_SAMPLE_RATE`
+- `SENTRY_ENABLE_LOGS`
 
 ## Run
 

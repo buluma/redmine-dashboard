@@ -13,12 +13,12 @@ To run the app, navigate to the directory and execute the following commands:
 ```bash
 cd mobile/flutter_nrcc
 flutter pub get
-flutter run --dart-define=NRCC_BASE_URL=http://10.0.2.2:3000
+flutter run --dart-define=NRCC_BASE_URL=http://100.100.245.3:3000
 ```
 
 ### Base URL Configuration
 
-- **Android Emulator:** Use `http://10.0.2.2:3000` to connect to the local development server.
+- **Android Emulator:** Use `http://100.100.245.3:3000` to connect to the local development server.
 - **Physical Device:** Use `http://<your-lan-ip>:3000` where `<your-lan-ip>` is the local IP address of your development machine.
 
 All mobile-specific endpoints are located under the `/api/mobile/v1/` path.
