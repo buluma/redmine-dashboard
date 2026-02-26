@@ -6,11 +6,13 @@ import "token_store.dart";
 class NrccApiClient {
   final Dio _dio;
   final TokenStore _tokenStore;
+  final String _baseUrl;
 
   NrccApiClient({
     required String baseUrl,
     required TokenStore tokenStore,
   })  : _tokenStore = tokenStore,
+        _baseUrl = baseUrl,
         _dio = Dio(BaseOptions(baseUrl: baseUrl)) {
     _dio.interceptors.add(
       InterceptorsWrapper(
@@ -36,6 +38,23 @@ class NrccApiClient {
     if (data is Map<String, dynamic> && data["error"] is String) {
       throw ApiError(data["error"] as String);
     }
+
+    if (e.type == DioExceptionType.connectionError) {
+      throw ApiError(
+        "Cannot reach NRCC server at $_baseUrl.\n"
+        "Check that NRCC is running and reachable from this device.\n"
+        "Android emulator usually needs http://10.0.2.2:3000.\n"
+        "Physical phone must use your computer LAN IP, e.g. http://192.168.x.x:3000.",
+      );
+    }
+
+    if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout) {
+      throw ApiError(
+        "Request timed out when contacting NRCC at $_baseUrl. "
+        "Verify network path and server availability.",
+      );
+    }
+
     throw ApiError(e.message ?? "API request failed");
   }
 

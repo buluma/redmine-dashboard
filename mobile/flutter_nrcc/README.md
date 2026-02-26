@@ -17,11 +17,15 @@ cp .env.example .env
 
 Set `NRCC_BASE_URL` in `.env`.
 
-Default emulator value:
+Default value in this project (Tailscale / physical phone):
 
 - `http://100.100.245.3:3000`
 
-For physical devices, use your machine LAN IP (example):
+Android emulator alternative:
+
+- `http://10.0.2.2:3000`
+
+For physical devices without Tailscale, use your machine LAN IP (example):
 
 - `http://192.168.1.50:3000`
 

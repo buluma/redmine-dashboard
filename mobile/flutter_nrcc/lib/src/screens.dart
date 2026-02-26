@@ -138,6 +138,7 @@ class _IssueListScreenState extends State<IssueListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text("My Issues"),
@@ -196,22 +197,52 @@ class _IssueListScreenState extends State<IssueListScreen> {
               itemCount: _issues.length,
               itemBuilder: (context, index) {
                 final issue = _issues[index];
-                return ListTile(
-                  title: Text("#${issue.redmineIssueId} ${issue.subject}"),
-                  subtitle: Text(
-                    "${issue.statusName} • ${issue.priority ?? "-"} • GH ${issue.githubLinks.length}",
-                  ),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => IssueDetailScreen(
-                          issueId: issue.redmineIssueId,
-                          issuesRepository: widget.issuesRepository,
-                          actionsRepository: widget.actionsRepository,
-                        ),
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    title: Text(
+                      "#${issue.redmineIssueId} ${issue.subject}",
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: <Widget>[
+                          Chip(
+                            label: Text(issue.statusName),
+                            visualDensity: VisualDensity.compact,
+                            side: BorderSide(color: theme.colorScheme.outlineVariant),
+                          ),
+                          Chip(
+                            label: Text(issue.priority ?? "No priority"),
+                            visualDensity: VisualDensity.compact,
+                            side: BorderSide(color: theme.colorScheme.outlineVariant),
+                          ),
+                          Chip(
+                            label: Text("GH ${issue.githubLinks.length}"),
+                            visualDensity: VisualDensity.compact,
+                            side: BorderSide(color: theme.colorScheme.outlineVariant),
+                          ),
+                        ],
                       ),
-                    );
-                  },
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => IssueDetailScreen(
+                            issueId: issue.redmineIssueId,
+                            issuesRepository: widget.issuesRepository,
+                            actionsRepository: widget.actionsRepository,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 );
               },
             ),
@@ -247,6 +278,60 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   final _ghIssue = TextEditingController();
   final _relationIssue = TextEditingController();
   String _relationType = "relates";
+
+  String _normalizeIssueDescription(String? input) {
+    if (input == null || input.trim().isEmpty) {
+      return "(No description)";
+    }
+
+    var out = input;
+
+    // Convert patterns like: "link":https://example.com
+    out = out.replaceAllMapped(
+      RegExp(r'"?link"?\s*:\s*(https?:\/\/[^\s)"\]]+)'),
+      (m) => "[link](${m.group(1)})",
+    );
+
+    // Convert any remaining bare URLs to markdown links.
+    out = out.replaceAllMapped(
+      RegExp(r'(?<!\()(?<!\])\b(https?:\/\/[^\s<]+)'),
+      (m) => "<${m.group(1)}>",
+    );
+
+    return out;
+  }
+
+  Widget _sectionCard({
+    required BuildContext context,
+    required String title,
+    required Widget child,
+    Widget? action,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                if (action case final button?) button,
+              ],
+            ),
+            const SizedBox(height: 10),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> _openMarkdownLink(String? href) async {
     if (href == null || href.trim().isEmpty) return;
@@ -364,6 +449,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: Text("Issue #${widget.issueId}")),
       body: _loading
@@ -382,129 +468,226 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text(_issue!.subject, style: Theme.of(context).textTheme.titleLarge),
-                          Text("${_issue!.statusName} • ${_issue!.priority ?? "-"}"),
-                          const SizedBox(height: 12),
-                          MarkdownBody(
-                            data: (_issue!.description?.trim().isNotEmpty ?? false)
-                                ? _issue!.description!
-                                : "(No description)",
-                            selectable: true,
-                            extensionSet: md.ExtensionSet.gitHubWeb,
-                            styleSheet: _markdownStyle(context),
-                            onTapLink: (text, href, title) => _openMarkdownLink(href),
-                          ),
-                          const SizedBox(height: 16),
-                          TextField(
-                            controller: _comment,
-                            decoration: const InputDecoration(labelText: "Comment"),
-                          ),
-                          const SizedBox(height: 8),
-                          ElevatedButton(
-                            onPressed: _postComment,
-                            child: const Text("Post Comment"),
-                          ),
-                          const SizedBox(height: 16),
-                          TextField(
-                            controller: _repo,
-                            decoration: const InputDecoration(labelText: "Repository (owner/repo)"),
-                          ),
-                          TextField(
-                            controller: _ghIssue,
-                            decoration: const InputDecoration(labelText: "GitHub Issue #"),
-                          ),
-                          const SizedBox(height: 8),
-                          ElevatedButton(
-                            onPressed: _addGithubLink,
-                            child: const Text("Add GitHub Link"),
-                          ),
-                          const SizedBox(height: 16),
-                          Text("Allowed Statuses", style: Theme.of(context).textTheme.titleMedium),
-                          if (_issue!.allowedStatuses.isEmpty)
-                            const Text("No transition data from server.")
-                          else
-                            Wrap(
-                              spacing: 8,
-                              children: _issue!.allowedStatuses
-                                  .map((s) => Chip(label: Text(s.name)))
-                                  .toList(),
-                            ),
-                          const SizedBox(height: 16),
-                          Text("GitHub Links", style: Theme.of(context).textTheme.titleMedium),
-                          ..._issue!.githubLinks.map(
-                            (link) => ListTile(
-                              title: Text(link.title ?? link.url),
-                              subtitle: Text(link.repositoryFullName),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                onPressed: () async {
-                                  await widget.actionsRepository.removeGithubLink(
-                                    redmineIssueId: widget.issueId,
-                                    linkId: link.id,
-                                  );
-                                  await _load();
-                                },
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text("Attachments", style: Theme.of(context).textTheme.titleMedium),
-                          if (_issue!.attachments.isEmpty)
-                            const Text("No attachments.")
-                          else
-                            ..._issue!.attachments.map(
-                              (attachment) => ListTile(
-                                title: Text(attachment.filename),
-                                subtitle: Text(
-                                  "${(attachment.filesize / 1024).toStringAsFixed(1)} KB"
-                                  "${attachment.author != null ? " • ${attachment.author}" : ""}",
+                          _sectionCard(
+                            context: context,
+                            title: "Overview",
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(_issue!.subject, style: theme.textTheme.headlineSmall),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: <Widget>[
+                                    Chip(
+                                      label: Text(_issue!.statusName),
+                                      backgroundColor: theme.colorScheme.primaryContainer,
+                                    ),
+                                    Chip(
+                                      label: Text(_issue!.priority ?? "No priority"),
+                                      side: BorderSide(color: theme.colorScheme.outlineVariant),
+                                    ),
+                                    if (_issue!.children.isNotEmpty)
+                                      Chip(
+                                        label: Text("Children ${_issue!.children.length}"),
+                                        side: BorderSide(color: theme.colorScheme.outlineVariant),
+                                      ),
+                                  ],
                                 ),
-                              ),
+                              ],
                             ),
-                          const SizedBox(height: 16),
-                          Text("Relations", style: Theme.of(context).textTheme.titleMedium),
-                          TextField(
-                            controller: _relationIssue,
-                            decoration: const InputDecoration(labelText: "Related issue #"),
-                            keyboardType: TextInputType.number,
                           ),
-                          DropdownButton<String>(
-                            value: _relationType,
-                            items: const <DropdownMenuItem<String>>[
-                              DropdownMenuItem<String>(value: "relates", child: Text("relates")),
-                              DropdownMenuItem<String>(value: "blocks", child: Text("blocks")),
-                              DropdownMenuItem<String>(value: "precedes", child: Text("precedes")),
-                              DropdownMenuItem<String>(value: "follows", child: Text("follows")),
-                              DropdownMenuItem<String>(value: "duplicates", child: Text("duplicates")),
-                            ],
-                            onChanged: (value) {
-                              if (value == null) return;
-                              setState(() => _relationType = value);
-                            },
+                          _sectionCard(
+                            context: context,
+                            title: "Description",
+                            child: MarkdownBody(
+                              data: _normalizeIssueDescription(_issue!.description),
+                              selectable: true,
+                              extensionSet: md.ExtensionSet.gitHubWeb,
+                              styleSheet: _markdownStyle(context),
+                              onTapLink: (text, href, title) => _openMarkdownLink(href),
+                            ),
                           ),
-                          ElevatedButton(
-                            onPressed: _addRelation,
-                            child: const Text("Add Relation"),
+                          _sectionCard(
+                            context: context,
+                            title: "Allowed Statuses",
+                            child: _issue!.allowedStatuses.isEmpty
+                                ? const Text("No transition data from server.")
+                                : Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: _issue!.allowedStatuses
+                                        .map((s) => Chip(
+                                              label: Text(s.name),
+                                              visualDensity: VisualDensity.compact,
+                                              side: BorderSide(color: theme.colorScheme.outlineVariant),
+                                            ))
+                                        .toList(),
+                                  ),
                           ),
-                          if (_issue!.relations.isEmpty)
-                            const Text("No relations.")
-                          else
-                            ..._issue!.relations.map(
-                              (relation) => ListTile(
-                                title: Text("${relation.relationType} #${relation.targetIssueId}"),
-                                subtitle: relation.delay == null ? null : Text("Delay: ${relation.delay}"),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete_outline),
-                                  onPressed: () async {
-                                    await widget.actionsRepository.removeRelation(
-                                      redmineIssueId: widget.issueId,
-                                      relationId: relation.redmineRelationId,
-                                    );
-                                    await _load();
-                                  },
+                          _sectionCard(
+                            context: context,
+                            title: "Add Comment",
+                            child: Column(
+                              children: <Widget>[
+                                TextField(
+                                  controller: _comment,
+                                  decoration: const InputDecoration(labelText: "Comment"),
+                                  minLines: 2,
+                                  maxLines: 4,
                                 ),
-                              ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: _postComment,
+                                    child: const Text("Post Comment"),
+                                  ),
+                                ),
+                              ],
                             ),
+                          ),
+                          _sectionCard(
+                            context: context,
+                            title: "GitHub Links",
+                            child: Column(
+                              children: <Widget>[
+                                TextField(
+                                  controller: _repo,
+                                  decoration: const InputDecoration(labelText: "Repository (owner/repo)"),
+                                ),
+                                TextField(
+                                  controller: _ghIssue,
+                                  decoration: const InputDecoration(labelText: "GitHub Issue #"),
+                                  keyboardType: TextInputType.number,
+                                ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: _addGithubLink,
+                                    child: const Text("Add GitHub Link"),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                if (_issue!.githubLinks.isEmpty)
+                                  const Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text("No GitHub links."),
+                                  )
+                                else
+                                  ..._issue!.githubLinks.map(
+                                    (link) => ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      title: Text(
+                                        link.title ?? link.url,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      subtitle: Text(link.repositoryFullName),
+                                      trailing: IconButton(
+                                        icon: const Icon(Icons.delete_outline),
+                                        onPressed: () async {
+                                          await widget.actionsRepository.removeGithubLink(
+                                            redmineIssueId: widget.issueId,
+                                            linkId: link.id,
+                                          );
+                                          await _load();
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          _sectionCard(
+                            context: context,
+                            title: "Attachments",
+                            child: _issue!.attachments.isEmpty
+                                ? const Text("No attachments.")
+                                : Column(
+                                    children: _issue!.attachments
+                                        .map(
+                                          (attachment) => ListTile(
+                                            contentPadding: EdgeInsets.zero,
+                                            leading: const Icon(Icons.attach_file),
+                                            title: Text(
+                                              attachment.filename,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            subtitle: Text(
+                                              "${(attachment.filesize / 1024).toStringAsFixed(1)} KB"
+                                              "${attachment.author != null ? " • ${attachment.author}" : ""}",
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                                  ),
+                          ),
+                          _sectionCard(
+                            context: context,
+                            title: "Relations",
+                            child: Column(
+                              children: <Widget>[
+                                TextField(
+                                  controller: _relationIssue,
+                                  decoration: const InputDecoration(labelText: "Related issue #"),
+                                  keyboardType: TextInputType.number,
+                                ),
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: DropdownButton<String>(
+                                    value: _relationType,
+                                    items: const <DropdownMenuItem<String>>[
+                                      DropdownMenuItem<String>(value: "relates", child: Text("relates")),
+                                      DropdownMenuItem<String>(value: "blocks", child: Text("blocks")),
+                                      DropdownMenuItem<String>(value: "precedes", child: Text("precedes")),
+                                      DropdownMenuItem<String>(value: "follows", child: Text("follows")),
+                                      DropdownMenuItem<String>(value: "duplicates", child: Text("duplicates")),
+                                    ],
+                                    onChanged: (value) {
+                                      if (value == null) return;
+                                      setState(() => _relationType = value);
+                                    },
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: _addRelation,
+                                    child: const Text("Add Relation"),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                if (_issue!.relations.isEmpty)
+                                  const Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text("No relations."),
+                                  )
+                                else
+                                  ..._issue!.relations.map(
+                                    (relation) => ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      title: Text("${relation.relationType} #${relation.targetIssueId}"),
+                                      subtitle: relation.delay == null ? null : Text("Delay: ${relation.delay}"),
+                                      trailing: IconButton(
+                                        icon: const Icon(Icons.delete_outline),
+                                        onPressed: () async {
+                                          await widget.actionsRepository.removeRelation(
+                                            redmineIssueId: widget.issueId,
+                                            relationId: relation.redmineRelationId,
+                                          );
+                                          await _load();
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
