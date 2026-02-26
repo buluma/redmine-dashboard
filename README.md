@@ -13,6 +13,7 @@ The documentation includes:
 - **[System Architecture](./docs/system-architecture.md)**
 - **[Deployment Guide](./docs/deployment-guide.md)**
 - **[Code Standards](./docs/code-standards.md)**
+- **[Telemetry Conventions](./docs/telemetry.md)**
 - **[API Reference](./docs/api-reference.md)**
 - **[Codebase Summary](./docs/codebase-summary.md)**
 - **[Design Guidelines](./docs/design-guidelines.md)**

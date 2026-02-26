@@ -33,6 +33,11 @@ Open the `.env` file and set the following variables:
 - `APP_ENCRYPTION_KEY`: A secret key used for encrypting stored Redmine API keys. Generate a secure random string for this.
 - `SESSION_SECRET`: A secret key used for signing session cookies. Generate a secure random string for this.
 
+**Recommended (Sentry error/performance/logs/profiling):**
+
+- `SENTRY_DSN`: Server-side DSN used by Node/Edge Sentry initialization.
+- `NEXT_PUBLIC_SENTRY_DSN`: Client-side DSN used by browser Sentry initialization.
+
 **Optional (for first-run bootstrap):**
 
 - `REDMINE_BASE_URL`: The base URL of your Redmine instance (e.g., `https://redmine.example.com`).
@@ -91,12 +96,20 @@ A full list of helper targets is available in the [Makefile](/Users/shadowwalker
 - `DOCKER_DATABASE_URL`: Optional Docker-only SQLite path override. Recommended to use `file:./prisma/dev.db` for Docker Compose setups.
 - `APP_ENCRYPTION_KEY`: Secret key for encrypting Redmine API keys at rest.
 - `SESSION_SECRET`: HMAC secret for signing session cookies.
+- `SENTRY_DSN`: Optional but recommended for server-side Sentry telemetry.
+- `NEXT_PUBLIC_SENTRY_DSN`: Optional but recommended for browser-side Sentry telemetry.
 - `POLL_INTERVAL_MS`: The interval for the sync poller in milliseconds (default: `60000`).
 - `LEADER_LOCK_TTL_MS`: The time-to-live for the leader lock in milliseconds (default: `90000`).
 - `SYNC_JOB_STALE_MS`: Timeout in milliseconds for resetting stale running or pending sync jobs (default: `600000`).
 - `MOBILE_API_ENABLED`: Enables the mobile API surface (`true` by default; set to `false` to disable `/api/mobile/v1/*`).
 - `REDMINE_BASE_URL`: Optional. Used for first-run bootstrap to pre-configure the Redmine connection.
 - `REDMINE_API_KEY`: Optional. Used for first-run bootstrap.
+
+## Security Notes
+
+- Do not commit `.env` to Git.
+- Replace placeholder values (especially `SESSION_SECRET`) before deployment.
+- Keep Sentry DSNs in environment variables instead of hardcoding them in source files.
 
 ## Available Scripts
 
