@@ -51,7 +51,7 @@ export const env = {
   databaseUrl: process.env.DATABASE_URL!,
   encryptionKey: process.env.APP_ENCRYPTION_KEY!,
   sessionSecret: process.env.SESSION_SECRET!,
-  pollIntervalMs: numberFromEnv("POLL_INTERVAL_MS", isProduction ? 120000 : 60000),
+  pollIntervalMs: numberFromEnv("POLL_INTERVAL_MS", 90000),
   leaderLockTtlMs: numberFromEnv("LEADER_LOCK_TTL_MS", 90000),
   syncJobStaleMs: numberFromEnv("SYNC_JOB_STALE_MS", 10 * 60 * 1000),
   enableSyncPoller: boolFromEnv("ENABLE_SYNC_POLLER", isProduction),
