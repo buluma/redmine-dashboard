@@ -8,12 +8,16 @@ Sentry.init({
   dsn: "https://b3676ccc7d5528b0b759c09646cf2f74@o4510889607430144.ingest.us.sentry.io/4510951252426752",
 
   integrations: [
+    Sentry.browserTracingIntegration(),
+    Sentry.browserProfilingIntegration(),
+
     // send console.log, console.warn, and console.error calls as logs to Sentry
     Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
   ],
 
   // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
   tracesSampleRate: 1,
+  profileSessionSampleRate: 1,
 
   // Enable logs to be sent to Sentry
   enableLogs: true,

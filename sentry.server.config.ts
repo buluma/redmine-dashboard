@@ -3,15 +3,19 @@
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
 import * as Sentry from "@sentry/nextjs";
+import { nodeProfilingIntegration } from "@sentry/profiling-node";
 
 Sentry.init({
-  dsn: "https://b3676ccc7d5528b0b759c09646cf2f74@o4510889607430144.ingest.us.sentry.io/4510951252426752",
+  dsn: process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN,
 
   integrations: [
     // send console.log, console.warn, and console.error calls as logs to Sentry
     Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
+    nodeProfilingIntegration(),
   ],
   tracesSampleRate: 1,
+  profileSessionSampleRate: 1,
+  profileLifecycle: "trace",
 
   // Enable logs to be sent to Sentry
   enableLogs: true,
