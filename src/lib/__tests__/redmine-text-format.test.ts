@@ -35,4 +35,28 @@ describe("normalizeRedmineText", () => {
     expect(output).toContain("`run-now`");
     expect(output).toContain("![](https://example.com/img.png)");
   });
+
+  it("converts escaped redmine pre/code blocks into fenced markdown", () => {
+    const input = `Condition details...\n&lt;pre&gt;&lt;code class=&quot;javascript&quot;&gt;ctx.instance.isChanged(\"status\") &amp;&amp; ok&lt;/pre&gt;&lt;/code&gt;`;
+    const output = normalizeRedmineText(input);
+
+    expect(output).toContain("```javascript");
+    expect(output).toContain("ctx.instance.isChanged(\"status\") && ok");
+    expect(output).toContain("```");
+  });
+
+  it("converts SRC refs to clickable source links", () => {
+    const input = `[SRC #71243 from redmine.nasctech.com]\n[SRC-JOURNAL #921156]\nhttps://streamline.staging.vodacomsa-battery.nasctech.com/admin/custom/objects/86/rules/db/336/edit?_tab_id=8m0nwg`;
+    const output = normalizeRedmineText(input);
+
+    expect(output).toContain("[SRC #71243](https://redmine.nasctech.com/issues/71243)");
+    expect(output).toContain("[SRC-JOURNAL #921156](https://redmine.nasctech.com/journals/921156)");
+  });
+
+  it("falls back to first URL for SRC-JOURNAL when source host is unavailable", () => {
+    const input = `[SRC-JOURNAL #921156]\nhttps://streamline.staging.vodacomsa-battery.nasctech.com/admin/custom/objects/86/rules/db/336/edit?_tab_id=8m0nwg`;
+    const output = normalizeRedmineText(input);
+
+    expect(output).toContain("[SRC-JOURNAL #921156](https://streamline.staging.vodacomsa-battery.nasctech.com/admin/custom/objects/86/rules/db/336/edit?_tab_id=8m0nwg)");
+  });
 });

@@ -1081,6 +1081,18 @@ label {
   padding: 0;
 }
 
+.markdown .md-collapsible-code {
+  margin: 0.45rem 0;
+}
+
+.markdown .md-collapsible-code > summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-bottom: 0.35rem;
+  user-select: none;
+}
+
 .markdown .hljs-keyword,
 .markdown .hljs-selector-tag,
 .markdown .hljs-literal,

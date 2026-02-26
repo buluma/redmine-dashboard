@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
@@ -86,11 +86,42 @@ type Issue = {
 
 function MarkdownBlock({ content }: { content: string }) {
   const normalized = useMemo(() => normalizeRedmineText(content), [content]);
+
+  function textFromNode(node: ReactNode): string {
+    if (typeof node === "string" || typeof node === "number") {
+      return String(node);
+    }
+    if (!node || typeof node !== "object") {
+      return "";
+    }
+    if (Array.isArray(node)) {
+      return node.map((part) => textFromNode(part)).join("");
+    }
+    const props = (node as { props?: { children?: ReactNode } }).props;
+    return textFromNode(props?.children ?? "");
+  }
+
+  function CodePre(props: { children?: ReactNode }) {
+    const raw = textFromNode(props.children ?? "");
+    const lines = raw.split("\n").filter((line) => line.trim().length > 0).length;
+    const shouldCollapse = lines >= 10 || raw.trim().length >= 80;
+    if (!shouldCollapse) {
+      return <pre>{props.children}</pre>;
+    }
+    return (
+      <details className="md-collapsible-code">
+        <summary>Show code ({lines} lines)</summary>
+        <pre>{props.children}</pre>
+      </details>
+    );
+  }
+
   return (
     <div className="markdown">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeHighlight, { ignoreMissing: true }]]}
+        components={{ pre: CodePre }}
       >
         {normalized}
       </ReactMarkdown>
