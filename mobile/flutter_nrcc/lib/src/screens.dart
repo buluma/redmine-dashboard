@@ -1,4 +1,7 @@
 import "package:flutter/material.dart";
+import "package:flutter_markdown/flutter_markdown.dart";
+import "package:markdown/markdown.dart" as md;
+import "package:url_launcher/url_launcher.dart";
 
 import "models.dart";
 import "repositories.dart";
@@ -228,6 +231,63 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   final _repo = TextEditingController();
   final _ghIssue = TextEditingController();
 
+  Future<void> _openMarkdownLink(String? href) async {
+    if (href == null || href.trim().isEmpty) return;
+    final uri = Uri.tryParse(href.trim());
+    if (uri == null) return;
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Could not open link: $href")),
+      );
+    }
+  }
+
+  MarkdownStyleSheet _markdownStyle(BuildContext context) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+
+    return MarkdownStyleSheet.fromTheme(theme).copyWith(
+      p: textTheme.bodyMedium?.copyWith(height: 1.45),
+      h1: textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
+      h2: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+      h3: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+      h4: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+      blockSpacing: 14,
+      listIndent: 22,
+      listBullet: textTheme.bodyLarge?.copyWith(height: 1.4),
+      code: textTheme.bodySmall?.copyWith(
+        fontFamily: "monospace",
+        backgroundColor: theme.colorScheme.surfaceContainerHighest,
+      ),
+      codeblockPadding: const EdgeInsets.all(12),
+      codeblockDecoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      blockquote: textTheme.bodyMedium?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        height: 1.45,
+      ),
+      blockquotePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      blockquoteDecoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        border: Border(
+          left: BorderSide(color: theme.colorScheme.primary, width: 3),
+        ),
+      ),
+      tableHead: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+      tableBody: textTheme.bodyMedium,
+      tableBorder: TableBorder.all(color: theme.colorScheme.outlineVariant),
+      tableCellsPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      a: textTheme.bodyMedium?.copyWith(
+        color: theme.colorScheme.primary,
+        decoration: TextDecoration.underline,
+      ),
+    );
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -296,7 +356,15 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                           Text(_issue!.subject, style: Theme.of(context).textTheme.titleLarge),
                           Text("${_issue!.statusName} • ${_issue!.priority ?? "-"}"),
                           const SizedBox(height: 12),
-                          Text(_issue!.description ?? "(No description)"),
+                          MarkdownBody(
+                            data: (_issue!.description?.trim().isNotEmpty ?? false)
+                                ? _issue!.description!
+                                : "(No description)",
+                            selectable: true,
+                            extensionSet: md.ExtensionSet.gitHubWeb,
+                            styleSheet: _markdownStyle(context),
+                            onTapLink: (text, href, title) => _openMarkdownLink(href),
+                          ),
                           const SizedBox(height: 16),
                           TextField(
                             controller: _comment,
