@@ -1,3 +1,6 @@
+import { env } from "@/src/lib/env";
+import { logEvent } from "@/src/lib/log";
+
 export type RedmineCurrentUser = {
   id: number;
   login: string;
@@ -26,6 +29,37 @@ export type RedmineIssueDetail = {
 export type RedmineStatus = { id: number; name: string; is_closed?: boolean };
 
 export type RedmineActivity = { id: number; name: string };
+export type RedminePriority = { id: number; name: string; is_default?: boolean; active?: boolean; position?: number };
+
+type RedmineSearchResult = {
+  id: number;
+  title?: string;
+  type?: string;
+  url?: string;
+  description?: string;
+  datetime?: string;
+};
+
+type RedmineSearchResponse = {
+  results: RedmineSearchResult[];
+  total_count: number;
+  offset: number;
+  limit: number;
+};
+
+type RedmineRelationPayload = {
+  issue_to_id: number;
+  relation_type: string;
+  delay?: number;
+};
+
+type RedmineRelationResponse = {
+  relation: {
+    id: number;
+  };
+};
+
+export type SyncIssueScope = "assigned" | "open" | "all";
 
 function trimBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/$/, "");
@@ -36,12 +70,76 @@ function redmineDate(value: Date): string {
 }
 
 export class RedmineClient {
+  private dispatcher: unknown | null = null;
+  private dispatcherLoaded = false;
+
   constructor(
     private readonly baseUrl: string,
     private readonly apiKey: string,
   ) {}
 
-  private async request<T>(path: string, init?: RequestInit): Promise<T> {
+  private host(): string | null {
+    try {
+      return new URL(trimBaseUrl(this.baseUrl)).hostname.toLowerCase();
+    } catch {
+      return null;
+    }
+  }
+
+  private allowInsecureTls(): boolean {
+    const host = this.host();
+    if (!host) {
+      return false;
+    }
+    return env.redmineInsecureTlsHosts.map((item) => item.toLowerCase()).includes(host);
+  }
+
+  private async getDispatcher(): Promise<unknown | undefined> {
+    if (!this.allowInsecureTls()) {
+      return undefined;
+    }
+    if (this.dispatcherLoaded) {
+      return this.dispatcher ?? undefined;
+    }
+    this.dispatcherLoaded = true;
+    try {
+      const undici = await import("undici");
+      this.dispatcher = new undici.Agent({
+        connect: { rejectUnauthorized: false },
+      });
+      logEvent("redmine.tls.insecure_host_enabled", { host: this.host() }, "warn");
+      return this.dispatcher;
+    } catch {
+      // If undici import fails, proceed with strict TLS instead of crashing.
+      this.dispatcher = null;
+      return undefined;
+    }
+  }
+
+  private normalizeNetworkError(error: unknown): Error | null {
+    if (!(error instanceof TypeError)) {
+      return null;
+    }
+    const code = (error as { cause?: { code?: string } }).cause?.code;
+    if (code === "UNABLE_TO_GET_ISSUER_CERT_LOCALLY" || code === "SELF_SIGNED_CERT_IN_CHAIN") {
+      const host = this.host() ?? this.baseUrl;
+      return new Error(
+        `TLS certificate validation failed for ${host}. ` +
+          `If this is staging, add its hostname to REDMINE_INSECURE_TLS_HOSTS.`,
+      );
+    }
+    if (code === "ENOTFOUND" || code === "ECONNREFUSED" || code === "ETIMEDOUT") {
+      return new Error(`Network error reaching Redmine (${code ?? "unknown"}). Check base URL and connectivity.`);
+    }
+    return null;
+  }
+
+  private async request<T>(
+    path: string,
+    init?: RequestInit & {
+      skipJsonContentType?: boolean;
+    },
+  ): Promise<T> {
     const maxAttempts = 3;
     const timeoutMs = 12000;
 
@@ -49,16 +147,20 @@ export class RedmineClient {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        const res = await fetch(`${trimBaseUrl(this.baseUrl)}${path}`, {
-          ...init,
+        const { skipJsonContentType, ...requestInit } = init ?? {};
+        const dispatcher = await this.getDispatcher();
+        const fetchInit: RequestInit & { dispatcher?: unknown } = {
+          ...requestInit,
           headers: {
-            "Content-Type": "application/json",
+            ...(skipJsonContentType ? {} : { "Content-Type": "application/json" }),
             "X-Redmine-API-Key": this.apiKey,
-            ...(init?.headers ?? {}),
+            ...(requestInit.headers ?? {}),
           },
           cache: "no-store",
           signal: controller.signal,
-        });
+          ...(dispatcher ? { dispatcher } : {}),
+        };
+        const res = await fetch(`${trimBaseUrl(this.baseUrl)}${path}`, fetchInit);
 
         if (!res.ok) {
           const body = await res.text();
@@ -81,6 +183,10 @@ export class RedmineClient {
 
         return JSON.parse(raw) as T;
       } catch (error) {
+        const normalized = this.normalizeNetworkError(error);
+        if (normalized) {
+          throw normalized;
+        }
         const isAbort = error instanceof Error && error.name === "AbortError";
         if (attempt < maxAttempts && isAbort) {
           await new Promise((resolve) => setTimeout(resolve, 300 * 2 ** (attempt - 1)));
@@ -116,6 +222,13 @@ export class RedmineClient {
     return data.time_entry_activities;
   }
 
+  async getIssuePriorities(): Promise<RedminePriority[]> {
+    const data = await this.request<{ issue_priorities: RedminePriority[] }>(
+      "/enumerations/issue_priorities.json",
+    );
+    return data.issue_priorities;
+  }
+
   async listIssueTimeEntries(issueId: number): Promise<Array<Record<string, unknown>>> {
     const limit = 100;
     const out: Array<Record<string, unknown>> = [];
@@ -135,7 +248,10 @@ export class RedmineClient {
     return out;
   }
 
-  async listAssignedIssues(updatedOnOrAfter?: Date): Promise<Array<Record<string, unknown>>> {
+  async listIssues(
+    scope: SyncIssueScope = "assigned",
+    updatedOnOrAfter?: Date,
+  ): Promise<Array<Record<string, unknown>>> {
     const limit = 100;
     const out: Array<Record<string, unknown>> = [];
     let offset = 0;
@@ -145,7 +261,13 @@ export class RedmineClient {
         ? `&updated_on=%3E%3D${encodeURIComponent(redmineDate(updatedOnOrAfter))}`
         : "";
 
-      const path = `/issues.json?assigned_to_id=me&status_id=*&sort=updated_on:desc&limit=${limit}&offset=${offset}${filterUpdated}`;
+      const scopeQuery =
+        scope === "assigned"
+          ? "assigned_to_id=me&status_id=*"
+          : scope === "open"
+            ? "status_id=open"
+            : "status_id=*";
+      const path = `/issues.json?${scopeQuery}&sort=updated_on:desc&limit=${limit}&offset=${offset}${filterUpdated}`;
 
       let data: RedmineIssueListResponse;
       try {
@@ -154,8 +276,12 @@ export class RedmineClient {
         const message = error instanceof Error ? error.message : "";
         const invalidUpdatedFilter = message.includes("Redmine request failed (422)") && /updated is invalid/i.test(message);
         if (updatedOnOrAfter && invalidUpdatedFilter) {
-          // Some Redmine instances reject strict updated_on syntax. Fall back to full assigned-issues fetch.
-          return this.listAssignedIssues();
+          // Some Redmine instances reject strict updated_on syntax. Fall back to full scoped fetch.
+          logEvent("redmine.issues.updated_filter_fallback", {
+            scope,
+            updatedOnOrAfter: redmineDate(updatedOnOrAfter),
+          }, "warn");
+          return this.listIssues(scope);
         }
         throw error;
       }
@@ -173,6 +299,47 @@ export class RedmineClient {
   async getIssue(issueId: number, include: string[] = []): Promise<RedmineIssueDetail> {
     const query = include.length > 0 ? `?include=${include.join(",")}` : "";
     return this.request<RedmineIssueDetail>(`/issues/${issueId}.json${query}`);
+  }
+
+  async uploadFile(input: {
+    filename: string;
+    contentType?: string;
+    bytes: ArrayBuffer;
+  }): Promise<{ token: string }> {
+    const params = new URLSearchParams({ filename: input.filename });
+    const payload = await this.request<{ upload: { token: string } }>(`/uploads.json?${params.toString()}`, {
+      method: "POST",
+      body: input.bytes,
+      headers: {
+        "Content-Type": input.contentType || "application/octet-stream",
+      },
+      skipJsonContentType: true,
+    });
+    return payload.upload;
+  }
+
+  async addIssueAttachment(input: {
+    issueId: number;
+    token: string;
+    filename: string;
+    contentType?: string;
+    description?: string;
+  }): Promise<void> {
+    await this.request(`/issues/${input.issueId}.json`, {
+      method: "PUT",
+      body: JSON.stringify({
+        issue: {
+          uploads: [
+            {
+              token: input.token,
+              filename: input.filename,
+              description: input.description,
+              content_type: input.contentType,
+            },
+          ],
+        },
+      }),
+    });
   }
 
   async updateIssueStatus(issueId: number, statusId: number, note?: string): Promise<void> {
@@ -208,5 +375,104 @@ export class RedmineClient {
         },
       }),
     });
+  }
+
+  async listTimeEntries(input: {
+    issueId?: number;
+    userId?: "me" | number;
+    from?: string;
+    to?: string;
+    offset?: number;
+    limit?: number;
+  }): Promise<Array<Record<string, unknown>>> {
+    const params = new URLSearchParams();
+    if (input.issueId) params.set("issue_id", String(input.issueId));
+    if (input.userId !== undefined) params.set("user_id", String(input.userId));
+    if (input.from) params.set("from", input.from);
+    if (input.to) params.set("to", input.to);
+    params.set("offset", String(input.offset ?? 0));
+    params.set("limit", String(input.limit ?? 100));
+    const data = await this.request<RedmineTimeEntryListResponse>(`/time_entries.json?${params.toString()}`);
+    return data.time_entries;
+  }
+
+  async updateTimeEntry(
+    timeEntryId: number,
+    input: {
+      hours?: number;
+      activityId?: number;
+      comments?: string;
+      spentOn?: string;
+    },
+  ): Promise<void> {
+    await this.request(`/time_entries/${timeEntryId}.json`, {
+      method: "PUT",
+      body: JSON.stringify({
+        time_entry: {
+          ...(input.hours !== undefined ? { hours: input.hours } : {}),
+          ...(input.activityId !== undefined ? { activity_id: input.activityId } : {}),
+          ...(input.comments !== undefined ? { comments: input.comments } : {}),
+          ...(input.spentOn !== undefined ? { spent_on: input.spentOn } : {}),
+        },
+      }),
+    });
+  }
+
+  async deleteTimeEntry(timeEntryId: number): Promise<void> {
+    await this.request(`/time_entries/${timeEntryId}.json`, { method: "DELETE" });
+  }
+
+  async createIssueRelation(issueId: number, relation: RedmineRelationPayload): Promise<number | null> {
+    const data = await this.request<RedmineRelationResponse | null>(`/issues/${issueId}/relations.json`, {
+      method: "POST",
+      body: JSON.stringify({ relation }),
+    });
+    return data?.relation?.id ?? null;
+  }
+
+  async deleteIssueRelation(relationId: number): Promise<void> {
+    await this.request(`/relations/${relationId}.json`, { method: "DELETE" });
+  }
+
+  async search(input: {
+    q: string;
+    scope?: "issues" | "all";
+    openOnly?: boolean;
+    offset?: number;
+    limit?: number;
+  }): Promise<RedmineSearchResponse> {
+    const params = new URLSearchParams({
+      q: input.q,
+      offset: String(input.offset ?? 0),
+      limit: String(input.limit ?? 25),
+      all_words: "1",
+      titles_only: "0",
+    });
+    if (input.scope && input.scope !== "all") {
+      params.set("scope", input.scope);
+    }
+    if (input.openOnly) {
+      params.set("open_issues", "1");
+    }
+    return this.request<RedmineSearchResponse>(`/search.json?${params.toString()}`);
+  }
+
+  async downloadAttachment(pathOrUrl: string): Promise<Response> {
+    const base = trimBaseUrl(this.baseUrl);
+    const url = pathOrUrl.startsWith("http") ? pathOrUrl : `${base}${pathOrUrl}`;
+    const dispatcher = await this.getDispatcher();
+    const init: RequestInit & { dispatcher?: unknown } = {
+      headers: {
+        "X-Redmine-API-Key": this.apiKey,
+      },
+      cache: "no-store",
+      ...(dispatcher ? { dispatcher } : {}),
+    };
+    const res = await fetch(url, init);
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Redmine request failed (${res.status}): ${body.slice(0, 300)}`);
+    }
+    return res;
   }
 }

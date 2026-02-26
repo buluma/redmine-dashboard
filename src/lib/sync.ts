@@ -46,6 +46,51 @@ function asDate(value: unknown): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function asBoolean(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
+}
+
+type AllowedStatus = { id: number; name: string; isClosed?: boolean };
+type IssueChild = { id: number; subject: string };
+
+function parseAllowedStatuses(issueRaw: Record<string, unknown>): AllowedStatus[] {
+  const statuses = asObject(issueRaw).allowed_statuses;
+  if (!Array.isArray(statuses)) {
+    return [];
+  }
+
+  return statuses
+    .map((row) => {
+      const item = asObject(row);
+      const id = asNumber(item.id);
+      const name = asString(item.name);
+      if (!id || !name) return null;
+      return {
+        id,
+        name,
+        ...(asBoolean(item.is_closed) !== null ? { isClosed: asBoolean(item.is_closed) ?? undefined } : {}),
+      };
+    })
+    .filter((x): x is AllowedStatus => Boolean(x));
+}
+
+function parseChildren(issueRaw: Record<string, unknown>): IssueChild[] {
+  const children = asObject(issueRaw).children;
+  if (!Array.isArray(children)) {
+    return [];
+  }
+
+  return children
+    .map((row) => {
+      const item = asObject(row);
+      const id = asNumber(item.id);
+      const subject = asString(item.subject);
+      if (!id || !subject) return null;
+      return { id, subject };
+    })
+    .filter((x): x is IssueChild => Boolean(x));
+}
+
 async function upsertIssueFromRemote(userId: string, issueRaw: Record<string, unknown>) {
   const remoteId = asNumber(issueRaw.id);
   if (!remoteId) {
@@ -70,6 +115,8 @@ async function upsertIssueFromRemote(userId: string, issueRaw: Record<string, un
     updatedOnRemote: updatedOn,
     dueDate: asDate(issueRaw.due_date),
     doneRatio: asNumber(issueRaw.done_ratio),
+    allowedStatusesJson: parseAllowedStatuses(issueRaw) as Prisma.InputJsonValue,
+    childrenJson: parseChildren(issueRaw) as Prisma.InputJsonValue,
   };
 
   const issue = await prisma.issue.upsert({
@@ -81,6 +128,116 @@ async function upsertIssueFromRemote(userId: string, issueRaw: Record<string, un
   });
 
   return issue;
+}
+
+async function upsertAttachmentsForIssue(issueId: string, issueRaw: Record<string, unknown>, pruneMissing: boolean) {
+  const attachments = asObject(issueRaw).attachments;
+  if (!Array.isArray(attachments)) {
+    if (pruneMissing) {
+      await prisma.issueAttachment.deleteMany({ where: { issueId } });
+    }
+    return;
+  }
+
+  const seenIds: number[] = [];
+
+  for (const itemRaw of attachments) {
+    const item = asObject(itemRaw);
+    const remoteId = asNumber(item.id);
+    const filename = asString(item.filename);
+    const downloadUrl = asString(item.content_url) ?? asString(item.url);
+    if (!remoteId || !filename || !downloadUrl) {
+      continue;
+    }
+
+    seenIds.push(remoteId);
+    await prisma.issueAttachment.upsert({
+      where: { redmineAttachmentId: remoteId },
+      update: {
+        issueId,
+        filename,
+        filesize: asNumber(item.filesize) ?? 0,
+        contentType: asString(item.content_type),
+        author: nestedName(item.author),
+        createdOnRemote: asDate(item.created_on),
+        downloadUrl,
+      },
+      create: {
+        redmineAttachmentId: remoteId,
+        issueId,
+        filename,
+        filesize: asNumber(item.filesize) ?? 0,
+        contentType: asString(item.content_type),
+        author: nestedName(item.author),
+        createdOnRemote: asDate(item.created_on),
+        downloadUrl,
+      },
+    });
+  }
+
+  if (!pruneMissing) return;
+  if (seenIds.length === 0) {
+    await prisma.issueAttachment.deleteMany({ where: { issueId } });
+    return;
+  }
+  await prisma.issueAttachment.deleteMany({
+    where: {
+      issueId,
+      redmineAttachmentId: { notIn: seenIds },
+    },
+  });
+}
+
+async function upsertRelationsForIssue(issueId: string, issueRaw: Record<string, unknown>, pruneMissing: boolean) {
+  const relations = asObject(issueRaw).relations;
+  if (!Array.isArray(relations)) {
+    if (pruneMissing) {
+      await prisma.issueRelation.deleteMany({ where: { issueId } });
+    }
+    return;
+  }
+
+  const seenIds: number[] = [];
+
+  for (const itemRaw of relations) {
+    const item = asObject(itemRaw);
+    const remoteId = asNumber(item.id);
+    const relationType = asString(item.relation_type);
+    const issueToId = asNumber(item.issue_to_id);
+    if (!remoteId || !relationType || !issueToId) {
+      continue;
+    }
+
+    seenIds.push(remoteId);
+    await prisma.issueRelation.upsert({
+      where: { redmineRelationId: remoteId },
+      update: {
+        issueId,
+        relationType,
+        targetIssueId: issueToId,
+        delay: asNumber(item.delay),
+      },
+      create: {
+        redmineRelationId: remoteId,
+        issueId,
+        relationType,
+        targetIssueId: issueToId,
+        delay: asNumber(item.delay),
+      },
+    });
+  }
+
+  if (!pruneMissing) return;
+  if (seenIds.length === 0) {
+    await prisma.issueRelation.deleteMany({ where: { issueId } });
+    return;
+  }
+  await prisma.issueRelation.deleteMany({
+    where: {
+      issueId,
+      redmineRelationId: { notIn: seenIds },
+    },
+  });
 }
 
 async function upsertJournals(issueId: string, issueRaw: Record<string, unknown>) {
@@ -196,15 +353,76 @@ export async function syncStatusCatalog(client: RedmineClient): Promise<void> {
   }
 }
 
+export async function syncEnumerationCatalog(client: RedmineClient): Promise<void> {
+  const [activities, priorities] = await Promise.all([
+    client.getTimeEntryActivities(),
+    client.getIssuePriorities(),
+  ]);
+
+  for (const activity of activities) {
+    await prisma.enumerationCatalog.upsert({
+      where: { key: `time_entry_activity:${activity.id}` },
+      update: {
+        remoteId: activity.id,
+        kind: "time_entry_activity",
+        name: activity.name,
+        isDefault: false,
+        isActive: true,
+        position: null,
+      },
+      create: {
+        key: `time_entry_activity:${activity.id}`,
+        remoteId: activity.id,
+        kind: "time_entry_activity",
+        name: activity.name,
+        isDefault: false,
+        isActive: true,
+        position: null,
+      },
+    });
+  }
+
+  for (const priority of priorities) {
+    await prisma.enumerationCatalog.upsert({
+      where: { key: `issue_priority:${priority.id}` },
+      update: {
+        remoteId: priority.id,
+        kind: "issue_priority",
+        name: priority.name,
+        isDefault: Boolean(priority.is_default),
+        isActive: priority.active ?? true,
+        position: priority.position ?? null,
+      },
+      create: {
+        key: `issue_priority:${priority.id}`,
+        remoteId: priority.id,
+        kind: "issue_priority",
+        name: priority.name,
+        isDefault: Boolean(priority.is_default),
+        isActive: priority.active ?? true,
+        position: priority.position ?? null,
+      },
+    });
+  }
+}
+
 export async function syncSingleIssue(
   userId: string,
   client: RedmineClient,
   remoteIssueId: number,
-  options?: { pruneTimeEntries?: boolean },
+  options?: { pruneTimeEntries?: boolean; pruneAttachments?: boolean; pruneRelations?: boolean },
 ) {
-  const detail = await client.getIssue(remoteIssueId, ["journals"]);
+  const detail = await client.getIssue(remoteIssueId, [
+    "journals",
+    "attachments",
+    "relations",
+    "allowed_statuses",
+    "children",
+  ]);
   const issue = await upsertIssueFromRemote(userId, detail.issue);
   await upsertJournals(issue.id, detail.issue);
+  await upsertAttachmentsForIssue(issue.id, detail.issue, options?.pruneAttachments ?? true);
+  await upsertRelationsForIssue(issue.id, detail.issue, options?.pruneRelations ?? true);
   await upsertTimeEntriesForIssue(
     userId,
     issue.id,
@@ -340,12 +558,13 @@ export async function executeSyncJob(jobId: string): Promise<void> {
     const client = new RedmineClient(cred.baseUrl, decryptText(cred.apiKeyEncrypted, cred.apiKeyIv));
 
     await syncStatusCatalog(client);
+    await syncEnumerationCatalog(client);
 
     const syncState = await prisma.syncState.findUnique({ where: { userId: job.userId } });
     const incrementalSince =
       job.jobType === "incremental" ? (syncState?.lastIncrementalSyncAt ?? undefined) : undefined;
 
-    const issueList = await client.listAssignedIssues(incrementalSince);
+    const issueList = await client.listIssues(env.redmineSyncIssueScope, incrementalSince);
     const seenRemoteIssueIds = new Set<number>();
 
     for (const issueRaw of issueList) {
@@ -357,6 +576,8 @@ export async function executeSyncJob(jobId: string): Promise<void> {
 
       await syncSingleIssue(job.userId, client, remoteId, {
         pruneTimeEntries: job.jobType === "full_manual",
+        pruneAttachments: true,
+        pruneRelations: true,
       });
     }
 

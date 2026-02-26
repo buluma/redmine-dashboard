@@ -38,7 +38,12 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to pair mobile device";
-    const status = message === "Mobile API is disabled" ? 404 : 400;
+    const status =
+      message === "Mobile API is disabled"
+        ? 404
+        : /TLS certificate validation failed|Network error reaching Redmine/i.test(message)
+          ? 502
+          : 400;
     logEvent("mobile.pair.failed", { status, error: message }, "error");
     return jsonError(message, status);
   }

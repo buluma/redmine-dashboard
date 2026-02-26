@@ -26,7 +26,8 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to connect Redmine";
+    const status = /TLS certificate validation failed|Network error reaching Redmine/i.test(message) ? 502 : 400;
     logEvent("redmine.connect.failed", { error: message }, "error");
-    return jsonError(message, 400);
+    return jsonError(message, status);
   }
 }

@@ -57,14 +57,14 @@ This document provides a high-level overview of the system architecture for the 
 
 - **Flutter:** A cross-platform mobile application built with Flutter.
 - **Native Android:** A reference implementation for a native Android client using Jetpack Compose.
-- **Functionality:** Both clients provide a mobile-friendly interface for managing Redmine issues, including viewing issues, adding comments, and managing GitHub links. They interact with the backend via a dedicated set of mobile API endpoints.
+- **Functionality:** Both clients provide a mobile-friendly interface for managing Redmine issues, including viewing issues, allowed transitions, comments, attachments, relations, and GitHub links. They interact with the backend via a dedicated set of mobile API endpoints.
 
 ### 3. API Routes
 
 - **Framework:** Next.js API Routes.
 - **Functionality:**
   - Handles all communication between the web frontend, mobile clients, and the backend.
-  - Exposes endpoints for session management, issue data, mutations, and synchronization.
+  - Exposes endpoints for session management, issue data, mutations, synchronization, time-entry lifecycle operations, attachments, and relations.
   - Provides a dedicated set of token-authenticated endpoints for mobile clients under `/api/mobile/v1/*`.
   - Enforces rate limiting on mutation endpoints.
 - **Validation:** Zod schemas are used to validate incoming request data.
@@ -79,6 +79,7 @@ This document provides a high-level overview of the system architecture for the 
 
 - **Implementation:** An in-process poller that runs within the Next.js server.
 - **Polling:** Periodically fetches data from the Redmine API to keep the local cache up to date. The default polling interval is 60 seconds.
+- **Synced Redmine surfaces:** `issues`, `issue_statuses`, enumerations (time entry activities + issue priorities), issue `attachments`, issue `relations`, `allowed_statuses`, and `children`.
 - **Leader Lock:** A leader lock mechanism is used to ensure that only one instance of the poller is active at a time in a multi-instance environment.
 
 ## Technology Stack

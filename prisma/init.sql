@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS "Issue" (
   "updatedOnRemote" DATETIME NOT NULL,
   "dueDate" DATETIME,
   "doneRatio" INTEGER,
+  "allowedStatusesJson" JSON,
+  "childrenJson" JSON,
   "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" DATETIME NOT NULL,
   CONSTRAINT "Issue_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
@@ -77,6 +79,37 @@ CREATE TABLE IF NOT EXISTS "IssueGithubLink" (
 CREATE UNIQUE INDEX IF NOT EXISTS "IssueGithubLink_issueId_url_key" ON "IssueGithubLink"("issueId", "url");
 CREATE INDEX IF NOT EXISTS "IssueGithubLink_issueId_createdAt_idx" ON "IssueGithubLink"("issueId", "createdAt");
 CREATE INDEX IF NOT EXISTS "IssueGithubLink_userId_createdAt_idx" ON "IssueGithubLink"("userId", "createdAt");
+
+CREATE TABLE IF NOT EXISTS "IssueAttachment" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "redmineAttachmentId" INTEGER NOT NULL,
+  "issueId" TEXT NOT NULL,
+  "filename" TEXT NOT NULL,
+  "filesize" INTEGER NOT NULL,
+  "contentType" TEXT,
+  "author" TEXT,
+  "createdOnRemote" DATETIME,
+  "downloadUrl" TEXT NOT NULL,
+  "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" DATETIME NOT NULL,
+  CONSTRAINT "IssueAttachment_issueId_fkey" FOREIGN KEY ("issueId") REFERENCES "Issue" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "IssueAttachment_redmineAttachmentId_key" ON "IssueAttachment"("redmineAttachmentId");
+CREATE INDEX IF NOT EXISTS "IssueAttachment_issueId_createdOnRemote_idx" ON "IssueAttachment"("issueId", "createdOnRemote");
+
+CREATE TABLE IF NOT EXISTS "IssueRelation" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "redmineRelationId" INTEGER NOT NULL,
+  "issueId" TEXT NOT NULL,
+  "targetIssueId" INTEGER NOT NULL,
+  "relationType" TEXT NOT NULL,
+  "delay" INTEGER,
+  "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" DATETIME NOT NULL,
+  CONSTRAINT "IssueRelation_issueId_fkey" FOREIGN KEY ("issueId") REFERENCES "Issue" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "IssueRelation_redmineRelationId_key" ON "IssueRelation"("redmineRelationId");
+CREATE INDEX IF NOT EXISTS "IssueRelation_issueId_relationType_idx" ON "IssueRelation"("issueId", "relationType");
 
 CREATE TABLE IF NOT EXISTS "TimeEntry" (
   "id" TEXT NOT NULL PRIMARY KEY,
@@ -127,6 +160,19 @@ CREATE TABLE IF NOT EXISTS "StatusCatalog" (
   "isClosed" BOOLEAN NOT NULL,
   "updatedAt" DATETIME NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS "EnumerationCatalog" (
+  "key" TEXT NOT NULL PRIMARY KEY,
+  "remoteId" INTEGER NOT NULL,
+  "kind" TEXT NOT NULL,
+  "name" TEXT NOT NULL,
+  "isDefault" BOOLEAN NOT NULL DEFAULT false,
+  "isActive" BOOLEAN NOT NULL DEFAULT true,
+  "position" INTEGER,
+  "updatedAt" DATETIME NOT NULL
+);
+CREATE INDEX IF NOT EXISTS "EnumerationCatalog_kind_remoteId_idx" ON "EnumerationCatalog"("kind", "remoteId");
+CREATE INDEX IF NOT EXISTS "EnumerationCatalog_kind_isActive_idx" ON "EnumerationCatalog"("kind", "isActive");
 
 CREATE TABLE IF NOT EXISTS "LeaderLock" (
   "name" TEXT NOT NULL PRIMARY KEY,

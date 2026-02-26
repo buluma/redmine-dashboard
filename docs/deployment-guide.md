@@ -53,6 +53,9 @@ Open the `.env` file and set the following variables:
 
 - `REDMINE_BASE_URL`: The base URL of your Redmine instance (e.g., `https://redmine.example.com`).
 - `REDMINE_API_KEY`: Your Redmine API key.
+- `REDMINE_ALLOWED_BASE_URLS`: Optional comma-separated allowlist for connect/pair flows (e.g., `https://redmine.example.com,https://redbrick.opsio.space`).
+- `REDMINE_INSECURE_TLS_HOSTS`: Optional comma-separated hostnames allowed to bypass TLS verification (recommended only for staging with incomplete certificate chains).
+- `REDMINE_SYNC_ISSUE_SCOPE`: Sync scope for `/issues.json` pulls. Allowed values: `assigned` (default, `assigned_to_id=me`), `open` (`status_id=open`), `all` (`status_id=*`).
 
 ### 3. Initialize the Database
 
@@ -122,6 +125,9 @@ A full list of helper targets is available in the [Makefile](/Users/shadowwalker
 - `MEMORY_LOG_INTERVAL_MS`: Memory log interval in milliseconds (default: `60000`).
 - `REDMINE_BASE_URL`: Optional. Used for first-run bootstrap to pre-configure the Redmine connection.
 - `REDMINE_API_KEY`: Optional. Used for first-run bootstrap.
+- `REDMINE_ALLOWED_BASE_URLS`: Optional comma-separated Redmine base URL allowlist for user-provided connect/pair requests.
+- `REDMINE_INSECURE_TLS_HOSTS`: Optional comma-separated hostname list for insecure TLS override on specific Redmine hosts.
+- `REDMINE_SYNC_ISSUE_SCOPE`: Optional sync scope override for Redmine issue imports (`assigned`, `open`, `all`; default `assigned`).
 
 ## Security Notes
 

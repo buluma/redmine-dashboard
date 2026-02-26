@@ -1,9 +1,13 @@
 import { prisma } from "@/src/lib/db";
-import { requireCurrentUser } from "@/src/lib/auth";
+import { requireRedmineClient } from "@/src/lib/auth";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const user = await requireCurrentUser();
+    const { user, client } = await requireRedmineClient();
+    const { searchParams } = new URL(request.url);
+    const remoteMode = searchParams.get("timeEntries") === "remote";
+    const from = searchParams.get("from") ?? undefined;
+    const to = searchParams.get("to") ?? undefined;
 
     const issues = await prisma.issue.findMany({
       where: { userId: user.id },
@@ -19,6 +23,16 @@ export async function GET() {
       take: 2000,
     });
 
+    let remoteTimeEntries: Array<Record<string, unknown>> = [];
+    if (remoteMode) {
+      remoteTimeEntries = await client.listTimeEntries({
+        userId: "me",
+        from,
+        to,
+        limit: 500,
+      });
+    }
+
     return Response.json({
       user: {
         id: user.id,
@@ -27,6 +41,8 @@ export async function GET() {
       },
       items: issues,
       total: issues.length,
+      remoteTimeEntries,
+      timeEntriesSource: remoteMode ? "redmine_live" : "local_cache",
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to fetch report data";

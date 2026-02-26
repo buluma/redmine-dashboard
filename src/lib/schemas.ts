@@ -37,6 +37,12 @@ export const issueQuerySchema = z.object({
   status: z.string().optional(),
   priority: z.string().optional(),
   search: z.string().optional(),
+  searchMode: z.enum(["local", "remote", "hybrid"]).default("local"),
+  scope: z.enum(["issues", "all"]).default("issues"),
+  openOnly: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .optional()
+    .transform((value) => (typeof value === "string" ? value === "true" : value)),
   sort: z.enum(["updated_desc", "updated_asc", "priority", "due_date"]).default("updated_desc"),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
@@ -62,4 +68,32 @@ export const githubLinkCreateSchema = z
 
 export const githubLinkDeleteSchema = z.object({
   linkId: z.string().trim().min(1),
+});
+
+export const relationCreateSchema = z.object({
+  issueToId: z.number().int().positive(),
+  relationType: z.enum(["relates", "blocks", "precedes", "follows", "duplicates"]),
+  delay: z.number().int().min(0).max(3650).optional(),
+});
+
+export const issueAttachmentCreateSchema = z.object({
+  description: z.string().trim().max(255).optional(),
+});
+
+export const timeEntryQuerySchema = z.object({
+  issueId: z.coerce.number().int().positive().optional(),
+  from: z.string().date().optional(),
+  to: z.string().date().optional(),
+  user: z.enum(["me"]).default("me"),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+export const timeEntryUpdateSchema = z.object({
+  hours: z.number().positive().max(24).optional(),
+  activityId: z.number().int().positive().optional(),
+  comment: z.string().trim().max(255).optional(),
+  spentOn: z.string().date().optional(),
+}).refine((v) => v.hours !== undefined || v.activityId !== undefined || v.comment !== undefined || v.spentOn !== undefined, {
+  message: "At least one field must be provided",
 });
