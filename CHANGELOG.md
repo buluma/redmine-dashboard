@@ -52,3 +52,13 @@ All notable changes to this project are documented in this file.
 
 - README rewritten to reflect current API surface, setup, env vars, and troubleshooting.
 - Added this changelog for release tracking.
+- Added Docker runbook at [DOCKER.md](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/DOCKER.md) with compose lifecycle, persistence, and reset commands.
+- Added Docker helper targets in [Makefile](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/Makefile) and documented `make up/down/logs/reset-db`.
+
+### Changed (Docker Reliability)
+
+- `db:init` now honors `DATABASE_URL` (SQLite `file:` URLs) via `scripts/db-init.sh`.
+- `docker-compose.yml` now:
+  - uses `DOCKER_DATABASE_URL` (default `file:./prisma/dev.db`) to avoid collision with local dev `DATABASE_URL`,
+  - mounts `./prisma` to `/app/prisma` for persistent SQLite data,
+  - includes `SYNC_JOB_STALE_MS` and optional Redmine bootstrap env passthroughs.

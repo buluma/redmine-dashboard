@@ -99,9 +99,36 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Docker Setup
+
+Docker quick start is documented in [DOCKER.md](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/DOCKER.md).
+
+Fast path:
+
+```bash
+cp .env.example .env
+make up
+make logs
+```
+
+Stop:
+
+```bash
+make down
+```
+
+Reset Docker SQLite cache:
+
+```bash
+make reset-db
+```
+
+Available Docker helper targets are in [Makefile](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/Makefile).
+
 ## Environment Variables
 
 - `DATABASE_URL`: SQLite file path (`file:./dev.db` by default).
+- `DOCKER_DATABASE_URL`: optional Docker-only SQLite path override (`file:./prisma/dev.db` recommended for compose).
 - `APP_ENCRYPTION_KEY`: encryption key for stored Redmine API keys.
 - `SESSION_SECRET`: HMAC secret for session cookie signing.
 - `POLL_INTERVAL_MS`: poll cadence in ms (default `60000`).
