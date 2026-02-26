@@ -1,4 +1,5 @@
 import { jsonError, parseJson } from "@/src/lib/http";
+import { logEvent } from "@/src/lib/log";
 import { connectRedmineAccount } from "@/src/lib/redmine-connect";
 import { connectSchema } from "@/src/lib/schemas";
 import { setSessionCookie } from "@/src/lib/session";
@@ -7,10 +8,12 @@ import { runSyncJob } from "@/src/lib/sync";
 export async function POST(request: Request) {
   try {
     const body = await parseJson(request, connectSchema);
+    logEvent("redmine.connect.requested", { baseUrl: body.baseUrl });
     const user = await connectRedmineAccount(body.baseUrl, body.apiKey);
 
     await setSessionCookie(user.id);
     const job = await runSyncJob(user.id, "full_manual");
+    logEvent("redmine.connect.succeeded", { userId: user.id, syncJobId: job.jobId });
 
     return Response.json({
       ok: true,
@@ -23,6 +26,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to connect Redmine";
+    logEvent("redmine.connect.failed", { error: message }, "error");
     return jsonError(message, 400);
   }
 }

@@ -620,6 +620,12 @@ export default function Home() {
         return;
       }
 
+      if (event.key.toLowerCase() === "o") {
+        event.preventDefault();
+        window.location.assign("/ops");
+        return;
+      }
+
       if (event.key === "?") {
         event.preventDefault();
         setShowShortcutHelp((current) => !current);
@@ -1055,6 +1061,9 @@ export default function Home() {
           </button>
           <Link href="/reports" className="primary-link nav-link">
             Open Reports
+          </Link>
+          <Link href="/ops" className="primary-link nav-link">
+            Sync Ops
           </Link>
           <button className="secondary-button" type="button" onClick={resetFilters}>
             Reset Filters
@@ -1573,6 +1582,7 @@ export default function Home() {
               <p><kbd>R</kbd> Force refresh all issues</p>
               <p><kbd>F</kbd> Reset filters</p>
               <p><kbd>G</kbd> Open reports page</p>
+              <p><kbd>O</kbd> Open sync ops page</p>
               <p><kbd>Esc</kbd> Close modal/popup</p>
               <p><kbd>?</kbd> Toggle this help</p>
             </div>

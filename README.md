@@ -15,6 +15,7 @@ See [CHANGELOG.md](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/CHANGE
 - Run automated sync polling every 60 seconds.
 - Run manual full sync with `Force Refresh`.
 - Show sync health/status and the latest sync error directly in the header.
+- Operate sync lifecycle from dedicated Sync Ops page (`/ops`).
 - Provide reports page with trends, heatmap, drilldowns, and CSV export.
 
 ## Stack
@@ -54,8 +55,10 @@ See [CHANGELOG.md](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/CHANGE
 
 - `POST /api/sync/manual-pull`
 - `GET /api/sync/status`
+- `GET /api/sync/jobs`
 - `GET /api/reports`
 - `GET /api/internal/activities`
+- `GET /api/health`
 
 ## Local Setup
 
@@ -119,6 +122,20 @@ npm run prisma:generate
 npm run db:init
 ```
 
+## CI and Branch Protection
+
+- Workflow file: [ci.yml](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/.github/workflows/ci.yml)
+- Required status check name to enforce in GitHub branch protection:
+  - `CI / validate`
+
+Recommended branch-protection settings for `main`:
+
+- Require a pull request before merging.
+- Require status checks to pass before merging.
+- Enable strict mode: require branches to be up to date before merging.
+- Select required check: `CI / validate`.
+- Include administrators if you want policy to apply to everyone.
+
 ## Troubleshooting
 
 ### Sync stuck at `running`
@@ -148,4 +165,5 @@ Then restart the app.
 - Decrypted API keys are never sent to the client.
 - Sync source of truth is Redmine; DB is an operational cache.
 - Rate limits are applied to mutation endpoints.
+- Structured JSON logs are emitted for sync jobs and mutation routes.
 - Current MVP uses SQLite + in-process poller; production path is Postgres + external scheduler.

@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/src/lib/db";
 import { env } from "@/src/lib/env";
+import { logEvent } from "@/src/lib/log";
 import { RedmineClient } from "@/src/lib/redmine";
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -261,6 +262,12 @@ export async function runSyncJob(
   if (existing) {
     const ageMs = now.getTime() - (existing.startedAt ?? existing.createdAt).getTime();
     if (ageMs < env.syncJobStaleMs) {
+      logEvent("sync.job.reuse_existing", {
+        userId,
+        jobType,
+        existingJobId: existing.id,
+        existingStatus: existing.status,
+      });
       return { jobId: existing.id };
     }
 
@@ -281,6 +288,12 @@ export async function runSyncJob(
       full: false,
       incremental: false,
     });
+    logEvent("sync.job.stale_reset", {
+      userId,
+      staleJobId: existing.id,
+      staleAgeMs: ageMs,
+      staleMessage,
+    }, "warn");
   }
 
   const job = await prisma.syncJob.create({
@@ -292,6 +305,7 @@ export async function runSyncJob(
   });
 
   void executeSyncJob(job.id);
+  logEvent("sync.job.created", { userId, jobType, jobId: job.id });
   return { jobId: job.id };
 }
 
@@ -310,6 +324,11 @@ export async function executeSyncJob(jobId: string): Promise<void> {
   });
 
   await markSyncState(job.userId, { status: "running", runningJobId: jobId, error: null });
+  logEvent("sync.job.started", {
+    jobId,
+    userId: job.userId,
+    jobType: job.jobType,
+  });
 
   try {
     const cred = await prisma.userRedmineCredential.findUnique({ where: { userId: job.userId } });
@@ -367,6 +386,12 @@ export async function executeSyncJob(jobId: string): Promise<void> {
       full: job.jobType === "full_manual",
       incremental: job.jobType === "incremental",
     });
+    logEvent("sync.job.succeeded", {
+      jobId,
+      userId: job.userId,
+      jobType: job.jobType,
+      syncedIssueCount: seenRemoteIssueIds.size,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown sync error";
 
@@ -386,5 +411,11 @@ export async function executeSyncJob(jobId: string): Promise<void> {
       full: false,
       incremental: false,
     });
+    logEvent("sync.job.failed", {
+      jobId,
+      userId: job.userId,
+      jobType: job.jobType,
+      error: message,
+    }, "error");
   }
 }

@@ -1,5 +1,6 @@
 import { requireRedmineClient } from "@/src/lib/auth";
 import { jsonError, parseJson } from "@/src/lib/http";
+import { logEvent } from "@/src/lib/log";
 import { isRateLimited } from "@/src/lib/rate-limit";
 import { bulkStatusUpdateSchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
@@ -15,6 +16,11 @@ export async function POST(request: Request) {
     const payload = await parseJson(request, bulkStatusUpdateSchema);
     const issueIds = Array.from(new Set(payload.issueIds));
     const { user, client } = await requireRedmineClient();
+    logEvent("issue.bulk_status.requested", {
+      userId: user.id,
+      issueCount: issueIds.length,
+      statusId: payload.statusId,
+    });
 
     const limiter = isRateLimited({
       key: `${user.id}:issue-bulk-status`,
@@ -22,6 +28,7 @@ export async function POST(request: Request) {
       windowMs: 60_000,
     });
     if (limiter.limited) {
+      logEvent("issue.bulk_status.rate_limited", { userId: user.id }, "warn");
       return jsonError("Rate limit exceeded. Try again shortly.", 429);
     }
 
@@ -69,6 +76,7 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to bulk update issues";
     const status = message === "Unauthorized" ? 401 : (statusFromRedmineError(message) ?? 400);
+    logEvent("issue.bulk_status.failed", { status, error: message }, "error");
     return jsonError(message, status);
   }
 }

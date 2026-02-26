@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/src/lib/db";
 import { env } from "@/src/lib/env";
+import { logEvent } from "@/src/lib/log";
 import { runSyncJob } from "@/src/lib/sync";
 
 declare global {
@@ -61,12 +62,14 @@ async function pollTick(): Promise<void> {
       where: { isActive: true },
       select: { userId: true },
     });
+    logEvent("poller.tick.started", { ownerId, activeUserCount: users.length });
 
     for (const u of users) {
       await runSyncJob(u.userId, "incremental");
     }
+    logEvent("poller.tick.completed", { ownerId, activeUserCount: users.length });
   } catch (error) {
-    console.error("poller tick failed", error);
+    logEvent("poller.tick.failed", { ownerId, error }, "error");
   } finally {
     tickInFlight = false;
   }

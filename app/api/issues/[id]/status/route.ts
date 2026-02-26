@@ -1,5 +1,6 @@
 import { requireRedmineClient } from "@/src/lib/auth";
 import { jsonError, parseJson } from "@/src/lib/http";
+import { logEvent } from "@/src/lib/log";
 import { isRateLimited } from "@/src/lib/rate-limit";
 import { statusUpdateSchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
@@ -24,12 +25,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const issueId = parseIssueId(id);
     const body = await parseJson(request, statusUpdateSchema);
     const { user, client } = await requireRedmineClient();
+    logEvent("issue.status.update.requested", {
+      userId: user.id,
+      issueId,
+      statusId: body.statusId,
+    });
     const limiter = isRateLimited({
       key: `${user.id}:issue-status`,
       max: 30,
       windowMs: 60_000,
     });
     if (limiter.limited) {
+      logEvent("issue.status.update.rate_limited", { userId: user.id, issueId }, "warn");
       return jsonError("Rate limit exceeded. Try again shortly.", 429);
     }
 
@@ -43,11 +50,17 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     await client.updateIssueStatus(issueId, body.statusId, body.note);
     const issue = await syncSingleIssue(user.id, client, issueId);
+    logEvent("issue.status.update.succeeded", {
+      userId: user.id,
+      issueId,
+      statusId: body.statusId,
+    });
 
     return Response.json({ ok: true, issue });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to update status";
     const status = message === "Unauthorized" ? 401 : (statusFromRedmineError(message) ?? 400);
+    logEvent("issue.status.update.failed", { status, error: message }, "error");
     return jsonError(message, status);
   }
 }

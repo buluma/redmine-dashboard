@@ -1,6 +1,7 @@
 import { prisma } from "@/src/lib/db";
 import { env } from "@/src/lib/env";
 import { jsonError } from "@/src/lib/http";
+import { logEvent } from "@/src/lib/log";
 import { connectRedmineAccount } from "@/src/lib/redmine-connect";
 import { setSessionCookie } from "@/src/lib/session";
 import { runSyncJob } from "@/src/lib/sync";
@@ -23,18 +24,22 @@ export async function GET() {
 
 export async function POST() {
   try {
+    logEvent("redmine.bootstrap.requested");
     if (!configuredFromEnv()) {
+      logEvent("redmine.bootstrap.missing_env", undefined, "warn");
       return jsonError("Missing REDMINE_BASE_URL or REDMINE_API_KEY in environment", 400);
     }
 
     const activeCredentials = await prisma.userRedmineCredential.count({ where: { isActive: true } });
     if (activeCredentials > 0) {
+      logEvent("redmine.bootstrap.blocked_existing_credentials", { activeCredentials }, "warn");
       return jsonError("Bootstrap is only available on first run", 409);
     }
 
     const user = await connectRedmineAccount(env.redmineBaseUrl!, env.redmineApiKey!);
     await setSessionCookie(user.id);
     const job = await runSyncJob(user.id, "full_manual");
+    logEvent("redmine.bootstrap.succeeded", { userId: user.id, syncJobId: job.jobId });
 
     return Response.json({
       ok: true,
@@ -47,6 +52,7 @@ export async function POST() {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to bootstrap from environment";
+    logEvent("redmine.bootstrap.failed", { error: message }, "error");
     return jsonError(message, 400);
   }
 }

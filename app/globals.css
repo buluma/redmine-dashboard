@@ -389,6 +389,34 @@ label {
   margin-top: 0.55rem;
 }
 
+.ops-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: 0.85rem;
+}
+
+.ops-kv {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.health-grid {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.health-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.ops-note {
+  margin-top: 0.6rem;
+  font-size: 0.86rem;
+}
+
 .alert-list {
   margin-top: 0.55rem;
   display: grid;
@@ -1077,6 +1105,10 @@ kbd {
   }
 
   .insights-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ops-grid {
     grid-template-columns: 1fr;
   }
 

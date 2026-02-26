@@ -1,5 +1,6 @@
 import { requireRedmineClient } from "@/src/lib/auth";
 import { jsonError, parseJson } from "@/src/lib/http";
+import { logEvent } from "@/src/lib/log";
 import { isRateLimited } from "@/src/lib/rate-limit";
 import { commentSchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
@@ -24,22 +25,33 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const issueId = parseIssueId(id);
     const body = await parseJson(request, commentSchema);
     const { user, client } = await requireRedmineClient();
+    logEvent("issue.comment.post.requested", {
+      userId: user.id,
+      issueId,
+    });
     const limiter = isRateLimited({
       key: `${user.id}:issue-comment`,
       max: 20,
       windowMs: 60_000,
     });
     if (limiter.limited) {
+      logEvent("issue.comment.post.rate_limited", { userId: user.id, issueId }, "warn");
       return jsonError("Rate limit exceeded. Try again shortly.", 429);
     }
 
     await client.addComment(issueId, body.comment);
     const issue = await syncSingleIssue(user.id, client, issueId);
+    logEvent("issue.comment.post.succeeded", {
+      userId: user.id,
+      issueId,
+      commentLength: body.comment.length,
+    });
 
     return Response.json({ ok: true, issue });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to post comment";
     const status = message === "Unauthorized" ? 401 : (statusFromRedmineError(message) ?? 400);
+    logEvent("issue.comment.post.failed", { status, error: message }, "error");
     return jsonError(message, status);
   }
 }

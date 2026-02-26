@@ -455,6 +455,9 @@ export default function ReportsPage() {
             <button type="button" onClick={() => void loadReportData()} disabled={loading}>
               {loading ? "Refreshing..." : "Refresh Reports"}
             </button>
+            <Link href="/ops" className="primary-link nav-link">
+              Open Sync Ops
+            </Link>
             <Link href="/" className="primary-link nav-link">
               Back to Dashboard
             </Link>
