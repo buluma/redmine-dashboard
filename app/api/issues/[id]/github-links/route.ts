@@ -1,9 +1,9 @@
 import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError, parseJson } from "@/src/lib/http";
-import { logEvent } from "@/src/lib/log";
 import { isRateLimited } from "@/src/lib/rate-limit";
 import { githubLinkCreateSchema } from "@/src/lib/schemas";
+import { trackFailure, trackInfo, trackSuccess } from "@/src/lib/telemetry";
 
 function parseIssueId(id: string): number {
   const n = Number(id);
@@ -31,6 +31,10 @@ function buildGithubUrl(input: {
     return `${base}/pull/${input.githubPrNumber}`;
   }
   return base;
+}
+
+function statusClass(status: number): string {
+  return `${Math.floor(status / 100)}xx`;
 }
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
@@ -68,12 +72,13 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
 }
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+  const startedAt = Date.now();
   try {
     const { id } = await context.params;
     const redmineIssueId = parseIssueId(id);
     const user = await requireCurrentUser();
     const payload = await parseJson(request, githubLinkCreateSchema);
-    logEvent("issue.github_link.create.requested", {
+    trackInfo("issue.github_link.create.requested", {
       userId: user.id,
       redmineIssueId,
       repository: payload.repositoryFullName,
@@ -87,7 +92,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       windowMs: 60_000,
     });
     if (limiter.limited) {
-      logEvent("issue.github_link.create.rate_limited", { userId: user.id, redmineIssueId }, "warn");
+      trackFailure({
+        event: "issue.github_link.create.rate_limited",
+        error: "issue github link create rate-limited",
+        level: "warn",
+        data: { userId: user.id, redmineIssueId },
+        metricName: "issue_github_link_create_rate_limited",
+        metricTags: { reason: "rate_limited" },
+        durationMetricName: "issue_github_link_create_duration",
+        durationMs: Date.now() - startedAt,
+      });
       return jsonError("Rate limit exceeded. Try again shortly.", 429);
     }
 
@@ -129,17 +143,31 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       },
     });
 
-    logEvent("issue.github_link.create.succeeded", {
-      userId: user.id,
-      redmineIssueId,
-      linkId: link.id,
+    trackSuccess({
+      event: "issue.github_link.create.succeeded",
+      data: {
+        userId: user.id,
+        redmineIssueId,
+        linkId: link.id,
+      },
+      metricName: "issue_github_link_create_succeeded",
+      durationMetricName: "issue_github_link_create_duration",
+      durationMs: Date.now() - startedAt,
     });
 
     return Response.json({ ok: true, link });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create GitHub link";
     const status = message === "Unauthorized" ? 401 : 400;
-    logEvent("issue.github_link.create.failed", { status, error: message }, "error");
+    trackFailure({
+      event: "issue.github_link.create.failed",
+      error,
+      data: { status },
+      metricName: "issue_github_link_create_failed",
+      metricTags: { status_class: statusClass(status) },
+      durationMetricName: "issue_github_link_create_duration",
+      durationMs: Date.now() - startedAt,
+    });
     return jsonError(message, status);
   }
 }

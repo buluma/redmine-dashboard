@@ -1,9 +1,9 @@
 import { requireRedmineClient } from "@/src/lib/auth";
 import { jsonError, parseJson } from "@/src/lib/http";
-import { logEvent } from "@/src/lib/log";
 import { isRateLimited } from "@/src/lib/rate-limit";
 import { commentSchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
+import { trackFailure, trackInfo, trackSuccess } from "@/src/lib/telemetry";
 
 function parseIssueId(id: string): number {
   const n = Number(id);
@@ -19,13 +19,18 @@ function statusFromRedmineError(message: string): number | null {
   return Number(match[1]);
 }
 
+function statusClass(status: number): string {
+  return `${Math.floor(status / 100)}xx`;
+}
+
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+  const startedAt = Date.now();
   try {
     const { id } = await context.params;
     const issueId = parseIssueId(id);
     const body = await parseJson(request, commentSchema);
     const { user, client } = await requireRedmineClient();
-    logEvent("issue.comment.post.requested", {
+    trackInfo("issue.comment.post.requested", {
       userId: user.id,
       issueId,
     });
@@ -35,23 +40,46 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       windowMs: 60_000,
     });
     if (limiter.limited) {
-      logEvent("issue.comment.post.rate_limited", { userId: user.id, issueId }, "warn");
+      trackFailure({
+        event: "issue.comment.post.rate_limited",
+        error: "issue comment rate-limited",
+        level: "warn",
+        data: { userId: user.id, issueId },
+        metricName: "issue_comment_post_rate_limited",
+        metricTags: { reason: "rate_limited" },
+        durationMetricName: "issue_comment_post_duration",
+        durationMs: Date.now() - startedAt,
+      });
       return jsonError("Rate limit exceeded. Try again shortly.", 429);
     }
 
     await client.addComment(issueId, body.comment);
     const issue = await syncSingleIssue(user.id, client, issueId);
-    logEvent("issue.comment.post.succeeded", {
-      userId: user.id,
-      issueId,
-      commentLength: body.comment.length,
+    trackSuccess({
+      event: "issue.comment.post.succeeded",
+      data: {
+        userId: user.id,
+        issueId,
+        commentLength: body.comment.length,
+      },
+      metricName: "issue_comment_post_succeeded",
+      durationMetricName: "issue_comment_post_duration",
+      durationMs: Date.now() - startedAt,
     });
 
     return Response.json({ ok: true, issue });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to post comment";
     const status = message === "Unauthorized" ? 401 : (statusFromRedmineError(message) ?? 400);
-    logEvent("issue.comment.post.failed", { status, error: message }, "error");
+    trackFailure({
+      event: "issue.comment.post.failed",
+      error,
+      data: { status },
+      metricName: "issue_comment_post_failed",
+      metricTags: { status_class: statusClass(status) },
+      durationMetricName: "issue_comment_post_duration",
+      durationMs: Date.now() - startedAt,
+    });
     return jsonError(message, status);
   }
 }

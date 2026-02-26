@@ -1,10 +1,10 @@
 import { requireMobileUser, requireRedmineClientForUser } from "@/src/lib/auth";
 import { jsonError, parseJson } from "@/src/lib/http";
-import { logEvent } from "@/src/lib/log";
 import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
 import { isRateLimited } from "@/src/lib/rate-limit";
 import { commentSchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
+import { trackFailure, trackInfo, trackSuccess } from "@/src/lib/telemetry";
 
 function parseIssueId(id: string): number {
   const n = Number(id);
@@ -20,7 +20,12 @@ function statusFromRedmineError(message: string): number | null {
   return Number(match[1]);
 }
 
+function statusClass(status: number): string {
+  return `${Math.floor(status / 100)}xx`;
+}
+
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+  const startedAt = Date.now();
   try {
     assertMobileApiEnabled();
     const { id } = await context.params;
@@ -28,7 +33,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const body = await parseJson(request, commentSchema);
     const { user } = await requireMobileUser(request);
     const { client } = await requireRedmineClientForUser(user.id);
-    logEvent("mobile.issue.comment.requested", {
+    trackInfo("mobile.issue.comment.requested", {
       userId: user.id,
       issueId,
     });
@@ -39,15 +44,31 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       windowMs: 60_000,
     });
     if (limiter.limited) {
+      trackFailure({
+        event: "mobile.issue.comment.rate_limited",
+        error: "mobile issue comment rate-limited",
+        level: "warn",
+        data: { userId: user.id, issueId },
+        metricName: "mobile_issue_comment_rate_limited",
+        metricTags: { reason: "rate_limited" },
+        durationMetricName: "mobile_issue_comment_duration",
+        durationMs: Date.now() - startedAt,
+      });
       return jsonError("Rate limit exceeded. Try again shortly.", 429);
     }
 
     await client.addComment(issueId, body.comment);
     const issue = await syncSingleIssue(user.id, client, issueId);
-    logEvent("mobile.issue.comment.succeeded", {
-      userId: user.id,
-      issueId,
-      commentLength: body.comment.length,
+    trackSuccess({
+      event: "mobile.issue.comment.succeeded",
+      data: {
+        userId: user.id,
+        issueId,
+        commentLength: body.comment.length,
+      },
+      metricName: "mobile_issue_comment_succeeded",
+      durationMetricName: "mobile_issue_comment_duration",
+      durationMs: Date.now() - startedAt,
     });
 
     return Response.json({ ok: true, issue });
@@ -59,7 +80,15 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         : message === "Unauthorized"
           ? 401
           : (statusFromRedmineError(message) ?? 400);
-    logEvent("mobile.issue.comment.failed", { status, error: message }, "error");
+    trackFailure({
+      event: "mobile.issue.comment.failed",
+      error,
+      data: { status },
+      metricName: "mobile_issue_comment_failed",
+      metricTags: { status_class: statusClass(status) },
+      durationMetricName: "mobile_issue_comment_duration",
+      durationMs: Date.now() - startedAt,
+    });
     return jsonError(message, status);
   }
 }
