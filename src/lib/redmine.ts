@@ -1,3 +1,4 @@
+import { env } from "@/src/lib/env";
 import { logEvent } from "@/src/lib/log";
 
 export type RedmineCurrentUser = {
@@ -58,6 +59,8 @@ type RedmineRelationResponse = {
   };
 };
 
+export type SyncIssueScope = "assigned" | "open" | "all";
+
 function trimBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/$/, "");
 }
@@ -67,10 +70,69 @@ function redmineDate(value: Date): string {
 }
 
 export class RedmineClient {
+  private dispatcher: unknown | null = null;
+  private dispatcherLoaded = false;
+
   constructor(
     private readonly baseUrl: string,
     private readonly apiKey: string,
   ) {}
+
+  private host(): string | null {
+    try {
+      return new URL(trimBaseUrl(this.baseUrl)).hostname.toLowerCase();
+    } catch {
+      return null;
+    }
+  }
+
+  private allowInsecureTls(): boolean {
+    const host = this.host();
+    if (!host) {
+      return false;
+    }
+    return env.redmineInsecureTlsHosts.map((item) => item.toLowerCase()).includes(host);
+  }
+
+  private async getDispatcher(): Promise<unknown | undefined> {
+    if (!this.allowInsecureTls()) {
+      return undefined;
+    }
+    if (this.dispatcherLoaded) {
+      return this.dispatcher ?? undefined;
+    }
+    this.dispatcherLoaded = true;
+    try {
+      const undici = await import("undici");
+      this.dispatcher = new undici.Agent({
+        connect: { rejectUnauthorized: false },
+      });
+      logEvent("redmine.tls.insecure_host_enabled", { host: this.host() }, "warn");
+      return this.dispatcher;
+    } catch {
+      // If undici import fails, proceed with strict TLS instead of crashing.
+      this.dispatcher = null;
+      return undefined;
+    }
+  }
+
+  private normalizeNetworkError(error: unknown): Error | null {
+    if (!(error instanceof TypeError)) {
+      return null;
+    }
+    const code = (error as { cause?: { code?: string } }).cause?.code;
+    if (code === "UNABLE_TO_GET_ISSUER_CERT_LOCALLY" || code === "SELF_SIGNED_CERT_IN_CHAIN") {
+      const host = this.host() ?? this.baseUrl;
+      return new Error(
+        `TLS certificate validation failed for ${host}. ` +
+          `If this is staging, add its hostname to REDMINE_INSECURE_TLS_HOSTS.`,
+      );
+    }
+    if (code === "ENOTFOUND" || code === "ECONNREFUSED" || code === "ETIMEDOUT") {
+      return new Error(`Network error reaching Redmine (${code ?? "unknown"}). Check base URL and connectivity.`);
+    }
+    return null;
+  }
 
   private async request<T>(
     path: string,
@@ -86,7 +148,8 @@ export class RedmineClient {
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const { skipJsonContentType, ...requestInit } = init ?? {};
-        const res = await fetch(`${trimBaseUrl(this.baseUrl)}${path}`, {
+        const dispatcher = await this.getDispatcher();
+        const fetchInit: RequestInit & { dispatcher?: unknown } = {
           ...requestInit,
           headers: {
             ...(skipJsonContentType ? {} : { "Content-Type": "application/json" }),
@@ -95,7 +158,9 @@ export class RedmineClient {
           },
           cache: "no-store",
           signal: controller.signal,
-        });
+          ...(dispatcher ? { dispatcher } : {}),
+        };
+        const res = await fetch(`${trimBaseUrl(this.baseUrl)}${path}`, fetchInit);
 
         if (!res.ok) {
           const body = await res.text();
@@ -118,6 +183,10 @@ export class RedmineClient {
 
         return JSON.parse(raw) as T;
       } catch (error) {
+        const normalized = this.normalizeNetworkError(error);
+        if (normalized) {
+          throw normalized;
+        }
         const isAbort = error instanceof Error && error.name === "AbortError";
         if (attempt < maxAttempts && isAbort) {
           await new Promise((resolve) => setTimeout(resolve, 300 * 2 ** (attempt - 1)));
@@ -179,7 +248,10 @@ export class RedmineClient {
     return out;
   }
 
-  async listAssignedIssues(updatedOnOrAfter?: Date): Promise<Array<Record<string, unknown>>> {
+  async listIssues(
+    scope: SyncIssueScope = "assigned",
+    updatedOnOrAfter?: Date,
+  ): Promise<Array<Record<string, unknown>>> {
     const limit = 100;
     const out: Array<Record<string, unknown>> = [];
     let offset = 0;
@@ -189,7 +261,13 @@ export class RedmineClient {
         ? `&updated_on=%3E%3D${encodeURIComponent(redmineDate(updatedOnOrAfter))}`
         : "";
 
-      const path = `/issues.json?assigned_to_id=me&status_id=*&sort=updated_on:desc&limit=${limit}&offset=${offset}${filterUpdated}`;
+      const scopeQuery =
+        scope === "assigned"
+          ? "assigned_to_id=me&status_id=*"
+          : scope === "open"
+            ? "status_id=open"
+            : "status_id=*";
+      const path = `/issues.json?${scopeQuery}&sort=updated_on:desc&limit=${limit}&offset=${offset}${filterUpdated}`;
 
       let data: RedmineIssueListResponse;
       try {
@@ -198,11 +276,12 @@ export class RedmineClient {
         const message = error instanceof Error ? error.message : "";
         const invalidUpdatedFilter = message.includes("Redmine request failed (422)") && /updated is invalid/i.test(message);
         if (updatedOnOrAfter && invalidUpdatedFilter) {
-          // Some Redmine instances reject strict updated_on syntax. Fall back to full assigned-issues fetch.
+          // Some Redmine instances reject strict updated_on syntax. Fall back to full scoped fetch.
           logEvent("redmine.issues.updated_filter_fallback", {
+            scope,
             updatedOnOrAfter: redmineDate(updatedOnOrAfter),
           }, "warn");
-          return this.listAssignedIssues();
+          return this.listIssues(scope);
         }
         throw error;
       }
@@ -381,12 +460,15 @@ export class RedmineClient {
   async downloadAttachment(pathOrUrl: string): Promise<Response> {
     const base = trimBaseUrl(this.baseUrl);
     const url = pathOrUrl.startsWith("http") ? pathOrUrl : `${base}${pathOrUrl}`;
-    const res = await fetch(url, {
+    const dispatcher = await this.getDispatcher();
+    const init: RequestInit & { dispatcher?: unknown } = {
       headers: {
         "X-Redmine-API-Key": this.apiKey,
       },
       cache: "no-store",
-    });
+      ...(dispatcher ? { dispatcher } : {}),
+    };
+    const res = await fetch(url, init);
     if (!res.ok) {
       const body = await res.text();
       throw new Error(`Redmine request failed (${res.status}): ${body.slice(0, 300)}`);

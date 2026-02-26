@@ -957,6 +957,27 @@ label {
   gap: 0.35rem;
 }
 
+.attachment-preview-link {
+  display: block;
+}
+
+.attachment-preview-image {
+  width: min(100%, 520px);
+  max-height: 240px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #f4efe4;
+}
+
+.attachment-preview-pdf {
+  width: min(100%, 640px);
+  height: 280px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f4efe4;
+}
+
 .entry-head {
   display: flex;
   justify-content: space-between;
@@ -1025,6 +1046,43 @@ label {
 .markdown pre code {
   background: transparent;
   padding: 0;
+}
+
+.markdown .hljs-keyword,
+.markdown .hljs-selector-tag,
+.markdown .hljs-literal,
+.markdown .hljs-section,
+.markdown .hljs-link {
+  color: #8f2d16;
+  font-weight: 600;
+}
+
+.markdown .hljs-string,
+.markdown .hljs-attr,
+.markdown .hljs-template-tag,
+.markdown .hljs-template-variable {
+  color: #0c6b58;
+}
+
+.markdown .hljs-title,
+.markdown .hljs-function,
+.markdown .hljs-built_in,
+.markdown .hljs-type,
+.markdown .hljs-class .hljs-title {
+  color: #15439b;
+}
+
+.markdown .hljs-number,
+.markdown .hljs-symbol,
+.markdown .hljs-bullet,
+.markdown .hljs-meta {
+  color: #7c3d8f;
+}
+
+.markdown .hljs-comment,
+.markdown .hljs-quote {
+  color: #667788;
+  font-style: italic;
 }
 
 .markdown table {

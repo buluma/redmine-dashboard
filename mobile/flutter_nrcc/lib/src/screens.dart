@@ -1,10 +1,102 @@
 import "package:flutter/material.dart";
+import "package:flutter_highlight/flutter_highlight.dart";
+import "package:flutter_highlight/themes/github.dart";
 import "package:flutter_markdown/flutter_markdown.dart";
+import "package:highlight/highlight.dart" as hi;
 import "package:markdown/markdown.dart" as md;
 import "package:url_launcher/url_launcher.dart";
 
 import "models.dart";
 import "repositories.dart";
+
+class _CodeBlockBuilder extends MarkdownElementBuilder {
+  _CodeBlockBuilder({required this.theme});
+
+  final ThemeData theme;
+
+  static const Map<String, String> _languageAlias = <String, String>{
+    "rb": "ruby",
+    "js": "javascript",
+    "ts": "typescript",
+    "sh": "bash",
+    "shell": "bash",
+    "yml": "yaml",
+    "plain": "plaintext",
+    "text": "plaintext",
+  };
+
+  String? _languageFromElement(md.Element? element) {
+    final className = element?.attributes["class"];
+    if (className == null || className.trim().isEmpty) {
+      return null;
+    }
+    final match = RegExp(r"(?:^|\s)language-([A-Za-z0-9_+\-]+)(?:\s|$)").firstMatch(className);
+    if (match == null) {
+      return null;
+    }
+    final raw = (match.group(1) ?? "").toLowerCase();
+    if (raw.isEmpty) {
+      return null;
+    }
+    return _languageAlias[raw] ?? raw;
+  }
+
+  String? _safeLanguage(String? language, String source) {
+    if (language == null) {
+      return null;
+    }
+    try {
+      hi.highlight.parse(source, language: language);
+      return language;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    md.Element? codeElement;
+    for (final node in element.children ?? const <md.Node>[]) {
+      if (node is md.Element && node.tag == "code") {
+        codeElement = node;
+        break;
+      }
+    }
+
+    final code = (codeElement?.textContent ?? element.textContent).trimRight();
+    if (code.isEmpty) {
+      return null;
+    }
+
+    final language = _safeLanguage(_languageFromElement(codeElement), code);
+    final baseStyle = preferredStyle ?? theme.textTheme.bodySmall;
+    final textStyle = (baseStyle ?? const TextStyle()).copyWith(
+      fontFamily: "monospace",
+      height: 1.35,
+      fontSize: 13,
+    );
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.all(12),
+        child: HighlightView(
+          code,
+          language: language,
+          theme: githubTheme,
+          textStyle: textStyle,
+        ),
+      ),
+    );
+  }
+}
 
 class PairScreen extends StatefulWidget {
   final AuthRepository authRepository;
@@ -273,6 +365,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   Issue? _issue;
   bool _loading = false;
   String? _error;
+  Map<String, String> _attachmentHeaders = const <String, String>{};
   final _comment = TextEditingController();
   final _repo = TextEditingController();
   final _ghIssue = TextEditingController();
@@ -293,11 +386,45 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
 
     var out = input;
 
+    // Strip Redmine TOC/notextile macros that do not map to flutter_markdown.
+    out = out
+        .replaceAll(RegExp(r"^\s*\{\{>?toc(?:\([^)]*\))?\}\}\s*$", multiLine: true), "")
+        .replaceAll(RegExp(r"</?notextile>", caseSensitive: false), "");
+
+    // Convert Textile headings (h1. / h2.) into Markdown headings.
+    out = out.replaceAllMapped(
+      RegExp(r"^h([1-6])\.\s+(.+)$", multiLine: true),
+      (m) => "${"#" * int.parse(m.group(1)!)} ${m.group(2)!.trim()}",
+    );
+
+    // Convert Redmine collapse macro blocks to blockquotes with a bold title.
+    out = out.replaceAllMapped(
+      RegExp(r"\{\{collapse(?:\(([^)]*)\))?\s*\n([\s\S]*?)\n\}\}"),
+      (m) {
+        final title = (m.group(1) ?? "Details").trim().isEmpty ? "Details" : (m.group(1) ?? "Details").trim();
+        final body = (m.group(2) ?? "").trim();
+        if (body.isEmpty) return "> **$title**";
+        final quoted = body.split("\n").map((line) => line.trim().isEmpty ? ">" : "> $line").join("\n");
+        return "> **$title**\n>\n$quoted";
+      },
+    );
+
     // Convert patterns like: "link":https://example.com
     out = out.replaceAllMapped(
       RegExp(r'"?link"?\s*:\s*(https?:\/\/[^\s)"\]]+)'),
       (m) => "[link](${m.group(1)})",
     );
+
+    // Convert Textile links: "label":https://example.com
+    out = out.replaceAllMapped(
+      RegExp(r'"([^"\n]+)":(https?:\/\/[^\s<>"\)\]]+)'),
+      (m) => "[${m.group(1)}](${m.group(2)})",
+    );
+
+    // Convert Textile inline code and image syntax.
+    out = out
+        .replaceAllMapped(RegExp(r"(^|[^\w`])@([^\n@]+?)@(?=[^\w`]|$)"), (m) => "${m.group(1)}`${m.group(2)}`")
+        .replaceAllMapped(RegExp(r"!((?:https?:\/\/|\/)[^\s!]+)!"), (m) => "![](${m.group(1)})");
 
     // Convert any remaining bare URLs to markdown links.
     out = out.replaceAllMapped(
@@ -343,6 +470,100 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Could not open link: $href")),
+      );
+    }
+  }
+
+  bool _isImageAttachment(IssueAttachment attachment) {
+    final type = (attachment.contentType ?? "").toLowerCase();
+    if (type.startsWith("image/")) return true;
+    final file = attachment.filename.toLowerCase();
+    return file.endsWith(".png")
+        || file.endsWith(".jpg")
+        || file.endsWith(".jpeg")
+        || file.endsWith(".gif")
+        || file.endsWith(".webp")
+        || file.endsWith(".bmp");
+  }
+
+  bool _isTextDocAttachment(IssueAttachment attachment) {
+    final type = (attachment.contentType ?? "").toLowerCase();
+    if (type.startsWith("text/")) return true;
+    return type == "application/json"
+        || type == "application/xml"
+        || type == "application/yaml"
+        || type == "application/x-yaml"
+        || type == "application/javascript";
+  }
+
+  String _attachmentUrl(IssueAttachment attachment) {
+    return widget.actionsRepository.attachmentPreviewUrl(
+      redmineIssueId: widget.issueId,
+      redmineAttachmentId: attachment.redmineAttachmentId,
+    );
+  }
+
+  Future<void> _loadAttachmentHeaders() async {
+    final headers = await widget.actionsRepository.attachmentPreviewHeaders();
+    if (!mounted) return;
+    setState(() => _attachmentHeaders = headers);
+  }
+
+  Uri? _resolveGithubUri(GithubLink link) {
+    final rawUrl = link.url.trim();
+    if (rawUrl.isNotEmpty) {
+      final parsed = Uri.tryParse(rawUrl);
+      if (parsed != null && (parsed.scheme == "http" || parsed.scheme == "https")) {
+        return parsed;
+      }
+    }
+
+    final repo = link.repositoryFullName.trim();
+    if (repo.isEmpty) {
+      return null;
+    }
+
+    final issueNo = link.githubIssueNumber;
+    if (issueNo != null && issueNo > 0) {
+      return Uri.https("github.com", "/$repo/issues/$issueNo");
+    }
+
+    final prNo = link.githubPrNumber;
+    if (prNo != null && prNo > 0) {
+      return Uri.https("github.com", "/$repo/pull/$prNo");
+    }
+
+    return Uri.https("github.com", "/$repo");
+  }
+
+  String _githubLinkDisplayTitle(GithubLink link) {
+    final customTitle = link.title?.trim();
+    if (customTitle != null && customTitle.isNotEmpty) {
+      return customTitle;
+    }
+    if (link.githubPrNumber != null) {
+      return "${link.repositoryFullName}#PR-${link.githubPrNumber}";
+    }
+    if (link.githubIssueNumber != null) {
+      return "${link.repositoryFullName}#${link.githubIssueNumber}";
+    }
+    return link.repositoryFullName;
+  }
+
+  Future<void> _openGithubLink(GithubLink link) async {
+    final uri = _resolveGithubUri(link);
+    if (uri == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Could not resolve GitHub link")),
+      );
+      return;
+    }
+
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Could not open GitHub link: ${uri.toString()}")),
       );
     }
   }
@@ -400,6 +621,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     try {
       final issue = await widget.issuesRepository.getIssue(widget.issueId);
       setState(() => _issue = issue);
+      await _loadAttachmentHeaders();
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -551,6 +773,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                               selectable: true,
                               extensionSet: md.ExtensionSet.gitHubWeb,
                               styleSheet: _markdownStyle(context),
+                              builders: <String, MarkdownElementBuilder>{
+                                "pre": _CodeBlockBuilder(theme: theme),
+                              },
                               onTapLink: (text, href, title) => _openMarkdownLink(href),
                             ),
                           ),
@@ -634,12 +859,18 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                   ..._issue!.githubLinks.map(
                                     (link) => ListTile(
                                       contentPadding: EdgeInsets.zero,
+                                      onTap: () => _openGithubLink(link),
+                                      leading: const Icon(Icons.open_in_new),
                                       title: Text(
-                                        link.title ?? link.url,
+                                        _githubLinkDisplayTitle(link),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                      subtitle: Text(link.repositoryFullName),
+                                      subtitle: Text(
+                                        link.url.trim().isNotEmpty ? link.url : link.repositoryFullName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                       trailing: IconButton(
                                         icon: const Icon(Icons.delete_outline),
                                         onPressed: () async {
@@ -668,15 +899,92 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                         .map(
                                           (attachment) => ListTile(
                                             contentPadding: EdgeInsets.zero,
-                                            leading: const Icon(Icons.attach_file),
-                                            title: Text(
-                                              attachment.filename,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            subtitle: Text(
-                                              "${(attachment.filesize / 1024).toStringAsFixed(1)} KB"
-                                              "${attachment.author != null ? " • ${attachment.author}" : ""}",
+                                            title: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: <Widget>[
+                                                Row(
+                                                  children: <Widget>[
+                                                    const Icon(Icons.attach_file),
+                                                    const SizedBox(width: 6),
+                                                    Expanded(
+                                                      child: Text(
+                                                        attachment.filename,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  "${(attachment.filesize / 1024).toStringAsFixed(1)} KB"
+                                                  "${attachment.author != null ? " • ${attachment.author}" : ""}",
+                                                ),
+                                                if (_isImageAttachment(attachment)) ...<Widget>[
+                                                  const SizedBox(height: 8),
+                                                  ClipRRect(
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    child: Image.network(
+                                                      _attachmentUrl(attachment),
+                                                      headers: _attachmentHeaders,
+                                                      height: 180,
+                                                      width: double.infinity,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (context, error, stackTrace) {
+                                                        return Container(
+                                                          height: 80,
+                                                          alignment: Alignment.center,
+                                                          color: theme.colorScheme.surfaceContainerHighest,
+                                                          child: const Text("Image preview unavailable"),
+                                                        );
+                                                      },
+                                                    ),
+                                                  ),
+                                                ],
+                                                if (_isTextDocAttachment(attachment)) ...<Widget>[
+                                                  const SizedBox(height: 8),
+                                                  FutureBuilder<String?>(
+                                                    future: widget.actionsRepository.attachmentTextPreview(
+                                                      redmineIssueId: widget.issueId,
+                                                      redmineAttachmentId: attachment.redmineAttachmentId,
+                                                      maxChars: 420,
+                                                    ),
+                                                    builder: (context, snapshot) {
+                                                      if (snapshot.connectionState == ConnectionState.waiting) {
+                                                        return const SizedBox(
+                                                          height: 28,
+                                                          child: Align(
+                                                            alignment: Alignment.centerLeft,
+                                                            child: Text("Loading text preview..."),
+                                                          ),
+                                                        );
+                                                      }
+                                                      final preview = snapshot.data?.trim();
+                                                      if (preview == null || preview.isEmpty) {
+                                                        return const Text("Text preview unavailable");
+                                                      }
+                                                      return Container(
+                                                        width: double.infinity,
+                                                        padding: const EdgeInsets.all(10),
+                                                        decoration: BoxDecoration(
+                                                          color: theme.colorScheme.surfaceContainerHighest,
+                                                          borderRadius: BorderRadius.circular(8),
+                                                          border: Border.all(color: theme.colorScheme.outlineVariant),
+                                                        ),
+                                                        child: Text(
+                                                          preview,
+                                                          maxLines: 7,
+                                                          overflow: TextOverflow.ellipsis,
+                                                          style: theme.textTheme.bodySmall?.copyWith(
+                                                            fontFamily: "monospace",
+                                                            height: 1.3,
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                                  ),
+                                                ],
+                                              ],
                                             ),
                                           ),
                                         )

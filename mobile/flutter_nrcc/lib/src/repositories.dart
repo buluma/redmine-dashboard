@@ -156,4 +156,30 @@ class IssueActionsRepository {
       redmineTimeEntryId: redmineTimeEntryId,
     );
   }
+
+  String attachmentPreviewUrl({
+    required int redmineIssueId,
+    required int redmineAttachmentId,
+  }) {
+    return _api.attachmentUrl(
+      redmineIssueId: redmineIssueId,
+      redmineAttachmentId: redmineAttachmentId,
+    );
+  }
+
+  Future<Map<String, String>> attachmentPreviewHeaders() {
+    return _api.attachmentPreviewHeaders();
+  }
+
+  Future<String?> attachmentTextPreview({
+    required int redmineIssueId,
+    required int redmineAttachmentId,
+    int maxChars = 1200,
+  }) {
+    return _api.fetchAttachmentTextPreview(
+      redmineIssueId: redmineIssueId,
+      redmineAttachmentId: redmineAttachmentId,
+      maxChars: maxChars,
+    );
+  }
 }

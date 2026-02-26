@@ -21,6 +21,9 @@ Request body:
 }
 ```
 
+Notes:
+- Returns `502` when NRCC cannot reach Redmine due to upstream network/TLS issues.
+
 ### GET /api/redmine/bootstrap
 Returns bootstrap capability and current credential state.
 
@@ -170,6 +173,9 @@ All `/api/mobile/v1/*` routes require `Authorization: Bearer <token>` except pai
 
 ### POST /api/mobile/v1/pair/connect
 Pairs mobile device and returns token.
+
+Notes:
+- Returns `502` when NRCC cannot reach Redmine due to upstream network/TLS issues.
 
 ### GET /api/mobile/v1/me
 Returns authenticated mobile user + token metadata.

@@ -1,4 +1,5 @@
 import "package:dio/dio.dart";
+import "dart:math" as math;
 
 import "models.dart";
 import "token_store.dart";
@@ -283,6 +284,46 @@ class NrccApiClient {
       await _dio.delete<Map<String, dynamic>>("/api/mobile/v1/tokens/current");
     } on DioException catch (e) {
       _throwApiError(e);
+    }
+  }
+
+  String attachmentUrl({
+    required int redmineIssueId,
+    required int redmineAttachmentId,
+  }) {
+    final base = _baseUrl.replaceAll(RegExp(r"/+$"), "");
+    return "$base/api/mobile/v1/issues/$redmineIssueId/attachments/$redmineAttachmentId";
+  }
+
+  Future<Map<String, String>> attachmentPreviewHeaders() async {
+    final token = await _tokenStore.getToken();
+    if (token == null || token.isEmpty) {
+      return const <String, String>{};
+    }
+    return <String, String>{"Authorization": "Bearer $token"};
+  }
+
+  Future<String?> fetchAttachmentTextPreview({
+    required int redmineIssueId,
+    required int redmineAttachmentId,
+    int maxChars = 1200,
+  }) async {
+    try {
+      final response = await _dio.get<String>(
+        "/api/mobile/v1/issues/$redmineIssueId/attachments/$redmineAttachmentId",
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: const <String, String>{"Range": "bytes=0-4095"},
+          validateStatus: (status) => status != null && status >= 200 && status < 400,
+        ),
+      );
+      final raw = (response.data ?? "").trim();
+      if (raw.isEmpty) {
+        return null;
+      }
+      return raw.substring(0, math.min(raw.length, maxChars));
+    } catch (_) {
+      return null;
     }
   }
 }

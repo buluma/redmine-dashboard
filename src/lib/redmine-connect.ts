@@ -1,5 +1,6 @@
 import { prisma } from "@/src/lib/db";
 import { encryptText } from "@/src/lib/crypto";
+import { env } from "@/src/lib/env";
 import { RedmineClient } from "@/src/lib/redmine";
 
 function displayName(firstname: string, lastname: string, fallback: string): string {
@@ -9,6 +10,12 @@ function displayName(firstname: string, lastname: string, fallback: string): str
 
 export async function connectRedmineAccount(baseUrl: string, apiKey: string) {
   const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
+  if (env.redmineAllowedBaseUrls.length > 0) {
+    const allowed = env.redmineAllowedBaseUrls.map((item) => item.replace(/\/$/, ""));
+    if (!allowed.includes(normalizedBaseUrl)) {
+      throw new Error("Redmine base URL is not allowed in this environment");
+    }
+  }
   const client = new RedmineClient(normalizedBaseUrl, apiKey);
   const currentUser = await client.getCurrentUser();
 

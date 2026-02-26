@@ -564,7 +564,7 @@ export async function executeSyncJob(jobId: string): Promise<void> {
     const incrementalSince =
       job.jobType === "incremental" ? (syncState?.lastIncrementalSyncAt ?? undefined) : undefined;
 
-    const issueList = await client.listAssignedIssues(incrementalSince);
+    const issueList = await client.listIssues(env.redmineSyncIssueScope, incrementalSince);
     const seenRemoteIssueIds = new Set<number>();
 
     for (const issueRaw of issueList) {

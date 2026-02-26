@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
+import { normalizeRedmineText } from "@/src/lib/redmine-text-format";
 
 type User = {
   id: string;
@@ -129,15 +132,49 @@ const POLL_INTERVAL_MS = 60_000;
 const SAVED_VIEWS_KEY = "nrcc.savedViews.v1";
 
 function MarkdownBlock({ content }: { content: string }) {
+  const normalized = useMemo(() => normalizeRedmineText(content), [content]);
   return (
     <div className="markdown">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[[rehypeHighlight, { ignoreMissing: true }]]}
+      >
+        {normalized}
+      </ReactMarkdown>
     </div>
   );
 }
 
+function attachmentUrl(issueId: number, attachmentId: number): string {
+  return `/api/issues/${issueId}/attachments/${attachmentId}`;
+}
+
+function isImageAttachment(attachment: Attachment): boolean {
+  const type = (attachment.contentType ?? "").toLowerCase();
+  if (type.startsWith("image/")) return true;
+  const name = attachment.filename.toLowerCase();
+  return (
+    name.endsWith(".png")
+    || name.endsWith(".jpg")
+    || name.endsWith(".jpeg")
+    || name.endsWith(".gif")
+    || name.endsWith(".webp")
+    || name.endsWith(".bmp")
+  );
+}
+
+function isPdfAttachment(attachment: Attachment): boolean {
+  const type = (attachment.contentType ?? "").toLowerCase();
+  if (type === "application/pdf") return true;
+  return attachment.filename.toLowerCase().endsWith(".pdf");
+}
+
 function normalizeStatus(statusName: string): string {
   return statusName.toLowerCase();
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return Array.from(new Set(values));
 }
 
 function isOpenStatus(statusName: string): boolean {
@@ -578,7 +615,7 @@ export default function Home() {
     setIssues(data.items ?? []);
     setTotal(data.total ?? 0);
     setStatuses(data.filters?.statuses ?? []);
-    setPriorities(data.filters?.priorities ?? []);
+    setPriorities(uniqueStrings(data.filters?.priorities ?? []));
     setSearchSource(data.source ?? "local_cache");
   }
 
@@ -1824,11 +1861,35 @@ export default function Home() {
                 {selectedIssue.attachments.map((attachment) => (
                   <div key={attachment.id} className="timeline-item">
                     <div className="entry-head">
-                      <a href={`/api/issues/${selectedIssue.redmineIssueId}/attachments/${attachment.redmineAttachmentId}`} target="_blank" rel="noreferrer">
+                      <a href={attachmentUrl(selectedIssue.redmineIssueId, attachment.redmineAttachmentId)} target="_blank" rel="noreferrer">
                         {attachment.filename}
                       </a>
                       <span className="muted">{(attachment.filesize / 1024).toFixed(1)} KB</span>
                     </div>
+                    {isImageAttachment(attachment) && (
+                      <a
+                        href={attachmentUrl(selectedIssue.redmineIssueId, attachment.redmineAttachmentId)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="attachment-preview-link"
+                      >
+                        <Image
+                          className="attachment-preview-image"
+                          src={attachmentUrl(selectedIssue.redmineIssueId, attachment.redmineAttachmentId)}
+                          alt={attachment.filename}
+                          width={520}
+                          height={240}
+                          loading="lazy"
+                        />
+                      </a>
+                    )}
+                    {isPdfAttachment(attachment) && (
+                      <iframe
+                        className="attachment-preview-pdf"
+                        src={attachmentUrl(selectedIssue.redmineIssueId, attachment.redmineAttachmentId)}
+                        title={`Preview ${attachment.filename}`}
+                      />
+                    )}
                     <p className="muted entry-meta">
                       {attachment.author ?? "Unknown author"}
                       {attachment.createdOnRemote ? ` • ${new Date(attachment.createdOnRemote).toLocaleString()}` : ""}
