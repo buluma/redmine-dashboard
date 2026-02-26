@@ -48,6 +48,21 @@ Response includes:
 - `filters.statuses`, `filters.priorities`
 - `source=local_cache|hybrid`
 
+Hybrid mode behavior:
+- Remote search results are merged with local cache rows and de-duplicated by Redmine issue id.
+- Result ordering honors the requested `sort` mode after merge.
+- `total` represents full pagination semantics for hybrid responses (not only current-page merged count).
+
+### GET /api/issues/[id]
+Returns enriched issue detail for the selected issue id (cache-backed), including:
+- `journals`
+- `githubLinks`
+- `timeEntries`
+- `attachments`
+- `relations`
+- `children`
+- `allowedStatuses` (derived from Redmine workflow metadata in cache)
+
 ### GET /api/issues/[id]/status
 Returns allowed workflow transitions from Redmine (`allowedStatuses`, `allowedStatusIds`).
 
@@ -163,6 +178,10 @@ Optional query params for remote time-entry mode:
 
 ### GET /api/internal/activities
 Returns time-entry activity catalog (cached from Redmine enumerations when available).
+
+Notes:
+- Requires authenticated web session.
+- Returns `401` when unauthenticated.
 
 ### GET /api/health
 System health probe.

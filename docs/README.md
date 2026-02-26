@@ -7,6 +7,7 @@ Welcome to the documentation for the Nasc Redmine Command Center (NRCC). This do
 - **[Project Overview](./project-overview.md):** A high-level overview of the project, its features, and the technology stack.
 - **[System Architecture](./system-architecture.md):** A description of the system architecture, components, and data flow.
 - **[Deployment Guide](./deployment-guide.md):** Instructions for setting up the application for local development and deployment.
+- **[API Reference](./api-reference.md):** Web and mobile API routes, request contracts, and response behavior.
 - **[Code Standards](./code-standards.md):** The coding standards and conventions used in the project.
 - **[Telemetry Conventions](./telemetry.md):** Standards for logs and metrics naming, tagging, and route instrumentation patterns.
 - **[Memory Profiling Guide](./perf-memory.md):** Repeatable process for measuring and reducing runtime memory usage.

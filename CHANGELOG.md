@@ -4,6 +4,27 @@ All notable changes to this project are documented in this file.
 
 ## 2026-02-26
 
+### Added (Issue Detail UX + Formatting Parity)
+
+- New dedicated issue detail page route at `/issues/[id]` with tabbed sections via `?tab=history|notes|properties|time_entries`.
+- Issue detail API endpoint `GET /api/issues/[id]` for enriched issue payloads (journals, GitHub links, time entries, attachments, relations).
+- Web attachment previews on issue detail page for image and PDF attachments.
+- Restored GitHub link management on issue detail page (add/remove) with section collapse support.
+- Redmine text normalization improvements:
+  - `collapse(...)` macro handling;
+  - `<pre><code>` and `<pre>` conversion (raw + escaped forms);
+  - escaped whitespace decoding (`\n`, `\r\n`, `\t`);
+  - source-reference link conversion for `SRC` and `SRC-JOURNAL`.
+- Long code/log block rendering improvements:
+  - auto-collapse for larger code blocks;
+  - wrapped long lines to prevent horizontal overflow in markdown containers.
+
+### Fixed (PR #1 Review Follow-ups)
+
+- Enforced authentication before cache access in `GET /api/internal/activities` to prevent unauthorized catalog reads.
+- Hybrid issue search now preserves requested `sort` semantics (`updated_desc`, `updated_asc`, `priority`, `due_date`) after local+remote merge.
+- Hybrid issue search `total` now reflects full-result semantics (uses remote full count rather than current merged page size).
+
 ### Added (Ops Hardening)
 
 - New Sync Ops console page at `/ops` with:
