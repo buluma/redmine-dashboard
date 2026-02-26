@@ -7,8 +7,12 @@ The system works by syncing Redmine issues to a local database, providing fast l
 ## Core Features
 
 - **Reporting:** A reports page provides insights with trends, a heatmap of activity, data drilldowns, and a CSV export feature.
+- **Issue Detail Page:** Clicking an issue opens a dedicated route (`/issues/[id]`) with Redmine-style sections and tabs (`history`, `notes`, `property changes`, `spent time`).
+- **Text/Markdown Parity:** Redmine-style content is normalized for web rendering, including collapse macros, source references, pre/code blocks, and escaped newline formatting.
 - **Hybrid Search:** Issue list can use local cache search or hybrid mode (Redmine search + cache hydration).
 - **Attachments + Relations:** Issues now support Redmine attachment upload/download and relation management (`blocks`, `precedes`, `follows`, etc.).
+- **Attachment Preview:** Issue detail page supports inline previews for images and PDFs.
+- **GitHub Linking:** Issue detail supports add/remove links to GitHub issues/PRs and keeps link metadata in local cache.
 - **Workflow-Aware Statusing:** Status changes use Redmine `allowed_statuses` data for transition-safe updates.
 - **Expanded Time Entries:** Beyond creation, the backend supports list/update/delete for Redmine time entries.
 
