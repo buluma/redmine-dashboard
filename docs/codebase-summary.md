@@ -35,6 +35,12 @@ This directory contains reusable library code, components, and other source file
   - `session.ts`: Session management utilities.
 - **`src/components/`:** Reusable React components (currently empty, but this is where they would go).
 
+### `mobile/`
+
+This directory contains the source code for the mobile applications.
+
+- **`mobile/flutter_nrcc/`:** A complete Flutter project for the cross-platform mobile app.
+
 ### `prisma/`
 
 This directory contains all Prisma-related files.

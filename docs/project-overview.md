@@ -6,28 +6,16 @@ The system works by syncing Redmine issues to a local database, providing fast l
 
 ## Core Features
 
-- **Redmine Integration:** Connect to a Redmine instance using a base URL and API key.
-- **Android/Native Pairing:** Pair mobile clients via token-based authentication (`/api/mobile/v1/pair/connect`) without browser cookies.
-- **Issue Management:**
-  - View issues assigned to the logged-in user.
-  - Filter, sort, and search through issues.
-  - Create and use saved views for common queries.
-- **Issue Updates:**
-  - Update the status of a single issue.
-  - Perform bulk status updates on selected issues.
-- **Collaboration:**
-  - Add comments to issues.
-  - Log time spent on issues.
-  - Post comments and manage GitHub links from Android/native clients.
-- **GitHub Integration:** Link Redmine issues to GitHub repositories, issues, and pull requests.
-- **Markdown Support:** Renders issue descriptions, comments, and time-log notes as Markdown for better readability.
-- **Automated Sync:**
-  - A polling mechanism automatically syncs data from Redmine every 60 seconds.
-  - A manual "Force Refresh" option is available for a full, on-demand sync.
-- **Operational Visibility:**
-  - A header display shows the current sync health, status, and any recent errors.
-  - A dedicated Sync Ops page (`/ops`) allows for managing the sync lifecycle.
 - **Reporting:** A reports page provides insights with trends, a heatmap of activity, data drilldowns, and a CSV export feature.
+
+## Mobile Support
+
+NRCC provides support for mobile clients, allowing users to manage their Redmine issues on the go.
+
+- **Clients:** The project includes a ready-to-build [Flutter application](../mobile/flutter_nrcc) and provides guidance for creating a [native Android client](./mobile/android.md).
+- **Secure Pairing:** Mobile clients can be paired securely using a token-based authentication system, avoiding the need for browser cookies.
+- **Mobile-Specific API:** A dedicated set of endpoints under `/api/mobile/v1/` is available for mobile clients.
+- **Core Functionality:** Mobile users can post comments and manage GitHub links from their devices.
 
 ## Technology Stack
 

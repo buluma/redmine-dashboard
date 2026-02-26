@@ -15,11 +15,12 @@ This document provides a high-level overview of the system architecture for the 
                  │   User's Browser  │
                  └─────────┬─────────┘
                            │
-                 ┌───────────────────┐
-                 │   Android Client  │
-                 └─────────┬─────────┘
-                           │ (HTTPS)
-                           ▼
+  ┌────────────────┐       │       ┌────────────────┐
+  │ Flutter Client │───────┘       │ Android Client │
+  └────────────────┘               └────────────────┘
+          │ (HTTPS, /api/mobile/v1/*) │
+          │                         │
+          ▼                         ▼
 ┌─────────────────────────────────────────────┐
 │                Next.js Server               │
 │                                             │
@@ -52,23 +53,29 @@ This document provides a high-level overview of the system architecture for the 
 - **Rendering:** Uses React Server Components for rendering the UI.
 - **Functionality:** Provides the user interface for viewing and interacting with Redmine issues.
 
-### 2. API Routes
+### 2. Mobile Clients
+
+- **Flutter:** A cross-platform mobile application built with Flutter.
+- **Native Android:** A reference implementation for a native Android client using Jetpack Compose.
+- **Functionality:** Both clients provide a mobile-friendly interface for managing Redmine issues, including viewing issues, adding comments, and managing GitHub links. They interact with the backend via a dedicated set of mobile API endpoints.
+
+### 3. API Routes
 
 - **Framework:** Next.js API Routes.
 - **Functionality:**
-  - Handles all communication between the frontend and the backend.
+  - Handles all communication between the web frontend, mobile clients, and the backend.
   - Exposes endpoints for session management, issue data, mutations, and synchronization.
-  - Exposes token-authenticated mobile endpoints under `/api/mobile/v1/*` for Android/native clients.
+  - Provides a dedicated set of token-authenticated endpoints for mobile clients under `/api/mobile/v1/*`.
   - Enforces rate limiting on mutation endpoints.
 - **Validation:** Zod schemas are used to validate incoming request data.
 
-### 3. Database
+### 4. Database
 
 - **Engine:** SQLite (as a starting point for the MVP).
 - **ORM:** [Prisma](https://www.prisma.io/) is used for database access.
 - **Purpose:** Acts as an operational cache for Redmine data to provide fast reads for the user. It is not the source of truth.
 
-### 4. Synchronization Service
+### 5. Synchronization Service
 
 - **Implementation:** An in-process poller that runs within the Next.js server.
 - **Polling:** Periodically fetches data from the Redmine API to keep the local cache up to date. The default polling interval is 60 seconds.

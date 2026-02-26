@@ -32,8 +32,8 @@ All notable changes to this project are documented in this file.
   - mobile GitHub-link CRUD routes,
   - token rotation/revoke routes.
 - Mobile token management in Sync Ops page with revoke controls.
-- Android client starter kit documentation and Kotlin templates under `docs/android/*`.
-- Flutter client starter kit under `docs/flutter/*` with API client, secure token store, repositories, and starter screens.
+- Android client integration guide under `docs/mobile/android.md`.
+- Flutter client integration guide under `docs/mobile/flutter.md`.
 - Dashboard productivity enhancements:
   - Saved views (status/priority/search/sort snapshots).
   - Keyboard shortcuts (`/`, `R`, `F`, `G`, `?`, `Esc`).

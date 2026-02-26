@@ -8,8 +8,10 @@ Welcome to the documentation for the Nasc Redmine Command Center (NRCC). This do
 - **[System Architecture](./system-architecture.md):** A description of the system architecture, components, and data flow.
 - **[Deployment Guide](./deployment-guide.md):** Instructions for setting up the application for local development and deployment.
 - **[Code Standards](./code-standards.md):** The coding standards and conventions used in the project.
-- **[API Reference](./api-reference.md):** Detailed documentation for the API endpoints.
-- **[Flutter Integration](./flutter-integration.md):** Flutter + Android SDK starter setup for `/api/mobile/v1/*`.
-- **[Android Integration](./android-integration.md):** Kotlin-native Android reference (optional).
 - **[Codebase Summary](./codebase-summary.md):** A summary of the codebase structure.
 - **[Design Guidelines](./design-guidelines.md):** The design guidelines and UI/UX specifications.
+
+## Mobile Development
+
+- **[Flutter Guide](./mobile/flutter.md):** Guide for the Flutter application.
+- **[Android Guide](./mobile/android.md):** Guide for the native Android client.
