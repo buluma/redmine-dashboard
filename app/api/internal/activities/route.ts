@@ -3,6 +3,8 @@ import { prisma } from "@/src/lib/db";
 
 export async function GET() {
   try {
+    const { client } = await requireRedmineClient();
+
     const cached = await prisma.enumerationCatalog.findMany({
       where: { kind: "time_entry_activity", isActive: true },
       orderBy: [{ position: "asc" }, { name: "asc" }],
@@ -15,10 +17,12 @@ export async function GET() {
       });
     }
 
-    const { client } = await requireRedmineClient();
     const activities = await client.getTimeEntryActivities();
     return Response.json({ activities });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return Response.json({ activities: [] });
   }
 }
