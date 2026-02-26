@@ -54,6 +54,7 @@ body {
   padding: 1rem;
   box-shadow: var(--shadow);
   animation: rise-in 0.36s ease both;
+  min-width: 0;
 }
 
 .kicker {
@@ -121,6 +122,10 @@ h3 {
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.hero-top > * {
+  min-width: 0;
 }
 
 .sync-pill {
@@ -398,6 +403,10 @@ label {
 .ops-kv {
   display: grid;
   gap: 0.38rem;
+}
+
+.ops-kv p {
+  overflow-wrap: anywhere;
 }
 
 .health-grid {
