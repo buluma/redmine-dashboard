@@ -129,7 +129,7 @@ type ActivityEvent = {
   detail: string;
 };
 
-const POLL_INTERVAL_MS = 60_000;
+const POLL_INTERVAL_MS = 90_000;
 const SAVED_VIEWS_KEY = "nrcc.savedViews.v1";
 
 function MarkdownBlock({ content }: { content: string }) {
