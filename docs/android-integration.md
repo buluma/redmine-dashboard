@@ -2,6 +2,10 @@
 
 This guide provides a ready-to-copy Android client setup for NRCC mobile APIs.
 
+If you are using Flutter (no Xcode, Android SDK only), use the primary guide:
+
+- [Flutter Integration Guide](./flutter-integration.md)
+
 ## Base URL
 
 - Local emulator: `http://10.0.2.2:3000`
@@ -29,6 +33,9 @@ Use the Kotlin starter files in [docs/android](/Users/shadowwalker/Documents/Git
 - [AuthTokenStore.kt](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/docs/android/AuthTokenStore.kt)
 - [AuthInterceptor.kt](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/docs/android/AuthInterceptor.kt)
 - [NrccRepositories.kt](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/docs/android/NrccRepositories.kt)
+- [NetworkModule.kt](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/docs/android/NetworkModule.kt)
+- [ViewModels.kt](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/docs/android/ViewModels.kt)
+- [ComposeScreens.kt](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/docs/android/ComposeScreens.kt)
 
 ## Required Android Dependencies
 
@@ -47,3 +54,17 @@ implementation("androidx.security:security-crypto:1.1.0-alpha06")
 - Use `POST /api/mobile/v1/tokens/rotate` for token rotation.
 - Use `DELETE /api/mobile/v1/tokens/current` for logout.
 - Keep Redmine API key only in memory during pairing; do not persist it.
+
+## Compose Screen Flow (Starter)
+
+The provided Compose starter includes:
+
+- `PairScreen`: collect Redmine URL + API key + device name and pair.
+- `IssueListScreen`: load and render assigned issues.
+- `IssueDetailScreen`: view details, post comment, add/remove GitHub links.
+
+Wire these screens via Navigation Compose in your app module and use:
+
+- `PairViewModel` for pairing
+- `IssuesViewModel` for list
+- `IssueDetailViewModel` for details/actions
