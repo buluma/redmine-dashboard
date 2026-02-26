@@ -957,6 +957,39 @@ label {
   gap: 0.35rem;
 }
 
+.issue-overview-grid {
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+}
+
+.issue-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-top: 1px solid #ceceb6;
+  padding-top: 0.6rem;
+}
+
+.issue-tabs a {
+  border: 1px solid #c7c7c7;
+  background: #efefef;
+  color: #4b5258;
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px 6px 0 0;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.issue-tabs a.active {
+  background: #fff;
+  border-bottom-color: #fff;
+  font-weight: 700;
+}
+
+@media (max-width: 780px) {
+  .issue-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .attachment-preview-link {
   display: block;
 }

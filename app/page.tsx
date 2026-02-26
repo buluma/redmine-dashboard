@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
@@ -307,6 +308,7 @@ function formatDurationFromMs(durationMs: number): string {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [total, setTotal] = useState(0);
@@ -1535,8 +1537,7 @@ export default function Home() {
                   type="button"
                   className="alert-row"
                   onClick={() => {
-                    setSelectedIssueId(issue.redmineIssueId);
-                    void loadAllowedStatuses(issue.redmineIssueId);
+                    router.push(`/issues/${issue.redmineIssueId}`);
                   }}
                 >
                   <span>
@@ -1570,8 +1571,7 @@ export default function Home() {
                   type="button"
                   className="activity-row"
                   onClick={() => {
-                    setSelectedIssueId(event.issueId);
-                    void loadAllowedStatuses(event.issueId);
+                    router.push(`/issues/${event.issueId}`);
                   }}
                 >
                   <span>
@@ -1663,8 +1663,7 @@ export default function Home() {
                         key={issue.id}
                         className={`issue-row ${selectedIssueId === issue.redmineIssueId ? "selected" : ""}`}
                         onClick={() => {
-                          setSelectedIssueId(issue.redmineIssueId);
-                          void loadAllowedStatuses(issue.redmineIssueId);
+                          router.push(`/issues/${issue.redmineIssueId}`);
                         }}
                       >
                         <td onClick={(e) => e.stopPropagation()}>
