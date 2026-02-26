@@ -59,6 +59,10 @@ class Issue {
   final String statusName;
   final String? priority;
   final List<GithubLink> githubLinks;
+  final List<IssueAttachment> attachments;
+  final List<IssueRelation> relations;
+  final List<AllowedStatus> allowedStatuses;
+  final List<IssueChild> children;
 
   Issue({
     required this.id,
@@ -68,6 +72,10 @@ class Issue {
     required this.statusName,
     required this.priority,
     required this.githubLinks,
+    required this.attachments,
+    required this.relations,
+    required this.allowedStatuses,
+    required this.children,
   });
 
   factory Issue.fromJson(Map<String, dynamic> json) => Issue(
@@ -80,6 +88,102 @@ class Issue {
         githubLinks: ((json["githubLinks"] as List<dynamic>?) ?? const <dynamic>[])
             .map((e) => GithubLink.fromJson(e as Map<String, dynamic>))
             .toList(),
+        attachments: ((json["attachments"] as List<dynamic>?) ?? const <dynamic>[])
+            .map((e) => IssueAttachment.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        relations: ((json["relations"] as List<dynamic>?) ?? const <dynamic>[])
+            .map((e) => IssueRelation.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        allowedStatuses: ((json["allowedStatuses"] as List<dynamic>?) ?? const <dynamic>[])
+            .map((e) => AllowedStatus.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        children: ((json["children"] as List<dynamic>?) ?? const <dynamic>[])
+            .map((e) => IssueChild.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
+class IssueAttachment {
+  final String id;
+  final int redmineAttachmentId;
+  final String filename;
+  final int filesize;
+  final String? contentType;
+  final String? author;
+  final String? createdOnRemote;
+
+  IssueAttachment({
+    required this.id,
+    required this.redmineAttachmentId,
+    required this.filename,
+    required this.filesize,
+    required this.contentType,
+    required this.author,
+    required this.createdOnRemote,
+  });
+
+  factory IssueAttachment.fromJson(Map<String, dynamic> json) => IssueAttachment(
+        id: json["id"] as String,
+        redmineAttachmentId: json["redmineAttachmentId"] as int,
+        filename: json["filename"] as String,
+        filesize: json["filesize"] as int? ?? 0,
+        contentType: json["contentType"] as String?,
+        author: json["author"] as String?,
+        createdOnRemote: json["createdOnRemote"] as String?,
+      );
+}
+
+class IssueRelation {
+  final String id;
+  final int redmineRelationId;
+  final int targetIssueId;
+  final String relationType;
+  final int? delay;
+
+  IssueRelation({
+    required this.id,
+    required this.redmineRelationId,
+    required this.targetIssueId,
+    required this.relationType,
+    required this.delay,
+  });
+
+  factory IssueRelation.fromJson(Map<String, dynamic> json) => IssueRelation(
+        id: json["id"] as String,
+        redmineRelationId: json["redmineRelationId"] as int,
+        targetIssueId: json["targetIssueId"] as int,
+        relationType: json["relationType"] as String,
+        delay: json["delay"] as int?,
+      );
+}
+
+class AllowedStatus {
+  final int id;
+  final String name;
+
+  AllowedStatus({
+    required this.id,
+    required this.name,
+  });
+
+  factory AllowedStatus.fromJson(Map<String, dynamic> json) => AllowedStatus(
+        id: json["id"] as int,
+        name: json["name"] as String,
+      );
+}
+
+class IssueChild {
+  final int id;
+  final String subject;
+
+  IssueChild({
+    required this.id,
+    required this.subject,
+  });
+
+  factory IssueChild.fromJson(Map<String, dynamic> json) => IssueChild(
+        id: json["id"] as int,
+        subject: json["subject"] as String,
       );
 }
 

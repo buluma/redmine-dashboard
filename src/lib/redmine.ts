@@ -1,3 +1,5 @@
+import { logEvent } from "@/src/lib/log";
+
 export type RedmineCurrentUser = {
   id: number;
   login: string;
@@ -26,6 +28,35 @@ export type RedmineIssueDetail = {
 export type RedmineStatus = { id: number; name: string; is_closed?: boolean };
 
 export type RedmineActivity = { id: number; name: string };
+export type RedminePriority = { id: number; name: string; is_default?: boolean; active?: boolean; position?: number };
+
+type RedmineSearchResult = {
+  id: number;
+  title?: string;
+  type?: string;
+  url?: string;
+  description?: string;
+  datetime?: string;
+};
+
+type RedmineSearchResponse = {
+  results: RedmineSearchResult[];
+  total_count: number;
+  offset: number;
+  limit: number;
+};
+
+type RedmineRelationPayload = {
+  issue_to_id: number;
+  relation_type: string;
+  delay?: number;
+};
+
+type RedmineRelationResponse = {
+  relation: {
+    id: number;
+  };
+};
 
 function trimBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/$/, "");
@@ -41,7 +72,12 @@ export class RedmineClient {
     private readonly apiKey: string,
   ) {}
 
-  private async request<T>(path: string, init?: RequestInit): Promise<T> {
+  private async request<T>(
+    path: string,
+    init?: RequestInit & {
+      skipJsonContentType?: boolean;
+    },
+  ): Promise<T> {
     const maxAttempts = 3;
     const timeoutMs = 12000;
 
@@ -49,12 +85,13 @@ export class RedmineClient {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
       try {
+        const { skipJsonContentType, ...requestInit } = init ?? {};
         const res = await fetch(`${trimBaseUrl(this.baseUrl)}${path}`, {
-          ...init,
+          ...requestInit,
           headers: {
-            "Content-Type": "application/json",
+            ...(skipJsonContentType ? {} : { "Content-Type": "application/json" }),
             "X-Redmine-API-Key": this.apiKey,
-            ...(init?.headers ?? {}),
+            ...(requestInit.headers ?? {}),
           },
           cache: "no-store",
           signal: controller.signal,
@@ -116,6 +153,13 @@ export class RedmineClient {
     return data.time_entry_activities;
   }
 
+  async getIssuePriorities(): Promise<RedminePriority[]> {
+    const data = await this.request<{ issue_priorities: RedminePriority[] }>(
+      "/enumerations/issue_priorities.json",
+    );
+    return data.issue_priorities;
+  }
+
   async listIssueTimeEntries(issueId: number): Promise<Array<Record<string, unknown>>> {
     const limit = 100;
     const out: Array<Record<string, unknown>> = [];
@@ -155,6 +199,9 @@ export class RedmineClient {
         const invalidUpdatedFilter = message.includes("Redmine request failed (422)") && /updated is invalid/i.test(message);
         if (updatedOnOrAfter && invalidUpdatedFilter) {
           // Some Redmine instances reject strict updated_on syntax. Fall back to full assigned-issues fetch.
+          logEvent("redmine.issues.updated_filter_fallback", {
+            updatedOnOrAfter: redmineDate(updatedOnOrAfter),
+          }, "warn");
           return this.listAssignedIssues();
         }
         throw error;
@@ -173,6 +220,47 @@ export class RedmineClient {
   async getIssue(issueId: number, include: string[] = []): Promise<RedmineIssueDetail> {
     const query = include.length > 0 ? `?include=${include.join(",")}` : "";
     return this.request<RedmineIssueDetail>(`/issues/${issueId}.json${query}`);
+  }
+
+  async uploadFile(input: {
+    filename: string;
+    contentType?: string;
+    bytes: ArrayBuffer;
+  }): Promise<{ token: string }> {
+    const params = new URLSearchParams({ filename: input.filename });
+    const payload = await this.request<{ upload: { token: string } }>(`/uploads.json?${params.toString()}`, {
+      method: "POST",
+      body: input.bytes,
+      headers: {
+        "Content-Type": input.contentType || "application/octet-stream",
+      },
+      skipJsonContentType: true,
+    });
+    return payload.upload;
+  }
+
+  async addIssueAttachment(input: {
+    issueId: number;
+    token: string;
+    filename: string;
+    contentType?: string;
+    description?: string;
+  }): Promise<void> {
+    await this.request(`/issues/${input.issueId}.json`, {
+      method: "PUT",
+      body: JSON.stringify({
+        issue: {
+          uploads: [
+            {
+              token: input.token,
+              filename: input.filename,
+              description: input.description,
+              content_type: input.contentType,
+            },
+          ],
+        },
+      }),
+    });
   }
 
   async updateIssueStatus(issueId: number, statusId: number, note?: string): Promise<void> {
@@ -208,5 +296,101 @@ export class RedmineClient {
         },
       }),
     });
+  }
+
+  async listTimeEntries(input: {
+    issueId?: number;
+    userId?: "me" | number;
+    from?: string;
+    to?: string;
+    offset?: number;
+    limit?: number;
+  }): Promise<Array<Record<string, unknown>>> {
+    const params = new URLSearchParams();
+    if (input.issueId) params.set("issue_id", String(input.issueId));
+    if (input.userId !== undefined) params.set("user_id", String(input.userId));
+    if (input.from) params.set("from", input.from);
+    if (input.to) params.set("to", input.to);
+    params.set("offset", String(input.offset ?? 0));
+    params.set("limit", String(input.limit ?? 100));
+    const data = await this.request<RedmineTimeEntryListResponse>(`/time_entries.json?${params.toString()}`);
+    return data.time_entries;
+  }
+
+  async updateTimeEntry(
+    timeEntryId: number,
+    input: {
+      hours?: number;
+      activityId?: number;
+      comments?: string;
+      spentOn?: string;
+    },
+  ): Promise<void> {
+    await this.request(`/time_entries/${timeEntryId}.json`, {
+      method: "PUT",
+      body: JSON.stringify({
+        time_entry: {
+          ...(input.hours !== undefined ? { hours: input.hours } : {}),
+          ...(input.activityId !== undefined ? { activity_id: input.activityId } : {}),
+          ...(input.comments !== undefined ? { comments: input.comments } : {}),
+          ...(input.spentOn !== undefined ? { spent_on: input.spentOn } : {}),
+        },
+      }),
+    });
+  }
+
+  async deleteTimeEntry(timeEntryId: number): Promise<void> {
+    await this.request(`/time_entries/${timeEntryId}.json`, { method: "DELETE" });
+  }
+
+  async createIssueRelation(issueId: number, relation: RedmineRelationPayload): Promise<number | null> {
+    const data = await this.request<RedmineRelationResponse | null>(`/issues/${issueId}/relations.json`, {
+      method: "POST",
+      body: JSON.stringify({ relation }),
+    });
+    return data?.relation?.id ?? null;
+  }
+
+  async deleteIssueRelation(relationId: number): Promise<void> {
+    await this.request(`/relations/${relationId}.json`, { method: "DELETE" });
+  }
+
+  async search(input: {
+    q: string;
+    scope?: "issues" | "all";
+    openOnly?: boolean;
+    offset?: number;
+    limit?: number;
+  }): Promise<RedmineSearchResponse> {
+    const params = new URLSearchParams({
+      q: input.q,
+      offset: String(input.offset ?? 0),
+      limit: String(input.limit ?? 25),
+      all_words: "1",
+      titles_only: "0",
+    });
+    if (input.scope && input.scope !== "all") {
+      params.set("scope", input.scope);
+    }
+    if (input.openOnly) {
+      params.set("open_issues", "1");
+    }
+    return this.request<RedmineSearchResponse>(`/search.json?${params.toString()}`);
+  }
+
+  async downloadAttachment(pathOrUrl: string): Promise<Response> {
+    const base = trimBaseUrl(this.baseUrl);
+    const url = pathOrUrl.startsWith("http") ? pathOrUrl : `${base}${pathOrUrl}`;
+    const res = await fetch(url, {
+      headers: {
+        "X-Redmine-API-Key": this.apiKey,
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Redmine request failed (${res.status}): ${body.slice(0, 300)}`);
+    }
+    return res;
   }
 }

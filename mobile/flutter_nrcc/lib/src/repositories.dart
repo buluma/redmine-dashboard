@@ -39,8 +39,8 @@ class IssuesRepository {
 
   IssuesRepository(this._api);
 
-  Future<List<Issue>> listIssues({String? search}) {
-    return _api.listIssues(search: search);
+  Future<List<Issue>> listIssues({String? search, String searchMode = "local"}) {
+    return _api.listIssues(search: search, searchMode: searchMode);
   }
 
   Future<Issue> getIssue(int redmineIssueId) {
@@ -88,6 +88,72 @@ class IssueActionsRepository {
     return _api.removeGithubLink(
       redmineIssueId: redmineIssueId,
       linkId: linkId,
+    );
+  }
+
+  Future<List<IssueAttachment>> listAttachments({
+    required int redmineIssueId,
+  }) {
+    return _api.listAttachments(redmineIssueId: redmineIssueId);
+  }
+
+  Future<void> uploadAttachment({
+    required int redmineIssueId,
+    required String filePath,
+    String? description,
+  }) {
+    return _api.uploadAttachment(
+      redmineIssueId: redmineIssueId,
+      filePath: filePath,
+      description: description,
+    );
+  }
+
+  Future<void> addRelation({
+    required int redmineIssueId,
+    required int issueToId,
+    required String relationType,
+    int? delay,
+  }) {
+    return _api.addRelation(
+      redmineIssueId: redmineIssueId,
+      issueToId: issueToId,
+      relationType: relationType,
+      delay: delay,
+    );
+  }
+
+  Future<void> removeRelation({
+    required int redmineIssueId,
+    required int relationId,
+  }) {
+    return _api.removeRelation(
+      redmineIssueId: redmineIssueId,
+      relationId: relationId,
+    );
+  }
+
+  Future<void> updateTimeEntry({
+    required int redmineTimeEntryId,
+    double? hours,
+    int? activityId,
+    String? comment,
+    String? spentOn,
+  }) {
+    return _api.updateTimeEntry(
+      redmineTimeEntryId: redmineTimeEntryId,
+      hours: hours,
+      activityId: activityId,
+      comment: comment,
+      spentOn: spentOn,
+    );
+  }
+
+  Future<void> deleteTimeEntry({
+    required int redmineTimeEntryId,
+  }) {
+    return _api.deleteTimeEntry(
+      redmineTimeEntryId: redmineTimeEntryId,
     );
   }
 }

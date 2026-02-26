@@ -7,6 +7,10 @@ The system works by syncing Redmine issues to a local database, providing fast l
 ## Core Features
 
 - **Reporting:** A reports page provides insights with trends, a heatmap of activity, data drilldowns, and a CSV export feature.
+- **Hybrid Search:** Issue list can use local cache search or hybrid mode (Redmine search + cache hydration).
+- **Attachments + Relations:** Issues now support Redmine attachment upload/download and relation management (`blocks`, `precedes`, `follows`, etc.).
+- **Workflow-Aware Statusing:** Status changes use Redmine `allowed_statuses` data for transition-safe updates.
+- **Expanded Time Entries:** Beyond creation, the backend supports list/update/delete for Redmine time entries.
 
 ## Mobile Support
 
@@ -15,7 +19,7 @@ NRCC provides support for mobile clients, allowing users to manage their Redmine
 - **Clients:** The project includes a ready-to-build [Flutter application](../mobile/flutter_nrcc) and provides guidance for creating a [native Android client](./mobile/android.md).
 - **Secure Pairing:** Mobile clients can be paired securely using a token-based authentication system, avoiding the need for browser cookies.
 - **Mobile-Specific API:** A dedicated set of endpoints under `/api/mobile/v1/` is available for mobile clients.
-- **Core Functionality:** Mobile users can post comments and manage GitHub links from their devices.
+- **Core Functionality:** Mobile users can search, post comments, manage GitHub links, and use attachments/relations through token-authenticated APIs.
 
 ## Technology Stack
 

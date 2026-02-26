@@ -47,7 +47,23 @@ The starter application includes the following screens:
 
 - **PairScreen:** Handles the initial pairing with a Redmine instance.
 - **IssueListScreen:** Displays the list of issues assigned to the user.
-- **IssueDetailScreen:** Shows the details of a selected issue and allows for actions like adding comments or managing GitHub links.
+- **IssueDetailScreen:** Shows a selected issue and supports comments, GitHub links, relations, attachment viewing, and allowed-status visibility.
+
+## Mobile Endpoint Coverage
+
+The Flutter app can use the following mobile routes:
+
+- `GET /api/mobile/v1/issues` with `searchMode=local|hybrid` for cache-first or hybrid search.
+- `GET /api/mobile/v1/issues/[id]` for enriched issue details (`attachments`, `relations`, `allowedStatuses`, `children`).
+- `POST /api/mobile/v1/issues/[id]/comment` for issue notes.
+- `GET|POST|DELETE /api/mobile/v1/issues/[id]/github-links...` for GitHub references.
+- `GET|POST /api/mobile/v1/issues/[id]/attachments` and `GET /api/mobile/v1/issues/[id]/attachments/[attachmentId]` for attachment flows.
+- `POST /api/mobile/v1/issues/[id]/relations` and `DELETE /api/mobile/v1/issues/[id]/relations/[relationId]` for relation flows.
+
+## Notes
+
+- Attachment uploads are multipart (`file`, optional `description`) and currently capped at 10MB.
+- Attachment downloads are proxied by NRCC so the Redmine API key is never exposed to mobile clients.
 
 ## Session Management
 

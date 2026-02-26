@@ -1,6 +1,7 @@
 import { requireMobileUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
+import { toIssueView } from "@/src/lib/issue-shape";
 import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
 
 function parseIssueId(id: string): number {
@@ -36,6 +37,14 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
           orderBy: { createdAt: "desc" },
           take: 40,
         },
+        attachments: {
+          orderBy: { createdOnRemote: "desc" },
+          take: 40,
+        },
+        relations: {
+          orderBy: { createdAt: "desc" },
+          take: 40,
+        },
       },
     });
 
@@ -43,7 +52,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       return jsonError("Issue not found", 404);
     }
 
-    return Response.json({ issue });
+    return Response.json({ issue: toIssueView(issue) });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to fetch issue detail";
     const status = message === "Mobile API is disabled" ? 404 : message === "Unauthorized" ? 401 : 400;

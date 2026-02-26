@@ -105,6 +105,7 @@ class IssueListScreen extends StatefulWidget {
 
 class _IssueListScreenState extends State<IssueListScreen> {
   final _search = TextEditingController();
+  String _searchMode = "local";
   List<Issue> _issues = <Issue>[];
   bool _loading = false;
   String? _error;
@@ -117,6 +118,7 @@ class _IssueListScreenState extends State<IssueListScreen> {
     try {
       final issues = await widget.issuesRepository.listIssues(
         search: _search.text.trim().isEmpty ? null : _search.text.trim(),
+        searchMode: _searchMode,
       );
       setState(() => _issues = issues);
     } catch (e) {
@@ -163,6 +165,19 @@ class _IssueListScreenState extends State<IssueListScreen> {
                 ElevatedButton(
                   onPressed: _loading ? null : _load,
                   child: const Text("Load"),
+                ),
+                const SizedBox(width: 8),
+                DropdownButton<String>(
+                  value: _searchMode,
+                  items: const <DropdownMenuItem<String>>[
+                    DropdownMenuItem<String>(value: "local", child: Text("Local")),
+                    DropdownMenuItem<String>(value: "hybrid", child: Text("Hybrid")),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _searchMode = value);
+                    _load();
+                  },
                 ),
               ],
             ),
@@ -230,6 +245,8 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   final _comment = TextEditingController();
   final _repo = TextEditingController();
   final _ghIssue = TextEditingController();
+  final _relationIssue = TextEditingController();
+  String _relationType = "relates";
 
   Future<void> _openMarkdownLink(String? href) async {
     if (href == null || href.trim().isEmpty) return;
@@ -327,6 +344,18 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     await _load();
   }
 
+  Future<void> _addRelation() async {
+    final target = int.tryParse(_relationIssue.text.trim());
+    if (target == null || target <= 0) return;
+    await widget.actionsRepository.addRelation(
+      redmineIssueId: widget.issueId,
+      issueToId: target,
+      relationType: _relationType,
+    );
+    _relationIssue.clear();
+    await _load();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -390,6 +419,17 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                             child: const Text("Add GitHub Link"),
                           ),
                           const SizedBox(height: 16),
+                          Text("Allowed Statuses", style: Theme.of(context).textTheme.titleMedium),
+                          if (_issue!.allowedStatuses.isEmpty)
+                            const Text("No transition data from server.")
+                          else
+                            Wrap(
+                              spacing: 8,
+                              children: _issue!.allowedStatuses
+                                  .map((s) => Chip(label: Text(s.name)))
+                                  .toList(),
+                            ),
+                          const SizedBox(height: 16),
                           Text("GitHub Links", style: Theme.of(context).textTheme.titleMedium),
                           ..._issue!.githubLinks.map(
                             (link) => ListTile(
@@ -407,6 +447,64 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 16),
+                          Text("Attachments", style: Theme.of(context).textTheme.titleMedium),
+                          if (_issue!.attachments.isEmpty)
+                            const Text("No attachments.")
+                          else
+                            ..._issue!.attachments.map(
+                              (attachment) => ListTile(
+                                title: Text(attachment.filename),
+                                subtitle: Text(
+                                  "${(attachment.filesize / 1024).toStringAsFixed(1)} KB"
+                                  "${attachment.author != null ? " • ${attachment.author}" : ""}",
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 16),
+                          Text("Relations", style: Theme.of(context).textTheme.titleMedium),
+                          TextField(
+                            controller: _relationIssue,
+                            decoration: const InputDecoration(labelText: "Related issue #"),
+                            keyboardType: TextInputType.number,
+                          ),
+                          DropdownButton<String>(
+                            value: _relationType,
+                            items: const <DropdownMenuItem<String>>[
+                              DropdownMenuItem<String>(value: "relates", child: Text("relates")),
+                              DropdownMenuItem<String>(value: "blocks", child: Text("blocks")),
+                              DropdownMenuItem<String>(value: "precedes", child: Text("precedes")),
+                              DropdownMenuItem<String>(value: "follows", child: Text("follows")),
+                              DropdownMenuItem<String>(value: "duplicates", child: Text("duplicates")),
+                            ],
+                            onChanged: (value) {
+                              if (value == null) return;
+                              setState(() => _relationType = value);
+                            },
+                          ),
+                          ElevatedButton(
+                            onPressed: _addRelation,
+                            child: const Text("Add Relation"),
+                          ),
+                          if (_issue!.relations.isEmpty)
+                            const Text("No relations.")
+                          else
+                            ..._issue!.relations.map(
+                              (relation) => ListTile(
+                                title: Text("${relation.relationType} #${relation.targetIssueId}"),
+                                subtitle: relation.delay == null ? null : Text("Delay: ${relation.delay}"),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: () async {
+                                    await widget.actionsRepository.removeRelation(
+                                      redmineIssueId: widget.issueId,
+                                      relationId: relation.redmineRelationId,
+                                    );
+                                    await _load();
+                                  },
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),

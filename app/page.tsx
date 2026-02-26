@@ -39,6 +39,35 @@ type GithubLink = {
   createdAt: string;
 };
 
+type Attachment = {
+  id: string;
+  redmineAttachmentId: number;
+  filename: string;
+  filesize: number;
+  contentType: string | null;
+  author: string | null;
+  createdOnRemote: string | null;
+};
+
+type Relation = {
+  id: string;
+  redmineRelationId: number;
+  targetIssueId: number;
+  relationType: string;
+  delay: number | null;
+};
+
+type AllowedStatus = {
+  id: number;
+  name: string;
+  isClosed?: boolean;
+};
+
+type IssueChild = {
+  id: number;
+  subject: string;
+};
+
 type Issue = {
   id: string;
   redmineIssueId: number;
@@ -58,6 +87,10 @@ type Issue = {
   githubLinks: GithubLink[];
   journals: Journal[];
   timeEntries: TimeEntry[];
+  attachments: Attachment[];
+  relations: Relation[];
+  allowedStatuses: AllowedStatus[];
+  children: IssueChild[];
 };
 
 type StatusCatalog = { id: number; name: string; isClosed: boolean };
@@ -242,6 +275,7 @@ export default function Home() {
   const [total, setTotal] = useState(0);
   const [statuses, setStatuses] = useState<StatusCatalog[]>([]);
   const [priorities, setPriorities] = useState<string[]>([]);
+  const [searchSource, setSearchSource] = useState("local_cache");
   const [activities, setActivities] = useState<Array<{ id: number; name: string }>>([]);
   const [selectedIssueId, setSelectedIssueId] = useState<number | null>(null);
   const [selectedIssueIds, setSelectedIssueIds] = useState<number[]>([]);
@@ -262,6 +296,7 @@ export default function Home() {
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
   const [search, setSearch] = useState("");
+  const [searchMode, setSearchMode] = useState<"local" | "hybrid">("local");
   const [sort, setSort] = useState("updated_desc");
 
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
@@ -283,6 +318,13 @@ export default function Home() {
   const [githubUrl, setGithubUrl] = useState("");
   const [githubTitle, setGithubTitle] = useState("");
   const [githubBusy, setGithubBusy] = useState(false);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentDescription, setAttachmentDescription] = useState("");
+  const [attachmentBusy, setAttachmentBusy] = useState(false);
+  const [relationIssueToId, setRelationIssueToId] = useState("");
+  const [relationType, setRelationType] = useState("relates");
+  const [relationDelay, setRelationDelay] = useState("");
+  const [relationBusy, setRelationBusy] = useState(false);
 
   const [timerIssueId, setTimerIssueId] = useState<number | null>(null);
   const [timerStartedAtMs, setTimerStartedAtMs] = useState<number | null>(null);
@@ -443,11 +485,14 @@ export default function Home() {
     if (statusFilter) params.set("status", statusFilter);
     if (priorityFilter) params.set("priority", priorityFilter);
     if (search) params.set("search", search);
+    params.set("searchMode", searchMode);
+    params.set("scope", "issues");
+    params.set("openOnly", "true");
     if (sort) params.set("sort", sort);
     params.set("page", "1");
     params.set("pageSize", "100");
     return params.toString();
-  }, [priorityFilter, search, sort, statusFilter]);
+  }, [priorityFilter, search, searchMode, sort, statusFilter]);
 
   useEffect(() => {
     try {
@@ -534,6 +579,7 @@ export default function Home() {
     setTotal(data.total ?? 0);
     setStatuses(data.filters?.statuses ?? []);
     setPriorities(data.filters?.priorities ?? []);
+    setSearchSource(data.source ?? "local_cache");
   }
 
   async function loadActivities() {
@@ -840,6 +886,16 @@ export default function Home() {
       return;
     }
 
+    const localIssue = issues.find((item) => item.redmineIssueId === issueId);
+    const fromIssue = localIssue?.allowedStatuses?.map((s) => s.id) ?? [];
+    if (fromIssue.length > 0) {
+      setAllowedStatusIdsByIssue((current) => ({
+        ...current,
+        [issueId]: fromIssue,
+      }));
+      return;
+    }
+
     const res = await fetch(`/api/issues/${issueId}/status`, { cache: "no-store" });
     if (!res.ok) {
       return;
@@ -966,6 +1022,98 @@ export default function Home() {
     }
   }
 
+  async function submitAttachment(event: React.FormEvent) {
+    event.preventDefault();
+    if (!selectedIssue || !attachmentFile) return;
+
+    setAttachmentBusy(true);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.set("file", attachmentFile);
+      if (attachmentDescription.trim()) {
+        form.set("description", attachmentDescription.trim());
+      }
+
+      const res = await fetch(`/api/issues/${selectedIssue.redmineIssueId}/attachments`, {
+        method: "POST",
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Unable to upload attachment");
+      }
+
+      setAttachmentFile(null);
+      setAttachmentDescription("");
+      await refreshAll();
+      setInfoMessage("Attachment uploaded.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to upload attachment");
+    } finally {
+      setAttachmentBusy(false);
+    }
+  }
+
+  async function submitRelation(event: React.FormEvent) {
+    event.preventDefault();
+    if (!selectedIssue) return;
+
+    const issueToId = Number(relationIssueToId);
+    if (!Number.isInteger(issueToId) || issueToId <= 0) {
+      setError("Enter a valid related issue ID.");
+      return;
+    }
+
+    setRelationBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/issues/${selectedIssue.redmineIssueId}/relations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          issueToId,
+          relationType,
+          delay: relationDelay.trim() ? Number(relationDelay) : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Unable to add relation");
+      }
+
+      setRelationIssueToId("");
+      setRelationDelay("");
+      await refreshAll();
+      setInfoMessage("Relation added.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to add relation");
+    } finally {
+      setRelationBusy(false);
+    }
+  }
+
+  async function deleteRelation(relationId: number) {
+    if (!selectedIssue) return;
+    setRelationBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/issues/${selectedIssue.redmineIssueId}/relations/${relationId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Unable to remove relation");
+      }
+      await refreshAll();
+      setInfoMessage("Relation removed.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to remove relation");
+    } finally {
+      setRelationBusy(false);
+    }
+  }
+
   function startTimerForIssue(issueId: number) {
     setTimerIssueId(issueId);
     const now = Date.now();
@@ -1053,6 +1201,7 @@ export default function Home() {
     setStatusFilter("");
     setPriorityFilter("");
     setSearch("");
+    setSearchMode("local");
     setSort("updated_desc");
     setActiveViewId(null);
   }
@@ -1247,6 +1396,15 @@ export default function Home() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+          </label>
+
+          <label className="filter-field">
+            Search Source
+            <select value={searchMode} onChange={(e) => setSearchMode((e.target.value as "local" | "hybrid"))}>
+              <option value="local">Local Cache</option>
+              <option value="hybrid">Hybrid (Redmine + Cache)</option>
+            </select>
+            <span className="muted">Serving from: {searchSource === "local_cache" ? "Local cache" : "Hybrid"}</span>
           </label>
         </div>
 
@@ -1487,6 +1645,12 @@ export default function Home() {
                             {issue.githubLinks.length > 0 && (
                               <span className="muted">GH: {issue.githubLinks.length} link(s)</span>
                             )}
+                            {issue.attachments.length > 0 && (
+                              <span className="muted">Attachments: {issue.attachments.length}</span>
+                            )}
+                            {issue.relations.length > 0 && (
+                              <span className="muted">Relations: {issue.relations.length}</span>
+                            )}
                             <span className={`urgency-pill ${urgency}`}>{urgency}</span>
                           </div>
                         </td>
@@ -1535,6 +1699,9 @@ export default function Home() {
                 <p className="issue-meta">
                   {selectedIssue.projectName ?? "No Project"} • {selectedIssue.statusName} • {selectedIssue.priority ?? "No Priority"}
                 </p>
+                {selectedIssue.children.length > 0 && (
+                  <p className="muted">Children: {selectedIssue.children.map((c) => `#${c.id}`).join(", ")}</p>
+                )}
               </div>
               <button className="secondary-button" type="button" onClick={() => setSelectedIssueId(null)}>
                 Close
@@ -1624,6 +1791,110 @@ export default function Home() {
                       {link.githubPrNumber ? ` • PR #${link.githubPrNumber}` : ""}
                     </p>
                     <p className="muted">{link.url}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="detail-section">
+              <h3>Attachments</h3>
+              <form className="form" onSubmit={submitAttachment}>
+                <label>
+                  File
+                  <input
+                    type="file"
+                    onChange={(e) => setAttachmentFile(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+                <label>
+                  Description (optional)
+                  <input
+                    value={attachmentDescription}
+                    onChange={(e) => setAttachmentDescription(e.target.value)}
+                    placeholder="Optional note"
+                  />
+                </label>
+                <button type="submit" disabled={attachmentBusy || !attachmentFile}>
+                  {attachmentBusy ? "Uploading..." : "Upload Attachment"}
+                </button>
+              </form>
+
+              <div className="timeline">
+                {selectedIssue.attachments.length === 0 && <p className="muted">No attachments yet.</p>}
+                {selectedIssue.attachments.map((attachment) => (
+                  <div key={attachment.id} className="timeline-item">
+                    <div className="entry-head">
+                      <a href={`/api/issues/${selectedIssue.redmineIssueId}/attachments/${attachment.redmineAttachmentId}`} target="_blank" rel="noreferrer">
+                        {attachment.filename}
+                      </a>
+                      <span className="muted">{(attachment.filesize / 1024).toFixed(1)} KB</span>
+                    </div>
+                    <p className="muted entry-meta">
+                      {attachment.author ?? "Unknown author"}
+                      {attachment.createdOnRemote ? ` • ${new Date(attachment.createdOnRemote).toLocaleString()}` : ""}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="detail-section">
+              <h3>Relations</h3>
+              <form className="form" onSubmit={submitRelation}>
+                <label>
+                  Issue #
+                  <input
+                    type="number"
+                    min="1"
+                    value={relationIssueToId}
+                    onChange={(e) => setRelationIssueToId(e.target.value)}
+                    placeholder="1234"
+                    required
+                  />
+                </label>
+                <label>
+                  Type
+                  <select value={relationType} onChange={(e) => setRelationType(e.target.value)}>
+                    <option value="relates">relates</option>
+                    <option value="blocks">blocks</option>
+                    <option value="precedes">precedes</option>
+                    <option value="follows">follows</option>
+                    <option value="duplicates">duplicates</option>
+                  </select>
+                </label>
+                <label>
+                  Delay (optional)
+                  <input
+                    type="number"
+                    min="0"
+                    value={relationDelay}
+                    onChange={(e) => setRelationDelay(e.target.value)}
+                    placeholder="days"
+                  />
+                </label>
+                <button type="submit" disabled={relationBusy}>
+                  {relationBusy ? "Saving..." : "Add Relation"}
+                </button>
+              </form>
+
+              <div className="timeline">
+                {selectedIssue.relations.length === 0 && <p className="muted">No relations yet.</p>}
+                {selectedIssue.relations.map((relation) => (
+                  <div key={relation.id} className="timeline-item">
+                    <div className="entry-head">
+                      <p>
+                        <strong>{relation.relationType}</strong> #{relation.targetIssueId}
+                      </p>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => void deleteRelation(relation.redmineRelationId)}
+                        disabled={relationBusy}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    {relation.delay !== null && <p className="muted">Delay: {relation.delay} day(s)</p>}
                   </div>
                 ))}
               </div>

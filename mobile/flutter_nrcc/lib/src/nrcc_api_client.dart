@@ -63,6 +63,7 @@ class NrccApiClient {
     String? status,
     String? priority,
     String? search,
+    String searchMode = "local",
     String sort = "updated_desc",
     int page = 1,
     int pageSize = 25,
@@ -74,6 +75,9 @@ class NrccApiClient {
           "status": status,
           "priority": priority,
           "search": search,
+          "searchMode": searchMode,
+          "scope": "issues",
+          "openOnly": true,
           "sort": sort,
           "page": page,
           "pageSize": pageSize,
@@ -142,6 +146,105 @@ class NrccApiClient {
       await _dio.delete<Map<String, dynamic>>(
         "/api/mobile/v1/issues/$redmineIssueId/github-links/$linkId",
       );
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<List<IssueAttachment>> listAttachments({
+    required int redmineIssueId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        "/api/mobile/v1/issues/$redmineIssueId/attachments",
+      );
+      final items = (response.data?["items"] as List<dynamic>?) ?? const <dynamic>[];
+      return items.map((e) => IssueAttachment.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<void> uploadAttachment({
+    required int redmineIssueId,
+    required String filePath,
+    String? description,
+  }) async {
+    try {
+      final fileName = filePath.split("/").last;
+      final form = FormData.fromMap(<String, dynamic>{
+        "file": await MultipartFile.fromFile(filePath, filename: fileName),
+        "description": description,
+      });
+      await _dio.post<Map<String, dynamic>>(
+        "/api/mobile/v1/issues/$redmineIssueId/attachments",
+        data: form,
+      );
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<void> addRelation({
+    required int redmineIssueId,
+    required int issueToId,
+    required String relationType,
+    int? delay,
+  }) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        "/api/mobile/v1/issues/$redmineIssueId/relations",
+        data: <String, dynamic>{
+          "issueToId": issueToId,
+          "relationType": relationType,
+          "delay": delay,
+        },
+      );
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<void> removeRelation({
+    required int redmineIssueId,
+    required int relationId,
+  }) async {
+    try {
+      await _dio.delete<Map<String, dynamic>>(
+        "/api/mobile/v1/issues/$redmineIssueId/relations/$relationId",
+      );
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<void> updateTimeEntry({
+    required int redmineTimeEntryId,
+    double? hours,
+    int? activityId,
+    String? comment,
+    String? spentOn,
+  }) async {
+    try {
+      await _dio.patch<Map<String, dynamic>>(
+        "/api/time-entries/$redmineTimeEntryId",
+        data: <String, dynamic>{
+          "hours": hours,
+          "activityId": activityId,
+          "comment": comment,
+          "spentOn": spentOn,
+        },
+      );
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<void> deleteTimeEntry({
+    required int redmineTimeEntryId,
+  }) async {
+    try {
+      await _dio.delete<Map<String, dynamic>>("/api/time-entries/$redmineTimeEntryId");
     } on DioException catch (e) {
       _throwApiError(e);
     }
