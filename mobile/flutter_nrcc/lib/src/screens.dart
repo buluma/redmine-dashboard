@@ -278,6 +278,13 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   final _ghIssue = TextEditingController();
   final _relationIssue = TextEditingController();
   String _relationType = "relates";
+  bool _expandOverview = true;
+  bool _expandDescription = true;
+  bool _expandAllowed = false;
+  bool _expandComment = false;
+  bool _expandGithub = false;
+  bool _expandAttachments = false;
+  bool _expandRelations = false;
 
   String _normalizeIssueDescription(String? input) {
     if (input == null || input.trim().isEmpty) {
@@ -303,32 +310,27 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
 
   Widget _sectionCard({
     required BuildContext context,
+    required String sectionId,
     required String title,
     required Widget child,
-    Widget? action,
+    required bool expanded,
+    required ValueChanged<bool> onExpandedChanged,
   }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ),
-                if (action case final button?) button,
-              ],
-            ),
-            const SizedBox(height: 10),
-            child,
-          ],
+      child: ExpansionTile(
+        key: ValueKey<String>("$sectionId:$expanded"),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        initiallyExpanded: expanded,
+        onExpansionChanged: onExpandedChanged,
+        title: Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
+        children: <Widget>[
+          child,
+        ],
       ),
     );
   }
@@ -468,9 +470,49 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: <Widget>[
+                              OutlinedButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    _expandOverview = true;
+                                    _expandDescription = true;
+                                    _expandAllowed = true;
+                                    _expandComment = true;
+                                    _expandGithub = true;
+                                    _expandAttachments = true;
+                                    _expandRelations = true;
+                                  });
+                                },
+                                icon: const Icon(Icons.unfold_more, size: 18),
+                                label: const Text("Expand all"),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    _expandOverview = false;
+                                    _expandDescription = false;
+                                    _expandAllowed = false;
+                                    _expandComment = false;
+                                    _expandGithub = false;
+                                    _expandAttachments = false;
+                                    _expandRelations = false;
+                                  });
+                                },
+                                icon: const Icon(Icons.unfold_less, size: 18),
+                                label: const Text("Collapse all"),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
                           _sectionCard(
                             context: context,
+                            sectionId: "overview",
                             title: "Overview",
+                            expanded: _expandOverview,
+                            onExpandedChanged: (value) => setState(() => _expandOverview = value),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
@@ -500,7 +542,10 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                           ),
                           _sectionCard(
                             context: context,
+                            sectionId: "description",
                             title: "Description",
+                            expanded: _expandDescription,
+                            onExpandedChanged: (value) => setState(() => _expandDescription = value),
                             child: MarkdownBody(
                               data: _normalizeIssueDescription(_issue!.description),
                               selectable: true,
@@ -511,7 +556,10 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                           ),
                           _sectionCard(
                             context: context,
+                            sectionId: "allowed",
                             title: "Allowed Statuses",
+                            expanded: _expandAllowed,
+                            onExpandedChanged: (value) => setState(() => _expandAllowed = value),
                             child: _issue!.allowedStatuses.isEmpty
                                 ? const Text("No transition data from server.")
                                 : Wrap(
@@ -528,7 +576,10 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                           ),
                           _sectionCard(
                             context: context,
+                            sectionId: "comment",
                             title: "Add Comment",
+                            expanded: _expandComment,
+                            onExpandedChanged: (value) => setState(() => _expandComment = value),
                             child: Column(
                               children: <Widget>[
                                 TextField(
@@ -550,7 +601,10 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                           ),
                           _sectionCard(
                             context: context,
+                            sectionId: "github",
                             title: "GitHub Links",
+                            expanded: _expandGithub,
+                            onExpandedChanged: (value) => setState(() => _expandGithub = value),
                             child: Column(
                               children: <Widget>[
                                 TextField(
@@ -603,7 +657,10 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                           ),
                           _sectionCard(
                             context: context,
+                            sectionId: "attachments",
                             title: "Attachments",
+                            expanded: _expandAttachments,
+                            onExpandedChanged: (value) => setState(() => _expandAttachments = value),
                             child: _issue!.attachments.isEmpty
                                 ? const Text("No attachments.")
                                 : Column(
@@ -628,7 +685,10 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                           ),
                           _sectionCard(
                             context: context,
+                            sectionId: "relations",
                             title: "Relations",
+                            expanded: _expandRelations,
+                            onExpandedChanged: (value) => setState(() => _expandRelations = value),
                             child: Column(
                               children: <Widget>[
                                 TextField(
