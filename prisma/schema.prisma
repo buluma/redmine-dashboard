@@ -53,14 +53,49 @@ model Issue {
   updatedOnRemote  DateTime
   dueDate          DateTime?
   doneRatio        Int?
+  allowedStatusesJson Json?
+  childrenJson     Json?
   journals         IssueJournal[]
   timeEntries      TimeEntry[]
   githubLinks      IssueGithubLink[]
+  attachments      IssueAttachment[]
+  relations        IssueRelation[]
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
   @@index([userId, statusId])
   @@index([userId, updatedOnRemote])
+}
+
+model IssueAttachment {
+  id                 String   @id @default(cuid())
+  redmineAttachmentId Int     @unique
+  issueId            String
+  issue              Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  filename           String
+  filesize           Int
+  contentType        String?
+  author             String?
+  createdOnRemote    DateTime?
+  downloadUrl        String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([issueId, createdOnRemote])
+}
+
+model IssueRelation {
+  id               String   @id @default(cuid())
+  redmineRelationId Int     @unique
+  issueId          String
+  issue            Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  targetIssueId    Int
+  relationType     String
+  delay            Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([issueId, relationType])
 }
 
 model IssueGithubLink {
@@ -144,6 +179,20 @@ model StatusCatalog {
   name      String
   isClosed  Boolean
   updatedAt DateTime @updatedAt
+}
+
+model EnumerationCatalog {
+  key        String   @id
+  remoteId   Int
+  kind       String
+  name       String
+  isDefault  Boolean  @default(false)
+  isActive   Boolean  @default(true)
+  position   Int?
+  updatedAt  DateTime @updatedAt
+
+  @@index([kind, remoteId])
+  @@index([kind, isActive])
 }
 
 model LeaderLock {

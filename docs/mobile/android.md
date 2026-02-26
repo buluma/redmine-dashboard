@@ -41,4 +41,15 @@ The starter example for Jetpack Compose includes the following screens:
 
 - **PairScreen:** A screen to collect the Redmine URL, API key, and an optional device name to pair with the server.
 - **IssueListScreen:** A screen that loads and displays the list of assigned issues.
-- **IssueDetailScreen:** A screen to view the details of an issue, post comments, and manage associated GitHub links.
+- **IssueDetailScreen:** A screen to view issue details, post comments, and manage GitHub links, relations, and attachments.
+
+## Endpoint Coverage
+
+Recommended endpoint set for native Android parity:
+
+- `GET /api/mobile/v1/issues` with optional `searchMode=local|hybrid`, `scope`, and `openOnly`.
+- `GET /api/mobile/v1/issues/[id]` (includes `attachments`, `relations`, `allowedStatuses`, `children`).
+- `POST /api/mobile/v1/issues/[id]/comment`.
+- `GET|POST|DELETE /api/mobile/v1/issues/[id]/github-links...`.
+- `GET|POST /api/mobile/v1/issues/[id]/attachments` and `GET /api/mobile/v1/issues/[id]/attachments/[attachmentId]`.
+- `POST /api/mobile/v1/issues/[id]/relations` and `DELETE /api/mobile/v1/issues/[id]/relations/[relationId]`.

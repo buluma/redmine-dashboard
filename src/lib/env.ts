@@ -26,6 +26,25 @@ function numberFromEnv(key: string, fallback: number): number {
   return Number.isFinite(value) ? value : fallback;
 }
 
+function csvFromEnv(key: string): string[] {
+  const raw = process.env[key];
+  if (!raw) {
+    return [];
+  }
+  return raw
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function syncIssueScopeFromEnv(): "assigned" | "open" | "all" {
+  const value = (process.env.REDMINE_SYNC_ISSUE_SCOPE ?? "assigned").trim().toLowerCase();
+  if (value === "assigned" || value === "open" || value === "all") {
+    return value;
+  }
+  return "assigned";
+}
+
 const isProduction = process.env.NODE_ENV === "production";
 
 export const env = {
@@ -40,5 +59,8 @@ export const env = {
   memoryLogIntervalMs: numberFromEnv("MEMORY_LOG_INTERVAL_MS", 60000),
   redmineBaseUrl: process.env.REDMINE_BASE_URL,
   redmineApiKey: process.env.REDMINE_API_KEY,
+  redmineAllowedBaseUrls: csvFromEnv("REDMINE_ALLOWED_BASE_URLS"),
+  redmineInsecureTlsHosts: csvFromEnv("REDMINE_INSECURE_TLS_HOSTS"),
+  redmineSyncIssueScope: syncIssueScopeFromEnv(),
   mobileApiEnabled: boolFromEnv("MOBILE_API_ENABLED", true),
 };

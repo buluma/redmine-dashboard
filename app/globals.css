@@ -957,6 +957,76 @@ label {
   gap: 0.35rem;
 }
 
+.issue-overview-grid {
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+}
+
+.issue-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-top: 1px solid #ceceb6;
+  padding-top: 0.6rem;
+}
+
+.issue-tabs a {
+  border: 1px solid #c7c7c7;
+  background: #efefef;
+  color: #4b5258;
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px 6px 0 0;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.issue-tabs a.active {
+  background: #fff;
+  border-bottom-color: #fff;
+  font-weight: 700;
+}
+
+.issue-collapsible > summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--ink-soft);
+  user-select: none;
+  margin-bottom: 0.5rem;
+}
+
+.issue-collapsible > summary .muted {
+  margin-left: 0.3rem;
+}
+
+.issue-collapsible[open] > summary {
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 780px) {
+  .issue-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.attachment-preview-link {
+  display: block;
+}
+
+.attachment-preview-image {
+  width: min(100%, 520px);
+  max-height: 240px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #f4efe4;
+}
+
+.attachment-preview-pdf {
+  width: min(100%, 640px);
+  height: 280px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f4efe4;
+}
+
 .entry-head {
   display: flex;
   justify-content: space-between;
@@ -1020,11 +1090,67 @@ label {
   border-radius: 10px;
   padding: 0.6rem;
   overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .markdown pre code {
+  display: block;
   background: transparent;
   padding: 0;
+  white-space: inherit;
+  overflow-wrap: inherit;
+  word-break: inherit;
+}
+
+.markdown .md-collapsible-code {
+  margin: 0.45rem 0;
+}
+
+.markdown .md-collapsible-code > summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-bottom: 0.35rem;
+  user-select: none;
+}
+
+.markdown .hljs-keyword,
+.markdown .hljs-selector-tag,
+.markdown .hljs-literal,
+.markdown .hljs-section,
+.markdown .hljs-link {
+  color: #8f2d16;
+  font-weight: 600;
+}
+
+.markdown .hljs-string,
+.markdown .hljs-attr,
+.markdown .hljs-template-tag,
+.markdown .hljs-template-variable {
+  color: #0c6b58;
+}
+
+.markdown .hljs-title,
+.markdown .hljs-function,
+.markdown .hljs-built_in,
+.markdown .hljs-type,
+.markdown .hljs-class .hljs-title {
+  color: #15439b;
+}
+
+.markdown .hljs-number,
+.markdown .hljs-symbol,
+.markdown .hljs-bullet,
+.markdown .hljs-meta {
+  color: #7c3d8f;
+}
+
+.markdown .hljs-comment,
+.markdown .hljs-quote {
+  color: #667788;
+  font-style: italic;
 }
 
 .markdown table {
