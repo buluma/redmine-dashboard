@@ -89,7 +89,7 @@ export function trackDuration(
   const { data = {}, tags = {}, unit = "millisecond" } = options;
   Sentry.metrics.distribution(metricName, durationValue, {
     unit,
-    tags: toMetricTags(tags),
+    attributes: toMetricTags(tags),
   });
 
   emitLog("info", `${metricName}.recorded`, {
@@ -114,7 +114,7 @@ export function trackSuccess(options: SuccessOptions): void {
   emitLog("info", event, data);
 
   if (metricName) {
-    Sentry.metrics.count(metricName, metricValue, { tags: toMetricTags(metricTags) });
+    Sentry.metrics.count(metricName, metricValue, { attributes: toMetricTags(metricTags) });
   }
 
   if (durationMetricName && typeof durationMs === "number") {
@@ -151,7 +151,7 @@ export function trackFailure(options: FailureOptions): void {
   emitLog(level, event, { ...data, ...errorData, error });
 
   if (metricName) {
-    Sentry.metrics.count(metricName, metricValue, { tags: toMetricTags(metricTags) });
+    Sentry.metrics.count(metricName, metricValue, { attributes: toMetricTags(metricTags) });
   }
 
   if (durationMetricName && typeof durationMs === "number") {
@@ -162,4 +162,3 @@ export function trackFailure(options: FailureOptions): void {
     });
   }
 }
-

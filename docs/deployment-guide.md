@@ -37,6 +37,17 @@ Open the `.env` file and set the following variables:
 
 - `SENTRY_DSN`: Server-side DSN used by Node/Edge Sentry initialization.
 - `NEXT_PUBLIC_SENTRY_DSN`: Client-side DSN used by browser Sentry initialization.
+- `SENTRY_TRACES_SAMPLE_RATE`: Trace sampling ratio. Recommended defaults: `0.0` in local dev, `0.1` in production.
+- `SENTRY_PROFILE_SAMPLE_RATE`: Profiling sampling ratio. Recommended default: `0.0` unless actively profiling.
+- `SENTRY_ENABLE_LOGS`: Enables Sentry logs pipeline (`false` by default).
+- `SENTRY_ENABLE_CONSOLE_LOGGING`: Sends `console.log/warn/error` to Sentry (`false` by default).
+
+**Recommended (runtime memory controls):**
+
+- `ENABLE_SYNC_POLLER`: Controls background sync poller startup. Recommended defaults: `false` in local dev, `true` in production.
+- `POLL_INTERVAL_MS`: Sync poller interval in milliseconds. Recommended production default: `120000`.
+- `MEMORY_LOGGING`: Enables periodic `process.memoryUsage()` logging (`false` by default).
+- `MEMORY_LOG_INTERVAL_MS`: Interval for memory logs in milliseconds (default: `60000`).
 
 **Optional (for first-run bootstrap):**
 
@@ -98,10 +109,17 @@ A full list of helper targets is available in the [Makefile](/Users/shadowwalker
 - `SESSION_SECRET`: HMAC secret for signing session cookies.
 - `SENTRY_DSN`: Optional but recommended for server-side Sentry telemetry.
 - `NEXT_PUBLIC_SENTRY_DSN`: Optional but recommended for browser-side Sentry telemetry.
-- `POLL_INTERVAL_MS`: The interval for the sync poller in milliseconds (default: `60000`).
+- `SENTRY_TRACES_SAMPLE_RATE`: Trace sampling ratio. Defaults to `0.0` in development and `0.1` in production.
+- `SENTRY_PROFILE_SAMPLE_RATE`: Profiling sampling ratio. Defaults to `0.0`.
+- `SENTRY_ENABLE_LOGS`: Enables Sentry logs pipeline (`false` by default).
+- `SENTRY_ENABLE_CONSOLE_LOGGING`: Sends `console.log/warn/error` to Sentry (`false` by default).
+- `ENABLE_SYNC_POLLER`: Enables background sync polling. Defaults to `false` in development and `true` in production.
+- `POLL_INTERVAL_MS`: The interval for the sync poller in milliseconds (default: `60000` development, `120000` production).
 - `LEADER_LOCK_TTL_MS`: The time-to-live for the leader lock in milliseconds (default: `90000`).
 - `SYNC_JOB_STALE_MS`: Timeout in milliseconds for resetting stale running or pending sync jobs (default: `600000`).
 - `MOBILE_API_ENABLED`: Enables the mobile API surface (`true` by default; set to `false` to disable `/api/mobile/v1/*`).
+- `MEMORY_LOGGING`: Enables structured memory usage logging (`false` by default).
+- `MEMORY_LOG_INTERVAL_MS`: Memory log interval in milliseconds (default: `60000`).
 - `REDMINE_BASE_URL`: Optional. Used for first-run bootstrap to pre-configure the Redmine connection.
 - `REDMINE_API_KEY`: Optional. Used for first-run bootstrap.
 
@@ -114,12 +132,24 @@ A full list of helper targets is available in the [Makefile](/Users/shadowwalker
 ## Available Scripts
 
 - `npm run dev`: Starts the development server.
+- `npm run mem:dev`: Starts the development server with periodic memory usage logging enabled.
 - `npm run build`: Creates a production build of the application.
 - `npm run start`: Starts a production server.
+- `npm run mem:start`: Starts the production server with periodic memory usage logging enabled.
 - `npm run lint`: Lints the codebase for errors and style issues.
 - `npm run test`: Runs the test suite.
 - `npm run prisma:generate`: Regenerates the Prisma client.
 - `npm run db:init`: Initializes the database schema.
+
+## Production Runtime Profile
+
+For memory-constrained production environments, start the app with:
+
+```bash
+NODE_ENV=production NODE_OPTIONS=--max-old-space-size=768 npm run start
+```
+
+Use this as a starting point and tune heap size based on GC behavior and request latency.
 
 ## Continuous Integration (CI) and Branch Protection
 

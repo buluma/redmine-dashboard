@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Sora, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { ensurePollerStarted } from "@/src/lib/poller";
 
 const sora = Sora({
   variable: "--font-geist-sans",
@@ -23,8 +22,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  ensurePollerStarted();
-
   return (
     <html lang="en">
       <body className={`${sora.variable} ${mono.variable}`}>

@@ -14,6 +14,7 @@ The documentation includes:
 - **[Deployment Guide](./docs/deployment-guide.md)**
 - **[Code Standards](./docs/code-standards.md)**
 - **[Telemetry Conventions](./docs/telemetry.md)**
+- **[Memory Profiling Guide](./docs/perf-memory.md)**
 - **[API Reference](./docs/api-reference.md)**
 - **[Codebase Summary](./docs/codebase-summary.md)**
 - **[Design Guidelines](./docs/design-guidelines.md)**

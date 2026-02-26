@@ -9,6 +9,7 @@ Welcome to the documentation for the Nasc Redmine Command Center (NRCC). This do
 - **[Deployment Guide](./deployment-guide.md):** Instructions for setting up the application for local development and deployment.
 - **[Code Standards](./code-standards.md):** The coding standards and conventions used in the project.
 - **[Telemetry Conventions](./telemetry.md):** Standards for logs and metrics naming, tagging, and route instrumentation patterns.
+- **[Memory Profiling Guide](./perf-memory.md):** Repeatable process for measuring and reducing runtime memory usage.
 - **[Codebase Summary](./codebase-summary.md):** A summary of the codebase structure.
 - **[Design Guidelines](./design-guidelines.md):** The design guidelines and UI/UX specifications.
 

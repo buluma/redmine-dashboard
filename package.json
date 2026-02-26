@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
+    "mem:dev": "MEMORY_LOGGING=true next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start -H 0.0.0.0",
+    "mem:start": "MEMORY_LOGGING=true next start -H 0.0.0.0",
     "postinstall": "prisma generate",
     "lint": "eslint",
     "test": "vitest run",

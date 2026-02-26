@@ -116,3 +116,14 @@ These routes already follow this standard:
 - Issue GitHub link mutation routes (web and mobile)
 
 When adding a new mutation route, follow the same pattern from the start.
+
+## Sentry Runtime Controls
+
+Runtime telemetry volume is controlled through environment variables:
+
+- `SENTRY_TRACES_SAMPLE_RATE`: Defaults to `0.0` in development and `0.1` in production.
+- `SENTRY_PROFILE_SAMPLE_RATE`: Defaults to `0.0` unless profiling is explicitly needed.
+- `SENTRY_ENABLE_LOGS`: Defaults to `false`.
+- `SENTRY_ENABLE_CONSOLE_LOGGING`: Defaults to `false`.
+
+These defaults keep error reporting active while reducing memory and CPU overhead from high-volume tracing, profiling, and console-log ingestion.
