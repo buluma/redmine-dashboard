@@ -20,27 +20,25 @@ export function NotificationsPanel({ initialNotifications = [] }: NotificationsP
 
   // Demo notifications (in real app, these would come from WebSocket/Poll)
   useEffect(() => {
-    // Simulate some notifications
-    const demo: Notification[] = [
-      {
-        id: "1",
-        type: "info",
-        message: "Sync completed successfully",
-        timestamp: new Date(Date.now() - 1000 * 60 * 5),
-        read: false,
-      },
-      {
-        id: "2",
-        type: "success",
-        message: "Issue #112345 updated",
-        timestamp: new Date(Date.now() - 1000 * 60 * 30),
-        read: true,
-      },
-    ];
-    if (initialNotifications.length === 0) {
-      setNotifications(demo);
+    if (notifications.length === 0) {
+      setNotifications([
+        {
+          id: "1",
+          type: "info" as const,
+          message: "Sync completed successfully",
+          timestamp: new Date(Date.now() - 1000 * 60 * 5),
+          read: false,
+        },
+        {
+          id: "2",
+          type: "success" as const,
+          message: "Issue #112345 updated",
+          timestamp: new Date(Date.now() - 1000 * 60 * 30),
+          read: true,
+        },
+      ]);
     }
-  }, [initialNotifications]);
+  }, []); // Empty deps - run once on mount
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
