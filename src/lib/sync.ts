@@ -446,7 +446,47 @@ export async function syncSingleIssue(
     client,
     Boolean(options?.pruneTimeEntries),
   );
-  return issue;
+
+  // Build breadcrumbs by fetching parent chain
+  const breadcrumbs = await buildBreadcrumbChain(client, remoteIssueId);
+
+  return { ...issue, breadcrumbs };
+}
+
+export async function buildBreadcrumbChain(
+  client: RedmineClient,
+  issueId: number,
+  maxDepth: number = 20,
+): Promise<Array<{ id: number; subject: string; tracker?: string }>> {
+  const chain: Array<{ id: number; subject: string; tracker?: string }> = [];
+  let currentId: number | null = issueId;
+  let depth = 0;
+  const visited = new Set<number>();
+
+  while (currentId && depth < maxDepth && !visited.has(currentId)) {
+    visited.add(currentId);
+    try {
+      const data = await client.getIssue(currentId, ["parent"]);
+      const issue = data?.issue;
+      if (!issue) break;
+
+      chain.unshift({
+        id: issue.id,
+        subject: issue.subject ?? `Issue #${issue.id}`,
+        tracker: issue.tracker?.name,
+      });
+
+      const parent = issue.parent;
+      currentId = parent?.id ? Number(parent.id) : null;
+      if (!currentId || !Number.isInteger(currentId) || currentId <= 0) break;
+
+      depth++;
+    } catch {
+      break;
+    }
+  }
+
+  return chain;
 }
 
 async function markSyncState(

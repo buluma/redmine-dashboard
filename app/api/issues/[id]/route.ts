@@ -1,6 +1,8 @@
 import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { toIssueView } from "@/src/lib/issue-shape";
+import { buildBreadcrumbChain } from "@/src/lib/sync";
+import { requireRedmineClient } from "@/src/lib/auth";
 
 function parseIssueId(id: string): number {
   const n = Number(id);
@@ -34,8 +36,19 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       return Response.json({ error: "Issue not found" }, { status: 404 });
     }
 
+    // Build breadcrumbs from parent chain
+    let breadcrumbs: Array<{ id: number; subject: string; tracker?: string }> = [];
+    try {
+      const { client } = await requireRedmineClient();
+      breadcrumbs = await buildBreadcrumbChain(client, issueId);
+    } catch {
+      // If Redmine is unavailable, skip breadcrumbs
+    }
+
+    const issueView = toIssueView(issue);
+
     return Response.json({
-      issue: toIssueView(issue),
+      issue: { ...issueView, breadcrumbs },
       statuses,
     });
   } catch (error) {
