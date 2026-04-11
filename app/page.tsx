@@ -1919,6 +1919,10 @@ export default function Home() {
                           alt={attachment.filename}
                           loading="lazy"
                           style={{ maxWidth: "520px", height: "auto" }}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                          }}
                         />
                       </a>
                     )}
