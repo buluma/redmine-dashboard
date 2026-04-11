@@ -48,6 +48,21 @@ model RedmineUser {
   @@index([isActive])
 }
 
+model RedmineEnumeration {
+  id           Int      @id
+  kind         String   // "issue_priority", "time_entry_activity", "document_category", "issue_category"
+  name         String
+  isDefault    Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  position     Int?
+  lastSeenAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([kind, isActive])
+  @@index([kind, position])
+}
+
 model UserRedmineCredential {
   userId           String   @id
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -71,6 +86,7 @@ model Issue {
   projectName      String?
   tracker          String?
   priority         String?
+  priorityId       Int?
   statusId         Int
   statusName       String
   parentIssueId    Int?

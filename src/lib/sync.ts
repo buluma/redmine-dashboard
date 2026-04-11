@@ -107,6 +107,7 @@ async function upsertIssueFromRemote(userId: string, redmineBaseUrl: string, iss
     projectName: nestedName(issueRaw.project),
     tracker: nestedName(issueRaw.tracker),
     priority: nestedName(issueRaw.priority),
+    priorityId: nestedId(issueRaw.priority),
     statusId: nestedId(issueRaw.status) ?? 0,
     statusName: nestedName(issueRaw.status) ?? "Unknown",
     parentIssueId: nestedId(issueRaw.parent),

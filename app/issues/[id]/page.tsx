@@ -73,6 +73,7 @@ type Issue = {
   parentIssueLabel: string | null;
   tracker: string | null;
   priority: string | null;
+  priorityId: number | null;
   statusId: number;
   statusName: string;
   assignedToName: string | null;
@@ -259,6 +260,7 @@ export default function IssueDetailPage() {
   const [transitionStatuses, setTransitionStatuses] = useState<AllowedStatus[]>([]);
   const [activities, setActivities] = useState<Array<{ id: number; name: string }>>([]);
   const [users, setUsers] = useState<Array<{ id: number; name: string }>>([]);
+  const [priorities, setPriorities] = useState<Array<{ id: number; name: string; isDefault: boolean }>>([]);
   const tabsRef = useRef<HTMLDivElement | null>(null);
 
   // Edit mode state
@@ -266,7 +268,7 @@ export default function IssueDetailPage() {
   const [editDraft, setEditDraft] = useState<{
     subject: string;
     description: string;
-    priority: string;
+    priorityId: string;
     dueDate: string;
     estimatedHours: string;
     startDate: string;
@@ -296,7 +298,7 @@ export default function IssueDetailPage() {
     setEditDraft({
       subject: issue.subject,
       description: issue.description ?? "",
-      priority: issue.priority ?? "",
+      priorityId: issue.priorityId != null ? String(issue.priorityId) : "",
       dueDate: issue.dueDate ? new Date(issue.dueDate).toISOString().split("T")[0] : "",
       estimatedHours: issue.estimatedHours != null ? String(issue.estimatedHours) : "",
       startDate: issue.startDate ? new Date(issue.startDate).toISOString().split("T")[0] : "",
@@ -319,7 +321,7 @@ export default function IssueDetailPage() {
         body: JSON.stringify({
           subject: editDraft.subject || undefined,
           description: editDraft.description,
-          priority: editDraft.priority || undefined,
+          priorityId: editDraft.priorityId ? parseInt(editDraft.priorityId, 10) : undefined,
           dueDate: editDraft.dueDate || undefined,
           estimatedHours: editDraft.estimatedHours ? parseFloat(editDraft.estimatedHours) : undefined,
           startDate: editDraft.startDate || undefined,
@@ -435,9 +437,10 @@ export default function IssueDetailPage() {
   useEffect(() => {
     void (async () => {
       try {
-        const [activitiesRes, usersRes] = await Promise.all([
+        const [activitiesRes, usersRes, prioritiesRes] = await Promise.all([
           fetch("/api/internal/activities", { cache: "no-store" }),
           fetch("/api/internal/users", { cache: "no-store" }),
+          fetch("/api/internal/priorities", { cache: "no-store" }),
         ]);
         if (activitiesRes.ok) {
           const data = await activitiesRes.json();
@@ -446,6 +449,10 @@ export default function IssueDetailPage() {
         if (usersRes.ok) {
           const data = await usersRes.json();
           setUsers(data.users ?? []);
+        }
+        if (prioritiesRes.ok) {
+          const data = await prioritiesRes.json();
+          setPriorities(data.priorities ?? []);
         }
       } catch {
         // Ignore errors
@@ -798,13 +805,16 @@ export default function IssueDetailPage() {
                   </div>
                   <div className="metadata-item metadata-item-editable">
                     <span className="metadata-label">Priority</span>
-                    <input
-                      type="text"
-                      className="edit-metadata-input"
-                      value={editDraft.priority}
-                      onChange={(e) => setEditDraft({ ...editDraft, priority: e.target.value })}
-                      placeholder="e.g., Normal, High, Urgent"
-                    />
+                    <select
+                      className="edit-metadata-input edit-priority-select"
+                      value={editDraft.priorityId}
+                      onChange={(e) => setEditDraft({ ...editDraft, priorityId: e.target.value })}
+                    >
+                      <option value="">— No priority —</option>
+                      {priorities.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}{p.isDefault ? " (default)" : ""}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="metadata-item metadata-item-editable">
                     <span className="metadata-label">Estimated Hours</span>
@@ -930,16 +940,26 @@ export default function IssueDetailPage() {
 
                   // Editable custom field
                   if (editMode && editDraft) {
+                    const isDateField = /due\s*date|date|sd\s*due|temp\s*fix/i.test(field.name);
                     return (
                       <div key={field.id} className="metadata-item metadata-item-editable">
                         <span className="metadata-label">{field.name}</span>
-                        <input
-                          type="text"
-                          className="edit-metadata-input"
-                          value={editDraft.customFields[field.id] || ""}
-                          onChange={(e) => updateCustomField(String(field.id), e.target.value)}
-                          placeholder={field.name}
-                        />
+                        {isDateField ? (
+                          <input
+                            type="date"
+                            className="edit-metadata-input edit-date-input"
+                            value={editDraft.customFields[field.id] || ""}
+                            onChange={(e) => updateCustomField(String(field.id), e.target.value)}
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            className="edit-metadata-input"
+                            value={editDraft.customFields[field.id] || ""}
+                            onChange={(e) => updateCustomField(String(field.id), e.target.value)}
+                            placeholder={field.name}
+                          />
+                        )}
                       </div>
                     );
                   }
