@@ -10,6 +10,7 @@ import remarkGfm from "remark-gfm";
 import { normalizeRedmineText } from "@/src/lib/redmine-text-format";
 import { AiIssueActions } from "@/src/components/ai/AiIssueActions";
 import { AiSearchBar } from "@/src/components/ai/AiSearchBar";
+import { DashboardWidgets, calculateStats } from "@/src/components/DashboardWidgets";
 
 type User = {
   id: string;
@@ -1668,6 +1669,11 @@ export default function Home() {
                   </button>
                 </div>
               </div>
+
+              {/* Dashboard Widgets */}
+              {issues.length > 0 && (
+                <DashboardWidgets stats={calculateStats(issues)} />
+              )}
 
               <table className="issues-table">
                 <thead>
