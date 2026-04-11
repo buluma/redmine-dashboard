@@ -411,6 +411,29 @@ export class RedmineClient {
     });
   }
 
+  async updateIssue(issueId: number, updates: {
+    assignedToId?: number;
+    statusId?: number;
+    notes?: string;
+    dueDate?: string;
+    estimatedHours?: number;
+    doneRatio?: number;
+  }): Promise<void> {
+    await this.request(`/issues/${issueId}.json`, {
+      method: "PUT",
+      body: JSON.stringify({
+        issue: {
+          ...(updates.assignedToId !== undefined ? { assigned_to_id: updates.assignedToId } : {}),
+          ...(updates.statusId !== undefined ? { status_id: updates.statusId } : {}),
+          ...(updates.notes !== undefined ? { notes: updates.notes } : {}),
+          ...(updates.dueDate !== undefined ? { due_date: updates.dueDate } : {}),
+          ...(updates.estimatedHours !== undefined ? { estimated_hours: updates.estimatedHours } : {}),
+          ...(updates.doneRatio !== undefined ? { done_ratio: updates.doneRatio } : {}),
+        },
+      }),
+    });
+  }
+
   async addComment(issueId: number, comment: string): Promise<void> {
     await this.request(`/issues/${issueId}.json`, {
       method: "PUT",
