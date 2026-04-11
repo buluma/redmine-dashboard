@@ -261,6 +261,19 @@ export default function IssueDetailPage() {
   const [users, setUsers] = useState<Array<{ id: number; name: string }>>([]);
   const tabsRef = useRef<HTMLDivElement | null>(null);
 
+  // Edit mode state
+  const [editMode, setEditMode] = useState(false);
+  const [editDraft, setEditDraft] = useState<{
+    subject: string;
+    description: string;
+    priority: string;
+    dueDate: string;
+    estimatedHours: string;
+    startDate: string;
+    customFields: Record<string, string>;
+  } | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+
   async function reloadIssue() {
     const res = await fetch(`/api/issues/${issueId}`, { cache: "no-store" });
     const data = await res.json();
@@ -268,6 +281,78 @@ export default function IssueDetailPage() {
       throw new Error(data.error ?? "Failed to load issue");
     }
     setIssue(data.issue ?? null);
+  }
+
+  function startEditMode() {
+    if (!issue) return;
+    // Build custom fields map
+    const customFields: Record<string, string> = {};
+    if (issue.customFieldsJson) {
+      for (const field of issue.customFieldsJson) {
+        customFields[field.id] = field.value ?? "";
+      }
+    }
+    setEditDraft({
+      subject: issue.subject,
+      description: issue.description ?? "",
+      priority: issue.priority ?? "",
+      dueDate: issue.dueDate ? new Date(issue.dueDate).toISOString().split("T")[0] : "",
+      estimatedHours: issue.estimatedHours != null ? String(issue.estimatedHours) : "",
+      startDate: issue.startDate ? new Date(issue.startDate).toISOString().split("T")[0] : "",
+      customFields,
+    });
+    setEditMode(true);
+    setActionInfo(null);
+    setActionError(null);
+  }
+
+  async function saveEdit() {
+    if (!editDraft || !issue) return;
+    setEditSaving(true);
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/issues/${issueId}/edit`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: editDraft.subject || undefined,
+          description: editDraft.description,
+          priority: editDraft.priority || undefined,
+          dueDate: editDraft.dueDate || undefined,
+          estimatedHours: editDraft.estimatedHours ? parseFloat(editDraft.estimatedHours) : undefined,
+          startDate: editDraft.startDate || undefined,
+          customFields: Object.entries(editDraft.customFields)
+            .filter(([, v]) => v !== "")
+            .map(([fieldId, value]) => ({ id: parseInt(fieldId, 10), value })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update issue");
+      }
+      await reloadIssue();
+      setEditMode(false);
+      setEditDraft(null);
+      setActionInfo("Issue updated in Redmine successfully.");
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to update issue");
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  function cancelEditMode() {
+    setEditMode(false);
+    setEditDraft(null);
+    setActionError(null);
+  }
+
+  function updateCustomField(fieldId: string, value: string) {
+    if (!editDraft) return;
+    setEditDraft({
+      ...editDraft,
+      customFields: { ...editDraft.customFields, [fieldId]: value },
+    });
   }
 
   useEffect(() => {
@@ -504,7 +589,17 @@ export default function IssueDetailPage() {
               ) : (
                 <span className="redmine-issue-link muted">#{issue.redmineIssueId}</span>
               )}
-              <h1>{issue.subject}</h1>
+              {editMode && editDraft ? (
+                <input
+                  className="edit-title-input"
+                  type="text"
+                  value={editDraft.subject}
+                  onChange={(e) => setEditDraft({ ...editDraft, subject: e.target.value })}
+                  autoFocus
+                />
+              ) : (
+                <h1>{issue.subject}</h1>
+              )}
             </div>
             <p className="muted">
               {issue.projectName ?? "No project"} • Updated {formatAgo(issue.updatedOnRemote)}
@@ -524,6 +619,11 @@ export default function IssueDetailPage() {
             </div>
           </div>
           <div className="hero-actions">
+            {!editMode && (
+              <button type="button" className="primary-link" onClick={startEditMode}>
+                ✏️ Edit
+              </button>
+            )}
             <Link href="/" className="primary-link">Back to Dashboard</Link>
           </div>
         </div>
@@ -615,13 +715,37 @@ export default function IssueDetailPage() {
 
         <article className="report-card issue-description-card">
           <p className="report-label">Description</p>
-          {issue.description ? <MarkdownBlock content={issue.description} attachments={issue.attachments} issueId={issue.redmineIssueId} onImageClick={(src, alt) => setLightboxImage({ src, alt })} /> : <p className="muted">No description.</p>}
+          {editMode && editDraft ? (
+            <textarea
+              className="edit-description-textarea"
+              value={editDraft.description}
+              onChange={(e) => setEditDraft({ ...editDraft, description: e.target.value })}
+              rows={8}
+              placeholder="Issue description (Textile formatting supported)"
+            />
+          ) : issue.description ? (
+            <MarkdownBlock content={issue.description} attachments={issue.attachments} issueId={issue.redmineIssueId} onImageClick={(src, alt) => setLightboxImage({ src, alt })} />
+          ) : (
+            <p className="muted">No description.</p>
+          )}
         </article>
 
         {/* Issue Metadata Section */}
         {(issue.authorName || issue.categoryName || issue.startDate || issue.estimatedHours || issue.spentHours || (issue.customFieldsJson && issue.customFieldsJson.length > 0)) && (
           <article className="report-card issue-metadata-card">
-            <h3>Issue Metadata</h3>
+            <div className="metadata-head-row">
+              <h3>Issue Metadata</h3>
+              {editMode && editDraft && (
+                <div className="edit-actions">
+                  <button type="button" className="edit-save-btn" onClick={saveEdit} disabled={editSaving}>
+                    {editSaving ? "Saving..." : "💾 Save Changes"}
+                  </button>
+                  <button type="button" className="edit-cancel-btn" onClick={cancelEditMode} disabled={editSaving}>
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="metadata-grid">
               {/* Standard metadata fields */}
               {issue.authorName && (
@@ -636,17 +760,76 @@ export default function IssueDetailPage() {
                   <span className="metadata-value">{issue.categoryName}</span>
                 </div>
               )}
-              {issue.startDate && (
-                <div className="metadata-item">
-                  <span className="metadata-label">Start Date</span>
-                  <span className="metadata-value">{new Date(issue.startDate).toLocaleDateString()}</span>
-                </div>
-              )}
-              {issue.estimatedHours != null && (
-                <div className="metadata-item">
-                  <span className="metadata-label">Estimated Hours</span>
-                  <span className="metadata-value">{issue.estimatedHours.toFixed(2)}h</span>
-                </div>
+              {editMode && editDraft ? (
+                <>
+                  <div className="metadata-item metadata-item-editable">
+                    <span className="metadata-label">Start Date</span>
+                    <input
+                      type="date"
+                      className="edit-metadata-input"
+                      value={editDraft.startDate}
+                      onChange={(e) => setEditDraft({ ...editDraft, startDate: e.target.value })}
+                    />
+                  </div>
+                  <div className="metadata-item metadata-item-editable">
+                    <span className="metadata-label">Due Date</span>
+                    <input
+                      type="date"
+                      className="edit-metadata-input"
+                      value={editDraft.dueDate}
+                      onChange={(e) => setEditDraft({ ...editDraft, dueDate: e.target.value })}
+                    />
+                  </div>
+                  <div className="metadata-item metadata-item-editable">
+                    <span className="metadata-label">Priority</span>
+                    <input
+                      type="text"
+                      className="edit-metadata-input"
+                      value={editDraft.priority}
+                      onChange={(e) => setEditDraft({ ...editDraft, priority: e.target.value })}
+                      placeholder="e.g., Normal, High, Urgent"
+                    />
+                  </div>
+                  <div className="metadata-item metadata-item-editable">
+                    <span className="metadata-label">Estimated Hours</span>
+                    <input
+                      type="number"
+                      className="edit-metadata-input"
+                      value={editDraft.estimatedHours}
+                      onChange={(e) => setEditDraft({ ...editDraft, estimatedHours: e.target.value })}
+                      step="0.25"
+                      min="0"
+                      placeholder="0"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {issue.startDate && (
+                    <div className="metadata-item">
+                      <span className="metadata-label">Start Date</span>
+                      <span className="metadata-value">{new Date(issue.startDate).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {issue.dueDate && (
+                    <div className="metadata-item">
+                      <span className="metadata-label">Due Date</span>
+                      <span className="metadata-value">{new Date(issue.dueDate).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {issue.priority && (
+                    <div className="metadata-item">
+                      <span className="metadata-label">Priority</span>
+                      <span className="metadata-value">{issue.priority}</span>
+                    </div>
+                  )}
+                  {issue.estimatedHours != null && (
+                    <div className="metadata-item">
+                      <span className="metadata-label">Estimated Hours</span>
+                      <span className="metadata-value">{issue.estimatedHours.toFixed(2)}h</span>
+                    </div>
+                  )}
+                </>
               )}
               {issue.spentHours != null && (
                 <div className="metadata-item">
@@ -657,58 +840,104 @@ export default function IssueDetailPage() {
 
               {/* Custom fields with values */}
               {issue.customFieldsJson && issue.customFieldsJson
-                .filter((field) => field.value && field.value.trim().length > 0)
+                .filter((field) => editMode ? true : (field.value && field.value.trim().length > 0))
                 .map((field) => {
                   // Special handling for "Possible assignee" custom field
-                  if (field.name === "Possible assignee" && field.value) {
-                    const assigneeUserId = parseInt(field.value, 10);
-                    const matchedUser = users.find((u) => u.id === assigneeUserId);
-                    return (
-                      <div key={field.id} className="metadata-item metadata-item-assignee">
-                        <span className="metadata-label">{field.name}</span>
-                        <span className="metadata-value">
-                          {matchedUser ? (
-                            <span className="assignee-user">
-                              👤 {matchedUser.name}
-                              <button
-                                type="button"
-                                className="assign-btn"
-                                onClick={async () => {
-                                  try {
-                                    const res = await fetch(`/api/issues/${issueId}/assign`, {
-                                      method: "POST",
-                                      headers: { "Content-Type": "application/json" },
-                                      body: JSON.stringify({ userId: assigneeUserId }),
-                                    });
-                                    if (!res.ok) {
-                                      const data = await res.json();
-                                      throw new Error(data.error || "Failed to assign");
+                  if (field.name === "Possible assignee") {
+                    if (editMode && editDraft) {
+                      const assigneeUserId = parseInt(editDraft.customFields[field.id] || "0", 10);
+                      const matchedUser = users.find((u) => u.id === assigneeUserId);
+                      return (
+                        <div key={field.id} className="metadata-item metadata-item-assignee">
+                          <span className="metadata-label">{field.name}</span>
+                          <span className="metadata-value">
+                            <select
+                              className="edit-custom-user-select"
+                              value={assigneeUserId || ""}
+                              onChange={(e) => updateCustomField(String(field.id), e.target.value)}
+                            >
+                              <option value="">— Unset —</option>
+                              {users.map((u) => (
+                                <option key={u.id} value={u.id}>{u.name}</option>
+                              ))}
+                            </select>
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    if (field.value) {
+                      const assigneeUserId = parseInt(field.value, 10);
+                      const matchedUser = users.find((u) => u.id === assigneeUserId);
+                      return (
+                        <div key={field.id} className="metadata-item metadata-item-assignee">
+                          <span className="metadata-label">{field.name}</span>
+                          <span className="metadata-value">
+                            {matchedUser ? (
+                              <span className="assignee-user">
+                                👤 {matchedUser.name}
+                                <button
+                                  type="button"
+                                  className="assign-btn"
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch(`/api/issues/${issueId}/assign`, {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ userId: assigneeUserId }),
+                                      });
+                                      if (!res.ok) {
+                                        const data = await res.json();
+                                        throw new Error(data.error || "Failed to assign");
+                                      }
+                                      await reloadIssue();
+                                      setActionInfo(`Assigned to ${matchedUser.name}`);
+                                    } catch (e) {
+                                      setActionError(e instanceof Error ? e.message : "Failed to assign");
                                     }
-                                    await reloadIssue();
-                                    setActionInfo(`Assigned to ${matchedUser.name}`);
-                                  } catch (e) {
-                                    setActionError(e instanceof Error ? e.message : "Failed to assign");
-                                  }
-                                }}
-                                title={`Assign to ${matchedUser.name}`}
-                              >
-                                Assign
-                              </button>
-                            </span>
-                          ) : (
-                            `User #${assigneeUserId}`
-                          )}
-                        </span>
+                                  }}
+                                  title={`Assign to ${matchedUser.name}`}
+                                >
+                                  Assign
+                                </button>
+                              </span>
+                            ) : (
+                              `User #${assigneeUserId}`
+                            )}
+                          </span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }
+
+                  // Editable custom field
+                  if (editMode && editDraft) {
+                    return (
+                      <div key={field.id} className="metadata-item metadata-item-editable">
+                        <span className="metadata-label">{field.name}</span>
+                        <input
+                          type="text"
+                          className="edit-metadata-input"
+                          value={editDraft.customFields[field.id] || ""}
+                          onChange={(e) => updateCustomField(String(field.id), e.target.value)}
+                          placeholder={field.name}
+                        />
                       </div>
                     );
                   }
 
-                  return (
-                    <div key={field.id} className="metadata-item">
-                      <span className="metadata-label">{field.name}</span>
-                      <span className="metadata-value">{field.value}</span>
-                    </div>
-                  );
+                  // Display custom field
+                  if (field.value && field.value.trim().length > 0) {
+                    return (
+                      <div key={field.id} className="metadata-item">
+                        <span className="metadata-label">{field.name}</span>
+                        <span className="metadata-value">{field.value}</span>
+                      </div>
+                    );
+                  }
+
+                  return null;
                 })}
             </div>
           </article>
