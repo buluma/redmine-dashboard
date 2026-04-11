@@ -1116,6 +1116,56 @@ label {
   word-break: break-word;
 }
 
+.metadata-item-assignee {
+  grid-column: span 2;
+}
+
+.assignee-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.assign-btn {
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  border-radius: 6px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.assign-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.status-chip-assignee {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.assignee-inline-select {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.15rem 0.35rem;
+  min-width: 140px;
+  cursor: pointer;
+}
+
+.assignee-inline-select:hover {
+  border-color: var(--accent);
+}
+
 .issue-tabs {
   display: flex;
   gap: 0.25rem;

@@ -520,7 +520,40 @@ export default function IssueDetailPage() {
             <div className="chip-row">
               <span className="status-chip active">{issue.statusName}</span>
               <span className="status-chip">{issue.priority ?? "No priority"}</span>
-              <span className="status-chip">{issue.assignedToName ?? "Unassigned"}</span>
+              <span className="status-chip status-chip-assignee">
+                👤 {issue.assignedToName ?? "Unassigned"}
+                <select
+                  className="assignee-inline-select"
+                  value={""}
+                  onChange={async (e) => {
+                    const userId = parseInt(e.target.value, 10);
+                    if (!userId) return;
+                    try {
+                      const res = await fetch(`/api/issues/${issueId}/assign`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ userId }),
+                      });
+                      if (!res.ok) {
+                        const data = await res.json();
+                        throw new Error(data.error || "Failed to assign");
+                      }
+                      await reloadIssue();
+                      const u = users.find((u) => u.id === userId);
+                      setActionInfo(u ? `Assigned to ${u.name}` : "Issue assigned");
+                    } catch (err) {
+                      setActionError(err instanceof Error ? err.message : "Failed to assign");
+                    }
+                    e.target.value = "";
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <option value="">Reassign to…</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+              </span>
             </div>
           </div>
           <div className="hero-actions">
@@ -658,12 +691,58 @@ export default function IssueDetailPage() {
               {/* Custom fields with values */}
               {issue.customFieldsJson && issue.customFieldsJson
                 .filter((field) => field.value && field.value.trim().length > 0)
-                .map((field) => (
-                  <div key={field.id} className="metadata-item">
-                    <span className="metadata-label">{field.name}</span>
-                    <span className="metadata-value">{field.value}</span>
-                  </div>
-                ))}
+                .map((field) => {
+                  // Special handling for "Possible assignee" custom field
+                  if (field.name === "Possible assignee" && field.value) {
+                    const assigneeUserId = parseInt(field.value, 10);
+                    const matchedUser = users.find((u) => u.id === assigneeUserId);
+                    return (
+                      <div key={field.id} className="metadata-item metadata-item-assignee">
+                        <span className="metadata-label">{field.name}</span>
+                        <span className="metadata-value">
+                          {matchedUser ? (
+                            <span className="assignee-user">
+                              👤 {matchedUser.name}
+                              <button
+                                type="button"
+                                className="assign-btn"
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch(`/api/issues/${issueId}/assign`, {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ userId: assigneeUserId }),
+                                    });
+                                    if (!res.ok) {
+                                      const data = await res.json();
+                                      throw new Error(data.error || "Failed to assign");
+                                    }
+                                    await reloadIssue();
+                                    setActionInfo(`Assigned to ${matchedUser.name}`);
+                                  } catch (e) {
+                                    setActionError(e instanceof Error ? e.message : "Failed to assign");
+                                  }
+                                }}
+                                title={`Assign to ${matchedUser.name}`}
+                              >
+                                Assign
+                              </button>
+                            </span>
+                          ) : (
+                            `User #${assigneeUserId}`
+                          )}
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={field.id} className="metadata-item">
+                      <span className="metadata-label">{field.name}</span>
+                      <span className="metadata-value">{field.value}</span>
+                    </div>
+                  );
+                })}
             </div>
           </article>
         )}
