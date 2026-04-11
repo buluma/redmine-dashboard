@@ -1,6 +1,6 @@
 import { requireRedmineClient } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
-import { jsonError, logError } from "@/src/lib/http";
+import { jsonError } from "@/src/lib/http";
 import { trackFailure, trackInfo } from "@/src/lib/telemetry";
 
 function parseIssueId(id: string): number {
@@ -100,7 +100,8 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
           ? 404
           : (statusFromRedmineError(message) ?? 400);
     
-    logError("attachment_download_error", error, { issueId: id, attachmentId });
+    // Log error locally
+    console.error("attachment_download_error:", error);
     
     trackFailure({
       event: "attachment.download.failed",
