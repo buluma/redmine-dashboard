@@ -1107,6 +1107,11 @@ label {
   background: linear-gradient(180deg, #f0f8fa 0%, #e8f4f6 100%);
 }
 
+.metadata-item-readonly {
+  opacity: 0.7;
+  background: linear-gradient(180deg, #f5f2eb 0%, #ede8dc 100%);
+}
+
 .metadata-head-row {
   display: flex;
   justify-content: space-between;
@@ -1218,6 +1223,26 @@ label {
   outline: none;
   border-color: var(--accent-strong);
   box-shadow: 0 0 0 2px rgba(0, 109, 119, 0.12);
+}
+
+.edit-date-input {
+  cursor: pointer;
+}
+
+.edit-date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.edit-date-input::-webkit-calendar-picker-indicator:hover {
+  background: var(--accent);
+  opacity: 0.8;
+}
+
+.edit-category-select {
+  cursor: pointer;
 }
 
 .edit-custom-user-select {

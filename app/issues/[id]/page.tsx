@@ -270,6 +270,7 @@ export default function IssueDetailPage() {
     dueDate: string;
     estimatedHours: string;
     startDate: string;
+    categoryId: string;
     customFields: Record<string, string>;
   } | null>(null);
   const [editSaving, setEditSaving] = useState(false);
@@ -299,6 +300,7 @@ export default function IssueDetailPage() {
       dueDate: issue.dueDate ? new Date(issue.dueDate).toISOString().split("T")[0] : "",
       estimatedHours: issue.estimatedHours != null ? String(issue.estimatedHours) : "",
       startDate: issue.startDate ? new Date(issue.startDate).toISOString().split("T")[0] : "",
+      categoryId: issue.categoryId != null ? String(issue.categoryId) : "",
       customFields,
     });
     setEditMode(true);
@@ -321,6 +323,7 @@ export default function IssueDetailPage() {
           dueDate: editDraft.dueDate || undefined,
           estimatedHours: editDraft.estimatedHours ? parseFloat(editDraft.estimatedHours) : undefined,
           startDate: editDraft.startDate || undefined,
+          categoryId: editDraft.categoryId ? parseInt(editDraft.categoryId, 10) : undefined,
           customFields: Object.entries(editDraft.customFields)
             .filter(([, v]) => v !== "")
             .map(([fieldId, value]) => ({ id: parseInt(fieldId, 10), value })),
@@ -747,14 +750,14 @@ export default function IssueDetailPage() {
               )}
             </div>
             <div className="metadata-grid">
-              {/* Standard metadata fields */}
-              {issue.authorName && (
+              {/* Show read-only fields only when NOT in edit mode */}
+              {!editMode && issue.authorName && (
                 <div className="metadata-item">
                   <span className="metadata-label">Author</span>
                   <span className="metadata-value">{issue.authorName}</span>
                 </div>
               )}
-              {issue.categoryName && (
+              {issue.categoryName && !editMode && (
                 <div className="metadata-item">
                   <span className="metadata-label">Category</span>
                   <span className="metadata-value">{issue.categoryName}</span>
@@ -766,7 +769,7 @@ export default function IssueDetailPage() {
                     <span className="metadata-label">Start Date</span>
                     <input
                       type="date"
-                      className="edit-metadata-input"
+                      className="edit-metadata-input edit-date-input"
                       value={editDraft.startDate}
                       onChange={(e) => setEditDraft({ ...editDraft, startDate: e.target.value })}
                     />
@@ -775,10 +778,23 @@ export default function IssueDetailPage() {
                     <span className="metadata-label">Due Date</span>
                     <input
                       type="date"
-                      className="edit-metadata-input"
+                      className="edit-metadata-input edit-date-input"
                       value={editDraft.dueDate}
                       onChange={(e) => setEditDraft({ ...editDraft, dueDate: e.target.value })}
                     />
+                  </div>
+                  <div className="metadata-item metadata-item-editable">
+                    <span className="metadata-label">Category</span>
+                    <select
+                      className="edit-metadata-input edit-category-select"
+                      value={editDraft.categoryId}
+                      onChange={(e) => setEditDraft({ ...editDraft, categoryId: e.target.value })}
+                    >
+                      <option value="">— No category —</option>
+                      <option value="32">activities</option>
+                      <option value="33">bugs</option>
+                      <option value="34">features</option>
+                    </select>
                   </div>
                   <div className="metadata-item metadata-item-editable">
                     <span className="metadata-label">Priority</span>
@@ -831,8 +847,9 @@ export default function IssueDetailPage() {
                   )}
                 </>
               )}
+              {/* Always show spent hours as read-only (not editable) */}
               {issue.spentHours != null && (
-                <div className="metadata-item">
+                <div className="metadata-item metadata-item-readonly">
                   <span className="metadata-label">Spent Hours (Redmine)</span>
                   <span className="metadata-value">{issue.spentHours.toFixed(2)}h</span>
                 </div>
