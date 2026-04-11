@@ -1442,6 +1442,55 @@ kbd {
   font-size: 0.9rem;
 }
 
+/* Bulk Action Bar */
+.bulk-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--accent-soft);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.bulk-count {
+  font-weight: 600;
+  color: var(--accent-strong);
+}
+
+.bulk-select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: white;
+  font-size: 0.875rem;
+}
+
+.bulk-apply,
+.bulk-clear {
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.bulk-apply {
+  background: var(--accent);
+  color: white;
+  border: none;
+}
+
+.bulk-apply:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bulk-clear {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+}
+
 .attachment-preview-image.clickable:hover {
   opacity: 0.8;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
