@@ -282,14 +282,14 @@ export default function OpsPage() {
                 </div>
                 <div className="health-row">
                   <span>Database</span>
-                  <span className={`sync-pill ${checkPill(Boolean(health?.checks.database.ok))}`}>
-                    {health?.checks.database.ok ? "ok" : "failed"}
+                  <span className={`sync-pill ${checkPill(Boolean(health?.checks?.database?.ok))}`}>
+                    {health?.checks?.database?.ok ? "ok" : "failed"}
                   </span>
                 </div>
                 <div className="health-row">
                   <span>Redmine Probe</span>
-                  <span className={`sync-pill ${checkPill(Boolean(health?.checks.redmine.ok || health?.checks.redmine.mode === "skipped"))}`}>
-                    {health?.checks.redmine.mode === "skipped" ? "skipped" : health?.checks.redmine.ok ? "ok" : "failed"}
+                  <span className={`sync-pill ${checkPill(Boolean(health?.checks?.redmine?.ok || health?.checks?.redmine?.mode === "skipped"))}`}>
+                    {health?.checks?.redmine?.mode === "skipped" ? "skipped" : health?.checks?.redmine?.ok ? "ok" : "failed"}
                   </span>
                 </div>
                 <div className="health-row">
