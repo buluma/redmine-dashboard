@@ -26,9 +26,14 @@ export function QuickActionsPanel({
   const [activeTab, setActiveTab] = useState<"status" | "assign" | "time">("status");
   const [selectedStatus, setSelectedStatus] = useState<number>(0);
   const [selectedUser, setSelectedUser] = useState<number>(0);
+  const [userSearch, setUserSearch] = useState("");
   const [hours, setHours] = useState("");
   const [comment, setComment] = useState("");
   const selectedStatusIsAllowed = selectedStatus > 0 && statuses.some((status) => status.id === selectedStatus);
+
+  const filteredUsers = userSearch
+    ? users.filter((u) => u.name.toLowerCase().includes(userSearch.toLowerCase()))
+    : users;
 
   const handleTimeSubmit = useCallback(() => {
     const h = parseFloat(hours);
@@ -102,24 +107,39 @@ export function QuickActionsPanel({
             <label className="qa-label">
               Current: <strong>{currentAssignee || "Unassigned"}</strong>
             </label>
+            {users.length > 10 && (
+              <input
+                type="text"
+                value={userSearch}
+                onChange={(e) => { setUserSearch(e.target.value); setSelectedUser(0); }}
+                placeholder="Search users..."
+                className="qa-input qa-user-search"
+              />
+            )}
             <select
               value={selectedUser}
               onChange={(e) => setSelectedUser(Number(e.target.value))}
-              className="qa-select"
-              disabled={users.length === 0}
+              className="qa-select qa-user-select"
+              size={Math.min(filteredUsers.length + 1, 12)}
+              disabled={filteredUsers.length === 0 && !userSearch}
             >
               <option value={0}>Select user...</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>{u.name}</option>
-              ))}
+              {filteredUsers.length === 0 && userSearch ? (
+                <option disabled>No users match "{userSearch}"</option>
+              ) : (
+                filteredUsers.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))
+              )}
             </select>
             {users.length === 0 && (
               <p className="muted entry-meta">No assignable Redmine users are available from the current cache.</p>
             )}
+            <p className="muted entry-meta">{users.length} user(s) loaded{userSearch ? ` • ${filteredUsers.length} shown` : ""}</p>
             <button
               className="qa-button primary"
               onClick={() => selectedUser > 0 && onAssign(selectedUser)}
-              disabled={selectedUser === 0 || users.length === 0}
+              disabled={selectedUser === 0 || (filteredUsers.length === 0 && !userSearch)}
             >
               Assign
             </button>
