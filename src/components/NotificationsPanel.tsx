@@ -1,44 +1,45 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface Notification {
   id: string;
   type: "info" | "success" | "warning" | "error";
+  title: string;
   message: string;
-  timestamp: Date;
+  timestamp: string;
   read: boolean;
+  link?: string;
 }
 
 interface NotificationsPanelProps {
-  initialNotifications?: Notification[];
+  pollingInterval?: number; // ms, default 30000 (30s)
 }
 
-export function NotificationsPanel({ initialNotifications = [] }: NotificationsPanelProps) {
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPanelProps) {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Demo notifications (in real app, these would come from WebSocket/Poll)
-  useEffect(() => {
-    if (notifications.length === 0) {
-      setNotifications([
-        {
-          id: "1",
-          type: "info" as const,
-          message: "Sync completed successfully",
-          timestamp: new Date(Date.now() - 1000 * 60 * 5),
-          read: false,
-        },
-        {
-          id: "2",
-          type: "success" as const,
-          message: "Issue #112345 updated",
-          timestamp: new Date(Date.now() - 1000 * 60 * 30),
-          read: true,
-        },
-      ]);
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await fetch("/api/notifications");
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
     }
-  }, []); // Empty deps - run once on mount
+  }, []);
+
+  // Initial fetch and polling
+  useEffect(() => {
+    fetchNotifications();
+    
+    const interval = setInterval(fetchNotifications, pollingInterval);
+    return () => clearInterval(interval);
+  }, [fetchNotifications, pollingInterval]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -52,11 +53,8 @@ export function NotificationsPanel({ initialNotifications = [] }: NotificationsP
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  const clearAll = () => {
-    setNotifications([]);
-  };
-
-  const formatTime = (date: Date) => {
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const mins = Math.floor(diff / 60000);
@@ -64,7 +62,18 @@ export function NotificationsPanel({ initialNotifications = [] }: NotificationsP
     if (mins < 60) return `${mins}m ago`;
     const hours = Math.floor(mins / 60);
     if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
     return date.toLocaleDateString();
+  };
+
+  const getTypeIcon = (type: Notification["type"]) => {
+    switch (type) {
+      case "success": return "✅";
+      case "error": return "❌";
+      case "warning": return "⚠️";
+      default: return "ℹ️";
+    }
   };
 
   return (
@@ -72,7 +81,10 @@ export function NotificationsPanel({ initialNotifications = [] }: NotificationsP
       <button
         type="button"
         className="notif-trigger"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) fetchNotifications();
+        }}
       >
         🔔
         {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
@@ -82,37 +94,42 @@ export function NotificationsPanel({ initialNotifications = [] }: NotificationsP
         <div className="notif-dropdown">
           <div className="notif-header">
             <span>Notifications</span>
-            <div className="notif-actions">
-              <button type="button" onClick={markAllRead} className="notif-action">
-                Mark all read
-              </button>
-              <button type="button" onClick={clearAll} className="notif-action">
-                Clear
-              </button>
-            </div>
+            {isLoading ? (
+              <span className="notif-loading">Loading...</span>
+            ) : (
+              <div className="notif-actions">
+                {unreadCount > 0 && (
+                  <button type="button" onClick={markAllRead} className="notif-action">
+                    Mark all read
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="notif-list">
-            {notifications.length === 0 ? (
+            {isLoading ? (
+              <p className="notif-empty">Loading...</p>
+            ) : notifications.length === 0 ? (
               <p className="notif-empty">No notifications</p>
             ) : (
               notifications.map((notif) => (
-                <div
+                <a
                   key={notif.id}
+                  href={notif.link || "#"}
                   className={`notif-item ${notif.type} ${notif.read ? "read" : ""}`}
-                  onClick={() => markAsRead(notif.id)}
+                  onClick={() => {
+                    markAsRead(notif.id);
+                    setIsOpen(false);
+                  }}
                 >
-                  <span className="notif-icon">
-                    {notif.type === "success" && "✅"}
-                    {notif.type === "error" && "❌"}
-                    {notif.type === "warning" && "⚠️"}
-                    {notif.type === "info" && "ℹ️"}
-                  </span>
+                  <span className="notif-icon">{getTypeIcon(notif.type)}</span>
                   <div className="notif-content">
+                    <p className="notif-title">{notif.title}</p>
                     <p className="notif-message">{notif.message}</p>
                     <span className="notif-time">{formatTime(notif.timestamp)}</span>
                   </div>
-                </div>
+                </a>
               ))
             )}
           </div>

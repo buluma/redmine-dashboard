@@ -9,6 +9,8 @@ import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import { normalizeRedmineText } from "@/src/lib/redmine-text-format";
 import { AiIssueActions } from "@/src/components/ai/AiIssueActions";
+import { TimeTrackingPanel } from "@/src/components/TimeTrackingPanel";
+import { QuickActionsPanel } from "@/src/components/QuickActionsPanel";
 
 type Journal = {
   id: string;
@@ -220,6 +222,9 @@ export default function IssueDetailPage() {
   const [aiStatus, setAiStatus] = useState<{ available: boolean } | null>(null);
   const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
   const [markdownAttachments, setMarkdownAttachments] = useState<Attachment[]>([]);
+  const [activities, setActivities] = useState<Array<{ id: number; name: string }>>([]);
+  const [users, setUsers] = useState<Array<{ id: number; name: string }>>([]);
+  const [statuses, setStatuses] = useState<Array<{ id: number; name: string }>>([]);
 
   async function reloadIssue() {
     const res = await fetch(`/api/issues/${issueId}`, { cache: "no-store" });
@@ -284,6 +289,23 @@ export default function IssueDetailPage() {
       setMarkdownAttachments(issue.attachments);
     }
   }, [issue?.attachments]);
+
+  // Load activities, users, and statuses
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/redmine/bootstrap", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          setActivities(data.activities || []);
+          setUsers(data.users || []);
+          setStatuses(data.statuses || []);
+        }
+      } catch {
+        // Ignore errors
+      }
+    })();
+  }, []);
 
   async function submitGithubLink(event: React.FormEvent) {
     event.preventDefault();
@@ -390,6 +412,61 @@ export default function IssueDetailPage() {
           </div>
           <div className="hero-actions">
             <Link href="/" className="primary-link">Back to Dashboard</Link>
+            <QuickActionsPanel
+              issueId={issue.redmineIssueId}
+              currentStatus={issue.statusName}
+              currentAssignee={issue.assignedToName}
+              onStatusChange={async (statusId) => {
+                try {
+                  const res = await fetch(`/api/issues/${issueId}/status`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ statusId }),
+                  });
+                  if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.error || "Failed to update status");
+                  }
+                  await reloadIssue();
+                } catch (e) {
+                  setActionError(e instanceof Error ? e.message : "Failed to update status");
+                }
+              }}
+              onAssign={async (userId) => {
+                try {
+                  const res = await fetch(`/api/issues/${issueId}/assign`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ userId }),
+                  });
+                  if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.error || "Failed to assign issue");
+                  }
+                  await reloadIssue();
+                } catch (e) {
+                  setActionError(e instanceof Error ? e.message : "Failed to assign issue");
+                }
+              }}
+              onAddTime={async (hours, comment) => {
+                try {
+                  const res = await fetch(`/api/issues/${issueId}/timelog`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ hours, comments: comment }),
+                  });
+                  if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.error || "Failed to add time entry");
+                  }
+                  await reloadIssue();
+                } catch (e) {
+                  setActionError(e instanceof Error ? e.message : "Failed to add time entry");
+                }
+              }}
+              statuses={statuses}
+              users={users}
+            />
           </div>
         </div>
       </header>
@@ -636,20 +713,35 @@ export default function IssueDetailPage() {
             </div>
           )}
           {activeTab === "time_entries" && (
-            <div className="timeline">
-              {issue.timeEntries.length === 0 && <p className="muted">No spent time entries yet.</p>}
-              {issue.timeEntries.map((entry) => (
-                <article key={entry.id} className="timeline-item">
-                  <p className="muted">
-                    <strong>{entry.authorName ?? "Unknown"}</strong> • {new Date(entry.spentOn).toLocaleDateString()}
-                  </p>
-                  <p>
-                    <strong>Spent time:</strong> {entry.hours.toFixed(1)}h
-                    {entry.activityName ? ` • ${entry.activityName}` : ""}
-                  </p>
-                  {entry.comments ? <MarkdownBlock content={entry.comments} /> : null}
-                </article>
-              ))}
+            <div className="time-entries-section">
+              <TimeTrackingPanel
+                entries={issue.timeEntries.map(e => ({
+                  id: e.id,
+                  hours: e.hours,
+                  comments: e.comments,
+                  activityName: e.activityName || "General",
+                  spentOn: e.spentOn,
+                  authorName: e.authorName || "Unknown",
+                }))}
+                onAddEntry={async (hours, activityId, comments, spentOn) => {
+                  try {
+                    const res = await fetch(`/api/issues/${issueId}/timelog`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ hours, activityId, comments, spentOn }),
+                    });
+                    if (!res.ok) {
+                      const data = await res.json();
+                      throw new Error(data.error || "Failed to add time entry");
+                    }
+                    await reloadIssue();
+                  } catch (e) {
+                    setActionError(e instanceof Error ? e.message : "Failed to add time entry");
+                  }
+                }}
+                activities={activities}
+                isLoading={false}
+              />
             </div>
           )}
         </article>

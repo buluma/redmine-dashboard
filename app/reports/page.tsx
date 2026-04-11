@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { CustomReports, exportToCSV, exportToJSON } from "@/src/components/CustomReports";
 
 type User = {
   id: string;
@@ -623,6 +624,52 @@ export default function ReportsPage() {
           </div>
         </article>
       </section>
+
+      {/* Custom Reports Section */}
+      <CustomReports
+        issues={issues.map(i => ({
+          id: i.id,
+          redmineIssueId: i.redmineIssueId,
+          subject: i.subject,
+          statusName: i.statusName,
+          priorityName: i.priority || undefined,
+          projectName: i.projectName || undefined,
+          assignedToName: i.assignedToName || undefined,
+          updatedAt: i.updatedAt || "",
+          dueDate: i.dueDate,
+        }))}
+        onExport={(format) => {
+          if (format === "csv") {
+            exportToCSV(
+              issues.map(i => ({
+                id: i.redmineIssueId,
+                subject: i.subject,
+                status: i.statusName,
+                priority: i.priority,
+                project: i.projectName,
+                assignee: i.assignedToName,
+                dueDate: i.dueDate,
+                updatedAt: i.updatedAt,
+              })),
+              "nrcc-custom-report"
+            );
+          } else {
+            exportToJSON(
+              issues.map(i => ({
+                id: i.redmineIssueId,
+                subject: i.subject,
+                status: i.statusName,
+                priority: i.priority,
+                project: i.projectName,
+                assignee: i.assignedToName,
+                dueDate: i.dueDate,
+                updatedAt: i.updatedAt,
+              })),
+              "nrcc-custom-report"
+            );
+          }
+        }}
+      />
 
       <section className="card drilldown-card">
         <div className="drilldown-head">
