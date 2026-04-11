@@ -13,6 +13,7 @@ const editIssueSchema = z.object({
   dueDate: z.string().date().optional(),
   startDate: z.string().date().optional(),
   estimatedHours: z.number().positive().optional(),
+  categoryId: z.number().int().positive().optional(),
   customFields: z.array(z.object({
     id: z.number().int().positive(),
     value: z.string(),
@@ -69,6 +70,9 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     }
     if (body.estimatedHours !== undefined) {
       redminePayload.estimated_hours = body.estimatedHours;
+    }
+    if (body.categoryId !== undefined) {
+      redminePayload.category_id = body.categoryId;
     }
     if (body.customFields && body.customFields.length > 0) {
       redminePayload.custom_fields = body.customFields.map((cf) => ({
