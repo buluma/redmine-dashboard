@@ -30,8 +30,22 @@ model Favorite {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   issueId      Int      // Redmine issue ID
   createdAt    DateTime @default(now())
-  
+
   @@unique([userId, issueId])
+}
+
+model RedmineUser {
+  id           Int      @id
+  name         String
+  login        String?
+  email        String?
+  isActive     Boolean  @default(true)
+  lastSeenAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([name])
+  @@index([isActive])
 }
 
 model UserRedmineCredential {

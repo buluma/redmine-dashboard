@@ -28,21 +28,41 @@ async function cachedAssignees(userId: string): Promise<Array<{ id: number; name
 export async function GET() {
   try {
     const { client, user } = await requireRedmineClient();
+
+    // Try to fetch users from Redmine API (requires admin access)
     try {
       const users = await client.listUsers();
-
       return Response.json({
         users: users
-          .map((user) => ({ id: user.id, name: displayName(user) }))
+          .map((u) => ({ id: u.id, name: displayName(u) }))
           .sort((a, b) => a.name.localeCompare(b.name)),
+        source: "redmine_api",
       });
     } catch {
-      return Response.json({ users: await cachedAssignees(user.id), source: "issue_cache" });
+      // Fallback to local RedmineUser table
+      const localUsers = await prisma.redmineUser.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, login: true },
+      });
+
+      if (localUsers.length > 0) {
+        return Response.json({
+          users: localUsers.map((u) => ({ id: u.id, name: u.name })),
+          source: "local_cache",
+        });
+      }
+
+      // Last resort: use cached assignees from issues
+      return Response.json({
+        users: await cachedAssignees(user.id),
+        source: "issue_cache",
+      });
     }
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
-    return Response.json({ users: [] });
+    return Response.json({ users: [], source: "error" });
   }
 }
