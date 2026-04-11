@@ -2232,3 +2232,16 @@ kbd {
   padding: 0.1rem 0.3rem;
   font-family: monospace;
 }
+
+/* Filters Bar */
+.filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}

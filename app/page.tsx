@@ -11,6 +11,11 @@ import { normalizeRedmineText } from "@/src/lib/redmine-text-format";
 import { AiIssueActions } from "@/src/components/ai/AiIssueActions";
 import { AiSearchBar } from "@/src/components/ai/AiSearchBar";
 import { DashboardWidgets, calculateStats } from "@/src/components/DashboardWidgets";
+import { AdvancedFilters, applyFilters } from "@/src/components/AdvancedFilters";
+import { ProjectFilter } from "@/src/components/ProjectFilter";
+import { ExportButton } from "@/src/components/ExportButton";
+import { ShortcutHelp } from "@/src/components/ShortcutHelp";
+import { NotificationsPanel } from "@/src/components/NotificationsPanel";
 
 type User = {
   id: string;
@@ -329,6 +334,8 @@ export default function Home() {
   const [selectedIssueId, setSelectedIssueId] = useState<number | null>(null);
   const [selectedIssueIds, setSelectedIssueIds] = useState<number[]>([]);
   const [bulkStatusId, setBulkStatusId] = useState(0);
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [syncState, setSyncState] = useState<SyncState>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1355,6 +1362,7 @@ export default function Home() {
               🤖 AI: {aiStatus.usingFallback ? "Fallback" : "Cloud"}
             </div>
           )}
+          <NotificationsPanel />
         </div>
         {syncState?.lastSyncStatus === "failed" && (
           <p className="sync-error-inline">
@@ -1681,6 +1689,24 @@ export default function Home() {
               {issues.length > 0 && (
                 <DashboardWidgets stats={calculateStats(issues)} />
               )}
+
+              {/* Filters Bar */}
+              <div className="filters-bar">
+                <ProjectFilter
+                  issues={issues}
+                  selectedProject={selectedProject}
+                  onChange={setSelectedProject}
+                />
+                <AdvancedFilters
+                  filters={{ search: "", statusIds: [], priorityIds: [], assignedToMe: false, hasGithubLinks: false, hasAttachments: false }}
+                  onChange={() => {}}
+                  statuses={statuses.map(s => ({ id: s.id, name: s.name }))}
+                  priorities={priorities.map(p => ({ id: 0, name: p }))}
+                  onClear={() => {}}
+                />
+                <ExportButton issues={issues} format="csv" />
+                <ExportButton issues={issues} format="print" />
+              </div>
 
               <table className="issues-table">
                 <thead>
@@ -2146,23 +2172,7 @@ export default function Home() {
       )}
 
       {showShortcutHelp && (
-        <div className="issue-modal-backdrop" onClick={() => setShowShortcutHelp(false)}>
-          <aside className="card shortcut-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>Keyboard Shortcuts</h2>
-            <div className="shortcut-grid">
-              <p><kbd>/</kbd> Focus search</p>
-              <p><kbd>R</kbd> Force refresh all issues</p>
-              <p><kbd>F</kbd> Reset filters</p>
-              <p><kbd>G</kbd> Open reports page</p>
-              <p><kbd>O</kbd> Open sync ops page</p>
-              <p><kbd>Esc</kbd> Close modal/popup</p>
-              <p><kbd>?</kbd> Toggle this help</p>
-            </div>
-            <button type="button" className="secondary-button" onClick={() => setShowShortcutHelp(false)}>
-              Close
-            </button>
-          </aside>
-        </div>
+        <ShortcutHelp isOpen={showShortcutHelp} onClose={() => setShowShortcutHelp(false)} />
       )}
     </main>
   );
