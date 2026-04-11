@@ -196,3 +196,15 @@ CREATE TABLE IF NOT EXISTS "MobileApiToken" (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "MobileApiToken_tokenHash_key" ON "MobileApiToken"("tokenHash");
 CREATE INDEX IF NOT EXISTS "MobileApiToken_userId_revokedAt_idx" ON "MobileApiToken"("userId", "revokedAt");
+
+CREATE TABLE IF NOT EXISTS "IssueEmbedding" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "issueId" TEXT NOT NULL,
+  "embedding" TEXT NOT NULL,
+  "model" TEXT NOT NULL,
+  "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" DATETIME NOT NULL,
+  CONSTRAINT "IssueEmbedding_issueId_fkey" FOREIGN KEY ("issueId") REFERENCES "Issue" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "IssueEmbedding_issueId_key" ON "IssueEmbedding"("issueId");
+CREATE INDEX IF NOT EXISTS "IssueEmbedding_issueId_idx" ON "IssueEmbedding"("issueId");

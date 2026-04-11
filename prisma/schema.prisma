@@ -217,3 +217,14 @@ model MobileApiToken {
 
   @@index([userId, revokedAt])
 }
+
+model IssueEmbedding {
+  id         String   @id @default(cuid())
+  issueId    String   @unique
+  embedding  String   // Stored as JSON string for SQLite compatibility
+  model      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([issueId])
+}

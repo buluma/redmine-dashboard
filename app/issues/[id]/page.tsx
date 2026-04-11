@@ -3,11 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import { normalizeRedmineText } from "@/src/lib/redmine-text-format";
+import { AiIssueActions } from "@/src/components/ai/AiIssueActions";
 
 type Journal = {
   id: string;
@@ -84,7 +85,7 @@ type Issue = {
   children: IssueChild[];
 };
 
-function MarkdownBlock({ content }: { content: string }) {
+function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: { content: string; attachments?: Attachment[]; issueId?: number; onImageClick?: (src: string, alt: string) => void }) {
   const normalized = useMemo(() => normalizeRedmineText(content), [content]);
 
   function textFromNode(node: ReactNode): string {
@@ -116,12 +117,40 @@ function MarkdownBlock({ content }: { content: string }) {
     );
   }
 
+  // Custom img component to handle attachment images in markdown
+  function MarkdownImage({ src, alt }: { src?: string | Blob; alt?: string }) {
+    if (!src || typeof src === "object") return null;
+    // Check if it's a placeholder for collapse image
+    if (src.includes("_ATTACHMENT_")) {
+      // Extract the filename from the placeholder
+      const filename = src.split("/").pop() ?? alt ?? "image";
+      // Find the matching attachment
+      const attachment = attachments.find(a => a.filename === filename);
+      if (!attachment || !issueId) return <span className="muted">[Image: {filename}]</span>;
+      const url = attachmentUrl(issueId, attachment.redmineAttachmentId);
+      // eslint-disable-next-line @next/next/no-img-element
+      return (
+        <img
+          className="attachment-preview-image clickable"
+          src={url}
+          alt={alt ?? filename}
+          loading="lazy"
+          style={{ maxWidth: "520px", height: "auto", cursor: "zoom-in" }}
+          onClick={() => onImageClick?.(url, alt ?? filename)}
+        />
+      );
+    }
+    // Regular images
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={alt ?? ""} />;
+  }
+
   return (
     <div className="markdown">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeHighlight, { ignoreMissing: true }]]}
-        components={{ pre: CodePre }}
+        components={{ pre: CodePre, img: MarkdownImage }}
       >
         {normalized}
       </ReactMarkdown>
@@ -180,6 +209,9 @@ export default function IssueDetailPage() {
   const [githubTitle, setGithubTitle] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionInfo, setActionInfo] = useState<string | null>(null);
+  const [aiStatus, setAiStatus] = useState<{ available: boolean } | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
+  const [markdownAttachments, setMarkdownAttachments] = useState<Attachment[]>([]);
 
   async function reloadIssue() {
     const res = await fetch(`/api/issues/${issueId}`, { cache: "no-store" });
@@ -223,6 +255,27 @@ export default function IssueDetailPage() {
       mounted = false;
     };
   }, [issueId]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/ai/status", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          setAiStatus(data);
+        }
+      } catch {
+        setAiStatus(null);
+      }
+    })();
+  }, []);
+
+  // Update markdown attachments when issue changes
+  useEffect(() => {
+    if (issue?.attachments) {
+      setMarkdownAttachments(issue.attachments);
+    }
+  }, [issue?.attachments]);
 
   async function submitGithubLink(event: React.FormEvent) {
     event.preventDefault();
@@ -361,41 +414,53 @@ export default function IssueDetailPage() {
 
         <article className="report-card">
           <p className="report-label">Description</p>
-          {issue.description ? <MarkdownBlock content={issue.description} /> : <p className="muted">No description.</p>}
+          {issue.description ? <MarkdownBlock content={issue.description} attachments={issue.attachments} issueId={issue.redmineIssueId} onImageClick={(src, alt) => setLightboxImage({ src, alt })} /> : <p className="muted">No description.</p>}
         </article>
 
+        {aiStatus?.available && (
+          <AiIssueActions issueId={issue.id} />
+        )}
+
         <article className="report-card">
-          <p className="report-label">Attachments</p>
-          <div className="timeline">
-            {issue.attachments.length === 0 && <p className="muted">No attachments.</p>}
-            {issue.attachments.map((attachment) => (
-              <div key={attachment.id} className="timeline-item">
-                <div className="entry-head">
-                  <a href={attachmentUrl(issue.redmineIssueId, attachment.redmineAttachmentId)} target="_blank" rel="noreferrer">
-                    {attachment.filename}
-                  </a>
-                  <span className="muted">{(attachment.filesize / 1024).toFixed(1)} KB</span>
+          <details className="issue-collapsible">
+            <summary>
+              Attachments <span className="muted">({issue.attachments.length})</span>
+            </summary>
+            <div className="timeline">
+              {issue.attachments.length === 0 && <p className="muted">No attachments.</p>}
+              {issue.attachments.map((attachment) => (
+                <div key={attachment.id} className="timeline-item">
+                  <div className="entry-head">
+                    <a href={attachmentUrl(issue.redmineIssueId, attachment.redmineAttachmentId)} target="_blank" rel="noreferrer">
+                      {attachment.filename}
+                    </a>
+                    <span className="muted">{(attachment.filesize / 1024).toFixed(1)} KB</span>
+                  </div>
+                  {isImageAttachment(attachment) && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      className="attachment-preview-image clickable"
+                      src={attachmentUrl(issue.redmineIssueId, attachment.redmineAttachmentId)}
+                      alt={attachment.filename}
+                      loading="lazy"
+                      style={{ maxWidth: "520px", height: "auto", cursor: "zoom-in" }}
+                      onClick={() => setLightboxImage({
+                        src: attachmentUrl(issue.redmineIssueId, attachment.redmineAttachmentId),
+                        alt: attachment.filename,
+                      })}
+                    />
+                  )}
+                  {isPdfAttachment(attachment) && (
+                    <iframe
+                      className="attachment-preview-pdf"
+                      src={attachmentUrl(issue.redmineIssueId, attachment.redmineAttachmentId)}
+                      title={`Preview ${attachment.filename}`}
+                    />
+                  )}
                 </div>
-                {isImageAttachment(attachment) && (
-                  <Image
-                    className="attachment-preview-image"
-                    src={attachmentUrl(issue.redmineIssueId, attachment.redmineAttachmentId)}
-                    alt={attachment.filename}
-                    width={520}
-                    height={240}
-                    loading="lazy"
-                  />
-                )}
-                {isPdfAttachment(attachment) && (
-                  <iframe
-                    className="attachment-preview-pdf"
-                    src={attachmentUrl(issue.redmineIssueId, attachment.redmineAttachmentId)}
-                    title={`Preview ${attachment.filename}`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </details>
         </article>
 
         <article className="report-card">
@@ -573,6 +638,19 @@ export default function IssueDetailPage() {
           )}
         </article>
       </section>
+
+      {lightboxImage && (
+        <div className="lightbox-overlay" onClick={() => setLightboxImage(null)}>
+          <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+            <button className="lightbox-close" onClick={() => setLightboxImage(null)} aria-label="Close">
+              ×
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={lightboxImage.src} alt={lightboxImage.alt} className="lightbox-image" />
+            <p className="lightbox-caption">{lightboxImage.alt}</p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
