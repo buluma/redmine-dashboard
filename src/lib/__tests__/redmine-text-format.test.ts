@@ -36,6 +36,33 @@ describe("normalizeRedmineText", () => {
     expect(output).toContain("![](https://example.com/img.png)");
   });
 
+  it("converts styled Redmine attachment images to attachment placeholders", () => {
+    const input = `open the rack form\n!{height:924px; width:435px;}20260319-131544-758.png!`;
+    const output = normalizeRedmineText(input);
+
+    expect(output).toContain("open the rack form");
+    expect(output).toContain("![](/api/issues/_ATTACHMENT_/20260319-131544-758.png)");
+    expect(output).not.toContain("!{height");
+  });
+
+  it("converts Redmine image references in journal notes to attachment placeholders", () => {
+    const input = `Something is broken [Image: 20260403-122619-539.png]\n[Image: 20260403-122538-591.png]`;
+    const output = normalizeRedmineText(input);
+
+    expect(output).toContain("![20260403-122619-539.png](/api/issues/_ATTACHMENT_/20260403-122619-539.png)");
+    expect(output).toContain("![20260403-122538-591.png](/api/issues/_ATTACHMENT_/20260403-122538-591.png)");
+    expect(output).not.toContain("[Image:");
+  });
+
+  it("removes Redmine Textile style wrappers while keeping label text", () => {
+    const input = `%{background:orange;}Result% • Error\n%{background:lightgreen;}Expected% success message`;
+    const output = normalizeRedmineText(input);
+
+    expect(output).toContain("Result • Error");
+    expect(output).toContain("Expected success message");
+    expect(output).not.toContain("%{background");
+  });
+
   it("converts escaped redmine pre/code blocks into fenced markdown", () => {
     const input = `Condition details...\n&lt;pre&gt;&lt;code class=&quot;javascript&quot;&gt;ctx.instance.isChanged(\"status\") &amp;&amp; ok&lt;/pre&gt;&lt;/code&gt;`;
     const output = normalizeRedmineText(input);

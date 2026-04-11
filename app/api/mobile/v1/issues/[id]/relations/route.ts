@@ -2,6 +2,7 @@ import { requireMobileUser, requireRedmineClientForUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError, parseJson } from "@/src/lib/http";
 import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
+import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
 import { relationCreateSchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
 
@@ -11,12 +12,6 @@ function parseIssueId(id: string): number {
     throw new Error("Invalid issue id");
   }
   return n;
-}
-
-function statusFromRedmineError(message: string): number | null {
-  const match = message.match(/Redmine request failed \((\d{3})\):/);
-  if (!match) return null;
-  return Number(match[1]);
 }
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -59,7 +54,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     return Response.json({ ok: true, items });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to create relation";
+    const message = redmineMessageFromError(error, "Unable to create relation");
     const status =
       message === "Mobile API is disabled"
         ? 404
@@ -67,7 +62,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           ? 401
           : message === "Issue not found"
             ? 404
-            : (statusFromRedmineError(message) ?? 400);
+            : (redmineStatusFromError(error) ?? 400);
     return jsonError(message, status);
   }
 }

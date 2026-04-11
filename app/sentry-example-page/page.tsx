@@ -14,15 +14,28 @@ class SentryExampleFrontendError extends Error {
 export default function Page() {
   const [hasSentError, setHasSentError] = useState(false);
   const [isConnected, setIsConnected] = useState(true);
+  const enabled = process.env.NEXT_PUBLIC_ENABLE_SENTRY_TEST_ROUTES === "true";
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     Sentry.logger.info("Sentry example page loaded");
     async function checkConnectivity() {
       const result = await Sentry.diagnoseSdkConnectivity();
       setIsConnected(result !== "sentry-unreachable");
     }
     checkConnectivity();
-  }, []);
+  }, [enabled]);
+
+  if (!enabled) {
+    return (
+      <main>
+        <h1>Sentry test route unavailable</h1>
+        <p>Telemetry test routes are disabled in this environment.</p>
+      </main>
+    );
+  }
 
   return (
     <div>
@@ -49,15 +62,8 @@ export default function Page() {
         <h1>sentry-example-page</h1>
 
         <p className="description">
-          Click the button below, and view the sample error on the Sentry{" "}
-          <a
-            target="_blank"
-            rel="noopener"
-            href="https://shadownet-20.sentry.io/issues/?project=4510951252426752"
-          >
-            Issues Page
-          </a>
-          . For more details about setting up Sentry,{" "}
+          Click the button below, then verify the sample error in your Sentry project.
+          For more details about setting up Sentry,{" "}
           <a
             target="_blank"
             rel="noopener"

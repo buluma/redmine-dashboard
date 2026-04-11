@@ -30,6 +30,7 @@ function numberFromEnv(key: string, fallback: number): number {
 const tracesSampleRate = numberFromEnv("SENTRY_TRACES_SAMPLE_RATE", isProduction ? 0.1 : 0);
 const enableLogs = boolFromEnv("SENTRY_ENABLE_LOGS", false);
 const enableConsoleLogging = boolFromEnv("SENTRY_ENABLE_CONSOLE_LOGGING", false);
+const sendDefaultPii = boolFromEnv("SENTRY_SEND_DEFAULT_PII", false);
 
 const integrations = [];
 if (enableConsoleLogging) {
@@ -44,7 +45,5 @@ Sentry.init({
   // Enable logs to be sent to Sentry
   enableLogs,
 
-  // Enable sending user PII (Personally Identifiable Information)
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
-  sendDefaultPii: true,
+  sendDefaultPii,
 });

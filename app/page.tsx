@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
@@ -83,6 +83,7 @@ type IssueChild = {
 type Issue = {
   id: string;
   redmineIssueId: number;
+  redmineBaseUrl: string;
   subject: string;
   description: string | null;
   projectName: string | null;
@@ -140,14 +141,74 @@ type ActivityEvent = {
 const POLL_INTERVAL_MS = 90_000;
 const SAVED_VIEWS_KEY = "nrcc.savedViews.v1";
 
-function MarkdownBlock({ content }: { content: string }) {
+function MarkdownBlock({ content, attachments = [], issueId }: { content: string; attachments?: Attachment[]; issueId?: number }) {
   const normalized = useMemo(() => normalizeRedmineText(content), [content]);
+
+  function textFromNode(node: ReactNode): string {
+    if (typeof node === "string" || typeof node === "number") {
+      return String(node);
+    }
+    if (!node || typeof node !== "object") {
+      return "";
+    }
+    if (Array.isArray(node)) {
+      return node.map((part) => textFromNode(part)).join("");
+    }
+    const props = (node as { props?: { children?: ReactNode } }).props;
+    return textFromNode(props?.children ?? "");
+  }
+
+  function MarkdownImage({ src, alt }: { src?: string | Blob; alt?: string }) {
+    if (!src || typeof src === "object") return null;
+    const srcText = src.toString();
+    const attachmentMarker = "/api/issues/_ATTACHMENT_/";
+    const filename = srcText.includes(attachmentMarker)
+      ? decodeURIComponent(srcText.slice(srcText.indexOf(attachmentMarker) + attachmentMarker.length))
+      : srcText.split("/").pop() ?? alt ?? "image";
+
+    if (srcText.includes(attachmentMarker)) {
+      const attachment = attachments.find((item) => item.filename === filename);
+      if (!attachment || !issueId) return <span className="muted">[Image: {filename}]</span>;
+      const url = attachmentUrl(issueId, attachment.redmineAttachmentId);
+      return (
+        <span className="markdown-image-frame">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="attachment-preview-image clickable" src={url} alt={alt ?? filename} loading="lazy" />
+        </span>
+      );
+    }
+
+    return (
+      <span className="markdown-image-frame">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="attachment-preview-image clickable" src={srcText} alt={alt ?? filename} loading="lazy" />
+      </span>
+    );
+  }
+
+  function CodePre(props: { children?: ReactNode }) {
+    const raw = textFromNode(props.children ?? "");
+    const lines = raw.split("\n").filter((line) => line.trim().length > 0).length;
+    const shouldCollapse = lines >= 10 || raw.trim().length >= 80;
+    if (!shouldCollapse) {
+      return <pre>{props.children}</pre>;
+    }
+    return (
+      <details className="md-collapsible-code">
+        <summary>Show code ({lines} lines)</summary>
+        <pre>{props.children}</pre>
+      </details>
+    );
+  }
+
   return (
     <div className="markdown">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeHighlight, { ignoreMissing: true }]]}
         components={{
+          pre: CodePre,
+          img: MarkdownImage,
           a: ({ href, children }) => (
             <a href={href} target="_blank" rel="noopener noreferrer">
               {children}
@@ -163,6 +224,14 @@ function MarkdownBlock({ content }: { content: string }) {
 
 function attachmentUrl(issueId: number, attachmentId: number): string {
   return `/api/issues/${issueId}/attachments/${attachmentId}`;
+}
+
+function redmineIssueUrl(issue: Pick<Issue, "redmineBaseUrl" | "redmineIssueId">): string | null {
+  const baseUrl = issue.redmineBaseUrl?.trim().replace(/\/+$/, "");
+  if (!baseUrl) {
+    return null;
+  }
+  return `${baseUrl}/issues/${issue.redmineIssueId}`;
 }
 
 function isImageAttachment(attachment: Attachment): boolean {
@@ -1753,7 +1822,20 @@ export default function Home() {
                             aria-label={`Select issue ${issue.redmineIssueId}`}
                           />
                         </td>
-                        <td>#{issue.redmineIssueId}</td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          {redmineIssueUrl(issue) ? (
+                            <a
+                              className="redmine-issue-link compact"
+                              href={redmineIssueUrl(issue) ?? undefined}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              #{issue.redmineIssueId}
+                            </a>
+                          ) : (
+                            <span>#{issue.redmineIssueId}</span>
+                          )}
+                        </td>
                         <td>
                           <div className="subject-cell">
                             <p>{issue.subject}</p>
@@ -1808,12 +1890,32 @@ export default function Home() {
           <aside className="card issue-modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="drawer-header">
               <div>
-                <h2>
-                  #{selectedIssue.redmineIssueId} {selectedIssue.subject}
-                </h2>
+                <div className="issue-title-line compact-title">
+                  {redmineIssueUrl(selectedIssue) ? (
+                    <a
+                      className="redmine-issue-link"
+                      href={redmineIssueUrl(selectedIssue) ?? undefined}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      #{selectedIssue.redmineIssueId}
+                    </a>
+                  ) : (
+                    <span className="redmine-issue-link muted">#{selectedIssue.redmineIssueId}</span>
+                  )}
+                  <h2>{selectedIssue.subject}</h2>
+                </div>
                 <p className="issue-meta">
                   {selectedIssue.projectName ?? "No Project"} • {selectedIssue.statusName} • {selectedIssue.priority ?? "No Priority"}
                 </p>
+                {redmineIssueUrl(selectedIssue) && (
+                  <p className="external-issue-row">
+                    Redmine source:
+                    <a href={redmineIssueUrl(selectedIssue) ?? undefined} target="_blank" rel="noopener noreferrer">
+                      {redmineIssueUrl(selectedIssue)}
+                    </a>
+                  </p>
+                )}
                 {selectedIssue.children.length > 0 && (
                   <p className="muted">Children: {selectedIssue.children.map((c) => `#${c.id}`).join(", ")}</p>
                 )}
@@ -1999,10 +2101,14 @@ export default function Home() {
                   Type
                   <select value={relationType} onChange={(e) => setRelationType(e.target.value)}>
                     <option value="relates">relates</option>
+                    <option value="duplicated">duplicated</option>
                     <option value="blocks">blocks</option>
+                    <option value="blocked">blocked</option>
                     <option value="precedes">precedes</option>
                     <option value="follows">follows</option>
                     <option value="duplicates">duplicates</option>
+                    <option value="copied_to">copied_to</option>
+                    <option value="copied_from">copied_from</option>
                   </select>
                 </label>
                 <label>
@@ -2046,7 +2152,11 @@ export default function Home() {
             <section className="detail-section">
               <h3>Description</h3>
               {selectedIssue.description ? (
-                <MarkdownBlock content={selectedIssue.description} />
+                <MarkdownBlock
+                  content={selectedIssue.description}
+                  attachments={selectedIssue.attachments}
+                  issueId={selectedIssue.redmineIssueId}
+                />
               ) : (
                 <p className="muted">No description.</p>
               )}
@@ -2074,7 +2184,13 @@ export default function Home() {
                     <p className="muted">
                       <strong>{j.author ?? "Unknown"}</strong> • {new Date(j.createdOnRemote).toLocaleString()}
                     </p>
-                    {j.notes ? <MarkdownBlock content={j.notes} /> : <p>(empty note)</p>}
+                    {j.notes ? (
+                      <MarkdownBlock
+                        content={j.notes}
+                        attachments={selectedIssue.attachments}
+                        issueId={selectedIssue.redmineIssueId}
+                      />
+                    ) : <p>(empty note)</p>}
                   </div>
                 ))}
               </div>
@@ -2162,7 +2278,13 @@ export default function Home() {
                       {t.authorName ?? "Unknown author"}
                       {t.activityName ? ` • ${t.activityName}` : ""}
                     </p>
-                    {t.comments ? <MarkdownBlock content={t.comments} /> : <p>(no comment)</p>}
+                    {t.comments ? (
+                      <MarkdownBlock
+                        content={t.comments}
+                        attachments={selectedIssue.attachments}
+                        issueId={selectedIssue.redmineIssueId}
+                      />
+                    ) : <p>(no comment)</p>}
                   </div>
                 ))}
               </div>

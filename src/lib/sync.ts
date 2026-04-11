@@ -91,7 +91,7 @@ function parseChildren(issueRaw: Record<string, unknown>): IssueChild[] {
     .filter((x): x is IssueChild => Boolean(x));
 }
 
-async function upsertIssueFromRemote(userId: string, issueRaw: Record<string, unknown>) {
+async function upsertIssueFromRemote(userId: string, redmineBaseUrl: string, issueRaw: Record<string, unknown>) {
   const remoteId = asNumber(issueRaw.id);
   if (!remoteId) {
     throw new Error("Missing remote issue id");
@@ -101,6 +101,7 @@ async function upsertIssueFromRemote(userId: string, issueRaw: Record<string, un
   const payload: Prisma.IssueUncheckedCreateInput = {
     userId,
     redmineIssueId: remoteId,
+    redmineBaseUrl,
     subject: asString(issueRaw.subject) ?? `Issue #${remoteId}`,
     description: asString(issueRaw.description),
     projectName: nestedName(issueRaw.project),
@@ -120,7 +121,13 @@ async function upsertIssueFromRemote(userId: string, issueRaw: Record<string, un
   };
 
   const issue = await prisma.issue.upsert({
-    where: { redmineIssueId: remoteId },
+    where: {
+      userId_redmineBaseUrl_redmineIssueId: {
+        userId,
+        redmineBaseUrl,
+        redmineIssueId: remoteId,
+      },
+    },
     update: {
       ...payload,
     },
@@ -152,7 +159,7 @@ async function upsertAttachmentsForIssue(issueId: string, issueRaw: Record<strin
 
     seenIds.push(remoteId);
     await prisma.issueAttachment.upsert({
-      where: { redmineAttachmentId: remoteId },
+      where: { issueId_redmineAttachmentId: { issueId, redmineAttachmentId: remoteId } },
       update: {
         issueId,
         filename,
@@ -210,7 +217,7 @@ async function upsertRelationsForIssue(issueId: string, issueRaw: Record<string,
 
     seenIds.push(remoteId);
     await prisma.issueRelation.upsert({
-      where: { redmineRelationId: remoteId },
+      where: { issueId_redmineRelationId: { issueId, redmineRelationId: remoteId } },
       update: {
         issueId,
         relationType,
@@ -254,7 +261,7 @@ async function upsertJournals(issueId: string, issueRaw: Record<string, unknown>
     }
 
     await prisma.issueJournal.upsert({
-      where: { redmineJournalId: remoteId },
+      where: { issueId_redmineJournalId: { issueId, redmineJournalId: remoteId } },
       update: {
         author: nestedName(journal.user),
         notes: asString(journal.notes),
@@ -290,7 +297,7 @@ async function upsertTimeEntriesForIssue(
 
     seenIds.push(remoteId);
     await prisma.timeEntry.upsert({
-      where: { redmineTimeEntryId: remoteId },
+      where: { issueId_redmineTimeEntryId: { issueId, redmineTimeEntryId: remoteId } },
       update: {
         issueId,
         userId,
@@ -419,7 +426,7 @@ export async function syncSingleIssue(
     "allowed_statuses",
     "children",
   ]);
-  const issue = await upsertIssueFromRemote(userId, detail.issue);
+  const issue = await upsertIssueFromRemote(userId, client.normalizedBaseUrl, detail.issue);
   await upsertJournals(issue.id, detail.issue);
   await upsertAttachmentsForIssue(issue.id, detail.issue, options?.pruneAttachments ?? true);
   await upsertRelationsForIssue(issue.id, detail.issue, options?.pruneRelations ?? true);
@@ -585,6 +592,7 @@ export async function executeSyncJob(jobId: string): Promise<void> {
       await prisma.issue.deleteMany({
         where: {
           userId: job.userId,
+          redmineBaseUrl: client.normalizedBaseUrl,
           redmineIssueId: {
             notIn: Array.from(seenRemoteIssueIds),
           },

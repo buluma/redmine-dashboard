@@ -48,7 +48,8 @@ model UserRedmineCredential {
 
 model Issue {
   id               String         @id @default(cuid())
-  redmineIssueId   Int            @unique
+  redmineIssueId   Int
+  redmineBaseUrl   String
   userId           String
   user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   subject          String
@@ -75,13 +76,14 @@ model Issue {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
+  @@unique([userId, redmineBaseUrl, redmineIssueId])
   @@index([userId, statusId])
   @@index([userId, updatedOnRemote])
 }
 
 model IssueAttachment {
   id                 String   @id @default(cuid())
-  redmineAttachmentId Int     @unique
+  redmineAttachmentId Int
   issueId            String
   issue              Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
   filename           String
@@ -93,12 +95,13 @@ model IssueAttachment {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
+  @@unique([issueId, redmineAttachmentId])
   @@index([issueId, createdOnRemote])
 }
 
 model IssueRelation {
   id               String   @id @default(cuid())
-  redmineRelationId Int     @unique
+  redmineRelationId Int
   issueId          String
   issue            Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
   targetIssueId    Int
@@ -107,6 +110,7 @@ model IssueRelation {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  @@unique([issueId, redmineRelationId])
   @@index([issueId, relationType])
 }
 
@@ -131,7 +135,7 @@ model IssueGithubLink {
 
 model IssueJournal {
   id               String   @id @default(cuid())
-  redmineJournalId Int      @unique
+  redmineJournalId Int
   issueId          String
   issue            Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
   author           String?
@@ -139,12 +143,13 @@ model IssueJournal {
   createdOnRemote  DateTime
   createdAt        DateTime @default(now())
 
+  @@unique([issueId, redmineJournalId])
   @@index([issueId, createdOnRemote])
 }
 
 model TimeEntry {
   id                 String    @id @default(cuid())
-  redmineTimeEntryId Int?      @unique
+  redmineTimeEntryId Int?
   issueId            String
   issue              Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
   userId             String
@@ -157,6 +162,7 @@ model TimeEntry {
   spentOn            DateTime
   createdAt          DateTime  @default(now())
 
+  @@unique([issueId, redmineTimeEntryId])
   @@index([userId, spentOn])
   @@index([issueId])
 }

@@ -4,6 +4,7 @@ import {
   connectSchema,
   githubLinkCreateSchema,
   mobilePairConnectSchema,
+  relationCreateSchema,
   statusUpdateSchema,
   timeLogSchema,
 } from "@/src/lib/schemas";
@@ -72,5 +73,13 @@ describe("validation schemas", () => {
       deviceName: "Pixel 9",
     });
     expect(out.deviceName).toBe("Pixel 9");
+  });
+
+  it("accepts documented Redmine relation types", () => {
+    const out = relationCreateSchema.parse({
+      issueToId: 456,
+      relationType: "copied_from",
+    });
+    expect(out.relationType).toBe("copied_from");
   });
 });

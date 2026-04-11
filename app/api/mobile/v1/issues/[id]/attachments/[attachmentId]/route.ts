@@ -2,6 +2,7 @@ import { requireMobileUser, requireRedmineClientForUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
+import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
 
 function parseIssueId(id: string): number {
   const n = Number(id);
@@ -17,12 +18,6 @@ function parseAttachmentId(id: string): number {
     throw new Error("Invalid attachment id");
   }
   return n;
-}
-
-function statusFromRedmineError(message: string): number | null {
-  const match = message.match(/Redmine request failed \((\d{3})\):/);
-  if (!match) return null;
-  return Number(match[1]);
 }
 
 export async function GET(request: Request, context: { params: Promise<{ id: string; attachmentId: string }> }) {
@@ -59,7 +54,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
     return new Response(upstream.body, { status: 200, headers });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to download attachment";
+    const message = redmineMessageFromError(error, "Unable to download attachment");
     const status =
       message === "Mobile API is disabled"
         ? 404
@@ -67,7 +62,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
           ? 401
           : message === "Issue not found" || message === "Attachment not found"
             ? 404
-            : (statusFromRedmineError(message) ?? 400);
+            : (redmineStatusFromError(error) ?? 400);
     return jsonError(message, status);
   }
 }

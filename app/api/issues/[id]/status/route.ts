@@ -1,6 +1,7 @@
 import { requireRedmineClient } from "@/src/lib/auth";
 import { jsonError, parseJson } from "@/src/lib/http";
 import { isRateLimited } from "@/src/lib/rate-limit";
+import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
 import { statusUpdateSchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
 import { trackFailure, trackInfo, trackSuccess } from "@/src/lib/telemetry";
@@ -11,12 +12,6 @@ function parseIssueId(id: string): number {
     throw new Error("Invalid issue id");
   }
   return n;
-}
-
-function statusFromRedmineError(message: string): number | null {
-  const match = message.match(/Redmine request failed \\((\\d{3})\\):/);
-  if (!match) return null;
-  return Number(match[1]);
 }
 
 function statusClass(status: number): string {
@@ -78,8 +73,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     return Response.json({ ok: true, issue });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to update status";
-    const status = message === "Unauthorized" ? 401 : (statusFromRedmineError(message) ?? 400);
+    const message = redmineMessageFromError(error, "Unable to update status");
+    const status = message === "Unauthorized" ? 401 : (redmineStatusFromError(error) ?? 400);
     trackFailure({
       event: "issue.status.update.failed",
       error,
@@ -109,8 +104,8 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       allowedStatusIds: allowedStatuses.map((s) => s.id),
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to fetch allowed statuses";
-    const status = message === "Unauthorized" ? 401 : (statusFromRedmineError(message) ?? 400);
+    const message = redmineMessageFromError(error, "Unable to fetch allowed statuses");
+    const status = message === "Unauthorized" ? 401 : (redmineStatusFromError(error) ?? 400);
     return jsonError(message, status);
   }
 }

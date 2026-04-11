@@ -125,5 +125,8 @@ Runtime telemetry volume is controlled through environment variables:
 - `SENTRY_PROFILE_SAMPLE_RATE`: Defaults to `0.0` unless profiling is explicitly needed.
 - `SENTRY_ENABLE_LOGS`: Defaults to `false`.
 - `SENTRY_ENABLE_CONSOLE_LOGGING`: Defaults to `false`.
+- `SENTRY_SEND_DEFAULT_PII`: Defaults to `false`.
+- `NEXT_PUBLIC_SENTRY_*`: Browser-side trace/profile/log/PII controls. These are intentionally separate from server variables because they are exposed to client builds.
+- `ENABLE_SENTRY_TEST_ROUTES` and `NEXT_PUBLIC_ENABLE_SENTRY_TEST_ROUTES`: Defaults to `false`; enable only for intentional Sentry smoke tests.
 
 These defaults keep error reporting active while reducing memory and CPU overhead from high-volume tracing, profiling, and console-log ingestion.

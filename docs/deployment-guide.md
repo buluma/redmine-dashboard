@@ -41,6 +41,9 @@ Open the `.env` file and set the following variables:
 - `SENTRY_PROFILE_SAMPLE_RATE`: Profiling sampling ratio. Recommended default: `0.0` unless actively profiling.
 - `SENTRY_ENABLE_LOGS`: Enables Sentry logs pipeline (`false` by default).
 - `SENTRY_ENABLE_CONSOLE_LOGGING`: Sends `console.log/warn/error` to Sentry (`false` by default).
+- `SENTRY_SEND_DEFAULT_PII`: Sends default server-side PII to Sentry (`false` by default).
+- `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`, `NEXT_PUBLIC_SENTRY_PROFILE_SAMPLE_RATE`, `NEXT_PUBLIC_SENTRY_ENABLE_LOGS`, `NEXT_PUBLIC_SENTRY_ENABLE_CONSOLE_LOGGING`, `NEXT_PUBLIC_SENTRY_SEND_DEFAULT_PII`: Browser-side Sentry controls; keep aligned with the server settings you intentionally want exposed to client builds.
+- `ENABLE_SENTRY_TEST_ROUTES` and `NEXT_PUBLIC_ENABLE_SENTRY_TEST_ROUTES`: Enables local Sentry smoke-test routes/pages (`false` by default).
 
 **Recommended (runtime memory controls):**
 
@@ -116,6 +119,9 @@ A full list of helper targets is available in the [Makefile](/Users/shadowwalker
 - `SENTRY_PROFILE_SAMPLE_RATE`: Profiling sampling ratio. Defaults to `0.0`.
 - `SENTRY_ENABLE_LOGS`: Enables Sentry logs pipeline (`false` by default).
 - `SENTRY_ENABLE_CONSOLE_LOGGING`: Sends `console.log/warn/error` to Sentry (`false` by default).
+- `SENTRY_SEND_DEFAULT_PII`: Sends default server-side PII to Sentry (`false` by default).
+- `NEXT_PUBLIC_SENTRY_*`: Browser-side equivalents for trace/profile/log/PII controls.
+- `ENABLE_SENTRY_TEST_ROUTES` / `NEXT_PUBLIC_ENABLE_SENTRY_TEST_ROUTES`: Optional Sentry smoke-test surface; leave disabled outside intentional telemetry checks.
 - `ENABLE_SYNC_POLLER`: Enables background sync polling. Defaults to `false` in development and `true` in production.
 - `POLL_INTERVAL_MS`: The interval for the sync poller in milliseconds (default: `90000`).
 - `LEADER_LOCK_TTL_MS`: The time-to-live for the leader lock in milliseconds (default: `90000`).

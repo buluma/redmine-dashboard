@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -66,6 +65,7 @@ type IssueChild = {
 type Issue = {
   id: string;
   redmineIssueId: number;
+  redmineBaseUrl: string;
   subject: string;
   description: string | null;
   projectName: string | null;
@@ -84,6 +84,7 @@ type Issue = {
   timeEntries: TimeEntry[];
   attachments: Attachment[];
   relations: Relation[];
+  allowedStatuses: AllowedStatus[];
   children: IssueChild[];
 };
 
@@ -122,29 +123,42 @@ function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: { c
   // Custom img component to handle attachment images in markdown
   function MarkdownImage({ src, alt }: { src?: string | Blob; alt?: string }) {
     if (!src || typeof src === "object") return null;
-    // Check if it's a placeholder for collapse image
-    if (src.includes("_ATTACHMENT_")) {
-      // Extract the filename from the placeholder
-      const filename = src.split("/").pop() ?? alt ?? "image";
-      // Find the matching attachment
+    const srcText = src.toString();
+    const attachmentMarker = "/api/issues/_ATTACHMENT_/";
+    const filename = srcText.includes(attachmentMarker)
+      ? decodeURIComponent(srcText.slice(srcText.indexOf(attachmentMarker) + attachmentMarker.length))
+      : srcText.split("/").pop() ?? alt ?? "image";
+
+    if (srcText.includes(attachmentMarker)) {
       const attachment = attachments.find(a => a.filename === filename);
       if (!attachment || !issueId) return <span className="muted">[Image: {filename}]</span>;
       const url = attachmentUrl(issueId, attachment.redmineAttachmentId);
-      // eslint-disable-next-line @next/next/no-img-element
       return (
-        <img
-          className="attachment-preview-image clickable"
-          src={url}
-          alt={alt ?? filename}
-          loading="lazy"
-          style={{ maxWidth: "520px", height: "auto", cursor: "zoom-in" }}
-          onClick={() => onImageClick?.(url, alt ?? filename)}
-        />
+        <span className="markdown-image-frame">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            className="attachment-preview-image clickable"
+            src={url}
+            alt={alt ?? filename}
+            loading="lazy"
+            onClick={() => onImageClick?.(url, alt ?? filename)}
+          />
+        </span>
       );
     }
-    // Regular images
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt={alt ?? ""} />;
+
+    return (
+      <span className="markdown-image-frame">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          className="attachment-preview-image clickable"
+          src={srcText}
+          alt={alt ?? filename}
+          loading="lazy"
+          onClick={() => onImageClick?.(srcText, alt ?? filename)}
+        />
+      </span>
+    );
   }
 
   return (
@@ -170,6 +184,14 @@ function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: { c
 
 function attachmentUrl(issueId: number, attachmentId: number): string {
   return `/api/issues/${issueId}/attachments/${attachmentId}`;
+}
+
+function redmineIssueUrl(issue: Pick<Issue, "redmineBaseUrl" | "redmineIssueId">): string | null {
+  const baseUrl = issue.redmineBaseUrl?.trim().replace(/\/+$/, "");
+  if (!baseUrl) {
+    return null;
+  }
+  return `${baseUrl}/issues/${issue.redmineIssueId}`;
 }
 
 function isImageAttachment(attachment: Attachment): boolean {
@@ -219,12 +241,14 @@ export default function IssueDetailPage() {
   const [githubTitle, setGithubTitle] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionInfo, setActionInfo] = useState<string | null>(null);
+  const [comment, setComment] = useState("");
+  const [commentBusy, setCommentBusy] = useState(false);
   const [aiStatus, setAiStatus] = useState<{ available: boolean } | null>(null);
   const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
-  const [markdownAttachments, setMarkdownAttachments] = useState<Attachment[]>([]);
+  const [transitionStatuses, setTransitionStatuses] = useState<AllowedStatus[]>([]);
   const [activities, setActivities] = useState<Array<{ id: number; name: string }>>([]);
   const [users, setUsers] = useState<Array<{ id: number; name: string }>>([]);
-  const [statuses, setStatuses] = useState<Array<{ id: number; name: string }>>([]);
+  const tabsRef = useRef<HTMLDivElement | null>(null);
 
   async function reloadIssue() {
     const res = await fetch(`/api/issues/${issueId}`, { cache: "no-store" });
@@ -283,23 +307,46 @@ export default function IssueDetailPage() {
     })();
   }, []);
 
-  // Update markdown attachments when issue changes
   useEffect(() => {
-    if (issue?.attachments) {
-      setMarkdownAttachments(issue.attachments);
+    if (!issue) {
+      return;
     }
-  }, [issue?.attachments]);
+    setTransitionStatuses(issue.allowedStatuses ?? []);
+    let mounted = true;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/issues/${issue.redmineIssueId}/status`, { cache: "no-store" });
+        if (!res.ok) {
+          return;
+        }
+        const data = await res.json();
+        if (mounted && Array.isArray(data.allowedStatuses)) {
+          setTransitionStatuses(data.allowedStatuses);
+        }
+      } catch {
+        // Keep cached allowed statuses when the live lookup is unavailable.
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [issue]);
 
-  // Load activities, users, and statuses
+  // Load activities and assignable users
   useEffect(() => {
     void (async () => {
       try {
-        const res = await fetch("/api/redmine/bootstrap", { cache: "no-store" });
-        if (res.ok) {
-          const data = await res.json();
-          setActivities(data.activities || []);
-          setUsers(data.users || []);
-          setStatuses(data.statuses || []);
+        const [activitiesRes, usersRes] = await Promise.all([
+          fetch("/api/internal/activities", { cache: "no-store" }),
+          fetch("/api/internal/users", { cache: "no-store" }),
+        ]);
+        if (activitiesRes.ok) {
+          const data = await activitiesRes.json();
+          setActivities(data.activities ?? []);
+        }
+        if (usersRes.ok) {
+          const data = await usersRes.json();
+          setUsers(data.users ?? []);
         }
       } catch {
         // Ignore errors
@@ -365,10 +412,46 @@ export default function IssueDetailPage() {
     }
   }
 
+  async function submitComment(event: React.FormEvent) {
+    event.preventDefault();
+    const trimmed = comment.trim();
+    if (!trimmed) {
+      return;
+    }
+    setCommentBusy(true);
+    setActionError(null);
+    setActionInfo(null);
+    try {
+      const res = await fetch(`/api/issues/${issueId}/comment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comment: trimmed }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Unable to post comment");
+      }
+      setComment("");
+      await reloadIssue();
+      setActionInfo("Comment posted to Redmine.");
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Unable to post comment");
+    } finally {
+      setCommentBusy(false);
+    }
+  }
+
   const totalSpent = useMemo(() => {
     if (!issue) return 0;
     return issue.timeEntries.reduce((sum, entry) => sum + entry.hours, 0);
   }, [issue]);
+
+  useEffect(() => {
+    if (!issue) {
+      return;
+    }
+    tabsRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [activeTab, issue]);
 
   const noteJournals = useMemo(() => {
     if (!issue) return [];
@@ -380,6 +463,8 @@ export default function IssueDetailPage() {
     const propertySignals = /\b(set to|changed|updated|status|priority|assignee|parent|category)\b/i;
     return issue.journals.filter((journal) => propertySignals.test(journal.notes ?? ""));
   }, [issue]);
+
+  const externalIssueUrl = issue ? redmineIssueUrl(issue) : null;
 
   if (loading) {
     return <main className="dashboard"><p>Loading issue...</p></main>;
@@ -396,14 +481,31 @@ export default function IssueDetailPage() {
 
   return (
     <main className="dashboard">
-      <header className="card hero">
+      <header className="card hero issue-hero">
         <div className="hero-top">
-          <div>
-            <p className="kicker">{issue.tracker ?? "Issue"} #{issue.redmineIssueId}</p>
-            <h1>{issue.subject}</h1>
+          <div className="issue-heading">
+            <p className="kicker">{issue.tracker ?? "Issue"}</p>
+            <div className="issue-title-line">
+              {externalIssueUrl ? (
+                <a className="redmine-issue-link" href={externalIssueUrl} target="_blank" rel="noopener noreferrer">
+                  #{issue.redmineIssueId}
+                </a>
+              ) : (
+                <span className="redmine-issue-link muted">#{issue.redmineIssueId}</span>
+              )}
+              <h1>{issue.subject}</h1>
+            </div>
             <p className="muted">
               {issue.projectName ?? "No project"} • Updated {formatAgo(issue.updatedOnRemote)}
             </p>
+            {externalIssueUrl && (
+              <p className="external-issue-row">
+                Redmine source:
+                <a href={externalIssueUrl} target="_blank" rel="noopener noreferrer">
+                  {externalIssueUrl}
+                </a>
+              </p>
+            )}
             <div className="chip-row">
               <span className="status-chip active">{issue.statusName}</span>
               <span className="status-chip">{issue.priority ?? "No priority"}</span>
@@ -420,7 +522,7 @@ export default function IssueDetailPage() {
       <QuickActionsPanel
         issueId={issue.redmineIssueId}
         currentStatus={issue.statusName}
-        currentAssignee={issue.assignedToName}
+        currentAssignee={issue.assignedToName ?? undefined}
         onStatusChange={async (statusId) => {
           try {
             const res = await fetch(`/api/issues/${issueId}/status`, {
@@ -433,6 +535,7 @@ export default function IssueDetailPage() {
               throw new Error(data.error || "Failed to update status");
             }
             await reloadIssue();
+            setActionInfo("Status updated in Redmine.");
           } catch (e) {
             setActionError(e instanceof Error ? e.message : "Failed to update status");
           }
@@ -469,7 +572,7 @@ export default function IssueDetailPage() {
             setActionError(e instanceof Error ? e.message : "Failed to add time entry");
           }
         }}
-        statuses={statuses}
+        statuses={transitionStatuses}
         users={users}
       />
 
@@ -499,7 +602,7 @@ export default function IssueDetailPage() {
           </article>
         </div>
 
-        <article className="report-card">
+        <article className="report-card issue-description-card">
           <p className="report-label">Description</p>
           {issue.description ? <MarkdownBlock content={issue.description} attachments={issue.attachments} issueId={issue.redmineIssueId} onImageClick={(src, alt) => setLightboxImage({ src, alt })} /> : <p className="muted">No description.</p>}
         </article>
@@ -653,17 +756,42 @@ export default function IssueDetailPage() {
           </details>
         </article>
 
-        <div className="issue-tabs">
-          <Link href={`/issues/${issue.redmineIssueId}?tab=history`} className={activeTab === "history" ? "active" : ""}>
+        <article className="report-card comment-card">
+          <div className="comment-card-head">
+            <div>
+              <p className="report-label">Redmine Comment</p>
+              <p className="muted">Add a note to this issue in Redmine.</p>
+            </div>
+          </div>
+          {actionError && <p className="error-banner">{actionError}</p>}
+          {actionInfo && <p className="info-banner">{actionInfo}</p>}
+          <form className="form" onSubmit={submitComment}>
+            <label>
+              Comment
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Write a Redmine note"
+                rows={4}
+              />
+            </label>
+            <button type="submit" disabled={commentBusy || comment.trim().length === 0}>
+              {commentBusy ? "Posting..." : "Post to Redmine"}
+            </button>
+          </form>
+        </article>
+
+        <div className="issue-tabs" ref={tabsRef}>
+          <Link href={`/issues/${issue.redmineIssueId}?tab=history`} scroll={false} className={activeTab === "history" ? "active" : ""}>
             History
           </Link>
-          <Link href={`/issues/${issue.redmineIssueId}?tab=notes`} className={activeTab === "notes" ? "active" : ""}>
+          <Link href={`/issues/${issue.redmineIssueId}?tab=notes`} scroll={false} className={activeTab === "notes" ? "active" : ""}>
             Notes
           </Link>
-          <Link href={`/issues/${issue.redmineIssueId}?tab=properties`} className={activeTab === "properties" ? "active" : ""}>
+          <Link href={`/issues/${issue.redmineIssueId}?tab=properties`} scroll={false} className={activeTab === "properties" ? "active" : ""}>
             Property changes
           </Link>
-          <Link href={`/issues/${issue.redmineIssueId}?tab=time_entries`} className={activeTab === "time_entries" ? "active" : ""}>
+          <Link href={`/issues/${issue.redmineIssueId}?tab=time_entries`} scroll={false} className={activeTab === "time_entries" ? "active" : ""}>
             Spent time
           </Link>
         </div>
@@ -683,7 +811,14 @@ export default function IssueDetailPage() {
                   <p className="muted">
                     <strong>{journal.author ?? "Unknown"}</strong> • {formatAgo(journal.createdOnRemote)}
                   </p>
-                  {journal.notes ? <MarkdownBlock content={journal.notes} /> : <p>(empty note)</p>}
+                  {journal.notes ? (
+                    <MarkdownBlock
+                      content={journal.notes}
+                      attachments={issue.attachments}
+                      issueId={issue.redmineIssueId}
+                      onImageClick={(src, alt) => setLightboxImage({ src, alt })}
+                    />
+                  ) : <p>(empty note)</p>}
                 </article>
               ))}
             </div>
@@ -696,7 +831,12 @@ export default function IssueDetailPage() {
                   <p className="muted">
                     <strong>{journal.author ?? "Unknown"}</strong> • {formatAgo(journal.createdOnRemote)}
                   </p>
-                  <MarkdownBlock content={journal.notes ?? ""} />
+                  <MarkdownBlock
+                    content={journal.notes ?? ""}
+                    attachments={issue.attachments}
+                    issueId={issue.redmineIssueId}
+                    onImageClick={(src, alt) => setLightboxImage({ src, alt })}
+                  />
                 </article>
               ))}
             </div>
@@ -709,7 +849,12 @@ export default function IssueDetailPage() {
                   <p className="muted">
                     <strong>{journal.author ?? "Unknown"}</strong> • {formatAgo(journal.createdOnRemote)}
                   </p>
-                  <MarkdownBlock content={journal.notes ?? ""} />
+                  <MarkdownBlock
+                    content={journal.notes ?? ""}
+                    attachments={issue.attachments}
+                    issueId={issue.redmineIssueId}
+                    onImageClick={(src, alt) => setLightboxImage({ src, alt })}
+                  />
                 </article>
               ))}
             </div>
