@@ -911,6 +911,21 @@ label {
   z-index: 1;
 }
 
+.issues-table th.sortable-header {
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  user-select: none;
+}
+
+.issues-table th.sortable-header:hover {
+  background: #f0ece2;
+  color: var(--ink);
+}
+
+.issues-table th.sortable-header:active {
+  background: #e8e4da;
+}
+
 .issue-row {
   cursor: pointer;
   transition: background 0.15s ease;
