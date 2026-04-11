@@ -412,64 +412,66 @@ export default function IssueDetailPage() {
           </div>
           <div className="hero-actions">
             <Link href="/" className="primary-link">Back to Dashboard</Link>
-            <QuickActionsPanel
-              issueId={issue.redmineIssueId}
-              currentStatus={issue.statusName}
-              currentAssignee={issue.assignedToName}
-              onStatusChange={async (statusId) => {
-                try {
-                  const res = await fetch(`/api/issues/${issueId}/status`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ statusId }),
-                  });
-                  if (!res.ok) {
-                    const data = await res.json();
-                    throw new Error(data.error || "Failed to update status");
-                  }
-                  await reloadIssue();
-                } catch (e) {
-                  setActionError(e instanceof Error ? e.message : "Failed to update status");
-                }
-              }}
-              onAssign={async (userId) => {
-                try {
-                  const res = await fetch(`/api/issues/${issueId}/assign`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ userId }),
-                  });
-                  if (!res.ok) {
-                    const data = await res.json();
-                    throw new Error(data.error || "Failed to assign issue");
-                  }
-                  await reloadIssue();
-                } catch (e) {
-                  setActionError(e instanceof Error ? e.message : "Failed to assign issue");
-                }
-              }}
-              onAddTime={async (hours, comment) => {
-                try {
-                  const res = await fetch(`/api/issues/${issueId}/timelog`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ hours, comments: comment }),
-                  });
-                  if (!res.ok) {
-                    const data = await res.json();
-                    throw new Error(data.error || "Failed to add time entry");
-                  }
-                  await reloadIssue();
-                } catch (e) {
-                  setActionError(e instanceof Error ? e.message : "Failed to add time entry");
-                }
-              }}
-              statuses={statuses}
-              users={users}
-            />
           </div>
         </div>
       </header>
+
+      {/* Quick Actions Panel */}
+      <QuickActionsPanel
+        issueId={issue.redmineIssueId}
+        currentStatus={issue.statusName}
+        currentAssignee={issue.assignedToName}
+        onStatusChange={async (statusId) => {
+          try {
+            const res = await fetch(`/api/issues/${issueId}/status`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ statusId }),
+            });
+            if (!res.ok) {
+              const data = await res.json();
+              throw new Error(data.error || "Failed to update status");
+            }
+            await reloadIssue();
+          } catch (e) {
+            setActionError(e instanceof Error ? e.message : "Failed to update status");
+          }
+        }}
+        onAssign={async (userId) => {
+          try {
+            const res = await fetch(`/api/issues/${issueId}/assign`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId }),
+            });
+            if (!res.ok) {
+              const data = await res.json();
+              throw new Error(data.error || "Failed to assign issue");
+            }
+            await reloadIssue();
+          } catch (e) {
+            setActionError(e instanceof Error ? e.message : "Failed to assign issue");
+          }
+        }}
+        onAddTime={async (hours, comment) => {
+          try {
+            const res = await fetch(`/api/issues/${issueId}/timelog`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ hours, comments: comment }),
+            });
+            if (!res.ok) {
+              const data = await res.json();
+              throw new Error(data.error || "Failed to add time entry");
+            }
+            await reloadIssue();
+          } catch (e) {
+            setActionError(e instanceof Error ? e.message : "Failed to add time entry");
+          }
+        }}
+        statuses={statuses}
+        users={users}
+      />
 
       <section className="card reports-shell">
         <div className="reports-head">
