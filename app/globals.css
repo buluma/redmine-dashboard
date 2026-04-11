@@ -1150,22 +1150,6 @@ label {
   flex-wrap: wrap;
 }
 
-.assignee-inline-select {
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #fff;
-  color: var(--ink);
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0.15rem 0.35rem;
-  min-width: 140px;
-  cursor: pointer;
-}
-
-.assignee-inline-select:hover {
-  border-color: var(--accent);
-}
-
 .issue-tabs {
   display: flex;
   gap: 0.25rem;
@@ -1862,6 +1846,17 @@ kbd {
   border: 1px solid var(--line);
   border-radius: 4px;
   font-size: 0.875rem;
+}
+
+.qa-user-search {
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.qa-user-select {
+  margin-bottom: 0.35rem;
+  font-size: 0.85rem;
 }
 
 .qa-button {
