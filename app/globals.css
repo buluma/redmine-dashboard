@@ -1101,6 +1101,141 @@ label {
   border-radius: 8px;
 }
 
+.metadata-item-editable {
+  border-color: var(--accent);
+  border-style: dashed;
+  background: linear-gradient(180deg, #f0f8fa 0%, #e8f4f6 100%);
+}
+
+.metadata-head-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.metadata-head-row h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--ink-soft);
+  letter-spacing: -0.01em;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-save-btn {
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(145deg, var(--ok), #1e6b3f);
+  color: #fff;
+  padding: 0.4rem 1rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.edit-save-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.edit-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.edit-cancel-btn {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f5f2eb;
+  color: var(--ink-soft);
+  padding: 0.4rem 0.85rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.edit-cancel-btn:hover {
+  background: #ece6da;
+}
+
+.edit-title-input {
+  width: 100%;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: clamp(1.15rem, 0.9vw + 0.78rem, 1.6rem);
+  font-weight: 700;
+  color: var(--ink);
+  background: #fff;
+  font-family: inherit;
+}
+
+.edit-title-input:focus {
+  outline: none;
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px rgba(0, 109, 119, 0.15);
+}
+
+.edit-description-textarea {
+  width: 100%;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: #fff;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.edit-description-textarea:focus {
+  outline: none;
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px rgba(0, 109, 119, 0.15);
+}
+
+.edit-metadata-input {
+  width: 100%;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: #fff;
+  font-family: inherit;
+}
+
+.edit-metadata-input:focus {
+  outline: none;
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 2px rgba(0, 109, 119, 0.12);
+}
+
+.edit-custom-user-select {
+  width: 100%;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: #fff;
+  cursor: pointer;
+}
+
+.edit-custom-user-select:focus {
+  outline: none;
+  border-color: var(--accent-strong);
+}
+
 .metadata-label {
   font-size: 0.75rem;
   font-weight: 700;
