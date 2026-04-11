@@ -1,4 +1,5 @@
 const required = ["DATABASE_URL", "APP_ENCRYPTION_KEY", "SESSION_SECRET"] as const;
+const optionalRequiredForAI = ["OLLAMA_BASE_URL", "OLLAMA_CHAT_MODEL"] as const;
 
 for (const key of required) {
   if (!process.env[key]) {
@@ -63,4 +64,16 @@ export const env = {
   redmineInsecureTlsHosts: csvFromEnv("REDMINE_INSECURE_TLS_HOSTS"),
   redmineSyncIssueScope: syncIssueScopeFromEnv(),
   mobileApiEnabled: boolFromEnv("MOBILE_API_ENABLED", true),
+  // Ollama AI Configuration
+  ollamaBaseUrl: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
+  ollamaChatModel: process.env.OLLAMA_CHAT_MODEL || "qwen3.5:cloud",
+  ollamaEmbedModel: process.env.OLLAMA_EMBED_MODEL || "nomic-embed-text-v2-moe:latest",
+  ollamaTimeoutMs: numberFromEnv("OLLAMA_TIMEOUT_MS", 120000),
+  ollamaStream: boolFromEnv("OLLAMA_STREAM", true),
+  ollamaChatModelFallback: process.env.OLLAMA_CHAT_MODEL_FALLBACK || "qwen2.5-coder:3b",
+  ollamaEmbedModelFallback: process.env.OLLAMA_EMBED_MODEL_FALLBACK || "nomic-embed-text:latest",
+  enableAiFeatures: boolFromEnv("ENABLE_AI_FEATURES", true),
+  aiSummarizeEnabled: boolFromEnv("AI_SUMMARIZE_ENABLED", true),
+  aiSearchEnabled: boolFromEnv("AI_SEARCH_ENABLED", true),
+  aiCategorizeEnabled: boolFromEnv("AI_CATEGORIZE_ENABLED", true),
 };

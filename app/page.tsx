@@ -8,6 +8,8 @@ import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import { normalizeRedmineText } from "@/src/lib/redmine-text-format";
+import { AiIssueActions } from "@/src/components/ai/AiIssueActions";
+import { AiSearchBar } from "@/src/components/ai/AiSearchBar";
 
 type User = {
   id: string;
@@ -328,6 +330,8 @@ export default function Home() {
   const [allowedStatusIdsByIssue, setAllowedStatusIdsByIssue] = useState<Record<number, number[]>>({});
   const [bootstrapInfo, setBootstrapInfo] = useState<BootstrapInfo>(null);
   const [bootstrapBusy, setBootstrapBusy] = useState(false);
+  const [aiStatus, setAiStatus] = useState<{ available: boolean; primaryModel: string; usingFallback: boolean } | null>(null);
+  const [aiSearchOpen, setAiSearchOpen] = useState(false);
 
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -592,6 +596,19 @@ export default function Home() {
     setBootstrapInfo(data);
   }
 
+  async function loadAiStatus() {
+    try {
+      const res = await fetch("/api/ai/status", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setAiStatus(data);
+      }
+    } catch {
+      // AI not available
+      setAiStatus(null);
+    }
+  }
+
   async function loadSyncStatus() {
     if (!user) return;
     const res = await fetch("/api/sync/status", { cache: "no-store" });
@@ -650,7 +667,7 @@ export default function Home() {
   useEffect(() => {
     void (async () => {
       try {
-        await Promise.all([loadSession(), loadBootstrapInfo()]);
+        await Promise.all([loadSession(), loadBootstrapInfo(), loadAiStatus()]);
       } finally {
         setLoading(false);
       }
@@ -1325,6 +1342,11 @@ export default function Home() {
               ? ` • ${new Date(lastSyncAt).toLocaleString()}`
               : " • Waiting for first sync"}
           </div>
+          {aiStatus?.available && (
+            <div className="ai-status-pill">
+              🤖 AI: {aiStatus.usingFallback ? "Fallback" : "Cloud"}
+            </div>
+          )}
         </div>
         {syncState?.lastSyncStatus === "failed" && (
           <p className="sync-error-inline">
@@ -1438,6 +1460,17 @@ export default function Home() {
           </label>
 
           <label className="filter-field">
+            <button
+              type="button"
+              className={`ai-toggle ${aiSearchOpen ? "active" : ""}`}
+              onClick={() => setAiSearchOpen(!aiSearchOpen)}
+              disabled={!aiStatus?.available}
+            >
+              🤖 AI Search {aiStatus?.available ? "" : "(offline)"}
+            </button>
+          </label>
+
+          <label className="filter-field">
             Search Source
             <select value={searchMode} onChange={(e) => setSearchMode((e.target.value as "local" | "hybrid"))}>
               <option value="local">Local Cache</option>
@@ -1515,6 +1548,13 @@ export default function Home() {
 
       {error && <p className="error-banner">{error}</p>}
       {infoMessage && <p className="info-banner">{infoMessage}</p>}
+
+      {aiSearchOpen && aiStatus?.available && (
+        <section className="card filters-panel">
+          <h3>🔍 AI-Powered Search</h3>
+          <AiSearchBar />
+        </section>
+      )}
 
       <section className="collapsible-stack">
         <article className="card">
@@ -1872,13 +1912,13 @@ export default function Home() {
                         rel="noreferrer"
                         className="attachment-preview-link"
                       >
-                        <Image
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
                           className="attachment-preview-image"
                           src={attachmentUrl(selectedIssue.redmineIssueId, attachment.redmineAttachmentId)}
                           alt={attachment.filename}
-                          width={520}
-                          height={240}
                           loading="lazy"
+                          style={{ maxWidth: "520px", height: "auto" }}
                         />
                       </a>
                     )}
@@ -1968,6 +2008,10 @@ export default function Home() {
                 <p className="muted">No description.</p>
               )}
             </section>
+
+            {aiStatus?.available && (
+              <AiIssueActions issueId={selectedIssue.id} />
+            )}
 
             <section className="detail-section">
               <h3>Comments</h3>
