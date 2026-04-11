@@ -1245,6 +1245,11 @@ label {
   cursor: pointer;
 }
 
+.edit-priority-select {
+  cursor: pointer;
+  font-weight: 600;
+}
+
 .edit-custom-user-select {
   width: 100%;
   border: 1px solid var(--accent);

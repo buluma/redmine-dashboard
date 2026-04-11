@@ -9,6 +9,7 @@ import { z } from "zod";
 const editIssueSchema = z.object({
   subject: z.string().trim().min(1).max(255).optional(),
   description: z.string().trim().optional(),
+  priorityId: z.number().int().positive().optional(),
   priority: z.string().trim().optional(),
   dueDate: z.string().date().optional(),
   startDate: z.string().date().optional(),
@@ -58,6 +59,9 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     }
     if (body.description !== undefined) {
       redminePayload.description = body.description;
+    }
+    if (body.priorityId !== undefined) {
+      redminePayload.priority_id = body.priorityId;
     }
     if (body.priority !== undefined) {
       redminePayload.priority_name = body.priority;
