@@ -18,6 +18,26 @@
   --shadow: 0 12px 30px rgba(24, 32, 44, 0.08);
 }
 
+[data-theme="dark"],
+.dark {
+  --bg: #1a1a2e;
+  --bg-soft: #16213e;
+  --ink: #eaeaea;
+  --ink-soft: #a0a0a0;
+  --card: #1f1f3a;
+  --line: #2d2d4a;
+  --accent: #4ecdc4;
+  --accent-strong: #3db8b0;
+  --accent-soft: #1a3d3a;
+  --signal: #ff9f43;
+  --signal-soft: #3d2a1a;
+  --danger: #ff6b6b;
+  --danger-soft: #3a1a1a;
+  --ok: #26de81;
+  --ok-soft: #1a3d25;
+  --shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+
 * {
   box-sizing: border-box;
 }
