@@ -150,7 +150,15 @@ function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: { c
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeHighlight, { ignoreMissing: true }]]}
-        components={{ pre: CodePre, img: MarkdownImage }}
+        components={{ 
+          pre: CodePre, 
+          img: MarkdownImage,
+          a: ({ href, children }) => (
+            <a href={href} target="_blank" rel="noopener noreferrer">
+              {children}
+            </a>
+          ),
+        }}
       >
         {normalized}
       </ReactMarkdown>
