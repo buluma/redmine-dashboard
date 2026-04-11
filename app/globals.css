@@ -132,6 +132,94 @@ body {
   gap: 0.35rem;
 }
 
+/* Children / Sub-issues Table */
+.children-card {
+  margin-top: 0.5rem;
+}
+
+.children-card h3 {
+  margin: 0 0 0.65rem;
+  font-size: 1rem;
+  color: var(--ink-soft);
+  letter-spacing: -0.01em;
+}
+
+.children-table-wrap {
+  overflow-x: auto;
+}
+
+.children-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.children-table th {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  color: var(--ink-soft);
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid var(--line);
+  white-space: nowrap;
+}
+
+.children-table td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.children-table tr:hover {
+  background: #f8f4ec;
+}
+
+.children-table td:first-child {
+  width: 80px;
+}
+
+.child-issue-link {
+  color: var(--accent-strong);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.child-issue-link:hover {
+  text-decoration: underline;
+}
+
+.child-subject a {
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.child-subject a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.child-status {
+  font-size: 0.78rem;
+  padding: 0.15rem 0.45rem;
+  white-space: nowrap;
+}
+
+.child-status.status-open {
+  background: var(--ok-soft);
+  color: var(--ok);
+  border-color: rgba(42, 127, 82, 0.2);
+}
+
+.child-priority {
+  font-weight: 600;
+  color: var(--signal);
+  white-space: nowrap;
+}
+
 .card {
   background: linear-gradient(180deg, #fffefb 0%, var(--card) 100%);
   border: 1px solid var(--line);

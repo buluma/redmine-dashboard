@@ -60,6 +60,9 @@ type GithubLink = {
 type IssueChild = {
   id: number;
   subject: string;
+  statusId?: number | null;
+  statusName?: string | null;
+  priority?: string | null;
 };
 
 type Issue = {
@@ -995,6 +998,50 @@ export default function IssueDetailPage() {
 
                   return null;
                 })}
+            </div>
+          </article>
+        )}
+
+        {/* Child Issues / Sub-tasks */}
+        {issue.children && issue.children.length > 0 && (
+          <article className="report-card children-card">
+            <h3>
+              Child Issues
+              <span className="muted"> ({issue.children.length})</span>
+            </h3>
+            <div className="children-table-wrap">
+              <table className="children-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Subject</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {issue.children.map((child) => (
+                    <tr key={child.id}>
+                      <td>
+                        <Link href={`/issues/${child.id}`} className="child-issue-link">
+                          #{child.id}
+                        </Link>
+                      </td>
+                      <td className="child-subject">
+                        <Link href={`/issues/${child.id}`}>
+                          {child.subject}
+                        </Link>
+                      </td>
+                      <td>
+                        <span className={`status-chip child-status ${child.statusId ? "status-open" : ""}`}>
+                          {child.statusName ?? "-"}
+                        </span>
+                      </td>
+                      <td className="child-priority">{child.priority ?? "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </article>
         )}

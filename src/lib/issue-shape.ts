@@ -3,7 +3,13 @@ import { Prisma } from "@prisma/client";
 type JsonValue = Prisma.JsonValue;
 
 export type AllowedStatusView = { id: number; name: string; isClosed?: boolean };
-export type IssueChildView = { id: number; subject: string };
+export type IssueChildView = {
+  id: number;
+  subject: string;
+  statusId?: number | null;
+  statusName?: string | null;
+  priority?: string | null;
+};
 
 function parseAllowedStatuses(value: JsonValue | null): AllowedStatusView[] {
   if (!Array.isArray(value)) return [];
@@ -32,7 +38,24 @@ function parseChildren(value: JsonValue | null): IssueChildView[] {
       const id = typeof item.id === "number" ? item.id : null;
       const subject = typeof item.subject === "string" ? item.subject : null;
       if (!id || !subject) return null;
-      return { id, subject };
+
+      // Status can be nested object {id, name} or missing
+      const status = item.status as Record<string, unknown> | undefined;
+      const statusId = typeof status?.id === "number" ? status.id : null;
+      const statusName = typeof status?.name === "string" ? status.name : null;
+
+      // Priority can be string or nested object {name}
+      const priorityVal = item.priority;
+      const priority = typeof priorityVal === "string" ? priorityVal
+        : (priorityVal && typeof priorityVal === "object" ? (priorityVal as Record<string, unknown>).name : null);
+
+      return {
+        id,
+        subject,
+        statusId,
+        statusName,
+        priority: typeof priority === "string" ? priority : null,
+      };
     })
     .filter((x): x is IssueChildView => Boolean(x));
 }
