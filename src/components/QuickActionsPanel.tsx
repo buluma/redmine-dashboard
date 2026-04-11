@@ -2,13 +2,6 @@
 
 import { useState, useCallback } from "react";
 
-interface QuickAction {
-  icon: string;
-  label: string;
-  action: () => void;
-  disabled?: boolean;
-}
-
 interface QuickActionsPanelProps {
   issueId: number;
   currentStatus: string;
@@ -35,6 +28,7 @@ export function QuickActionsPanel({
   const [selectedUser, setSelectedUser] = useState<number>(0);
   const [hours, setHours] = useState("");
   const [comment, setComment] = useState("");
+  const selectedStatusIsAllowed = selectedStatus > 0 && statuses.some((status) => status.id === selectedStatus);
 
   const handleTimeSubmit = useCallback(() => {
     const h = parseFloat(hours);
@@ -80,19 +74,23 @@ export function QuickActionsPanel({
               Current: <strong>{currentStatus}</strong>
             </label>
             <select
-              value={selectedStatus}
+              value={selectedStatusIsAllowed ? selectedStatus : 0}
               onChange={(e) => setSelectedStatus(Number(e.target.value))}
               className="qa-select"
+              disabled={statuses.length === 0}
             >
               <option value={0}>Select new status...</option>
               {statuses.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
+            {statuses.length === 0 && (
+              <p className="muted entry-meta">No allowed status transitions are available for this issue.</p>
+            )}
             <button
               className="qa-button primary"
-              onClick={() => selectedStatus > 0 && onStatusChange(selectedStatus)}
-              disabled={selectedStatus === 0}
+              onClick={() => selectedStatusIsAllowed && onStatusChange(selectedStatus)}
+              disabled={!selectedStatusIsAllowed}
             >
               Update Status
             </button>
@@ -108,16 +106,20 @@ export function QuickActionsPanel({
               value={selectedUser}
               onChange={(e) => setSelectedUser(Number(e.target.value))}
               className="qa-select"
+              disabled={users.length === 0}
             >
               <option value={0}>Select user...</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>{u.name}</option>
               ))}
             </select>
+            {users.length === 0 && (
+              <p className="muted entry-meta">No assignable Redmine users are available from the current cache.</p>
+            )}
             <button
               className="qa-button primary"
               onClick={() => selectedUser > 0 && onAssign(selectedUser)}
-              disabled={selectedUser === 0}
+              disabled={selectedUser === 0 || users.length === 0}
             >
               Assign
             </button>

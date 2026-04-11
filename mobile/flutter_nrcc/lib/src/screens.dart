@@ -1011,10 +1011,14 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                     value: _relationType,
                                     items: const <DropdownMenuItem<String>>[
                                       DropdownMenuItem<String>(value: "relates", child: Text("relates")),
+                                      DropdownMenuItem<String>(value: "duplicated", child: Text("duplicated")),
                                       DropdownMenuItem<String>(value: "blocks", child: Text("blocks")),
+                                      DropdownMenuItem<String>(value: "blocked", child: Text("blocked")),
                                       DropdownMenuItem<String>(value: "precedes", child: Text("precedes")),
                                       DropdownMenuItem<String>(value: "follows", child: Text("follows")),
                                       DropdownMenuItem<String>(value: "duplicates", child: Text("duplicates")),
+                                      DropdownMenuItem<String>(value: "copied_to", child: Text("copied_to")),
+                                      DropdownMenuItem<String>(value: "copied_from", child: Text("copied_from")),
                                     ],
                                     onChanged: (value) {
                                       if (value == null) return;

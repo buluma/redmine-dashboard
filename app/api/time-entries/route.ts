@@ -1,14 +1,9 @@
 import { requireRedmineClient } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
+import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
 import { timeEntryQuerySchema } from "@/src/lib/schemas";
 import { trackFailure, trackSuccess } from "@/src/lib/telemetry";
-
-function statusFromRedmineError(message: string): number | null {
-  const match = message.match(/Redmine request failed \((\d{3})\):/);
-  if (!match) return null;
-  return Number(match[1]);
-}
 
 export async function GET(request: Request) {
   const startedAt = Date.now();
@@ -54,8 +49,8 @@ export async function GET(request: Request) {
       pageSize: query.pageSize,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to list time entries";
-    const status = message === "Unauthorized" ? 401 : (statusFromRedmineError(message) ?? 400);
+    const message = redmineMessageFromError(error, "Unable to list time entries");
+    const status = message === "Unauthorized" ? 401 : (redmineStatusFromError(error) ?? 400);
     trackFailure({
       event: "time_entries.list.failed",
       error,

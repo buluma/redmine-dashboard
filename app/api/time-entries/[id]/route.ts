@@ -1,6 +1,7 @@
 import { requireRedmineClient } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError, parseJson } from "@/src/lib/http";
+import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
 import { timeEntryUpdateSchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
 import { trackFailure, trackSuccess } from "@/src/lib/telemetry";
@@ -11,12 +12,6 @@ function parseTimeEntryId(id: string): number {
     throw new Error("Invalid time entry id");
   }
   return n;
-}
-
-function statusFromRedmineError(message: string): number | null {
-  const match = message.match(/Redmine request failed \((\d{3})\):/);
-  if (!match) return null;
-  return Number(match[1]);
 }
 
 async function assertTimeEntryOwnership(userId: string, redmineTimeEntryId: number) {
@@ -64,13 +59,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     return Response.json({ ok: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to update time entry";
+    const message = redmineMessageFromError(error, "Unable to update time entry");
     const status =
       message === "Unauthorized"
         ? 401
         : message === "Time entry not found"
           ? 404
-          : (statusFromRedmineError(message) ?? 400);
+          : (redmineStatusFromError(error) ?? 400);
 
     trackFailure({
       event: "time_entries.update.failed",
@@ -115,13 +110,13 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
 
     return Response.json({ ok: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to delete time entry";
+    const message = redmineMessageFromError(error, "Unable to delete time entry");
     const status =
       message === "Unauthorized"
         ? 401
         : message === "Time entry not found"
           ? 404
-          : (statusFromRedmineError(message) ?? 400);
+          : (redmineStatusFromError(error) ?? 400);
 
     trackFailure({
       event: "time_entries.delete.failed",

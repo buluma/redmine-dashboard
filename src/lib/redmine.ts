@@ -30,6 +30,7 @@ export type RedmineStatus = { id: number; name: string; is_closed?: boolean };
 
 export type RedmineActivity = { id: number; name: string };
 export type RedminePriority = { id: number; name: string; is_default?: boolean; active?: boolean; position?: number };
+export type RedmineUser = { id: number; login?: string; firstname?: string; lastname?: string; name?: string };
 
 type RedmineSearchResult = {
   id: number;
@@ -42,6 +43,13 @@ type RedmineSearchResult = {
 
 type RedmineSearchResponse = {
   results: RedmineSearchResult[];
+  total_count: number;
+  offset: number;
+  limit: number;
+};
+
+type RedmineUserListResponse = {
+  users: RedmineUser[];
   total_count: number;
   offset: number;
   limit: number;
@@ -61,6 +69,35 @@ type RedmineRelationResponse = {
 
 export type SyncIssueScope = "assigned" | "open" | "all";
 
+export class RedmineError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly body: string,
+    public readonly errors: string[] = [],
+  ) {
+    super(`Redmine request failed (${status})`);
+    this.name = "RedmineError";
+  }
+}
+
+export function isRedmineError(error: unknown): error is RedmineError {
+  return error instanceof RedmineError;
+}
+
+export function redmineStatusFromError(error: unknown): number | null {
+  return isRedmineError(error) ? error.status : null;
+}
+
+export function redmineMessageFromError(error: unknown, fallback: string): string {
+  if (!isRedmineError(error)) {
+    return error instanceof Error ? error.message : fallback;
+  }
+  if (error.errors.length > 0) {
+    return error.errors.join(", ");
+  }
+  return fallback;
+}
+
 function trimBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/$/, "");
 }
@@ -74,9 +111,14 @@ export class RedmineClient {
   private dispatcherLoaded = false;
 
   constructor(
-    private readonly baseUrl: string,
+    public readonly baseUrl: string,
     private readonly apiKey: string,
+    private readonly options: { timeoutMs?: number } = {},
   ) {}
+
+  get normalizedBaseUrl(): string {
+    return trimBaseUrl(this.baseUrl);
+  }
 
   private host(): string | null {
     try {
@@ -141,7 +183,7 @@ export class RedmineClient {
     },
   ): Promise<T> {
     const maxAttempts = 3;
-    const timeoutMs = 12000;
+    const timeoutMs = this.options.timeoutMs ?? 12000;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       const controller = new AbortController();
@@ -160,7 +202,7 @@ export class RedmineClient {
           signal: controller.signal,
           ...(dispatcher ? { dispatcher } : {}),
         };
-        const res = await fetch(`${trimBaseUrl(this.baseUrl)}${path}`, fetchInit);
+        const res = await fetch(`${this.normalizedBaseUrl}${path}`, fetchInit);
 
         if (!res.ok) {
           const body = await res.text();
@@ -169,7 +211,7 @@ export class RedmineClient {
             await new Promise((resolve) => setTimeout(resolve, 300 * 2 ** (attempt - 1)));
             continue;
           }
-          throw new Error(`Redmine request failed (${res.status}): ${body.slice(0, 300)}`);
+          throw new RedmineError(res.status, body, parseRedmineErrors(body));
         }
 
         if (res.status === 204) {
@@ -229,6 +271,24 @@ export class RedmineClient {
     return data.issue_priorities;
   }
 
+  async listUsers(): Promise<RedmineUser[]> {
+    const limit = 100;
+    const out: RedmineUser[] = [];
+    let offset = 0;
+
+    while (true) {
+      const data = await this.request<RedmineUserListResponse>(`/users.json?status=1&limit=${limit}&offset=${offset}`);
+      out.push(...data.users);
+      offset += data.users.length;
+
+      if (offset >= data.total_count || data.users.length === 0) {
+        break;
+      }
+    }
+
+    return out;
+  }
+
   async listIssueTimeEntries(issueId: number): Promise<Array<Record<string, unknown>>> {
     const limit = 100;
     const out: Array<Record<string, unknown>> = [];
@@ -273,8 +333,10 @@ export class RedmineClient {
       try {
         data = await this.request<RedmineIssueListResponse>(path);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "";
-        const invalidUpdatedFilter = message.includes("Redmine request failed (422)") && /updated is invalid/i.test(message);
+        const invalidUpdatedFilter =
+          isRedmineError(error) &&
+          error.status === 422 &&
+          /updated is invalid/i.test([error.body, ...error.errors].join(" "));
         if (updatedOnOrAfter && invalidUpdatedFilter) {
           // Some Redmine instances reject strict updated_on syntax. Fall back to full scoped fetch.
           logEvent("redmine.issues.updated_filter_fallback", {
@@ -311,7 +373,7 @@ export class RedmineClient {
       method: "POST",
       body: input.bytes,
       headers: {
-        "Content-Type": input.contentType || "application/octet-stream",
+        "Content-Type": "application/octet-stream",
       },
       skipJsonContentType: true,
     });
@@ -471,8 +533,23 @@ export class RedmineClient {
     const res = await fetch(url, init);
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(`Redmine request failed (${res.status}): ${body.slice(0, 300)}`);
+      throw new RedmineError(res.status, body, parseRedmineErrors(body));
     }
     return res;
   }
+}
+
+function parseRedmineErrors(body: string): string[] {
+  if (!body.trim()) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(body) as { errors?: unknown };
+    if (Array.isArray(parsed.errors)) {
+      return parsed.errors.filter((item): item is string => typeof item === "string");
+    }
+  } catch {
+    // Redmine can return XML or HTML for some failures; callers still get status + sanitized fallback.
+  }
+  return [];
 }

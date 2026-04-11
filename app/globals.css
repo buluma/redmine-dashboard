@@ -148,6 +148,80 @@ h3 {
   min-width: 0;
 }
 
+.issue-hero {
+  padding: 1.15rem;
+}
+
+.issue-heading {
+  display: grid;
+  gap: 0.34rem;
+  min-width: 0;
+}
+
+.issue-title-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.68rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.issue-title-line h1,
+.issue-title-line h2 {
+  min-width: min(100%, 26rem);
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.issue-hero .issue-title-line h1 {
+  font-size: clamp(1.15rem, 0.9vw + 0.78rem, 1.6rem);
+  line-height: 1.22;
+}
+
+.compact-title {
+  align-items: center;
+}
+
+.redmine-issue-link {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid rgba(0, 109, 119, 0.26);
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 800;
+  line-height: 1;
+  padding: 0.38rem 0.52rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.redmine-issue-link:hover {
+  border-color: rgba(0, 109, 119, 0.5);
+  filter: brightness(0.98);
+}
+
+.redmine-issue-link.compact {
+  padding: 0.28rem 0.42rem;
+  font-size: 0.86rem;
+}
+
+.external-issue-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: baseline;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.external-issue-row a {
+  color: var(--accent-strong);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
 .sync-pill {
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -981,6 +1055,10 @@ label {
   grid-template-columns: repeat(3, minmax(220px, 1fr));
 }
 
+.issue-description-card {
+  overflow: hidden;
+}
+
 .issue-tabs {
   display: flex;
   gap: 0.25rem;
@@ -1031,10 +1109,11 @@ label {
 }
 
 .attachment-preview-image {
-  width: min(100%, 520px);
-  max-height: 240px;
-  object-fit: cover;
-  border-radius: 10px;
+  display: block;
+  width: min(100%, 640px);
+  max-height: min(52vh, 420px);
+  object-fit: contain;
+  border-radius: 8px;
   border: 1px solid var(--line);
   background: #f4efe4;
 }
@@ -1080,6 +1159,7 @@ label {
 .markdown {
   overflow-wrap: anywhere;
   line-height: 1.5;
+  max-width: 100%;
 }
 
 .markdown p {
@@ -1191,6 +1271,23 @@ label {
   border-left: 3px solid #c6bca7;
   padding: 0.25rem 0.55rem;
   color: #4c5868;
+}
+
+.markdown img {
+  display: block;
+  max-width: min(100%, 720px);
+  max-height: min(58vh, 480px);
+  object-fit: contain;
+}
+
+.markdown-image-frame {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0.6rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f4efe4;
 }
 
 .auth-shell {
@@ -1598,22 +1695,44 @@ kbd {
 }
 
 .qa-tabs {
-  display: flex;
+  display: inline-flex;
+  width: fit-content;
+  max-width: calc(100% - 2rem);
+  gap: 0.2rem;
+  margin: 0.75rem 1rem 0;
+  padding: 0.2rem;
+  background: #f2eee5;
+  border: 1px solid var(--line);
+  border-radius: 8px;
   border-bottom: 1px solid var(--line);
 }
 
 .qa-tabs button {
-  flex: 1;
-  padding: 0.5rem;
-  background: none;
+  min-width: 96px;
+  padding: 0.45rem 0.72rem;
+  background: transparent;
   border: none;
+  border-radius: 6px;
+  color: var(--ink-soft);
   cursor: pointer;
   font-size: 0.875rem;
+  font-weight: 700;
+  transform: none;
+  filter: none;
 }
 
 .qa-tabs button.active {
   background: var(--accent-soft);
-  border-bottom: 2px solid var(--accent);
+  color: var(--accent-strong);
+  border: 1px solid rgba(0, 109, 119, 0.35);
+  box-shadow: none;
+}
+
+.qa-tabs button:hover {
+  background: #fffaf1;
+  color: var(--ink);
+  transform: none;
+  filter: none;
 }
 
 .qa-content {
@@ -1839,9 +1958,27 @@ kbd {
 }
 
 .tt-row {
-  display: flex;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: minmax(92px, 120px) minmax(220px, 1fr) minmax(150px, 180px);
+  gap: 0.65rem;
   margin-bottom: 0.5rem;
+  align-items: end;
+}
+
+.tt-field {
+  display: grid;
+  gap: 0.28rem;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.tt-hours-field input {
+  min-width: 0;
+}
+
+.tt-date-field input {
+  min-width: 0;
 }
 
 .tt-input,
@@ -1853,11 +1990,11 @@ kbd {
 }
 
 .tt-input {
-  flex: 1;
+  width: 100%;
 }
 
 .tt-date {
-  width: 140px;
+  width: 100%;
 }
 
 .tt-comments {
@@ -1877,6 +2014,12 @@ kbd {
 .tt-submit:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (max-width: 780px) {
+  .tt-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .tt-table {

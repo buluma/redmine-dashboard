@@ -2,6 +2,7 @@ import { requireMobileUser, requireRedmineClientForUser } from "@/src/lib/auth";
 import { jsonError, parseJson } from "@/src/lib/http";
 import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
 import { isRateLimited } from "@/src/lib/rate-limit";
+import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
 import { commentSchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
 import { trackFailure, trackInfo, trackSuccess } from "@/src/lib/telemetry";
@@ -12,12 +13,6 @@ function parseIssueId(id: string): number {
     throw new Error("Invalid issue id");
   }
   return n;
-}
-
-function statusFromRedmineError(message: string): number | null {
-  const match = message.match(/Redmine request failed \((\d{3})\):/);
-  if (!match) return null;
-  return Number(match[1]);
 }
 
 function statusClass(status: number): string {
@@ -73,13 +68,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     return Response.json({ ok: true, issue });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to post comment";
+    const message = redmineMessageFromError(error, "Unable to post comment");
     const status =
       message === "Mobile API is disabled"
         ? 404
         : message === "Unauthorized"
           ? 401
-          : (statusFromRedmineError(message) ?? 400);
+          : (redmineStatusFromError(error) ?? 400);
     trackFailure({
       event: "mobile.issue.comment.failed",
       error,

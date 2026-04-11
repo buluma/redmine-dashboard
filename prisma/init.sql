@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS "UserRedmineCredential" (
 CREATE TABLE IF NOT EXISTS "Issue" (
   "id" TEXT NOT NULL PRIMARY KEY,
   "redmineIssueId" INTEGER NOT NULL,
+  "redmineBaseUrl" TEXT NOT NULL,
   "userId" TEXT NOT NULL,
   "subject" TEXT NOT NULL,
   "description" TEXT,
@@ -45,7 +46,7 @@ CREATE TABLE IF NOT EXISTS "Issue" (
   "updatedAt" DATETIME NOT NULL,
   CONSTRAINT "Issue_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
-CREATE UNIQUE INDEX IF NOT EXISTS "Issue_redmineIssueId_key" ON "Issue"("redmineIssueId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Issue_userId_redmineBaseUrl_redmineIssueId_key" ON "Issue"("userId", "redmineBaseUrl", "redmineIssueId");
 CREATE INDEX IF NOT EXISTS "Issue_userId_statusId_idx" ON "Issue"("userId", "statusId");
 CREATE INDEX IF NOT EXISTS "Issue_userId_updatedOnRemote_idx" ON "Issue"("userId", "updatedOnRemote");
 
@@ -59,7 +60,7 @@ CREATE TABLE IF NOT EXISTS "IssueJournal" (
   "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "IssueJournal_issueId_fkey" FOREIGN KEY ("issueId") REFERENCES "Issue" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
-CREATE UNIQUE INDEX IF NOT EXISTS "IssueJournal_redmineJournalId_key" ON "IssueJournal"("redmineJournalId");
+CREATE UNIQUE INDEX IF NOT EXISTS "IssueJournal_issueId_redmineJournalId_key" ON "IssueJournal"("issueId", "redmineJournalId");
 CREATE INDEX IF NOT EXISTS "IssueJournal_issueId_createdOnRemote_idx" ON "IssueJournal"("issueId", "createdOnRemote");
 
 CREATE TABLE IF NOT EXISTS "IssueGithubLink" (
@@ -94,7 +95,7 @@ CREATE TABLE IF NOT EXISTS "IssueAttachment" (
   "updatedAt" DATETIME NOT NULL,
   CONSTRAINT "IssueAttachment_issueId_fkey" FOREIGN KEY ("issueId") REFERENCES "Issue" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
-CREATE UNIQUE INDEX IF NOT EXISTS "IssueAttachment_redmineAttachmentId_key" ON "IssueAttachment"("redmineAttachmentId");
+CREATE UNIQUE INDEX IF NOT EXISTS "IssueAttachment_issueId_redmineAttachmentId_key" ON "IssueAttachment"("issueId", "redmineAttachmentId");
 CREATE INDEX IF NOT EXISTS "IssueAttachment_issueId_createdOnRemote_idx" ON "IssueAttachment"("issueId", "createdOnRemote");
 
 CREATE TABLE IF NOT EXISTS "IssueRelation" (
@@ -108,7 +109,7 @@ CREATE TABLE IF NOT EXISTS "IssueRelation" (
   "updatedAt" DATETIME NOT NULL,
   CONSTRAINT "IssueRelation_issueId_fkey" FOREIGN KEY ("issueId") REFERENCES "Issue" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
-CREATE UNIQUE INDEX IF NOT EXISTS "IssueRelation_redmineRelationId_key" ON "IssueRelation"("redmineRelationId");
+CREATE UNIQUE INDEX IF NOT EXISTS "IssueRelation_issueId_redmineRelationId_key" ON "IssueRelation"("issueId", "redmineRelationId");
 CREATE INDEX IF NOT EXISTS "IssueRelation_issueId_relationType_idx" ON "IssueRelation"("issueId", "relationType");
 
 CREATE TABLE IF NOT EXISTS "TimeEntry" (
@@ -126,7 +127,7 @@ CREATE TABLE IF NOT EXISTS "TimeEntry" (
   CONSTRAINT "TimeEntry_issueId_fkey" FOREIGN KEY ("issueId") REFERENCES "Issue" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT "TimeEntry_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
-CREATE UNIQUE INDEX IF NOT EXISTS "TimeEntry_redmineTimeEntryId_key" ON "TimeEntry"("redmineTimeEntryId");
+CREATE UNIQUE INDEX IF NOT EXISTS "TimeEntry_issueId_redmineTimeEntryId_key" ON "TimeEntry"("issueId", "redmineTimeEntryId");
 CREATE INDEX IF NOT EXISTS "TimeEntry_userId_spentOn_idx" ON "TimeEntry"("userId", "spentOn");
 CREATE INDEX IF NOT EXISTS "TimeEntry_issueId_idx" ON "TimeEntry"("issueId");
 

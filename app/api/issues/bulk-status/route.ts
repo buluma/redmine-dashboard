@@ -1,15 +1,10 @@
 import { requireRedmineClient } from "@/src/lib/auth";
 import { jsonError, parseJson } from "@/src/lib/http";
 import { isRateLimited } from "@/src/lib/rate-limit";
+import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
 import { bulkStatusUpdateSchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
 import { trackFailure, trackInfo, trackSuccess } from "@/src/lib/telemetry";
-
-function statusFromRedmineError(message: string): number | null {
-  const match = message.match(/Redmine request failed \((\d{3})\):/);
-  if (!match) return null;
-  return Number(match[1]);
-}
 
 function statusClass(status: number): string {
   return `${Math.floor(status / 100)}xx`;
@@ -64,7 +59,7 @@ export async function POST(request: Request) {
         await syncSingleIssue(user.id, client, issueId);
         updatedCount += 1;
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Update failed";
+        const message = redmineMessageFromError(error, "Update failed");
         failures.push({ issueId, error: message });
       }
     }
@@ -118,8 +113,8 @@ export async function POST(request: Request) {
       failures,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to bulk update issues";
-    const status = message === "Unauthorized" ? 401 : (statusFromRedmineError(message) ?? 400);
+    const message = redmineMessageFromError(error, "Unable to bulk update issues");
+    const status = message === "Unauthorized" ? 401 : (redmineStatusFromError(error) ?? 400);
     trackFailure({
       event: "issue.bulk_status.failed",
       error,

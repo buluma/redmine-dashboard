@@ -1,7 +1,9 @@
 const TOC_MACRO_RE = /^\s*\{\{>?toc(?:\((?:[^()]|\([^)]*\))*\))?\}\}\s*$/gim;
 const TEXTILE_HEADING_RE = /^(h([1-6])\.\s+)(.+)$/gm;
 const TEXTILE_INLINE_LINK_RE = /"([^"\n]+)":(https?:\/\/[^\s<>"')\]]+)/g;
-const TEXTILE_IMAGE_RE = /!((?:https?:\/\/|\/)[^\s!]+)!/g;
+const TEXTILE_IMAGE_RE = /!(?:\{[^}]*\})?((?:(?:https?:\/\/|\/)[^\s!]+)|(?:[^!\n]+?\.(?:png|jpe?g|gif|webp|bmp|svg)))!/gi;
+const REDMINE_IMAGE_REF_RE = /\[Image:\s*([^\]\n]+?\.(?:png|jpe?g|gif|webp|bmp|svg))\]/gi;
+const TEXTILE_STYLED_SPAN_RE = /%\{[^}\n]*\}([^%\n]+)%/g;
 const REDMINE_COLLAPSE_RE = /\{\{collapse(?:\(([^)]*)\))?\s*\n([\s\S]*?)\n\}\}/g;
 const REDMINE_COLLAPSE_INLINE_RE = /\{\{collapse(?:\(([^)]*)\))?\s*\|([\s\S]*?)\}\}/g;
 const REDMINE_COLLAPSE_IMAGE_RE = /\{\{collapse\(([^)]*)\)\s*!\{([^}]*)\}([^!\s]+)!\s*\}\}/gi;
@@ -97,11 +99,18 @@ function normalizeCollapse(titleRaw: string | undefined, contentRaw: string): st
   return `> **${title}**\n>\n${toBlockQuote(content)}`;
 }
 
-function normalizeCollapseImage(title: string | undefined, css: string | undefined, filename: string): string {
+function normalizeImageTarget(rawTarget: string): string {
+  const target = rawTarget.trim();
+  if (/^(?:https?:\/\/|\/)/i.test(target)) {
+    return target;
+  }
+  return `/api/issues/_ATTACHMENT_/${encodeURI(target)}`;
+}
+
+function normalizeCollapseImage(title: string | undefined, _css: string | undefined, filename: string): string {
   const label = (title ?? "Image").trim() || "Image";
-  const attachmentUrl = `/api/issues/_ATTACHMENT_/${filename}`;
-  const style = css ? ` style="${css}"` : "";
-  return `\n<details><summary>${label}</summary>\n\n<img src="${attachmentUrl}" alt="${filename}"${style} loading="lazy" />\n\n</details>\n`;
+  const attachmentUrl = normalizeImageTarget(filename);
+  return `\n> **${label}**\n\n![${filename}](${attachmentUrl})\n`;
 }
 
 function decodeEscapedWhitespace(input: string): string {
@@ -115,12 +124,16 @@ function decodeEscapedWhitespace(input: string): string {
 export function normalizeRedmineText(input: string): string {
   let out = decodeEscapedWhitespace(input);
   out = convertSourceRefs(out);
+  out = out.replace(REDMINE_IMAGE_REF_RE, (_all, target: string) => `![${target.trim()}](${normalizeImageTarget(target)})`);
   out = out.replace(REDMINE_ESCAPED_PRE_CODE_RE, (_all, cls: string | undefined, code: string) => asFence(code, cls, true));
   out = out.replace(REDMINE_PRE_CODE_RE, (_all, cls: string | undefined, code: string) => asFence(code, cls));
   out = out.replace(REDMINE_ESCAPED_PRE_ONLY_RE, (_all, code: string) => asFence(code, undefined, true));
   out = out.replace(REDMINE_PRE_ONLY_RE, (_all, code: string) => asFence(code, undefined));
   out = out.replace(REDMINE_NOTEXTILE_RE, "");
   out = out.replace(TOC_MACRO_RE, "");
+  out = out.replace(REDMINE_COLLAPSE_IMAGE_RE, (_, title: string | undefined, css: string | undefined, filename: string) =>
+    normalizeCollapseImage(title, css, filename),
+  );
   out = out.replace(REDMINE_COLLAPSE_RE, (_, title: string | undefined, body: string) =>
     normalizeCollapse(title, body),
   );
@@ -132,12 +145,9 @@ export function normalizeRedmineText(input: string): string {
     return `${"#".repeat(level)} ${title.trim()}`;
   });
   out = out.replace(TEXTILE_INLINE_LINK_RE, "[$1]($2)");
-  out = out.replace(TEXTILE_IMAGE_RE, "![]($1)");
+  out = out.replace(TEXTILE_IMAGE_RE, (_all, target: string) => `![](${normalizeImageTarget(target)})`);
+  out = out.replace(TEXTILE_STYLED_SPAN_RE, "$1");
   out = out.replace(TEXTILE_CODE_RE, (_, prefix: string, code: string) => `${prefix}\`${code}\``);
-  // Handle collapsible images LAST (after all other transformations)
-  out = out.replace(REDMINE_COLLAPSE_IMAGE_RE, (_, title: string | undefined, css: string | undefined, filename: string) =>
-    normalizeCollapseImage(title, css, filename),
-  );
 
   return out;
 }

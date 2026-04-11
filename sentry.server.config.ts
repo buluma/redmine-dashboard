@@ -3,7 +3,6 @@
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
 import * as Sentry from "@sentry/nextjs";
-import { nodeProfilingIntegration } from "@sentry/profiling-node";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -31,12 +30,14 @@ const tracesSampleRate = numberFromEnv("SENTRY_TRACES_SAMPLE_RATE", isProduction
 const profileSampleRate = numberFromEnv("SENTRY_PROFILE_SAMPLE_RATE", 0);
 const enableLogs = boolFromEnv("SENTRY_ENABLE_LOGS", false);
 const enableConsoleLogging = boolFromEnv("SENTRY_ENABLE_CONSOLE_LOGGING", false);
+const sendDefaultPii = boolFromEnv("SENTRY_SEND_DEFAULT_PII", false);
 
 const integrations = [];
 if (enableConsoleLogging) {
   integrations.push(Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }));
 }
 if (profileSampleRate > 0) {
+  const { nodeProfilingIntegration } = require("@sentry/profiling-node") as typeof import("@sentry/profiling-node");
   integrations.push(nodeProfilingIntegration());
 }
 
@@ -50,7 +51,5 @@ Sentry.init({
   // Enable logs to be sent to Sentry
   enableLogs,
 
-  // Enable sending user PII (Personally Identifiable Information)
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
-  sendDefaultPii: true,
+  sendDefaultPii,
 });

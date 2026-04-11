@@ -32,20 +32,21 @@ export function TimeTrackingPanel({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const totalHours = entries.reduce((sum, e) => sum + e.hours, 0);
+  const selectedActivityId = activityId || activities[0]?.id || 0;
 
   const handleSubmit = useCallback(async () => {
     const h = parseFloat(hours);
-    if (h <= 0 || !activityId) return;
+    if (h <= 0 || !selectedActivityId) return;
     
     setIsSubmitting(true);
     try {
-      await onAddEntry(h, activityId, comments, spentOn);
+      await onAddEntry(h, selectedActivityId, comments, spentOn);
       setHours("");
       setComments("");
     } finally {
       setIsSubmitting(false);
     }
-  }, [hours, activityId, comments, spentOn, onAddEntry]);
+  }, [hours, selectedActivityId, comments, spentOn, onAddEntry]);
 
   return (
     <div className="time-tracking-panel">
@@ -67,30 +68,41 @@ export function TimeTrackingPanel({
           <div className="tt-form">
             <h4>Log Time</h4>
             <div className="tt-row">
-              <input
-                type="number"
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
-                placeholder="Hours"
-                step="0.25"
-                min="0"
-                className="tt-input"
-              />
-              <select
-                value={activityId}
+              <label className="tt-field tt-hours-field">
+                Hours
+                <input
+                  type="number"
+                  value={hours}
+                  onChange={(e) => setHours(e.target.value)}
+                  placeholder="0.25"
+                  step="0.25"
+                  min="0"
+                  className="tt-input"
+                />
+              </label>
+              <label className="tt-field">
+                Activity
+                <select
+                value={selectedActivityId}
                 onChange={(e) => setActivityId(Number(e.target.value))}
                 className="tt-select"
+                disabled={activities.length === 0}
               >
+                {activities.length === 0 && <option value={0}>No activities available</option>}
                 {activities.map((a) => (
                   <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
-              </select>
-              <input
-                type="date"
-                value={spentOn}
-                onChange={(e) => setSpentOn(e.target.value)}
-                className="tt-input tt-date"
-              />
+                </select>
+              </label>
+              <label className="tt-field tt-date-field">
+                Date
+                <input
+                  type="date"
+                  value={spentOn}
+                  onChange={(e) => setSpentOn(e.target.value)}
+                  className="tt-input tt-date"
+                />
+              </label>
             </div>
             <input
               type="text"
@@ -102,7 +114,7 @@ export function TimeTrackingPanel({
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={isSubmitting || !hours || parseFloat(hours) <= 0}
+              disabled={isSubmitting || !hours || parseFloat(hours) <= 0 || selectedActivityId <= 0}
               className="tt-submit"
             >
               {isSubmitting ? "Saving..." : "Log Time"}

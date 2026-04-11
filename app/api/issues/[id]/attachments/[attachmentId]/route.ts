@@ -1,6 +1,7 @@
 import { requireRedmineClient } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
+import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
 import { trackFailure, trackInfo } from "@/src/lib/telemetry";
 
 function parseIssueId(id: string): number {
@@ -17,12 +18,6 @@ function parseAttachmentId(id: string): number {
     throw new Error("Invalid attachment id");
   }
   return n;
-}
-
-function statusFromRedmineError(message: string): number | null {
-  const match = message.match(/Redmine request failed \((\d{3})\):/);
-  if (!match) return null;
-  return Number(match[1]);
 }
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string; attachmentId: string }> }) {
@@ -92,13 +87,13 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
 
     return new Response(upstream.body, { status: 200, headers });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to download attachment";
+    const message = redmineMessageFromError(error, "Unable to download attachment");
     const status =
       message === "Unauthorized"
         ? 401
         : message === "Issue not found" || message === "Attachment not found"
           ? 404
-          : (statusFromRedmineError(message) ?? 400);
+          : (redmineStatusFromError(error) ?? 400);
     
     // Log error locally
     console.error("attachment_download_error:", error);

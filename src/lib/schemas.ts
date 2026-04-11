@@ -72,7 +72,17 @@ export const githubLinkDeleteSchema = z.object({
 
 export const relationCreateSchema = z.object({
   issueToId: z.number().int().positive(),
-  relationType: z.enum(["relates", "blocks", "precedes", "follows", "duplicates"]),
+  relationType: z.enum([
+    "relates",
+    "duplicates",
+    "duplicated",
+    "blocks",
+    "blocked",
+    "precedes",
+    "follows",
+    "copied_to",
+    "copied_from",
+  ]),
   delay: z.number().int().min(0).max(3650).optional(),
 });
 

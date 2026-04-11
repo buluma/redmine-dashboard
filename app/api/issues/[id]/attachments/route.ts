@@ -1,6 +1,7 @@
 import { requireRedmineClient } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
+import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
 import { syncSingleIssue } from "@/src/lib/sync";
 import { trackFailure, trackSuccess } from "@/src/lib/telemetry";
 
@@ -12,12 +13,6 @@ function parseIssueId(id: string): number {
     throw new Error("Invalid issue id");
   }
   return n;
-}
-
-function statusFromRedmineError(message: string): number | null {
-  const match = message.match(/Redmine request failed \((\d{3})\):/);
-  if (!match) return null;
-  return Number(match[1]);
 }
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
@@ -37,8 +32,8 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
 
     return Response.json({ items: issue.attachments });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to fetch attachments";
-    const status = message === "Unauthorized" ? 401 : (statusFromRedmineError(message) ?? 400);
+    const message = redmineMessageFromError(error, "Unable to fetch attachments");
+    const status = message === "Unauthorized" ? 401 : (redmineStatusFromError(error) ?? 400);
     return jsonError(message, status);
   }
 }
@@ -106,13 +101,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     return Response.json({ ok: true, items: attachments });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to upload attachment";
+    const message = redmineMessageFromError(error, "Unable to upload attachment");
     const status =
       message === "Unauthorized"
         ? 401
         : message === "Issue not found"
           ? 404
-          : (statusFromRedmineError(message) ?? 400);
+          : (redmineStatusFromError(error) ?? 400);
 
     trackFailure({
       event: "issue.attachments.upload.failed",

@@ -1,6 +1,7 @@
 import { requireRedmineClient } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
+import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
 import { syncSingleIssue } from "@/src/lib/sync";
 
 function parseIssueId(id: string): number {
@@ -17,12 +18,6 @@ function parseRelationId(id: string): number {
     throw new Error("Invalid relation id");
   }
   return n;
-}
-
-function statusFromRedmineError(message: string): number | null {
-  const match = message.match(/Redmine request failed \((\d{3})\):/);
-  if (!match) return null;
-  return Number(match[1]);
 }
 
 export async function DELETE(_request: Request, context: { params: Promise<{ id: string; relationId: string }> }) {
@@ -58,13 +53,13 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
 
     return Response.json({ ok: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to delete relation";
+    const message = redmineMessageFromError(error, "Unable to delete relation");
     const status =
       message === "Unauthorized"
         ? 401
         : message === "Issue not found" || message === "Relation not found"
           ? 404
-          : (statusFromRedmineError(message) ?? 400);
+          : (redmineStatusFromError(error) ?? 400);
     return jsonError(message, status);
   }
 }

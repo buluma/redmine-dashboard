@@ -7,6 +7,40 @@ import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
 import { issueQuerySchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
 
+type SortMode = "updated_desc" | "updated_asc" | "priority" | "due_date";
+
+function compareNullableDateAsc(a: Date | null, b: Date | null): number {
+  if (!a && !b) return 0;
+  if (!a) return 1;
+  if (!b) return -1;
+  return a.getTime() - b.getTime();
+}
+
+function comparePriorityAsc(a: string | null, b: string | null): number {
+  return (a ?? "").localeCompare(b ?? "", undefined, { sensitivity: "base" });
+}
+
+function compareIssuesBySort(
+  a: { updatedOnRemote: Date; dueDate: Date | null; priority: string | null },
+  b: { updatedOnRemote: Date; dueDate: Date | null; priority: string | null },
+  sort: SortMode,
+): number {
+  if (sort === "updated_asc") {
+    return a.updatedOnRemote.getTime() - b.updatedOnRemote.getTime();
+  }
+  if (sort === "priority") {
+    const byPriority = comparePriorityAsc(a.priority, b.priority);
+    if (byPriority !== 0) return byPriority;
+    return b.updatedOnRemote.getTime() - a.updatedOnRemote.getTime();
+  }
+  if (sort === "due_date") {
+    const byDueDate = compareNullableDateAsc(a.dueDate, b.dueDate);
+    if (byDueDate !== 0) return byDueDate;
+    return b.updatedOnRemote.getTime() - a.updatedOnRemote.getTime();
+  }
+  return b.updatedOnRemote.getTime() - a.updatedOnRemote.getTime();
+}
+
 export async function GET(request: Request) {
   try {
     assertMobileApiEnabled();
@@ -76,6 +110,7 @@ export async function GET(request: Request) {
     ]);
 
     let merged = items;
+    let hybridTotal = total;
     if (q.search && q.searchMode !== "local") {
       const { client } = await requireRedmineClientForUser(user.id);
       const remote = await client.search({
@@ -118,15 +153,14 @@ export async function GET(request: Request) {
         for (const issue of [...items, ...hydrated]) {
           byRemote.set(issue.redmineIssueId, issue);
         }
-        merged = Array.from(byRemote.values()).sort(
-          (a, b) => b.updatedOnRemote.getTime() - a.updatedOnRemote.getTime(),
-        );
+        merged = Array.from(byRemote.values()).sort((a, b) => compareIssuesBySort(a, b, q.sort));
       }
+      hybridTotal = Math.max(total, remote.total_count);
     }
 
     return Response.json({
       items: merged.map((issue) => toIssueView(issue)),
-      total: q.searchMode === "local" ? total : merged.length,
+      total: q.searchMode === "local" ? total : hybridTotal,
       page: q.page,
       pageSize: q.pageSize,
       source: q.searchMode === "local" ? "local_cache" : "hybrid",

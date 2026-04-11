@@ -125,7 +125,7 @@ Request body:
 ```
 
 Allowed `relationType` values:
-- `relates`, `blocks`, `precedes`, `follows`, `duplicates`
+- `relates`, `duplicates`, `duplicated`, `blocks`, `blocked`, `precedes`, `follows`, `copied_to`, `copied_from`
 
 ### DELETE /api/issues/[id]/relations/[relationId]
 Deletes Redmine relation and local cache row.

@@ -125,6 +125,60 @@ describe("mobile v1 routes", () => {
     expect(body.items[0].redmineIssueId).toBe(101);
   });
 
+  it("uses remote totals and requested sort mode for mobile hybrid search", async () => {
+    const client = {
+      search: vi.fn().mockResolvedValue({
+        results: [{ id: 202, type: "issue" }],
+        total_count: 5,
+        offset: 0,
+        limit: 20,
+      }),
+    };
+    const localIssue = {
+      id: "i-local",
+      redmineIssueId: 101,
+      subject: "Local",
+      priority: "Zulu",
+      dueDate: null,
+      updatedOnRemote: new Date("2026-04-10T00:00:00.000Z"),
+      allowedStatusesJson: null,
+      childrenJson: null,
+    };
+    const remoteIssue = {
+      id: "i-remote",
+      redmineIssueId: 202,
+      subject: "Remote",
+      priority: "Alpha",
+      dueDate: null,
+      updatedOnRemote: new Date("2026-04-11T00:00:00.000Z"),
+      allowedStatusesJson: null,
+      childrenJson: null,
+    };
+    mockRequireMobileUser.mockResolvedValue({
+      user: { id: "u1", emailOrUsername: "alice", displayName: "Alice" },
+      tokenRecordId: "mt1",
+    });
+    mockRequireRedmineClientForUser.mockResolvedValue({ client });
+    mockIssueCount.mockResolvedValue(1);
+    mockIssueFindMany.mockResolvedValueOnce([localIssue]).mockResolvedValueOnce([remoteIssue]);
+    mockSyncSingleIssue.mockResolvedValue({ id: "i-remote" });
+
+    const { GET } = await import("@/app/api/mobile/v1/issues/route");
+    const response = await GET(
+      new Request("http://localhost?search=bug&searchMode=hybrid&sort=priority&page=1&pageSize=20"),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.total).toBe(5);
+    expect(body.items.map((item: { redmineIssueId: number }) => item.redmineIssueId)).toEqual([202, 101]);
+    expect(mockSyncSingleIssue).toHaveBeenCalledWith("u1", client, 202, {
+      pruneAttachments: true,
+      pruneRelations: true,
+      pruneTimeEntries: false,
+    });
+  });
+
   it("posts comment from mobile route and syncs issue", async () => {
     const client = {
       addComment: vi.fn().mockResolvedValue(undefined),
