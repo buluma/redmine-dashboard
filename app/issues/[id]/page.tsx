@@ -88,6 +88,7 @@ type Issue = {
     name: string;
     value: string | null;
   }> | null;
+  breadcrumbs: Array<{ id: number; subject: string; tracker?: string }>;
   updatedOnRemote: string;
   dueDate: string | null;
   doneRatio: number | null;
@@ -587,6 +588,24 @@ export default function IssueDetailPage() {
 
   return (
     <main className="dashboard">
+      {/* Breadcrumb Navigation */}
+      {issue.breadcrumbs && issue.breadcrumbs.length > 0 && (
+        <nav className="breadcrumb-nav">
+          <Link href="/" className="breadcrumb-item breadcrumb-home">Dashboard</Link>
+          <span className="breadcrumb-sep">›</span>
+          {issue.breadcrumbs.map((crumb, i) => (
+            <span key={crumb.id} className="breadcrumb-chain">
+              <Link href={`/issues/${crumb.id}`} className="breadcrumb-item">
+                {crumb.tracker && <span className="breadcrumb-tracker">{crumb.tracker}</span>}
+                #{crumb.id}: {crumb.subject}
+              </Link>
+              {i < issue.breadcrumbs.length - 1 && <span className="breadcrumb-sep">›</span>}
+            </span>
+          ))}
+          <span className="breadcrumb-sep">›</span>
+          <span className="breadcrumb-item breadcrumb-current">#{issue.redmineIssueId}</span>
+        </nav>
+      )}
       <header className="card hero issue-hero">
         <div className="hero-top">
           <div className="issue-heading">
