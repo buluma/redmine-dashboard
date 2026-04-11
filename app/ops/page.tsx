@@ -294,22 +294,22 @@ export default function OpsPage() {
                 </div>
                 <div className="health-row">
                   <span>Stale Jobs</span>
-                  <span>{health?.checks.scheduler.staleRunningJobs ?? "-"}</span>
+                  <span>{health?.checks?.scheduler?.staleRunningJobs ?? "-"}</span>
                 </div>
               </div>
               <p className="muted ops-note">
                 Checked at {health?.timestamp ? new Date(health.timestamp).toLocaleString() : "-"}.
-                {health?.checks.redmine.error ? ` Redmine error: ${health.checks.redmine.error}` : ""}
-                {health?.checks.database.error ? ` DB error: ${health.checks.database.error}` : ""}
+                {health?.checks?.redmine?.error ? ` Redmine error: ${health.checks.redmine.error}` : ""}
+                {health?.checks?.database?.error ? ` DB error: ${health.checks.database.error}` : ""}
               </p>
             </article>
 
             <article className="card">
               <h2>Leader Lock</h2>
               <div className="ops-kv">
-                <p><strong>Owner:</strong> {health?.checks.scheduler.lock?.ownerId ?? "-"}</p>
-                <p><strong>Heartbeat:</strong> {formatDateTime(health?.checks.scheduler.lock?.heartbeatAt ?? null)}</p>
-                <p><strong>Expires:</strong> {formatDateTime(health?.checks.scheduler.lock?.expiresAt ?? null)}</p>
+                <p><strong>Owner:</strong> {health?.checks?.scheduler?.lock?.ownerId ?? "-"}</p>
+                <p><strong>Heartbeat:</strong> {formatDateTime(health?.checks?.scheduler?.lock?.heartbeatAt ?? null)}</p>
+                <p><strong>Expires:</strong> {formatDateTime(health?.checks?.scheduler?.lock?.expiresAt ?? null)}</p>
               </div>
             </article>
           </section>
