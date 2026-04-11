@@ -309,7 +309,7 @@ export class RedmineClient {
   }
 
   async listIssues(
-    scope: SyncIssueScope = "assigned",
+    scope: SyncIssueScope = "all",
     updatedOnOrAfter?: Date,
   ): Promise<Array<Record<string, unknown>>> {
     const limit = 100;
