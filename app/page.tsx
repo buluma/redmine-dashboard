@@ -982,6 +982,34 @@ export default function Home() {
     }
   }
 
+  const handleSort = (column: string) => {
+    const sortMap: Record<string, [string, string]> = {
+      priority: ["priority", "updated_desc"],
+      due: ["due_date", "updated_desc"],
+      updated: ["updated_desc", "updated_asc"],
+    };
+    
+    const options = sortMap[column];
+    if (!options) return;
+    
+    const [defaultSort, alternateSort] = options;
+    if (sort === defaultSort) {
+      setSort(alternateSort);
+    } else if (sort === alternateSort && column === "updated") {
+      setSort(defaultSort);
+    } else {
+      setSort(defaultSort);
+    }
+  };
+
+  const getSortIndicator = (column: string): string => {
+    if (column === "priority" && sort === "priority") return " ▲";
+    if (column === "due" && sort === "due_date") return " ▲";
+    if (column === "updated" && sort === "updated_desc") return " ▼";
+    if (column === "updated" && sort === "updated_asc") return " ▲";
+    return "";
+  };
+
   async function updateBulkStatus() {
     if (selectedIssueIds.length === 0 || bulkStatusId <= 0) {
       return;
@@ -1791,10 +1819,31 @@ export default function Home() {
                     <th>ID</th>
                     <th>Subject</th>
                     <th>Status</th>
-                    <th>Priority</th>
-                    <th>Due</th>
+                    <th 
+                      className="sortable-header"
+                      onClick={() => handleSort("priority")}
+                      style={{ cursor: "pointer" }}
+                      title="Sort by priority"
+                    >
+                      Priority{getSortIndicator("priority")}
+                    </th>
+                    <th 
+                      className="sortable-header"
+                      onClick={() => handleSort("due")}
+                      style={{ cursor: "pointer" }}
+                      title="Sort by due date"
+                    >
+                      Due{getSortIndicator("due")}
+                    </th>
                     <th>Progress</th>
-                    <th>Updated</th>
+                    <th 
+                      className="sortable-header"
+                      onClick={() => handleSort("updated")}
+                      style={{ cursor: "pointer" }}
+                      title="Sort by update time"
+                    >
+                      Updated{getSortIndicator("updated")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
