@@ -1798,7 +1798,7 @@ export default function Home() {
                   filters={{ search: "", statusIds: [], priorityIds: [], assignedToMe: false, hasGithubLinks: false, hasAttachments: false }}
                   onChange={() => {}}
                   statuses={statuses.map(s => ({ id: s.id, name: s.name }))}
-                  priorities={priorities.map(p => ({ id: 0, name: p }))}
+                  priorities={priorities.map((p, index) => ({ id: index + 1, name: p }))}
                   onClear={() => {}}
                 />
                 <ExportButton issues={issues} format="csv" />
