@@ -63,6 +63,14 @@ model Issue {
   parentIssueLabel String?
   assignedToId     Int?
   assignedToName   String?
+  authorId         Int?
+  authorName       String?
+  categoryId       Int?
+  categoryName     String?
+  startDate        DateTime?
+  estimatedHours   Float?
+  spentHours       Float?
+  customFieldsJson  Json?
   updatedOnRemote  DateTime
   dueDate          DateTime?
   doneRatio        Int?
