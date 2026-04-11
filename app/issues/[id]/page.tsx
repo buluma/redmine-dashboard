@@ -448,6 +448,14 @@ export default function IssueDetailPage() {
                         src: attachmentUrl(issue.redmineIssueId, attachment.redmineAttachmentId),
                         alt: attachment.filename,
                       })}
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        target.style.display = 'none';
+                        const link = target.parentElement?.querySelector('a');
+                        if (link) {
+                          link.textContent = `${attachment.filename} (click to view)`;
+                        }
+                      }}
                     />
                   )}
                   {isPdfAttachment(attachment) && (
