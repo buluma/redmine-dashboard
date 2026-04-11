@@ -76,6 +76,17 @@ type Issue = {
   statusId: number;
   statusName: string;
   assignedToName: string | null;
+  authorName: string | null;
+  categoryId: number | null;
+  categoryName: string | null;
+  startDate: string | null;
+  estimatedHours: number | null;
+  spentHours: number | null;
+  customFieldsJson: Array<{
+    id: number;
+    name: string;
+    value: string | null;
+  }> | null;
   updatedOnRemote: string;
   dueDate: string | null;
   doneRatio: number | null;
@@ -606,6 +617,56 @@ export default function IssueDetailPage() {
           <p className="report-label">Description</p>
           {issue.description ? <MarkdownBlock content={issue.description} attachments={issue.attachments} issueId={issue.redmineIssueId} onImageClick={(src, alt) => setLightboxImage({ src, alt })} /> : <p className="muted">No description.</p>}
         </article>
+
+        {/* Issue Metadata Section */}
+        {(issue.authorName || issue.categoryName || issue.startDate || issue.estimatedHours || issue.spentHours || (issue.customFieldsJson && issue.customFieldsJson.length > 0)) && (
+          <article className="report-card issue-metadata-card">
+            <h3>Issue Metadata</h3>
+            <div className="metadata-grid">
+              {/* Standard metadata fields */}
+              {issue.authorName && (
+                <div className="metadata-item">
+                  <span className="metadata-label">Author</span>
+                  <span className="metadata-value">{issue.authorName}</span>
+                </div>
+              )}
+              {issue.categoryName && (
+                <div className="metadata-item">
+                  <span className="metadata-label">Category</span>
+                  <span className="metadata-value">{issue.categoryName}</span>
+                </div>
+              )}
+              {issue.startDate && (
+                <div className="metadata-item">
+                  <span className="metadata-label">Start Date</span>
+                  <span className="metadata-value">{new Date(issue.startDate).toLocaleDateString()}</span>
+                </div>
+              )}
+              {issue.estimatedHours != null && (
+                <div className="metadata-item">
+                  <span className="metadata-label">Estimated Hours</span>
+                  <span className="metadata-value">{issue.estimatedHours.toFixed(2)}h</span>
+                </div>
+              )}
+              {issue.spentHours != null && (
+                <div className="metadata-item">
+                  <span className="metadata-label">Spent Hours (Redmine)</span>
+                  <span className="metadata-value">{issue.spentHours.toFixed(2)}h</span>
+                </div>
+              )}
+
+              {/* Custom fields with values */}
+              {issue.customFieldsJson && issue.customFieldsJson
+                .filter((field) => field.value && field.value.trim().length > 0)
+                .map((field) => (
+                  <div key={field.id} className="metadata-item">
+                    <span className="metadata-label">{field.name}</span>
+                    <span className="metadata-value">{field.value}</span>
+                  </div>
+                ))}
+            </div>
+          </article>
+        )}
 
         {aiStatus?.available && (
           <AiIssueActions issueId={issue.id} />
