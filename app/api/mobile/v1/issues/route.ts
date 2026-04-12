@@ -158,8 +158,23 @@ export async function GET(request: Request) {
       hybridTotal = Math.max(total, remote.total_count);
     }
 
+    const favoritedIssueIds = new Set<number>(
+      (
+        await prisma.favorite.findMany({
+          where: {
+            userId: user.id,
+            issueId: { in: merged.map((issue) => issue.redmineIssueId) },
+          },
+          select: { issueId: true },
+        })
+      ).map((item) => item.issueId),
+    );
+
     return Response.json({
-      items: merged.map((issue) => toIssueView(issue)),
+      items: merged.map((issue) => ({
+        ...toIssueView(issue),
+        isFavorited: favoritedIssueIds.has(issue.redmineIssueId),
+      })),
       total: q.searchMode === "local" ? total : hybridTotal,
       page: q.page,
       pageSize: q.pageSize,

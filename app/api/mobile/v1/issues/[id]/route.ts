@@ -52,7 +52,22 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       return jsonError("Issue not found", 404);
     }
 
-    return Response.json({ issue: toIssueView(issue) });
+    const favorite = await prisma.favorite.findUnique({
+      where: {
+        userId_issueId: {
+          userId: user.id,
+          issueId: redmineIssueId,
+        },
+      },
+      select: { id: true },
+    });
+
+    return Response.json({
+      issue: {
+        ...toIssueView(issue),
+        isFavorited: Boolean(favorite),
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to fetch issue detail";
     const status = message === "Mobile API is disabled" ? 404 : message === "Unauthorized" ? 401 : 400;
