@@ -3468,7 +3468,33 @@ textarea {
 }
 
 .metric-ai-insights {
-  background: linear-gradient(180deg, #ffffff 0%, #e9f7f9 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #f3f0ff 50%, #ede9fe 100%);
+  border: 1px solid #c4b5fd;
+  box-shadow:
+    0 4px 14px rgba(139, 92, 246, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-ai-insights::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.12) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.metric-ai-insights .metric-value {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 800;
 }
 
 .metric-health {

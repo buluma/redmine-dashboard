@@ -469,6 +469,7 @@ export default function Home() {
   const [bootstrapBusy, setBootstrapBusy] = useState(false);
   const [aiStatus, setAiStatus] = useState<{ available: boolean; primaryModel: string; usingFallback: boolean } | null>(null);
   const [aiSearchOpen, setAiSearchOpen] = useState(false);
+  const [aiSummaryCount, setAiSummaryCount] = useState(0);
 
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -763,6 +764,18 @@ export default function Home() {
     }
   }
 
+  async function loadAiSummaryCount() {
+    try {
+      const res = await fetch("/api/ai/summary-count", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setAiSummaryCount(data.count ?? 0);
+      }
+    } catch {
+      setAiSummaryCount(0);
+    }
+  }
+
   async function loadSyncStatus() {
     if (!user) return;
     const res = await fetch("/api/sync/status", { cache: "no-store" });
@@ -838,7 +851,7 @@ export default function Home() {
   useEffect(() => {
     void (async () => {
       try {
-        await Promise.all([loadSession(), loadBootstrapInfo(), loadAiStatus()]);
+        await Promise.all([loadSession(), loadBootstrapInfo(), loadAiStatus(), loadAiSummaryCount()]);
       } finally {
         setLoading(false);
       }
@@ -1621,8 +1634,14 @@ export default function Home() {
           </article>
           <article className="card metric-card metric-ai-insights">
             <p className="metric-label">AI Insights</p>
-            <p className="metric-value">0</p>
-            <p className="metric-foot">No avaible AI insights. Check again later!</p>
+            <p className="metric-value">{aiSummaryCount}</p>
+            <p className="metric-foot">
+              {aiSummaryCount === 0
+                ? "No available AI insights. Check again later!"
+                : aiSummaryCount === 1
+                  ? "1 AI insight generated"
+                  : `${aiSummaryCount} AI insights generated`}
+            </p>
           </article>
         </section>
       </header>
