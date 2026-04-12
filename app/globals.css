@@ -3041,3 +3041,61 @@ kbd {
   background: var(--danger-soft);
   color: var(--danger);
 }
+
+/* Favorite Button */
+.favorite-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 0.62rem 0.95rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+  background: #f0ece2;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.favorite-btn:hover {
+  transform: translateY(-1px);
+  background: #fff3cd;
+  color: #856404;
+}
+
+.favorite-btn.favorited {
+  background: #ffd700;
+  color: #5c4900;
+  border-color: #e6c200;
+}
+
+.favorite-btn.favorited:hover {
+  background: #ffed4a;
+}
+
+/* Favorites Filter Button */
+.favorite-filter {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f5f2eb;
+  color: var(--ink-soft);
+  padding: 0.4rem 0.75rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.favorite-filter:hover {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.favorite-filter.active {
+  background: #ffd700;
+  color: #5c4900;
+  border-color: #e6c200;
+}

@@ -433,6 +433,8 @@ export default function Home() {
   const [opsAlertsOpen, setOpsAlertsOpen] = useState(false);
   const [activityFeedOpen, setActivityFeedOpen] = useState(false);
   const [issueQueueOpen, setIssueQueueOpen] = useState(true);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [favoriteIssueIds, setFavoriteIssueIds] = useState<number[]>([]);
 
   const [comment, setComment] = useState("");
   const [hours, setHours] = useState("1");
@@ -735,6 +737,18 @@ export default function Home() {
     }
   }
 
+  async function loadFavorites() {
+    try {
+      const res = await fetch("/api/issues/favorites", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setFavoriteIssueIds(data.favorites ?? []);
+      }
+    } catch {
+      // Ignore errors
+    }
+  }
+
   async function refreshAll() {
     setLoading(true);
     setError(null);
@@ -765,6 +779,7 @@ export default function Home() {
 
     void refreshAll();
     void loadActivities();
+    void loadFavorites();
 
     const id = setInterval(() => {
       void refreshAll();
@@ -1801,6 +1816,13 @@ export default function Home() {
                   priorities={priorities.map((p, index) => ({ id: index + 1, name: p }))}
                   onClear={() => {}}
                 />
+                <button
+                  type="button"
+                  className={`favorite-filter ${showFavoritesOnly ? "active" : ""}`}
+                  onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                >
+                  {showFavoritesOnly ? "★ Favorites" : "☆ Favorites"}
+                </button>
                 <ExportButton issues={issues} format="csv" />
                 <ExportButton issues={issues} format="print" />
               </div>
@@ -1847,7 +1869,7 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {issues.map((issue) => {
+                  {(showFavoritesOnly ? issues.filter(i => favoriteIssueIds.includes(i.redmineIssueId)) : issues).map((issue) => {
                     const urgency = issueUrgency(issue);
                     const allowedStatusIds = allowedStatusIdsByIssue[issue.redmineIssueId];
                     const selectableStatuses =
