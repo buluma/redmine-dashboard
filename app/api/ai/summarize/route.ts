@@ -3,6 +3,7 @@ import { createSummarizeMessages, parseJsonResponse, type SummarizeResponse } fr
 import { env } from "@/src/lib/env";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
+import { requireCurrentUser } from "@/src/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -59,8 +60,25 @@ export async function POST(request: Request) {
     // Parse JSON response
     const parsed = parseJsonResponse<SummarizeResponse>(result.content);
 
+    const summaryText = parsed
+      ? JSON.stringify(parsed)
+      : result.content;
+
+    // Persist summary to database
+    await prisma.aiSummary.upsert({
+      where: { issueId },
+      update: {
+        summary: summaryText,
+        model: result.model,
+      },
+      create: {
+        issueId,
+        summary: summaryText,
+        model: result.model,
+      },
+    });
+
     if (!parsed) {
-      // If parsing failed, return the raw content as summary
       return Response.json({
         summary: result.content,
         keyPoints: [],
@@ -82,5 +100,32 @@ export async function POST(request: Request) {
       `Failed to summarize issue: ${error instanceof Error ? error.message : "Unknown error"}`,
       500
     );
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    await requireCurrentUser();
+    const { searchParams } = new URL(request.url);
+    const issueId = searchParams.get("issueId");
+
+    if (!issueId) {
+      return jsonError("issueId query param is required", 400);
+    }
+
+    const summary = await prisma.aiSummary.findUnique({
+      where: { issueId },
+    });
+
+    if (!summary) {
+      return Response.json({ summary: null });
+    }
+
+    return Response.json({ summary });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return jsonError("Unauthorized", 401);
+    }
+    return jsonError("Failed to fetch summary", 500);
   }
 }
