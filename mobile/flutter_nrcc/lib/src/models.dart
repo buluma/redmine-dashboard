@@ -58,11 +58,13 @@ class Issue {
   final String? description;
   final String statusName;
   final String? priority;
+  final String? assignedToName;
   final List<GithubLink> githubLinks;
   final List<IssueAttachment> attachments;
   final List<IssueRelation> relations;
   final List<AllowedStatus> allowedStatuses;
   final List<IssueChild> children;
+  final List<TimeEntry> timeEntries;
 
   Issue({
     required this.id,
@@ -71,11 +73,13 @@ class Issue {
     required this.description,
     required this.statusName,
     required this.priority,
+    this.assignedToName,
     required this.githubLinks,
     required this.attachments,
     required this.relations,
     required this.allowedStatuses,
     required this.children,
+    this.timeEntries = const <TimeEntry>[],
   });
 
   factory Issue.fromJson(Map<String, dynamic> json) => Issue(
@@ -85,6 +89,7 @@ class Issue {
         description: json["description"] as String?,
         statusName: json["statusName"] as String,
         priority: json["priority"] as String?,
+        assignedToName: json["assignedToName"] as String?,
         githubLinks: ((json["githubLinks"] as List<dynamic>?) ?? const <dynamic>[])
             .map((e) => GithubLink.fromJson(e as Map<String, dynamic>))
             .toList(),
@@ -99,6 +104,9 @@ class Issue {
             .toList(),
         children: ((json["children"] as List<dynamic>?) ?? const <dynamic>[])
             .map((e) => IssueChild.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        timeEntries: ((json["timeEntries"] as List<dynamic>?) ?? const <dynamic>[])
+            .map((e) => TimeEntry.fromJson(e as Map<String, dynamic>))
             .toList(),
       );
 }
@@ -199,5 +207,50 @@ class PairConnectResponse {
   factory PairConnectResponse.fromJson(Map<String, dynamic> json) => PairConnectResponse(
         token: json["token"] as String,
         user: MobileUser.fromJson(json["user"] as Map<String, dynamic>),
+      );
+}
+
+class TimeEntry {
+  final String id;
+  final int? redmineTimeEntryId;
+  final double hours;
+  final int? activityId;
+  final String? activityName;
+  final String? authorName;
+  final String? comments;
+  final String spentOn;
+
+  TimeEntry({
+    required this.id,
+    required this.redmineTimeEntryId,
+    required this.hours,
+    required this.activityId,
+    required this.activityName,
+    required this.authorName,
+    required this.comments,
+    required this.spentOn,
+  });
+
+  factory TimeEntry.fromJson(Map<String, dynamic> json) => TimeEntry(
+        id: json["id"] as String,
+        redmineTimeEntryId: json["redmineTimeEntryId"] as int?,
+        hours: (json["hours"] as num?)?.toDouble() ?? 0.0,
+        activityId: json["activityId"] as int?,
+        activityName: json["activityName"] as String?,
+        authorName: json["authorName"] as String?,
+        comments: json["comments"] as String?,
+        spentOn: json["spentOn"] as String,
+      );
+}
+
+class AssignableUser {
+  final int id;
+  final String name;
+
+  AssignableUser({required this.id, required this.name});
+
+  factory AssignableUser.fromJson(Map<String, dynamic> json) => AssignableUser(
+        id: json["id"] as int,
+        name: json["name"] as String,
       );
 }
