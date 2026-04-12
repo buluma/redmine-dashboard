@@ -134,6 +134,88 @@ class NrccApiClient {
     }
   }
 
+  Future<void> updateStatus({
+    required int redmineIssueId,
+    required int statusId,
+  }) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        "/api/mobile/v1/issues/$redmineIssueId/status",
+        data: <String, dynamic>{"statusId": statusId},
+      );
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<void> assignIssue({
+    required int redmineIssueId,
+    required int userId,
+  }) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        "/api/mobile/v1/issues/$redmineIssueId/assign",
+        data: <String, dynamic>{"userId": userId},
+      );
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<List<AssignableUser>> listAssignableUsers() async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>("/api/mobile/v1/issues/assignable-users");
+      final items = (response.data?["users"] as List<dynamic>?) ?? const <dynamic>[];
+      return items.map((e) => AssignableUser.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<List<TimeEntry>> listTimeEntries({required int redmineIssueId}) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        "/api/mobile/v1/issues/$redmineIssueId/time-entries",
+      );
+      final items = (response.data?["items"] as List<dynamic>?) ?? const <dynamic>[];
+      return items.map((e) => TimeEntry.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<void> createTimeEntry({
+    required int redmineIssueId,
+    required double hours,
+    required int activityId,
+    String? comment,
+    String? spentOn,
+  }) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        "/api/mobile/v1/issues/$redmineIssueId/time-entries",
+        data: <String, dynamic>{
+          "hours": hours,
+          "activityId": activityId,
+          "comment": comment,
+          "spentOn": spentOn,
+        },
+      );
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> listActivities() async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>("/api/mobile/v1/activities");
+      final items = (response.data?["activities"] as List<dynamic>?) ?? const <dynamic>[];
+      return items.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
   Future<void> addGithubLink({
     required int redmineIssueId,
     required String repositoryFullName,

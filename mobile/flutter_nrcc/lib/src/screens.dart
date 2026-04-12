@@ -198,11 +198,18 @@ class IssueListScreen extends StatefulWidget {
 class _IssueListScreenState extends State<IssueListScreen> {
   final _search = TextEditingController();
   String _searchMode = "local";
+  String _sort = "updated_desc";
+  int _page = 1;
+  final int _pageSize = 20;
   List<Issue> _issues = <Issue>[];
   bool _loading = false;
+  bool _hasMore = false;
   String? _error;
 
-  Future<void> _load() async {
+  Future<void> _load({bool reset = false}) async {
+    if (reset) setState(() => _page = 1);
+    final currentPage = reset ? 1 : _page;
+
     setState(() {
       _loading = true;
       _error = null;
@@ -211,8 +218,14 @@ class _IssueListScreenState extends State<IssueListScreen> {
       final issues = await widget.issuesRepository.listIssues(
         search: _search.text.trim().isEmpty ? null : _search.text.trim(),
         searchMode: _searchMode,
+        sort: _sort,
+        page: currentPage,
+        pageSize: _pageSize,
       );
-      setState(() => _issues = issues);
+      setState(() {
+        _issues = issues;
+        _hasMore = issues.length >= _pageSize;
+      });
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -220,6 +233,18 @@ class _IssueListScreenState extends State<IssueListScreen> {
         setState(() => _loading = false);
       }
     }
+  }
+
+  void _nextPage() {
+    if (!_hasMore || _loading) return;
+    setState(() => _page++);
+    _load();
+  }
+
+  void _prevPage() {
+    if (_page <= 1 || _loading) return;
+    setState(() => _page--);
+    _load();
   }
 
   @override
@@ -245,31 +270,71 @@ class _IssueListScreenState extends State<IssueListScreen> {
       body: Column(
         children: <Widget>[
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
             child: Row(
               children: <Widget>[
                 Expanded(
                   child: TextField(
                     controller: _search,
-                    decoration: const InputDecoration(labelText: "Search"),
+                    decoration: const InputDecoration(
+                      labelText: "Search",
+                      isDense: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                ElevatedButton(
+                  onPressed: _loading ? null : () => _load(reset: true),
+                  child: const Text("Load"),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _sort,
+                    isDense: true,
+                    decoration: const InputDecoration(
+                      labelText: "Sort",
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    ),
+                    items: const <DropdownMenuItem<String>>[
+                      DropdownMenuItem(value: "updated_desc", child: Text("Updated ↓")),
+                      DropdownMenuItem(value: "updated_asc", child: Text("Updated ↑")),
+                      DropdownMenuItem(value: "priority", child: Text("Priority")),
+                      DropdownMenuItem(value: "due_date", child: Text("Due Date")),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => _sort = value);
+                      _load(reset: true);
+                    },
                   ),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _loading ? null : _load,
-                  child: const Text("Load"),
-                ),
-                const SizedBox(width: 8),
-                DropdownButton<String>(
+                DropdownButtonFormField<String>(
                   value: _searchMode,
+                  isDense: true,
+                  decoration: const InputDecoration(
+                    labelText: "Mode",
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
                   items: const <DropdownMenuItem<String>>[
-                    DropdownMenuItem<String>(value: "local", child: Text("Local")),
-                    DropdownMenuItem<String>(value: "hybrid", child: Text("Hybrid")),
+                    DropdownMenuItem(value: "local", child: Text("Local")),
+                    DropdownMenuItem(value: "hybrid", child: Text("Hybrid")),
                   ],
                   onChanged: (value) {
                     if (value == null) return;
                     setState(() => _searchMode = value);
-                    _load();
+                    _load(reset: true);
                   },
                 ),
               ],
@@ -283,7 +348,34 @@ class _IssueListScreenState extends State<IssueListScreen> {
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
-          if (_loading) const LinearProgressIndicator(),
+          if (_loading && _issues.isEmpty) const LinearProgressIndicator(),
+          if (_issues.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  Text(
+                    "Page $_page · ${_issues.length} issues",
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  Row(
+                    children: <Widget>[
+                      TextButton.icon(
+                        onPressed: _page > 1 && !_loading ? _prevPage : null,
+                        icon: const Icon(Icons.chevron_left, size: 18),
+                        label: const Text("Prev"),
+                      ),
+                      TextButton.icon(
+                        onPressed: _hasMore && !_loading ? _nextPage : null,
+                        label: const Text("Next"),
+                        icon: const Icon(Icons.chevron_right, size: 18),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: ListView.builder(
               itemCount: _issues.length,
@@ -314,11 +406,12 @@ class _IssueListScreenState extends State<IssueListScreen> {
                             visualDensity: VisualDensity.compact,
                             side: BorderSide(color: theme.colorScheme.outlineVariant),
                           ),
-                          Chip(
-                            label: Text("GH ${issue.githubLinks.length}"),
-                            visualDensity: VisualDensity.compact,
-                            side: BorderSide(color: theme.colorScheme.outlineVariant),
-                          ),
+                          if (issue.assignedToName != null)
+                            Chip(
+                              label: Text("👤 ${issue.assignedToName!}"),
+                              visualDensity: VisualDensity.compact,
+                              side: BorderSide(color: theme.colorScheme.outlineVariant),
+                            ),
                         ],
                       ),
                     ),
@@ -373,11 +466,24 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   String _relationType = "relates";
   bool _expandOverview = true;
   bool _expandDescription = true;
+  bool _expandStatus = false;
+  bool _expandAssign = false;
+  bool _expandTime = false;
   bool _expandAllowed = false;
   bool _expandComment = false;
   bool _expandGithub = false;
   bool _expandAttachments = false;
   bool _expandRelations = false;
+  String? _statusError;
+  String? _assignError;
+  List<TimeEntry> _timeEntries = <TimeEntry>[];
+  List<Map<String, dynamic>> _activities = <Map<String, dynamic>>[];
+  List<AssignableUser> _assignableUsers = <AssignableUser>[];
+  final _timeHours = TextEditingController();
+  final _timeComment = TextEditingController();
+  String? _timeSpentOn;
+  int? _timeActivityId;
+  bool _timeLoading = false;
 
   String _normalizeIssueDescription(String? input) {
     if (input == null || input.trim().isEmpty) {
@@ -622,12 +728,43 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
       final issue = await widget.issuesRepository.getIssue(widget.issueId);
       setState(() => _issue = issue);
       await _loadAttachmentHeaders();
+      await _loadTimeEntries();
+      await _loadAssignableUsers();
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
       if (mounted) {
         setState(() => _loading = false);
       }
+    }
+  }
+
+  Future<void> _loadTimeEntries() async {
+    try {
+      final entries = await widget.actionsRepository.listTimeEntries(redmineIssueId: widget.issueId);
+      final activities = await widget.actionsRepository.listActivities();
+      if (mounted) {
+        setState(() {
+          _timeEntries = entries;
+          _activities = activities;
+          if (activities.isNotEmpty && _timeActivityId == null) {
+            _timeActivityId = activities.first["id"] as int?;
+          }
+        });
+      }
+    } catch (_) {
+      // Time entries are optional
+    }
+  }
+
+  Future<void> _loadAssignableUsers() async {
+    try {
+      final users = await widget.actionsRepository.listAssignableUsers();
+      if (mounted) {
+        setState(() => _assignableUsers = users);
+      }
+    } catch (_) {
+      // Assignable users are optional
     }
   }
 
@@ -639,6 +776,67 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     );
     _comment.clear();
     await _load();
+  }
+
+  Future<void> _updateStatus(int statusId) async {
+    setState(() => _statusError = null);
+    try {
+      await widget.actionsRepository.updateStatus(
+        redmineIssueId: widget.issueId,
+        statusId: statusId,
+      );
+      await _load();
+    } catch (e) {
+      setState(() => _statusError = e.toString());
+    }
+  }
+
+  Future<void> _assignUser(int userId) async {
+    setState(() => _assignError = null);
+    try {
+      await widget.actionsRepository.assignIssue(
+        redmineIssueId: widget.issueId,
+        userId: userId,
+      );
+      await _load();
+    } catch (e) {
+      setState(() => _assignError = e.toString());
+    }
+  }
+
+  Future<void> _logTime() async {
+    final hours = double.tryParse(_timeHours.text.trim());
+    if (hours == null || hours <= 0 || _timeActivityId == null) return;
+    setState(() => _timeLoading = true);
+    try {
+      await widget.actionsRepository.createTimeEntry(
+        redmineIssueId: widget.issueId,
+        hours: hours,
+        activityId: _timeActivityId!,
+        comment: _timeComment.text.trim().isEmpty ? null : _timeComment.text.trim(),
+        spentOn: _timeSpentOn,
+      );
+      _timeHours.clear();
+      _timeComment.clear();
+      await _loadTimeEntries();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to log time: $e")));
+      }
+    } finally {
+      if (mounted) setState(() => _timeLoading = false);
+    }
+  }
+
+  Future<void> _deleteTimeEntry(int entryId) async {
+    try {
+      await widget.actionsRepository.deleteTimeEntry(redmineTimeEntryId: entryId);
+      await _loadTimeEntries();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to delete: $e")));
+      }
+    }
   }
 
   Future<void> _addGithubLink() async {
@@ -701,6 +899,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                   setState(() {
                                     _expandOverview = true;
                                     _expandDescription = true;
+                                    _expandStatus = true;
+                                    _expandAssign = true;
+                                    _expandTime = true;
                                     _expandAllowed = true;
                                     _expandComment = true;
                                     _expandGithub = true;
@@ -716,6 +917,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                   setState(() {
                                     _expandOverview = false;
                                     _expandDescription = false;
+                                    _expandStatus = false;
+                                    _expandAssign = false;
+                                    _expandTime = false;
                                     _expandAllowed = false;
                                     _expandComment = false;
                                     _expandGithub = false;
@@ -777,6 +981,147 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                 "pre": _CodeBlockBuilder(theme: theme),
                               },
                               onTapLink: (text, href, title) => _openMarkdownLink(href),
+                            ),
+                          ),
+                          _sectionCard(
+                            context: context,
+                            sectionId: "status",
+                            title: "Change Status",
+                            expanded: _expandStatus,
+                            onExpandedChanged: (value) => setState(() => _expandStatus = value),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text("Current: ${_issue!.statusName}", style: theme.textTheme.bodyMedium),
+                                const SizedBox(height: 8),
+                                if (_statusError != null)
+                                  Text(_statusError!, style: TextStyle(color: theme.colorScheme.error)),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: _issue!.allowedStatuses.map((s) {
+                                    final isCurrent = s.name == _issue!.statusName;
+                                    return ChoiceChip(
+                                      label: Text(s.name),
+                                      selected: isCurrent,
+                                      onSelected: isCurrent ? null : (_) => _updateStatus(s.id),
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _sectionCard(
+                            context: context,
+                            sectionId: "assign",
+                            title: "Assign",
+                            expanded: _expandAssign,
+                            onExpandedChanged: (value) => setState(() => _expandAssign = value),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text("Current: ${_issue!.assignedToName ?? "Unassigned"}", style: theme.textTheme.bodyMedium),
+                                const SizedBox(height: 8),
+                                if (_assignError != null)
+                                  Text(_assignError!, style: TextStyle(color: theme.colorScheme.error)),
+                                if (_assignableUsers.isEmpty)
+                                  const Text("No assignable users available.")
+                                else
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: _assignableUsers.map((u) {
+                                      final isCurrent = _issue!.assignedToName == u.name;
+                                      return ChoiceChip(
+                                        label: Text(u.name),
+                                        selected: isCurrent,
+                                        onSelected: isCurrent ? null : (_) => _assignUser(u.id),
+                                      );
+                                    }).toList(),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          _sectionCard(
+                            context: context,
+                            sectionId: "time",
+                            title: "Time Tracking",
+                            expanded: _expandTime,
+                            onExpandedChanged: (value) => setState(() => _expandTime = value),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Row(
+                                  children: <Widget>[
+                                    Expanded(
+                                      flex: 2,
+                                      child: TextField(
+                                        controller: _timeHours,
+                                        decoration: const InputDecoration(labelText: "Hours", isDense: true),
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      flex: 3,
+                                      child: DropdownButtonFormField<int>(
+                                        value: _timeActivityId,
+                                        isDense: true,
+                                        decoration: const InputDecoration(labelText: "Activity", isDense: true),
+                                        items: _activities
+                                            .map((a) => DropdownMenuItem<int>(
+                                                  value: a["id"] as int,
+                                                  child: Text(a["name"] as String, overflow: TextOverflow.ellipsis),
+                                                ))
+                                            .toList(),
+                                        onChanged: (v) => setState(() => _timeActivityId = v),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TextField(
+                                  controller: _timeComment,
+                                  decoration: const InputDecoration(labelText: "Comment (optional)", isDense: true),
+                                  maxLines: 1,
+                                ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: _timeLoading ? null : _logTime,
+                                    child: _timeLoading
+                                        ? const SizedBox(
+                                            width: 16, height: 16,
+                                            child: CircularProgressIndicator(strokeWidth: 2),
+                                          )
+                                        : const Text("Log Time"),
+                                  ),
+                                ),
+                                if (_timeEntries.isNotEmpty) ...<Widget>[
+                                  const SizedBox(height: 12),
+                                  Text("Recent Entries (${_timeEntries.length})", style: theme.textTheme.labelLarge),
+                                  ..._timeEntries.take(10).map((entry) => ListTile(
+                                        contentPadding: EdgeInsets.zero,
+                                        dense: true,
+                                        title: Text(
+                                          "${entry.hours}h${entry.activityName != null ? " - ${entry.activityName}" : ""}",
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        subtitle: Text(
+                                          "${entry.comments ?? "No comment"} • ${entry.spentOn}",
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        trailing: IconButton(
+                                          icon: const Icon(Icons.delete_outline, size: 18),
+                                          onPressed: entry.redmineTimeEntryId != null
+                                              ? () => _deleteTimeEntry(entry.redmineTimeEntryId!)
+                                              : null,
+                                        ),
+                                      )),
+                                ],
+                              ],
                             ),
                           ),
                           _sectionCard(

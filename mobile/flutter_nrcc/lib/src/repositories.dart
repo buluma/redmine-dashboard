@@ -39,8 +39,24 @@ class IssuesRepository {
 
   IssuesRepository(this._api);
 
-  Future<List<Issue>> listIssues({String? search, String searchMode = "local"}) {
-    return _api.listIssues(search: search, searchMode: searchMode);
+  Future<List<Issue>> listIssues({
+    String? status,
+    String? priority,
+    String? search,
+    String searchMode = "local",
+    String sort = "updated_desc",
+    int page = 1,
+    int pageSize = 25,
+  }) {
+    return _api.listIssues(
+      status: status,
+      priority: priority,
+      search: search,
+      searchMode: searchMode,
+      sort: sort,
+      page: page,
+      pageSize: pageSize,
+    );
   }
 
   Future<Issue> getIssue(int redmineIssueId) {
@@ -52,6 +68,48 @@ class IssueActionsRepository {
   final NrccApiClient _api;
 
   IssueActionsRepository(this._api);
+
+  Future<void> updateStatus({
+    required int redmineIssueId,
+    required int statusId,
+  }) {
+    return _api.updateStatus(redmineIssueId: redmineIssueId, statusId: statusId);
+  }
+
+  Future<void> assignIssue({
+    required int redmineIssueId,
+    required int userId,
+  }) {
+    return _api.assignIssue(redmineIssueId: redmineIssueId, userId: userId);
+  }
+
+  Future<List<AssignableUser>> listAssignableUsers() {
+    return _api.listAssignableUsers();
+  }
+
+  Future<List<TimeEntry>> listTimeEntries({required int redmineIssueId}) {
+    return _api.listTimeEntries(redmineIssueId: redmineIssueId);
+  }
+
+  Future<void> createTimeEntry({
+    required int redmineIssueId,
+    required double hours,
+    required int activityId,
+    String? comment,
+    String? spentOn,
+  }) {
+    return _api.createTimeEntry(
+      redmineIssueId: redmineIssueId,
+      hours: hours,
+      activityId: activityId,
+      comment: comment,
+      spentOn: spentOn,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> listActivities() {
+    return _api.listActivities();
+  }
 
   Future<void> postComment({
     required int redmineIssueId,
