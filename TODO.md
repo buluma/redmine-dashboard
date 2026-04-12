@@ -1,1 +1,1 @@
-- wakatime api integration
+- wakatime api integration for worktime tracking

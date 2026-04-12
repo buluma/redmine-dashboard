@@ -1,4 +1,5 @@
 import { requireCurrentUser } from "@/src/lib/auth";
+import { recomputeIssueActivityIndex, recordIssueActivityEvent } from "@/src/lib/activity-index";
 import { prisma } from "@/src/lib/db";
 import { jsonError, parseJson } from "@/src/lib/http";
 import { z } from "zod";
@@ -80,6 +81,15 @@ export async function POST(request: Request) {
         user: { select: { id: true, displayName: true } },
       },
     });
+    await recordIssueActivityEvent({
+      issueId: issue.id,
+      eventType: "internal_note",
+      source: "local",
+      sourceRemoteId: note.id,
+      eventAt: note.updatedAt,
+      summary: note.content,
+    });
+    await recomputeIssueActivityIndex(issue.id);
 
     return Response.json({
       note: {

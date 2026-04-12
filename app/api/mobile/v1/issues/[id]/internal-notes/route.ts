@@ -1,4 +1,5 @@
 import { requireMobileUser } from "@/src/lib/auth";
+import { recomputeIssueActivityIndex, recordIssueActivityEvent } from "@/src/lib/activity-index";
 import { prisma } from "@/src/lib/db";
 import { jsonError, parseJson } from "@/src/lib/http";
 import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
@@ -68,6 +69,15 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       data: { issueId: issue.id, userId: user.id, content: body.content },
       include: { user: { select: { displayName: true } } },
     });
+    await recordIssueActivityEvent({
+      issueId: issue.id,
+      eventType: "internal_note",
+      source: "local",
+      sourceRemoteId: note.id,
+      eventAt: note.updatedAt,
+      summary: note.content,
+    });
+    await recomputeIssueActivityIndex(issue.id);
 
     return Response.json({
       note: {

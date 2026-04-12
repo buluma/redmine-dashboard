@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS "Issue" (
   "updatedOnRemote" DATETIME NOT NULL,
   "dueDate" DATETIME,
   "doneRatio" INTEGER,
+  "lastActivityAt" DATETIME,
+  "lastActivityType" TEXT,
   "allowedStatusesJson" JSON,
   "childrenJson" JSON,
   "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -49,6 +51,7 @@ CREATE TABLE IF NOT EXISTS "Issue" (
 CREATE UNIQUE INDEX IF NOT EXISTS "Issue_userId_redmineBaseUrl_redmineIssueId_key" ON "Issue"("userId", "redmineBaseUrl", "redmineIssueId");
 CREATE INDEX IF NOT EXISTS "Issue_userId_statusId_idx" ON "Issue"("userId", "statusId");
 CREATE INDEX IF NOT EXISTS "Issue_userId_updatedOnRemote_idx" ON "Issue"("userId", "updatedOnRemote");
+CREATE INDEX IF NOT EXISTS "Issue_userId_lastActivityAt_idx" ON "Issue"("userId", "lastActivityAt");
 
 CREATE TABLE IF NOT EXISTS "IssueJournal" (
   "id" TEXT NOT NULL PRIMARY KEY,
@@ -111,6 +114,22 @@ CREATE TABLE IF NOT EXISTS "IssueRelation" (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "IssueRelation_issueId_redmineRelationId_key" ON "IssueRelation"("issueId", "redmineRelationId");
 CREATE INDEX IF NOT EXISTS "IssueRelation_issueId_relationType_idx" ON "IssueRelation"("issueId", "relationType");
+
+CREATE TABLE IF NOT EXISTS "IssueActivityEvent" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "issueId" TEXT NOT NULL,
+  "eventType" TEXT NOT NULL,
+  "source" TEXT NOT NULL,
+  "sourceRemoteId" TEXT,
+  "eventAt" DATETIME NOT NULL,
+  "summary" TEXT,
+  "dedupeKey" TEXT NOT NULL,
+  "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "IssueActivityEvent_issueId_fkey" FOREIGN KEY ("issueId") REFERENCES "Issue" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "IssueActivityEvent_dedupeKey_key" ON "IssueActivityEvent"("dedupeKey");
+CREATE INDEX IF NOT EXISTS "IssueActivityEvent_issueId_eventAt_idx" ON "IssueActivityEvent"("issueId", "eventAt");
+CREATE INDEX IF NOT EXISTS "IssueActivityEvent_issueId_eventType_idx" ON "IssueActivityEvent"("issueId", "eventType");
 
 CREATE TABLE IF NOT EXISTS "TimeEntry" (
   "id" TEXT NOT NULL PRIMARY KEY,

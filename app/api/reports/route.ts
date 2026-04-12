@@ -415,10 +415,10 @@ export async function GET(request: Request) {
     ]);
 
     const agingBuckets = new Map<string, number>([
-      ["Updated < 7d", 0],
-      ["Updated 7-30d", 0],
-      ["Updated 31-90d", 0],
-      ["Updated > 90d", 0],
+      ["Activity < 7d", 0],
+      ["Activity 7-30d", 0],
+      ["Activity 31-90d", 0],
+      ["Activity > 90d", 0],
     ]);
 
     const progressBuckets = new Map<string, number>([
@@ -469,11 +469,12 @@ export async function GET(request: Request) {
         else dueBuckets.set("Due 15d+", (dueBuckets.get("Due 15d+") ?? 0) + 1);
       }
 
-      const staleDays = Math.floor((dayStart.getTime() - new Date(issue.updatedOnRemote).getTime()) / (24 * 60 * 60 * 1000));
-      if (staleDays < 7) agingBuckets.set("Updated < 7d", (agingBuckets.get("Updated < 7d") ?? 0) + 1);
-      else if (staleDays <= 30) agingBuckets.set("Updated 7-30d", (agingBuckets.get("Updated 7-30d") ?? 0) + 1);
-      else if (staleDays <= 90) agingBuckets.set("Updated 31-90d", (agingBuckets.get("Updated 31-90d") ?? 0) + 1);
-      else agingBuckets.set("Updated > 90d", (agingBuckets.get("Updated > 90d") ?? 0) + 1);
+      const activityAt = issue.updatedOnRemote;
+      const staleDays = Math.floor((dayStart.getTime() - new Date(activityAt).getTime()) / (24 * 60 * 60 * 1000));
+      if (staleDays < 7) agingBuckets.set("Activity < 7d", (agingBuckets.get("Activity < 7d") ?? 0) + 1);
+      else if (staleDays <= 30) agingBuckets.set("Activity 7-30d", (agingBuckets.get("Activity 7-30d") ?? 0) + 1);
+      else if (staleDays <= 90) agingBuckets.set("Activity 31-90d", (agingBuckets.get("Activity 31-90d") ?? 0) + 1);
+      else agingBuckets.set("Activity > 90d", (agingBuckets.get("Activity > 90d") ?? 0) + 1);
 
       if (!done) {
         if (blocked) blockedOpenIssues += 1;

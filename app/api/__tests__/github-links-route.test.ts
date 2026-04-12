@@ -3,9 +3,13 @@ import { clearRateLimitState } from "@/src/lib/rate-limit";
 
 const mockRequireCurrentUser = vi.fn();
 const mockIssueFindFirst = vi.fn();
+const mockIssueFindUnique = vi.fn();
+const mockIssueUpdate = vi.fn();
 const mockLinkFindMany = vi.fn();
 const mockLinkUpsert = vi.fn();
 const mockLinkDeleteMany = vi.fn();
+const mockIssueActivityEventUpsert = vi.fn();
+const mockIssueActivityEventFindFirst = vi.fn();
 
 vi.mock("@/src/lib/auth", () => ({
   requireCurrentUser: mockRequireCurrentUser,
@@ -15,11 +19,17 @@ vi.mock("@/src/lib/db", () => ({
   prisma: {
     issue: {
       findFirst: mockIssueFindFirst,
+      findUnique: mockIssueFindUnique,
+      update: mockIssueUpdate,
     },
     issueGithubLink: {
       findMany: mockLinkFindMany,
       upsert: mockLinkUpsert,
       deleteMany: mockLinkDeleteMany,
+    },
+    issueActivityEvent: {
+      upsert: mockIssueActivityEventUpsert,
+      findFirst: mockIssueActivityEventFindFirst,
     },
   },
 }));
@@ -28,6 +38,12 @@ describe("GitHub links issue routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearRateLimitState();
+    mockIssueFindUnique.mockResolvedValue({
+      id: "issue-local-1",
+      updatedOnRemote: new Date("2026-04-11T00:00:00.000Z"),
+    });
+    mockIssueActivityEventFindFirst.mockResolvedValue(null);
+    mockIssueUpdate.mockResolvedValue(null);
   });
 
   it("creates github issue link using derived url", async () => {

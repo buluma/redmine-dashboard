@@ -112,14 +112,18 @@ model Issue {
   githubLinks      IssueGithubLink[]
   attachments      IssueAttachment[]
   relations        IssueRelation[]
+  activityEvents   IssueActivityEvent[]
   aiSummaries      AiSummary[]
   internalNotes    InternalNote[]
+  lastActivityAt   DateTime?
+  lastActivityType String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
   @@unique([userId, redmineBaseUrl, redmineIssueId])
   @@index([userId, statusId])
   @@index([userId, updatedOnRemote])
+  @@index([userId, lastActivityAt])
   @@index([parentIssueId])
 }
 
@@ -154,6 +158,22 @@ model IssueRelation {
 
   @@unique([issueId, redmineRelationId])
   @@index([issueId, relationType])
+}
+
+model IssueActivityEvent {
+  id             String   @id @default(cuid())
+  issueId         String
+  issue           Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  eventType       String
+  source          String
+  sourceRemoteId  String?
+  eventAt         DateTime
+  summary         String?
+  dedupeKey       String   @unique
+  createdAt       DateTime @default(now())
+
+  @@index([issueId, eventAt])
+  @@index([issueId, eventType])
 }
 
 model AiSummary {

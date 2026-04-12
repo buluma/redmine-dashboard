@@ -99,7 +99,7 @@ export async function POST(request: Request) {
       assignedToName: issue.assignedToName,
       dueDate: issue.dueDate?.toISOString() ?? null,
       doneRatio: issue.doneRatio,
-      updatedOn: issue.updatedOnRemote.toISOString(),
+      updatedOn: (issue.lastActivityAt ?? issue.updatedOnRemote).toISOString(),
       journals: issue.journals.map((journal) => ({
         author: journal.author,
         notes: journal.notes,

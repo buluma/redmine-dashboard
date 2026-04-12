@@ -92,6 +92,8 @@ type Issue = {
   }> | null;
   breadcrumbs: Array<{ id: number; subject: string; tracker?: string; isCached?: boolean }>;
   updatedOnRemote: string;
+  lastActivityAt: string | null;
+  lastActivityType: string | null;
   dueDate: string | null;
   doneRatio: number | null;
   githubLinks: GithubLink[];
@@ -261,6 +263,10 @@ function formatDisplayDate(dateLike: string | null): string {
   const d = new Date(dateLike);
   if (Number.isNaN(d.getTime())) return "Not set";
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function issueActivityAt(issue: Pick<Issue, "lastActivityAt" | "updatedOnRemote">): string {
+  return issue.lastActivityAt ?? issue.updatedOnRemote;
 }
 
 const ATTACHMENT_MARKER_RE = /\/api\/issues\/_ATTACHMENT_\/([^)]+)/gi;
@@ -1046,7 +1052,7 @@ export default function IssueDetailPage() {
               )}
             </div>
             <p className="muted">
-              {issue.projectName ?? "No project"} • Updated {formatAgo(issue.updatedOnRemote)}
+              {issue.projectName ?? "No project"} • Activity {formatAgo(issueActivityAt(issue))}
             </p>
             {externalIssueUrl && (
               <p className="external-issue-row">
@@ -1075,8 +1081,8 @@ export default function IssueDetailPage() {
                 <strong>{totalSpent.toFixed(1)}h</strong>
               </div>
               <div className="issue-snapshot">
-                <span>Last update</span>
-                <strong>{formatAgo(issue.updatedOnRemote)}</strong>
+                <span>Last activity</span>
+                <strong>{formatAgo(issueActivityAt(issue))}</strong>
               </div>
             </div>
           </div>
