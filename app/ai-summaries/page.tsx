@@ -1,61 +1,9 @@
 import Link from "next/link";
 import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
+import { AiSummariesClient } from "./ai-summaries-client";
 
 export const runtime = "nodejs";
-
-interface ParsedSummary {
-  summary: string;
-  keyPoints: string[];
-  actionItems: string[];
-  confidence: number;
-}
-
-function parseSummaryText(text: string | null): ParsedSummary | null {
-  if (!text) return null;
-  try {
-    const parsed = JSON.parse(text);
-    return {
-      summary: parsed.summary ?? "",
-      keyPoints: parsed.keyPoints ?? [],
-      actionItems: parsed.actionItems ?? [],
-      confidence: parsed.confidence ?? 0,
-    };
-  } catch {
-    return { summary: text, keyPoints: [], actionItems: [], confidence: 0 };
-  }
-}
-
-function linkify(text: string): React.ReactElement {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const parts = text.split(urlRegex);
-
-  if (parts.length === 1) return <>{text}</>;
-
-  return (
-    <>
-      {parts.map((part, i) =>
-        urlRegex.test(part) ? (
-          <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="ai-link">
-            {part}
-          </a>
-        ) : (
-          <span key={i}>{part}</span>
-        )
-      )}
-    </>
-  );
-}
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export default async function AiSummariesPage() {
   const user = await requireCurrentUser();
@@ -227,89 +175,7 @@ export default async function AiSummariesPage() {
               </div>
             </div>
 
-            <div className="summaries-list">
-              {summaries.map((summary) => {
-                const parsed = parseSummaryText(summary.summary);
-
-                return (
-                  <article key={summary.id} className="summary-card">
-                    <div className="summary-header">
-                      <div className="summary-issue-info">
-                        <Link
-                          href={`/issues/${summary.issue.redmineIssueId}`}
-                          className="summary-issue-link"
-                        >
-                          #{summary.issue.redmineIssueId} - {summary.issue.subject}
-                        </Link>
-                        <div className="summary-meta">
-                          <span className="summary-status">{summary.issue.statusName}</span>
-                          {summary.issue.priority && (
-                            <span className="summary-priority">{summary.issue.priority}</span>
-                          )}
-                          {summary.issue.projectName && (
-                            <span className="summary-project">{summary.issue.projectName}</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="summary-side">
-                        <span className="summary-model">{summary.model}</span>
-                        <span className="summary-date">{formatDate(summary.updatedAt)}</span>
-                      </div>
-                    </div>
-
-                    {/* Rendered exactly like AiIssueActions */}
-                    {parsed && (
-                      <div className="ai-result">
-                        <div className="ai-result-header">
-                          <h5>AI Summary</h5>
-                          {parsed.confidence > 0 && (
-                            <span className="ai-confidence">
-                              {Math.round(parsed.confidence * 100)}% confident
-                            </span>
-                          )}
-                        </div>
-
-                        {parsed.summary && (
-                          <div className="ai-section">
-                            <p>{linkify(parsed.summary)}</p>
-                          </div>
-                        )}
-
-                        {parsed.keyPoints.length > 0 && (
-                          <div className="ai-section">
-                            <h6>Key Points</h6>
-                            <ul>
-                              {parsed.keyPoints.map((point, i) => (
-                                <li key={i}>{linkify(point)}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {parsed.actionItems.length > 0 && (
-                          <div className="ai-section">
-                            <h6>Action Items</h6>
-                            <ul className="action-items">
-                              {parsed.actionItems.map((item, i) => (
-                                <li key={i}>{linkify(item)}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="summary-footer">
-                      <span>
-                        {summary.issue.assignedToName
-                          ? `Assigned to: ${summary.issue.assignedToName}`
-                          : "Unassigned"}
-                      </span>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+            <AiSummariesClient summaries={summaries} />
           </section>
         </>
       )}

@@ -4540,6 +4540,38 @@ textarea {
   color: #374151;
 }
 
+.ai-result-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.summary-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.5rem;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.summary-copy-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.summary-copy-btn.copied {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+
 .ai-confidence {
   font-size: 0.7rem;
   color: #6b7280;
