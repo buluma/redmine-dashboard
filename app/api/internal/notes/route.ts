@@ -19,8 +19,17 @@ export async function GET(request: Request) {
       return jsonError("issueId query param is required", 400);
     }
 
+    const issue = await prisma.issue.findFirst({
+      where: { id: issueId, userId: user.id },
+      select: { id: true },
+    });
+
+    if (!issue) {
+      return jsonError("Issue not found", 404);
+    }
+
     const notes = await prisma.internalNote.findMany({
-      where: { issueId, userId: user.id },
+      where: { issueId: issue.id },
       orderBy: { createdAt: "desc" },
       include: {
         user: { select: { id: true, displayName: true } },
@@ -52,9 +61,18 @@ export async function POST(request: Request) {
     const user = await requireCurrentUser();
     const body = await parseJson(request, createNoteSchema);
 
+    const issue = await prisma.issue.findFirst({
+      where: { id: body.issueId, userId: user.id },
+      select: { id: true },
+    });
+
+    if (!issue) {
+      return jsonError("Issue not found", 404);
+    }
+
     const note = await prisma.internalNote.create({
       data: {
-        issueId: body.issueId,
+        issueId: issue.id,
         userId: user.id,
         content: body.content,
       },
