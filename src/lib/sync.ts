@@ -77,8 +77,7 @@ function parseAllowedStatuses(issueRaw: Record<string, unknown>): AllowedStatus[
 type IssueChild = {
   id: number;
   subject: string;
-  status?: { id?: number; name?: string };
-  priority?: string;
+  tracker?: string;
 };
 
 function parseChildren(issueRaw: Record<string, unknown>): IssueChild[] {
@@ -94,17 +93,10 @@ function parseChildren(issueRaw: Record<string, unknown>): IssueChild[] {
       const subject = asString(item.subject);
       if (!id || !subject) return null;
 
-      const statusObj = item.status as Record<string, unknown> | undefined;
-      const status = statusObj ? {
-        id: asNumber(statusObj.id),
-        name: asString(statusObj.name),
-      } : undefined;
+      const trackerObj = item.tracker as Record<string, unknown> | undefined;
+      const tracker = trackerObj ? asString(trackerObj.name) : undefined;
 
-      const priorityVal = item.priority;
-      const priority = typeof priorityVal === "string" ? priorityVal
-        : (priorityVal && typeof priorityVal === "object" ? asString((priorityVal as Record<string, unknown>).name) : undefined);
-
-      return { id, subject, status, priority };
+      return { id, subject, tracker };
     })
     .filter((x): x is IssueChild => Boolean(x));
 }
