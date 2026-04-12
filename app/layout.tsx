@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Sora, JetBrains_Mono } from "next/font/google";
+import { Sora, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
 const sora = Sora({
@@ -9,6 +9,11 @@ const sora = Sora({
 
 const mono = JetBrains_Mono({
   variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+const display = Space_Grotesk({
+  variable: "--font-display",
   subsets: ["latin"],
 });
 
@@ -24,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${sora.variable} ${mono.variable}`}>
+      <body className={`${sora.variable} ${mono.variable} ${display.variable}`}>
         {children}
       </body>
     </html>

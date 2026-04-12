@@ -1,8 +1,16 @@
 import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { toIssueView } from "@/src/lib/issue-shape";
-import { buildBreadcrumbChain } from "@/src/lib/sync";
+import { buildBreadcrumbChain, syncSingleIssue } from "@/src/lib/sync";
 import { requireRedmineClient } from "@/src/lib/auth";
+
+const ISSUE_DETAIL_CACHE_TTL_MS = 90_000;
+const ISSUE_DETAIL_CACHE_LIMIT = 1000;
+type IssueDetailPayload = {
+  issue: unknown;
+  statuses: unknown;
+};
+const issueDetailCache = new Map<string, { expiresAt: number; payload: IssueDetailPayload }>();
 
 function parseIssueId(id: string): number {
   const n = Number(id);
@@ -12,45 +20,106 @@ function parseIssueId(id: string): number {
   return n;
 }
 
-export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
+function pruneIssueDetailCache(nowMs: number) {
+  for (const [key, entry] of issueDetailCache.entries()) {
+    if (entry.expiresAt <= nowMs) {
+      issueDetailCache.delete(key);
+    }
+  }
+  if (issueDetailCache.size <= ISSUE_DETAIL_CACHE_LIMIT) {
+    return;
+  }
+  const overflow = issueDetailCache.size - ISSUE_DETAIL_CACHE_LIMIT;
+  const keys = issueDetailCache.keys();
+  for (let i = 0; i < overflow; i += 1) {
+    const next = keys.next();
+    if (next.done) break;
+    issueDetailCache.delete(next.value);
+  }
+}
+
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireCurrentUser();
     const { id } = await context.params;
     const issueId = parseIssueId(id);
+    const cacheKey = `${user.id}:${issueId}`;
+    const nowMs = Date.now();
+    const forceFresh = new URL(request.url).searchParams.get("fresh") === "1";
 
-    const [issue, statuses] = await Promise.all([
-      prisma.issue.findFirst({
-        where: { userId: user.id, redmineIssueId: issueId },
-        include: {
-          journals: { orderBy: { createdOnRemote: "desc" }, take: 50 },
-          githubLinks: { orderBy: { createdAt: "desc" }, take: 50 },
-          timeEntries: { orderBy: { spentOn: "desc" }, take: 50 },
-          attachments: { orderBy: { createdOnRemote: "desc" }, take: 50 },
-          relations: { orderBy: { createdAt: "desc" }, take: 50 },
-        },
-      }),
+    const cached = issueDetailCache.get(cacheKey);
+    if (!forceFresh && cached && cached.expiresAt > nowMs) {
+      return Response.json(cached.payload);
+    }
+
+    const readIssue = () => prisma.issue.findFirst({
+      where: { userId: user.id, redmineIssueId: issueId },
+      include: {
+        journals: { orderBy: { createdOnRemote: "desc" }, take: 50 },
+        githubLinks: { orderBy: { createdAt: "desc" }, take: 50 },
+        timeEntries: { orderBy: { spentOn: "desc" }, take: 50 },
+        attachments: { orderBy: { createdOnRemote: "desc" }, take: 50 },
+        relations: { orderBy: { createdAt: "desc" }, take: 50 },
+      },
+    });
+
+    const [initialIssue, statuses] = await Promise.all([
+      readIssue(),
       prisma.statusCatalog.findMany({ orderBy: { name: "asc" } }),
     ]);
+
+    let issue = initialIssue;
+    if (!issue) {
+      try {
+        const { client } = await requireRedmineClient();
+        await syncSingleIssue(user.id, client, issueId, {
+          pruneAttachments: false,
+          pruneRelations: false,
+          pruneTimeEntries: false,
+        });
+        issue = await readIssue();
+      } catch {
+        // If direct hydration fails, keep default 404 behavior below.
+      }
+    }
 
     if (!issue) {
       return Response.json({ error: "Issue not found" }, { status: 404 });
     }
 
     // Build breadcrumbs from parent chain
-    let breadcrumbs: Array<{ id: number; subject: string; tracker?: string }> = [];
+    let breadcrumbs: Array<{ id: number; subject: string; tracker?: string; isCached?: boolean }> = [];
     try {
       const { client } = await requireRedmineClient();
-      breadcrumbs = await buildBreadcrumbChain(client, issueId);
+      const chain = await buildBreadcrumbChain(client, issueId);
+      const chainIds = chain.map((crumb) => crumb.id);
+      const cached = chainIds.length === 0
+        ? []
+        : await prisma.issue.findMany({
+          where: {
+            userId: user.id,
+            redmineIssueId: { in: chainIds },
+          },
+          select: { redmineIssueId: true },
+        });
+      const cachedIds = new Set(cached.map((row) => row.redmineIssueId));
+      breadcrumbs = chain.map((crumb) => ({ ...crumb, isCached: cachedIds.has(crumb.id) }));
     } catch {
       // If Redmine is unavailable, skip breadcrumbs
     }
 
     const issueView = toIssueView(issue);
-
-    return Response.json({
+    const payload: IssueDetailPayload = {
       issue: { ...issueView, breadcrumbs },
       statuses,
+    };
+    issueDetailCache.set(cacheKey, {
+      expiresAt: nowMs + ISSUE_DETAIL_CACHE_TTL_MS,
+      payload,
     });
+    pruneIssueDetailCache(nowMs);
+
+    return Response.json(payload);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load issue";
     const status = message === "Unauthorized" ? 401 : message === "Invalid issue id" ? 400 : 500;

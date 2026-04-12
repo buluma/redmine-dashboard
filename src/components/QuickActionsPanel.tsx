@@ -50,6 +50,10 @@ export function QuickActionsPanel({
         <span className="qa-title">Quick Actions</span>
         <span className="qa-issue">#{issueId}</span>
       </div>
+      <div className="qa-meta-row">
+        <span className="qa-meta-pill">Status: {currentStatus}</span>
+        <span className="qa-meta-pill">Assignee: {currentAssignee || "Unassigned"}</span>
+      </div>
 
       <div className="qa-tabs">
         <button

@@ -2,7 +2,7 @@ import { requireRedmineClient } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
-import { syncSingleIssue } from "@/src/lib/sync";
+import { syncSingleIssue, upsertAttachmentsForIssue } from "@/src/lib/sync";
 import { trackFailure, trackSuccess } from "@/src/lib/telemetry";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -15,11 +15,11 @@ function parseIssueId(id: string): number {
   return n;
 }
 
-export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
     const issueId = parseIssueId(id);
-    const { user } = await requireRedmineClient();
+    const { user, client } = await requireRedmineClient();
 
     const issue = await prisma.issue.findFirst({
       where: { userId: user.id, redmineIssueId: issueId },
@@ -30,7 +30,21 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       return jsonError("Issue not found", 404);
     }
 
-    return Response.json({ items: issue.attachments });
+    const refreshRequested = new URL(request.url).searchParams.get("refresh") === "1";
+    if (refreshRequested) {
+      try {
+        const detail = await client.getIssue(issueId, ["attachments"]);
+        await upsertAttachmentsForIssue(issue.id, (detail.issue ?? {}) as Record<string, unknown>, true);
+      } catch {
+        // Fall back to currently cached attachment rows when Redmine refresh fails.
+      }
+    }
+
+    const attachments = await prisma.issueAttachment.findMany({
+      where: { issueId: issue.id },
+      orderBy: { createdOnRemote: "desc" },
+    });
+    return Response.json({ items: attachments });
   } catch (error) {
     const message = redmineMessageFromError(error, "Unable to fetch attachments");
     const status = message === "Unauthorized" ? 401 : (redmineStatusFromError(error) ?? 400);
