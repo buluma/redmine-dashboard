@@ -499,6 +499,23 @@ class _IssueListScreenState extends State<IssueListScreen> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: FilterChip(
+                            label: const Text("Favorites only"),
+                            selected: _showFavoritesOnly,
+                            avatar: Icon(
+                              _showFavoritesOnly
+                                  ? Icons.star
+                                  : Icons.star_border,
+                              size: 16,
+                            ),
+                            onSelected: (value) {
+                              setState(() => _showFavoritesOnly = value);
+                            },
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -699,8 +716,8 @@ class _IssueListScreenState extends State<IssueListScreen> {
                                   const Icon(Icons.chevron_right),
                                 ],
                               ),
-                              onTap: () {
-                                Navigator.of(context).push(
+                              onTap: () async {
+                                await Navigator.of(context).push(
                                   MaterialPageRoute<void>(
                                     builder: (_) => IssueDetailScreen(
                                       issueId: issue.redmineIssueId,
@@ -710,6 +727,9 @@ class _IssueListScreenState extends State<IssueListScreen> {
                                     ),
                                   ),
                                 );
+                                if (mounted) {
+                                  await _load();
+                                }
                               },
                             ),
                           );
@@ -758,6 +778,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   bool _expandAllowed = false;
   bool _expandComment = false;
   bool _expandGithub = false;
+  bool _expandInternalNotes = false;
   bool _expandAttachments = false;
   bool _expandRelations = false;
   bool _expandAi = false;
@@ -879,6 +900,8 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
           return Icons.chat_bubble_outline;
         case "github":
           return Icons.link;
+        case "internal-notes":
+          return Icons.sticky_note_2_outlined;
         case "attachments":
           return Icons.attach_file;
         case "relations":
@@ -1663,6 +1686,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                             _expandAllowed = true;
                             _expandComment = true;
                             _expandGithub = true;
+                            _expandInternalNotes = true;
                             _expandAttachments = true;
                             _expandRelations = true;
                           });
@@ -1682,6 +1706,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                             _expandAllowed = false;
                             _expandComment = false;
                             _expandGithub = false;
+                            _expandInternalNotes = false;
                             _expandAttachments = false;
                             _expandRelations = false;
                           });
@@ -2128,25 +2153,19 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                       ],
                     ),
                   ),
-                  Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ExpansionTile(
-                      tilePadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 2,
-                      ),
-                      childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                      onExpansionChanged: (value) {
-                        if (value && _internalNotes.isEmpty) {
-                          _loadInternalNotes();
-                        }
-                      },
-                      title: Text(
-                        "Internal Notes",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                  _sectionCard(
+                    context: context,
+                    sectionId: "internal-notes",
+                    title: "Internal Notes",
+                    expanded: _expandInternalNotes,
+                    onExpandedChanged: (value) {
+                      setState(() => _expandInternalNotes = value);
+                      if (value && _internalNotes.isEmpty) {
+                        _loadInternalNotes();
+                      }
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         ElevatedButton.icon(
                           onPressed: () => _showAddNoteDialog(context),
@@ -2318,8 +2337,13 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                     sectionId: "attachments",
                     title: "Attachments",
                     expanded: _expandAttachments,
-                    onExpandedChanged: (value) =>
-                        setState(() => _expandAttachments = value),
+                    onExpandedChanged: (value) {
+                      setState(() => _expandAttachments = value);
+                      if (value &&
+                          !_attachmentHeaders.containsKey("Authorization")) {
+                        _loadAttachmentHeaders();
+                      }
+                    },
                     child: _issue!.attachments.isEmpty
                         ? const Text("No attachments.")
                         : Column(
@@ -2353,32 +2377,66 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                           attachment,
                                         )) ...<Widget>[
                                           const SizedBox(height: 8),
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
+                                          if (!_attachmentHeaders.containsKey(
+                                            "Authorization",
+                                          ))
+                                            Container(
+                                              height: 80,
+                                              alignment: Alignment.center,
+                                              color: theme
+                                                  .colorScheme
+                                                  .surfaceContainerHighest,
+                                              child: const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: <Widget>[
+                                                  SizedBox(
+                                                    width: 16,
+                                                    height: 16,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                        ),
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text(
+                                                    "Loading image preview...",
+                                                  ),
+                                                ],
+                                              ),
+                                            )
+                                          else
+                                            ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Image.network(
+                                                _attachmentUrl(attachment),
+                                                key: ValueKey<String>(
+                                                  "att-${attachment.redmineAttachmentId}-${_attachmentHeaders["Authorization"]}",
+                                                ),
+                                                headers: _attachmentHeaders,
+                                                height: 180,
+                                                width: double.infinity,
+                                                fit: BoxFit.cover,
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) {
+                                                      return Container(
+                                                        height: 80,
+                                                        alignment:
+                                                            Alignment.center,
+                                                        color: theme
+                                                            .colorScheme
+                                                            .surfaceContainerHighest,
+                                                        child: const Text(
+                                                          "Image preview unavailable",
+                                                        ),
+                                                      );
+                                                    },
+                                              ),
                                             ),
-                                            child: Image.network(
-                                              _attachmentUrl(attachment),
-                                              headers: _attachmentHeaders,
-                                              height: 180,
-                                              width: double.infinity,
-                                              fit: BoxFit.cover,
-                                              errorBuilder:
-                                                  (context, error, stackTrace) {
-                                                    return Container(
-                                                      height: 80,
-                                                      alignment:
-                                                          Alignment.center,
-                                                      color: theme
-                                                          .colorScheme
-                                                          .surfaceContainerHighest,
-                                                      child: const Text(
-                                                        "Image preview unavailable",
-                                                      ),
-                                                    );
-                                                  },
-                                            ),
-                                          ),
                                         ],
                                         if (_isTextDocAttachment(
                                           attachment,
