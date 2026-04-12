@@ -591,7 +591,50 @@ export async function runSyncJob(
     },
   });
 
-  void executeSyncJob(job.id);
+  // Safe fire-and-forget: wrap in try/catch to prevent unhandled rejections
+  // Also add a timeout to auto-fail long-running jobs
+  const STALE_JOB_TIMEOUT_MS = env.syncJobStaleMs;
+  const timeoutHandle = setTimeout(() => {
+    prisma.syncJob.findUnique({ where: { id: job.id } }).then((j) => {
+      if (j && j.status === "running") {
+        prisma.syncJob
+          .update({
+            where: { id: job.id },
+            data: { status: "failed", endedAt: new Date(), error: "Job timed out" },
+          })
+          .then(() =>
+            markSyncState(job.userId, {
+              status: "failed",
+              runningJobId: null,
+              error: "Job timed out after " + STALE_JOB_TIMEOUT_MS + "ms",
+            })
+          );
+        logEvent("sync.job.timed_out", { jobId: job.id, userId, jobType }, "warn");
+      }
+    });
+  }, STALE_JOB_TIMEOUT_MS);
+
+  executeSyncJob(job.id)
+    .then(() => clearTimeout(timeoutHandle))
+    .catch((err) => {
+      clearTimeout(timeoutHandle);
+      const msg = err instanceof Error ? err.message : String(err);
+      logEvent("sync.job.startup_failed", { jobId: job.id, userId, jobType, error: msg }, "error");
+      // Mark as failed - this handles startup errors that the inner try/catch misses
+      prisma.syncJob
+        .update({
+          where: { id: job.id },
+          data: { status: "failed", endedAt: new Date(), error: msg },
+        })
+        .then(() =>
+          markSyncState(job.userId, {
+            status: "failed",
+            runningJobId: null,
+            error: msg,
+          })
+        );
+    });
+
   logEvent("sync.job.created", { userId, jobType, jobId: job.id });
   return { jobId: job.id };
 }
@@ -601,6 +644,25 @@ export async function executeSyncJob(jobId: string): Promise<void> {
   if (!job || job.status !== "pending") {
     return;
   }
+
+  // Watchdog: auto-fail if job runs too long (runs inside executeSyncJob for reliability)
+  const WATCHDOG_TIMEOUT_MS = env.syncJobStaleMs;
+  const watchdogTimeout = setTimeout(async () => {
+    try {
+      await prisma.syncJob.update({
+        where: { id: jobId },
+        data: { status: "failed", endedAt: new Date(), error: "Job watchdog timeout" },
+      });
+      await markSyncState(job.userId, {
+        status: "failed",
+        runningJobId: null,
+        error: "Job timed out after " + WATCHDOG_TIMEOUT_MS + "ms",
+      });
+      logEvent("sync.job.watchdog_timeout", { jobId, userId: job.userId }, "error");
+    } catch (e) {
+      // Ignore errors in watchdog
+    }
+  }, WATCHDOG_TIMEOUT_MS);
 
   await prisma.syncJob.update({
     where: { id: jobId },
@@ -679,6 +741,7 @@ export async function executeSyncJob(jobId: string): Promise<void> {
       full: job.jobType === "full_manual",
       incremental: job.jobType === "incremental",
     });
+    clearTimeout(watchdogTimeout);
     logEvent("sync.job.succeeded", {
       jobId,
       userId: job.userId,
@@ -710,5 +773,7 @@ export async function executeSyncJob(jobId: string): Promise<void> {
       jobType: job.jobType,
       error: message,
     }, "error");
+  } finally {
+    clearTimeout(watchdogTimeout);
   }
 }
