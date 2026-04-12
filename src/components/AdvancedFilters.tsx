@@ -133,7 +133,18 @@ export function AdvancedFilters({
               <label>Due Date</label>
               <select
                 value={filters.dueInDays ?? ""}
-                onChange={(e) => updateFilter("dueInDays", e.target.value ? Number(e.target.value) : undefined)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (!value) {
+                    updateFilter("dueInDays", undefined);
+                    return;
+                  }
+                  if (value === "overdue") {
+                    updateFilter("dueInDays", "overdue");
+                    return;
+                  }
+                  updateFilter("dueInDays", Number(value));
+                }}
                 className="filter-select"
               >
                 <option value="">Any</option>
