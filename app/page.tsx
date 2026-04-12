@@ -795,7 +795,7 @@ export default function Home() {
     return () => clearInterval(id);
     // refreshAll/loadActivities intentionally depend on current query + user snapshot.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryString, user]);
+  }, [queryString, user, page]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
