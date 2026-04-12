@@ -11,7 +11,7 @@ Add AI capabilities to the Redmine Dashboard using Ollama cloud models as primar
 ### Model Selection
 | Purpose | Primary (Cloud) | Fallback (Local) |
 |---------|-----------------|------------------|
-| Chat | `qwen3.5:cloud` | `qwen2.5-coder:3b` |
+| Chat | `qwen3.5:cloud` | `gpt-oss:20b-cloud` |
 | Embeddings | `nomic-embed-text-v2-moe:latest` | `nomic-embed-text:latest` |
 
 ## Architecture
@@ -55,7 +55,7 @@ Add AI capabilities to the Redmine Dashboard using Ollama cloud models as primar
    OLLAMA_STREAM=true
    
    # Fallback models (used if cloud unavailable)
-   OLLAMA_CHAT_MODEL_FALLBACK=qwen2.5-coder:3b
+   OLLAMA_CHAT_MODEL_FALLBACK=gpt-oss:20b-cloud
    OLLAMA_EMBED_MODEL_FALLBACK=nomic-embed-text:latest
    
    # Feature flags

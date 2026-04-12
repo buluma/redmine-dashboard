@@ -115,6 +115,20 @@ class IssueActionsRepository {
     return _api.getBreadcrumbs(redmineIssueId: redmineIssueId);
   }
 
+  Future<AiSummaryResponse> summarizeIssue({required int redmineIssueId}) async {
+    final json = await _api.summarizeIssue(redmineIssueId: redmineIssueId);
+    return AiSummaryResponse.fromJson(json);
+  }
+
+  Future<AiCategorizeResponse> categorizeIssue({required int redmineIssueId}) async {
+    final json = await _api.categorizeIssue(redmineIssueId: redmineIssueId);
+    return AiCategorizeResponse.fromJson(json);
+  }
+
+  Future<Map<String, dynamic>> getAiStatus() {
+    return _api.getAiStatus();
+  }
+
   Future<void> postComment({
     required int redmineIssueId,
     required String comment,

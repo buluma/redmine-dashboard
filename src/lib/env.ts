@@ -70,7 +70,7 @@ export const env = {
   ollamaEmbedModel: process.env.OLLAMA_EMBED_MODEL || "nomic-embed-text-v2-moe:latest",
   ollamaTimeoutMs: numberFromEnv("OLLAMA_TIMEOUT_MS", 120000),
   ollamaStream: boolFromEnv("OLLAMA_STREAM", true),
-  ollamaChatModelFallback: process.env.OLLAMA_CHAT_MODEL_FALLBACK || "qwen2.5-coder:3b",
+  ollamaChatModelFallback: process.env.OLLAMA_CHAT_MODEL_FALLBACK || "gpt-oss:20b-cloud",
   ollamaEmbedModelFallback: process.env.OLLAMA_EMBED_MODEL_FALLBACK || "nomic-embed-text:latest",
   enableAiFeatures: boolFromEnv("ENABLE_AI_FEATURES", true),
   aiSummarizeEnabled: boolFromEnv("AI_SUMMARIZE_ENABLED", true),

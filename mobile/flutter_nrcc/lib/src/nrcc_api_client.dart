@@ -228,6 +228,54 @@ class NrccApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> summarizeIssue({required int redmineIssueId}) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        "/api/ai/summarize",
+        data: <String, dynamic>{"issueId": "$redmineIssueId"},
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> categorizeIssue({required int redmineIssueId}) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        "/api/ai/categorize",
+        data: <String, dynamic>{"issueId": "$redmineIssueId"},
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> getAiStatus() async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>("/api/ai/status");
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<String?> getCachedSummary({required int redmineIssueId}) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        "/api/ai/summarize?issueId=$redmineIssueId",
+      );
+      final summary = response.data?["summary"];
+      if (summary is Map<String, dynamic>) {
+        return null; // Not cached yet
+      }
+      return null;
+    } on DioException catch (_) {
+      return null;
+    }
+  }
+
   Future<void> addGithubLink({
     required int redmineIssueId,
     required String repositoryFullName,

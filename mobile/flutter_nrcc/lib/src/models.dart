@@ -263,3 +263,62 @@ class AssignableUser {
         name: json["name"] as String,
       );
 }
+
+class AiSummaryResponse {
+  final String summary;
+  final List<String> keyPoints;
+  final List<String> actionItems;
+  final double confidence;
+  final String modelUsed;
+  final bool rawResponse;
+
+  AiSummaryResponse({
+    required this.summary,
+    required this.keyPoints,
+    required this.actionItems,
+    required this.confidence,
+    required this.modelUsed,
+    this.rawResponse = false,
+  });
+
+  factory AiSummaryResponse.fromJson(Map<String, dynamic> json) => AiSummaryResponse(
+        summary: json["summary"] as String? ?? "",
+        keyPoints: (json["keyPoints"] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const <String>[],
+        actionItems: (json["actionItems"] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const <String>[],
+        confidence: (json["confidence"] as num?)?.toDouble() ?? 0.0,
+        modelUsed: json["modelUsed"] as String? ?? "",
+        rawResponse: json["rawResponse"] as bool? ?? false,
+      );
+}
+
+class AiCategorizeResponse {
+  final Map<String, dynamic>? suggestedPriority;
+  final List<Map<String, dynamic>> suggestedTags;
+  final Map<String, dynamic>? suggestedCategory;
+  final String reasoning;
+  final String modelUsed;
+
+  AiCategorizeResponse({
+    this.suggestedPriority,
+    this.suggestedTags = const <Map<String, dynamic>>[],
+    this.suggestedCategory,
+    required this.reasoning,
+    required this.modelUsed,
+  });
+
+  factory AiCategorizeResponse.fromJson(Map<String, dynamic> json) => AiCategorizeResponse(
+        suggestedPriority: json["suggestedPriority"] as Map<String, dynamic>?,
+        suggestedTags: ((json["suggestedTags"] as List<dynamic>?) ?? const <dynamic>[])
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList(),
+        suggestedCategory: json["suggestedCategory"] as Map<String, dynamic>?,
+        reasoning: json["reasoning"] as String? ?? "",
+        modelUsed: json["modelUsed"] as String? ?? "",
+      );
+}
