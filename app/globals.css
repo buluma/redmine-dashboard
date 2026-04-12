@@ -963,6 +963,33 @@ label {
 .bar-row {
   display: grid;
   gap: 0.28rem;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.bar-row:hover {
+  opacity: 0.85;
+}
+
+.bar-row.active .bar-label {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.bar-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.bar-value {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  text-align: right;
 }
 
 .bar-label-row {
