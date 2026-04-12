@@ -556,8 +556,6 @@ export default function IssueDetailPage() {
     return issue.timeEntries.reduce((sum, entry) => sum + entry.hours, 0);
   }, [issue]);
 
-  const hasScrolledRef = useRef(false);
-
   useEffect(() => {
     if (!issue) {
       return;
