@@ -261,6 +261,83 @@ class NrccApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> editIssue({
+    required int redmineIssueId,
+    String? subject,
+    String? description,
+    String? priority,
+    String? dueDate,
+    String? startDate,
+    double? estimatedHours,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+      if (subject != null) data["subject"] = subject;
+      if (description != null) data["description"] = description;
+      if (priority != null) data["priority"] = priority;
+      if (dueDate != null) data["dueDate"] = dueDate;
+      if (startDate != null) data["startDate"] = startDate;
+      if (estimatedHours != null) data["estimatedHours"] = estimatedHours;
+
+      final response = await _dio.put<Map<String, dynamic>>(
+        "/api/mobile/v1/issues/$redmineIssueId/edit",
+        data: data,
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<List<InternalNote>> listInternalNotes({required int redmineIssueId}) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        "/api/mobile/v1/issues/$redmineIssueId/internal-notes",
+      );
+      final items = (response.data?["notes"] as List<dynamic>?) ?? const <dynamic>[];
+      return items.map((e) => InternalNote.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<InternalNote> createInternalNote({
+    required int redmineIssueId,
+    required String content,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        "/api/mobile/v1/issues/$redmineIssueId/internal-notes",
+        data: <String, dynamic>{"content": content},
+      );
+      return InternalNote.fromJson(response.data?["note"] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<bool> toggleFavorite({required int redmineIssueId}) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        "/api/mobile/v1/issues/$redmineIssueId/favorite",
+      );
+      return response.data?["favorited"] as bool? ?? false;
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
+  Future<bool> isFavorited({required int redmineIssueId}) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        "/api/mobile/v1/issues/$redmineIssueId/favorite",
+      );
+      return response.data?["favorited"] as bool? ?? false;
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
   Future<String?> getCachedSummary({required int redmineIssueId}) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(

@@ -62,6 +62,10 @@ class Issue {
   final String? parentIssueLabel;
   final int? parentIssueId;
   final String? projectName;
+  final String? dueDate;
+  final String? startDate;
+  final double? estimatedHours;
+  final bool isFavorited;
   final List<GithubLink> githubLinks;
   final List<IssueAttachment> attachments;
   final List<IssueRelation> relations;
@@ -80,6 +84,10 @@ class Issue {
     this.parentIssueLabel,
     this.parentIssueId,
     this.projectName,
+    this.dueDate,
+    this.startDate,
+    this.estimatedHours,
+    this.isFavorited = false,
     required this.githubLinks,
     required this.attachments,
     required this.relations,
@@ -99,6 +107,10 @@ class Issue {
         parentIssueLabel: json["parentIssueLabel"] as String?,
         parentIssueId: json["parentIssueId"] as int?,
         projectName: json["projectName"] as String?,
+        dueDate: json["dueDate"] as String?,
+        startDate: json["startDate"] as String?,
+        estimatedHours: (json["estimatedHours"] as num?)?.toDouble(),
+        isFavorited: json["isFavorited"] as bool? ?? false,
         githubLinks: ((json["githubLinks"] as List<dynamic>?) ?? const <dynamic>[])
             .map((e) => GithubLink.fromJson(e as Map<String, dynamic>))
             .toList(),
@@ -261,6 +273,22 @@ class AssignableUser {
   factory AssignableUser.fromJson(Map<String, dynamic> json) => AssignableUser(
         id: json["id"] as int,
         name: json["name"] as String,
+      );
+}
+
+class InternalNote {
+  final String id;
+  final String content;
+  final String createdAt;
+  final String authorName;
+
+  InternalNote({required this.id, required this.content, required this.createdAt, required this.authorName});
+
+  factory InternalNote.fromJson(Map<String, dynamic> json) => InternalNote(
+        id: json["id"] as String,
+        content: json["content"] as String,
+        createdAt: json["createdAt"] as String,
+        authorName: json["authorName"] as String,
       );
 }
 
