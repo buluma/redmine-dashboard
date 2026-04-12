@@ -1000,8 +1000,12 @@ export default function IssueDetailPage() {
           </article>
         )}
 
+        {aiStatus?.available && (
+          <AiIssueActions issueId={issue.id} />
+        )}
+
         <article className="report-card">
-          <details className="issue-collapsible" open={issue.children && issue.children.length > 0}>
+          <details className="issue-collapsible">
             <summary>
               Child Issues
               <span className="muted">({issue.children ? issue.children.length : 0})</span>
@@ -1044,10 +1048,6 @@ export default function IssueDetailPage() {
             )}
           </details>
         </article>
-
-        {aiStatus?.available && (
-          <AiIssueActions issueId={issue.id} />
-        )}
 
         <article className="report-card">
           <details className="issue-collapsible">
