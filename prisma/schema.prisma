@@ -177,13 +177,19 @@ model IssueActivityEvent {
 }
 
 model AiSummary {
-  id        String   @id @default(cuid())
-  issueId   String
-  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  summary   String
-  model     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String   @id @default(cuid())
+  issueId           String
+  issue             Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  summary           String
+  model             String
+  totalDuration     BigInt?
+  loadDuration      BigInt?
+  promptEvalCount   Int?
+  promptEvalDuration BigInt?
+  evalCount         Int?
+  evalDuration      BigInt?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@unique([issueId])
   @@index([issueId])

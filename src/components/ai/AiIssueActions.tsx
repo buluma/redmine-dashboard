@@ -9,6 +9,12 @@ interface StoredSummary {
   summary: string;
   model: string;
   createdAt: string;
+  totalDuration?: string | bigint | null;
+  loadDuration?: string | bigint | null;
+  promptEvalCount?: number | null;
+  promptEvalDuration?: string | bigint | null;
+  evalCount?: number | null;
+  evalDuration?: string | bigint | null;
 }
 
 interface ParsedSummary {
@@ -93,8 +99,31 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
   const [summary, setSummary] = useState<string | null>(existingSummaries[0]?.summary ?? null);
   const [category, setCategory] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [perfMetrics, setPerfMetrics] = useState<{
+    totalDuration: string | bigint | null;
+    loadDuration: string | bigint | null;
+    promptEvalCount: number | null;
+    promptEvalDuration: string | bigint | null;
+    evalCount: number | null;
+    evalDuration: string | bigint | null;
+  } | null>(existingSummaries[0] ? {
+    totalDuration: existingSummaries[0].totalDuration ?? null,
+    loadDuration: existingSummaries[0].loadDuration ?? null,
+    promptEvalCount: existingSummaries[0].promptEvalCount ?? null,
+    promptEvalDuration: existingSummaries[0].promptEvalDuration ?? null,
+    evalCount: existingSummaries[0].evalCount ?? null,
+    evalDuration: existingSummaries[0].evalDuration ?? null,
+  } : null);
 
   const parsedSummary = useMemo(() => parseSummaryText(summary), [summary]);
+
+  const formatDuration = (ns: bigint | string | number | null): string => {
+    if (ns == null) return "—";
+    const nsNum = typeof ns === "string" ? BigInt(ns) : typeof ns === "bigint" ? ns : BigInt(ns);
+    const ms = Number(nsNum) / 1_000_000;
+    if (ms < 1000) return `${Math.round(ms)}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
+  };
 
   const handleSummarize = async () => {
     setSummaryLoading(true);
@@ -122,6 +151,7 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
       };
       const serialized = JSON.stringify(structured);
       setSummary(serialized);
+      setPerfMetrics(data.metrics ?? null);
       onSummary?.(serialized);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to summarize");
@@ -280,6 +310,44 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
               </ul>
             </div>
           )}
+
+          {perfMetrics && (perfMetrics.totalDuration || perfMetrics.evalCount) && (
+            <div className="ai-section ai-perf-metrics">
+              <h6>Performance</h6>
+              <div className="ai-perf-grid">
+                {perfMetrics.totalDuration && (
+                  <span className="ai-perf-badge">
+                    Total: {formatDuration(perfMetrics.totalDuration)}
+                  </span>
+                )}
+                {perfMetrics.loadDuration && (
+                  <span className="ai-perf-badge">
+                    Load: {formatDuration(perfMetrics.loadDuration)}
+                  </span>
+                )}
+                {perfMetrics.promptEvalCount != null && (
+                  <span className="ai-perf-badge">
+                    Prompt tokens: {perfMetrics.promptEvalCount}
+                  </span>
+                )}
+                {perfMetrics.promptEvalDuration && (
+                  <span className="ai-perf-badge">
+                    Prompt: {formatDuration(perfMetrics.promptEvalDuration)}
+                  </span>
+                )}
+                {perfMetrics.evalCount != null && (
+                  <span className="ai-perf-badge">
+                    Tokens: {perfMetrics.evalCount}
+                  </span>
+                )}
+                {perfMetrics.evalDuration && (
+                  <span className="ai-perf-badge">
+                    Gen: {formatDuration(perfMetrics.evalDuration)}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -397,6 +465,29 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
         
         .ai-link:hover {
           color: #1d4ed8;
+        }
+
+        .ai-perf-metrics {
+          margin-top: 1rem;
+          padding-top: 0.75rem;
+          border-top: 1px dashed #e5e7eb;
+        }
+
+        .ai-perf-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.4rem;
+        }
+
+        .ai-perf-badge {
+          display: inline-block;
+          padding: 0.2rem 0.5rem;
+          background: #f3f4f6;
+          border-radius: 4px;
+          font-size: 0.72rem;
+          font-weight: 500;
+          color: #6b7280;
+          font-family: monospace;
         }
       `}</style>
     </div>

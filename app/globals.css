@@ -4739,8 +4739,32 @@ textarea {
   align-items: center;
   padding-top: 0.35rem;
   border-top: 1px dashed var(--line);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--ink-soft);
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.summary-footer-left {
+  flex-shrink: 0;
+}
+
+.summary-footer-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.summary-metric {
+  display: inline-block;
+  padding: 0.15rem 0.4rem;
+  background: #f3f4f6;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #6b7280;
+  font-family: monospace;
 }
 
 @media (max-width: 768px) {

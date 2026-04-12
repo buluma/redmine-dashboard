@@ -164,6 +164,12 @@ export class OllamaClient {
     content: string;
     model: string;
     done: boolean;
+    total_duration?: number;
+    load_duration?: number;
+    prompt_eval_count?: number;
+    prompt_eval_duration?: number;
+    eval_count?: number;
+    eval_duration?: number;
   }> {
     const { stream = this.streamEnabled, temperature = 0.7, maxTokens = 4096, useFallback = false } = options;
     const model = useFallback ? this.fallbackChatModel : this.primaryChatModel;
@@ -195,6 +201,12 @@ export class OllamaClient {
 
       let fullContent = "";
       let finalModel = model;
+      let totalDuration: number | undefined;
+      let loadDuration: number | undefined;
+      let promptEvalCount: number | undefined;
+      let promptEvalDuration: number | undefined;
+      let evalCount: number | undefined;
+      let evalDuration: number | undefined;
 
       try {
         while (true) {
@@ -209,8 +221,24 @@ export class OllamaClient {
               const data: OllamaChatResponse = JSON.parse(line);
               fullContent += data.message.content;
               finalModel = data.model;
+              if (data.total_duration != null) totalDuration = data.total_duration;
+              if (data.load_duration != null) loadDuration = data.load_duration;
+              if (data.prompt_eval_count != null) promptEvalCount = data.prompt_eval_count;
+              if (data.prompt_eval_duration != null) promptEvalDuration = data.prompt_eval_duration;
+              if (data.eval_count != null) evalCount = data.eval_count;
+              if (data.eval_duration != null) evalDuration = data.eval_duration;
               if (data.done) {
-                return { content: fullContent, model: finalModel, done: true };
+                return {
+                  content: fullContent,
+                  model: finalModel,
+                  done: true,
+                  total_duration: totalDuration,
+                  load_duration: loadDuration,
+                  prompt_eval_count: promptEvalCount,
+                  prompt_eval_duration: promptEvalDuration,
+                  eval_count: evalCount,
+                  eval_duration: evalDuration,
+                };
               }
             } catch {
               // Skip invalid JSON lines
@@ -221,13 +249,29 @@ export class OllamaClient {
         reader.releaseLock();
       }
 
-      return { content: fullContent, model: finalModel, done: true };
+      return {
+        content: fullContent,
+        model: finalModel,
+        done: true,
+        total_duration: totalDuration,
+        load_duration: loadDuration,
+        prompt_eval_count: promptEvalCount,
+        prompt_eval_duration: promptEvalDuration,
+        eval_count: evalCount,
+        eval_duration: evalDuration,
+      };
     } else {
       const data: OllamaChatResponse = await response.json();
       return {
         content: data.message.content,
         model: data.model,
         done: data.done,
+        total_duration: data.total_duration,
+        load_duration: data.load_duration,
+        prompt_eval_count: data.prompt_eval_count,
+        prompt_eval_duration: data.prompt_eval_duration,
+        eval_count: data.eval_count,
+        eval_duration: data.eval_duration,
       };
     }
   }
@@ -239,7 +283,17 @@ export class OllamaClient {
       temperature?: number;
       maxTokens?: number;
     } = {}
-  ): Promise<{ content: string; model: string; usedFallback: boolean }> {
+  ): Promise<{
+    content: string;
+    model: string;
+    usedFallback: boolean;
+    total_duration?: number;
+    load_duration?: number;
+    prompt_eval_count?: number;
+    prompt_eval_duration?: number;
+    eval_count?: number;
+    eval_duration?: number;
+  }> {
     // Try primary model first
     try {
       const result = await this.chat(messages, { ...options, useFallback: false });

@@ -110,8 +110,25 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     }
 
     const issueView = toIssueView(issue);
+
+    // Serialize BigInt fields to strings for JSON compatibility
+    const serializeBigInts = (obj: unknown): unknown => {
+      if (obj === null || obj === undefined) return obj;
+      if (typeof obj === "bigint") return obj.toString();
+      if (obj instanceof Date) return obj.toISOString();
+      if (Array.isArray(obj)) return obj.map(serializeBigInts);
+      if (typeof obj === "object") {
+        const result: Record<string, unknown> = {};
+        for (const [key, val] of Object.entries(obj)) {
+          result[key] = serializeBigInts(val);
+        }
+        return result;
+      }
+      return obj;
+    };
+
     const payload: IssueDetailPayload = {
-      issue: { ...issueView, breadcrumbs },
+      issue: serializeBigInts({ ...issueView, breadcrumbs }),
       statuses,
     };
     issueDetailCache.set(cacheKey, {

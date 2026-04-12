@@ -8,6 +8,12 @@ interface AiSummaryData {
   summary: string;
   model: string;
   updatedAt: Date;
+  totalDuration: bigint | string | null;
+  loadDuration: bigint | string | null;
+  promptEvalCount: number | null;
+  promptEvalDuration: bigint | string | null;
+  evalCount: number | null;
+  evalDuration: bigint | string | null;
   issue: {
     redmineIssueId: number;
     redmineBaseUrl: string;
@@ -70,6 +76,14 @@ function formatDate(date: Date): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatDuration(ns: bigint | string | number | null): string {
+  if (ns == null) return "—";
+  const nsNum = typeof ns === "string" ? BigInt(ns) : typeof ns === "bigint" ? ns : BigInt(ns);
+  const ms = Number(nsNum) / 1_000_000;
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
 }
 
 function buildCopyText(summary: string, parsed: ParsedSummary): string {
@@ -227,11 +241,45 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
             )}
 
             <div className="summary-footer">
-              <span>
+              <div className="summary-footer-left">
                 {summary.issue.assignedToName
                   ? `Assigned to: ${summary.issue.assignedToName}`
                   : "Unassigned"}
-              </span>
+              </div>
+              {(summary.totalDuration || summary.evalCount) && (
+                <div className="summary-footer-right">
+                  {summary.totalDuration && (
+                    <span className="summary-metric">
+                      Total: {formatDuration(summary.totalDuration)}
+                    </span>
+                  )}
+                  {summary.loadDuration && (
+                    <span className="summary-metric">
+                      Load: {formatDuration(summary.loadDuration)}
+                    </span>
+                  )}
+                  {summary.promptEvalCount != null && (
+                    <span className="summary-metric">
+                      Prompt tokens: {summary.promptEvalCount}
+                    </span>
+                  )}
+                  {summary.promptEvalDuration && (
+                    <span className="summary-metric">
+                      Prompt: {formatDuration(summary.promptEvalDuration)}
+                    </span>
+                  )}
+                  {summary.evalCount != null && (
+                    <span className="summary-metric">
+                      Tokens: {summary.evalCount}
+                    </span>
+                  )}
+                  {summary.evalDuration && (
+                    <span className="summary-metric">
+                      Gen: {formatDuration(summary.evalDuration)}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </article>
         );
