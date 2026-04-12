@@ -18,6 +18,231 @@ const SRC_ISSUE_REF_RE = /\[SRC\s+#(\d+)\s+from\s+([^\]\s]+)\]/gi;
 const SRC_ISSUE_REF_SINGLE_RE = /\[SRC\s+#(\d+)\s+from\s+([^\]\s]+)\]/i;
 const SRC_JOURNAL_REF_RE = /\[SRC-JOURNAL\s+#(\d+)\]/gi;
 const URL_RE = /https?:\/\/[^\s<)\]]+/i;
+const STEPS_LABEL_RE = /^(\s*.*?\bsteps?\s+to\s+reproduce\b\s*:?\s*)(.+)$/i;
+const COLLAPSE_TOGGLE_TITLE_RE = /^(show\s*,\s*hide|hide\s*,\s*show)$/i;
+
+const TEMPLATE_SECTION_PATTERNS: Array<{ regex: RegExp; label: string }> = [
+  { regex: /^\*?\s*Reason Dev\s*:?\s*\*?\s*(.*)$/i, label: "Reason Dev" },
+  { regex: /^\*?\s*Reason QA\s*:?\s*\*?\s*(.*)$/i, label: "Reason QA" },
+  { regex: /^\*?\s*If Blocker\s*:?\s*\*?\s*(.*)$/i, label: "If Blocker" },
+  { regex: /^\*?\s*What's wrong\?\s*\(description\)\s*:?\s*\*?\s*(.*)$/i, label: "What's wrong? (description)" },
+  { regex: /^\*?\s*Steps to reproduce\s*:?\s*\*?\s*(.*)$/i, label: "Steps to reproduce" },
+  { regex: /^\*?\s*Result\s*:?\s*\*?\s*(.*)$/i, label: "Result" },
+  { regex: /^\*?\s*Expected\s*:?\s*\*?\s*(.*)$/i, label: "Expected" },
+  { regex: /^\*?\s*Requirements\s*\(Design\)\s*URL\s*:?\s*\*?\s*(.*)$/i, label: "Requirements (Design) URL" },
+  { regex: /^\*?\s*Repetition of bug\*?\s*(?:\([^)]*\))?\s*:?\s*(.*)$/i, label: "Repetition of bug" },
+  { regex: /^\*?\s*DB\s*:?\s*\*?\s*(.*)$/i, label: "DB" },
+  { regex: /^\*?\s*MC version\s*:?\s*\*?\s*(.*)$/i, label: "MC version" },
+  { regex: /^\*?\s*Update\s*:?\s*\*?\s*(.*)$/i, label: "Update" },
+  { regex: /^\*?\s*Notes\s*:?\s*\*?\s*(.*)$/i, label: "Notes" },
+  { regex: /^\*?\s*Link to Draft\s*:?\s*\*?\s*(.*)$/i, label: "Link to Draft" },
+  { regex: /^\*?\s*Link to CL\s*:?\s*\*?\s*(.*)$/i, label: "Link to CL" },
+  { regex: /^\*?\s*Link to code style\s*:?\s*\*?\s*(.*)$/i, label: "Link to code style" },
+  { regex: /^\*?\s*Link to design rules\s*:?\s*\*?\s*(.*)$/i, label: "Link to design rules" },
+  { regex: /^\*?\s*CO checklist(?:\s*\(.*\))?\s*:?\s*\*?\s*(.*)$/i, label: "CO checklist" },
+];
+
+function detectTemplateMode(input: string): "bug" | "generic" | null {
+  const hasChecklist = /\bCO checklist\b/i.test(input);
+  const hasBugAnchors = /\bReason Dev\b/i.test(input) && /\bSteps to reproduce\b/i.test(input);
+  const hasGenericAnchors = /\bLink to Draft\b/i.test(input) && /\bLink to CL\b/i.test(input);
+  if (hasBugAnchors && hasChecklist) return "bug";
+  if (hasGenericAnchors && hasChecklist) return "generic";
+  return null;
+}
+
+function normalizeCollapseTitle(rawTitle: string | undefined): string {
+  const title = (rawTitle ?? "Details").trim();
+  if (!title || COLLAPSE_TOGGLE_TITLE_RE.test(title)) {
+    return "Details";
+  }
+  return title;
+}
+
+function formatInlineNumberedSequence(input: string): string | null {
+  const normalized = input.replace(/\s+/g, " ").trim();
+  if (!/^\d+[\.\)]?\s+/.test(normalized)) {
+    return null;
+  }
+  const segments = normalized.match(/\d+[\.\)]?\s+[\s\S]*?(?=(?:\s+\d+[\.\)]?\s+\S|$))/g);
+  if (!segments || segments.length < 2) {
+    return null;
+  }
+  return segments
+    .map((segment) => segment.trim().replace(/^(\d+)[\.\)]?\s+/, "$1. "))
+    .join("\n");
+}
+
+function normalizeInlineNumberedSteps(input: string): string {
+  const lines = input.split("\n");
+  return lines
+    .map((line) => {
+      const labelMatch = line.match(STEPS_LABEL_RE);
+      if (labelMatch) {
+        const formatted = formatInlineNumberedSequence(labelMatch[2]);
+        if (formatted) {
+          return `${labelMatch[1].trimEnd()}\n${formatted}`;
+        }
+      }
+
+      const trimmed = line.trim();
+      const formatted = formatInlineNumberedSequence(trimmed);
+      if (!formatted) {
+        return line;
+      }
+
+      const leadingWhitespace = line.match(/^\s*/)?.[0] ?? "";
+      return formatted
+        .split("\n")
+        .map((entry) => `${leadingWhitespace}${entry}`)
+        .join("\n");
+    })
+    .join("\n");
+}
+
+function normalizeBulletLine(line: string): string {
+  if (/^\s*[•·]\s*$/.test(line)) {
+    return "- ";
+  }
+  return line.replace(/^(\s*)[•·]\s*/, "$1- ");
+}
+
+function normalizeTemplateSections(input: string): string {
+  const mode = detectTemplateMode(input);
+  let out = normalizeInlineNumberedSteps(input);
+  if (!mode) {
+    return out
+      .split("\n")
+      .map((line) => normalizeBulletLine(line))
+      .join("\n");
+  }
+
+  const lines = out.split("\n");
+  const normalized: string[] = [];
+  let inStepsSection = false;
+
+  for (const line of lines) {
+    const bulletNormalized = normalizeBulletLine(line);
+    const trimmed = bulletNormalized.trim();
+    let matchedSection: { label: string; body: string } | null = null;
+
+    for (const { regex, label } of TEMPLATE_SECTION_PATTERNS) {
+      const match = trimmed.match(regex);
+      if (!match) continue;
+      matchedSection = { label, body: (match[1] ?? "").trim() };
+      break;
+    }
+
+    if (matchedSection) {
+      if (normalized.length > 0 && normalized[normalized.length - 1].trim().length > 0) {
+        normalized.push("");
+      }
+      normalized.push(`**${matchedSection.label}:**${matchedSection.body ? ` ${matchedSection.body}` : ""}`);
+      inStepsSection = matchedSection.label.toLowerCase() === "steps to reproduce";
+      continue;
+    }
+
+    if (inStepsSection) {
+      const stepMatch = trimmed.match(/^(\d+)[\.\)]?\s*(.*)$/);
+      if (stepMatch) {
+        const [, step, body] = stepMatch;
+        normalized.push(`${step}. ${body.trim()}`.trimEnd());
+        continue;
+      }
+      if (trimmed.length === 0) {
+        normalized.push("");
+        continue;
+      }
+      if (/^\{\{collapse/i.test(trimmed)) {
+        inStepsSection = false;
+      } else if (!/^- /.test(trimmed)) {
+        inStepsSection = false;
+      }
+    }
+
+    normalized.push(bulletNormalized);
+  }
+
+  out = normalized.join("\n");
+  return out;
+}
+
+function applyOutsideCodeFences(input: string, transform: (segment: string) => string): string {
+  const segments = input.split(/(```[\s\S]*?```)/g);
+  return segments
+    .map((segment, index) => (index % 2 === 1 ? segment : transform(segment)))
+    .join("");
+}
+
+function splitTextileTableRow(trimmedLine: string): string[] {
+  return trimmedLine
+    .slice(1, -1)
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function stripTextileCellPrefix(cell: string): string {
+  return cell
+    .replace(/^((?:[_<>^=~]|\\\d+|\/\d+|\{[^}]+\})+)\.\s*/, "")
+    .replace(/^\.\s*/, "");
+}
+
+function convertTextileTableBlock(lines: string[]): string[] {
+  if (lines.length === 0) return lines;
+
+  const parsedRows = lines.map((line) => splitTextileTableRow(line.trim()).map(stripTextileCellPrefix));
+  const maxCols = Math.max(...parsedRows.map((row) => row.length));
+  if (maxCols <= 0) return lines;
+
+  const normalizedRows = parsedRows.map((row) => [
+    ...row,
+    ...new Array(Math.max(0, maxCols - row.length)).fill(""),
+  ]);
+
+  const toMarkdownRow = (row: string[]) => `| ${row.join(" | ")} |`;
+  const header = toMarkdownRow(normalizedRows[0]);
+  const separator = `| ${new Array(maxCols).fill("---").join(" | ")} |`;
+  const body = normalizedRows.slice(1).map(toMarkdownRow);
+
+  return [header, separator, ...body];
+}
+
+function convertTextileTables(input: string): string {
+  const lines = input.split("\n");
+  const out: string[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
+    const trimmed = line.trim();
+    const isTextileTableLine = trimmed.startsWith("|") && trimmed.endsWith("|") && trimmed.length > 2;
+
+    if (!isTextileTableLine) {
+      out.push(line);
+      index += 1;
+      continue;
+    }
+
+    const block: string[] = [];
+    let cursor = index;
+    while (cursor < lines.length) {
+      const candidate = lines[cursor].trim();
+      const candidateIsTable = candidate.startsWith("|") && candidate.endsWith("|") && candidate.length > 2;
+      if (!candidateIsTable) break;
+      block.push(lines[cursor]);
+      cursor += 1;
+    }
+
+    if (block.length >= 2) {
+      out.push(...convertTextileTableBlock(block));
+    } else {
+      out.push(...block);
+    }
+    index = cursor;
+  }
+
+  return out.join("\n");
+}
 
 function decodeHtmlEntities(value: string): string {
   return value
@@ -92,7 +317,7 @@ function toBlockQuote(content: string): string {
 }
 
 function normalizeCollapse(titleRaw: string | undefined, contentRaw: string): string {
-  const title = (titleRaw ?? "Details").trim() || "Details";
+  const title = normalizeCollapseTitle(titleRaw);
   const content = contentRaw.trim();
   if (!content) {
     return `> **${title}**`;
@@ -144,7 +369,7 @@ export function splitRedmineCollapseSegments(input: string): RedmineTextSegment[
       }
     }
 
-    const title = (match[1] ?? "Details").trim() || "Details";
+    const title = normalizeCollapseTitle(match[1]);
     const body = (match[2] ?? match[3] ?? "").trim();
     segments.push({ type: "collapse", title, content: body });
     cursor = end;
@@ -166,6 +391,7 @@ export function splitRedmineCollapseSegments(input: string): RedmineTextSegment[
 export function normalizeRedmineText(input: string): string {
   let out = decodeEscapedWhitespace(input);
   out = convertSourceRefs(out);
+  out = convertTextileTables(out);
   out = out.replace(REDMINE_IMAGE_REF_RE, (_all, target: string) => `![${target.trim()}](${normalizeImageTarget(target)})`);
   out = out.replace(REDMINE_ESCAPED_PRE_CODE_RE, (_all, cls: string | undefined, code: string) => asFence(code, cls, true));
   out = out.replace(REDMINE_PRE_CODE_RE, (_all, cls: string | undefined, code: string) => asFence(code, cls));
@@ -190,6 +416,7 @@ export function normalizeRedmineText(input: string): string {
   out = out.replace(TEXTILE_IMAGE_RE, (_all, target: string) => `![](${normalizeImageTarget(target)})`);
   out = out.replace(TEXTILE_STYLED_SPAN_RE, "$1");
   out = out.replace(TEXTILE_CODE_RE, (_, prefix: string, code: string) => `${prefix}\`${code}\``);
+  out = applyOutsideCodeFences(out, (segment) => normalizeTemplateSections(segment));
 
   return out;
 }

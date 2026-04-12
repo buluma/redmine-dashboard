@@ -282,18 +282,19 @@ export default function ReportsPage() {
   return (
     <main className="dashboard reports-v2">
       {/* Hero */}
-      <header className="reports-hero">
-        <div className="reports-hero-content">
-          <div>
-            <h1>Reports</h1>
+      <header className="card hero reports-hero">
+        <div className="hero-top reports-hero-content">
+          <div className="hero-heading">
+            <p className="kicker">Reports</p>
+            <h1 className="hero-title">Redmine Reports</h1>
             <p className="reports-hero-sub">
               Insights across <strong>{stats.totalIssues.toLocaleString()}</strong> issues
               {appliedFilters.days !== 30 && <span> · Last {appliedFilters.days} days</span>}
             </p>
           </div>
-          <div className="reports-hero-actions">
+          <div className="hero-actions reports-hero-actions">
             {loading && <span className="loading-pill" role="status">Refreshing...</span>}
-            <Link href="/" className="btn-ghost">← Dashboard</Link>
+            <Link href="/" className="secondary-button">Back to Dashboard</Link>
           </div>
         </div>
       </header>
@@ -301,7 +302,7 @@ export default function ReportsPage() {
       {error && <p className="error-banner">{error}</p>}
 
       {/* Filters */}
-      <section className="report-panel filters-panel">
+      <section className="card filters-panel reports-filters-panel">
         <div className="report-panel-head">
           <div>
             <h2>Filters</h2>
@@ -343,7 +344,7 @@ export default function ReportsPage() {
           </div>
           <div className="filters-actions">
             <button type="submit" className="btn-primary" disabled={loading}>Apply</button>
-            <button type="button" className="btn-ghost" onClick={resetFilters} disabled={loading}>Reset</button>
+            <button type="button" className="secondary-button" onClick={resetFilters} disabled={loading}>Reset</button>
           </div>
         </form>
       </section>
@@ -421,13 +422,13 @@ export default function ReportsPage() {
       {drilldown && (
         <div className="drilldown-banner">
           <span className="drilldown-text">{drillTitle()}</span>
-          <button type="button" className="btn-ghost btn-sm" onClick={() => setDrilldown(null)}>Clear</button>
+          <button type="button" className="secondary-button reports-clear-btn" onClick={() => setDrilldown(null)}>Clear</button>
         </div>
       )}
 
       {/* Charts - Row 1: Trends (2 columns) */}
       <div className="reports-charts-grid reports-charts-row-2">
-        <div className="report-panel">
+        <div className="card report-panel">
           <div className="report-panel-head">
             <h3>Comments Trend</h3>
             <span className="report-panel-badge">{journalTotal} total</span>
@@ -441,7 +442,7 @@ export default function ReportsPage() {
           />
         </div>
 
-        <div className="report-panel">
+        <div className="card report-panel">
           <div className="report-panel-head">
             <h3>Time Logged</h3>
             <span className="report-panel-badge">{timeTotal.toFixed(1)}h total</span>
@@ -458,7 +459,7 @@ export default function ReportsPage() {
 
       {/* Row 2: Status, Priority, Activity (3 columns) */}
       <div className="reports-charts-grid reports-charts-row-3">
-        <div className="report-panel">
+        <div className="card report-panel">
           <div className="report-panel-head">
             <h3>Status Distribution</h3>
           </div>
@@ -470,7 +471,7 @@ export default function ReportsPage() {
           />
         </div>
 
-        <div className="report-panel">
+        <div className="card report-panel">
           <div className="report-panel-head">
             <h3>Priority Mix</h3>
           </div>
@@ -482,7 +483,7 @@ export default function ReportsPage() {
           />
         </div>
 
-        <div className="report-panel">
+        <div className="card report-panel">
           <div className="report-panel-head">
             <h3>Time by Activity</h3>
           </div>
@@ -494,7 +495,7 @@ export default function ReportsPage() {
 
       {/* Row 3: Time by User, Top Assignees, Due Risk (3 columns) */}
       <div className="reports-charts-grid reports-charts-row-3">
-        <div className="report-panel">
+        <div className="card report-panel">
           <div className="report-panel-head">
             <h3>Time by User</h3>
           </div>
@@ -503,7 +504,7 @@ export default function ReportsPage() {
           />
         </div>
 
-        <div className="report-panel">
+        <div className="card report-panel">
           <div className="report-panel-head">
             <h3>Top Assignees</h3>
           </div>
@@ -514,7 +515,7 @@ export default function ReportsPage() {
           />
         </div>
 
-        <div className="report-panel">
+        <div className="card report-panel">
           <div className="report-panel-head">
             <h3>Due Risk</h3>
           </div>
@@ -527,7 +528,7 @@ export default function ReportsPage() {
 
       {/* Row 4: Staleness, Progress, Overdue by Parent (3 columns or 2) */}
       <div className="reports-charts-grid reports-charts-row-3">
-        <div className="report-panel">
+        <div className="card report-panel">
           <div className="report-panel-head">
             <h3>Staleness</h3>
           </div>
@@ -537,7 +538,7 @@ export default function ReportsPage() {
           />
         </div>
 
-        <div className="report-panel">
+        <div className="card report-panel">
           <div className="report-panel-head">
             <h3>Progress</h3>
           </div>
@@ -548,7 +549,7 @@ export default function ReportsPage() {
         </div>
 
         {stats.overdueParents.length > 0 && (
-          <div className="report-panel">
+          <div className="card report-panel">
             <div className="report-panel-head">
               <h3>Overdue by Parent</h3>
             </div>
@@ -561,7 +562,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Activity Feed */}
-      <section className="report-panel activity-panel">
+      <section className="card report-panel activity-panel">
         <div className="report-panel-head">
           <div>
             <h3>Recent Activity</h3>

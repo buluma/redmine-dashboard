@@ -4,6 +4,7 @@ import {
   createSummarizeMessages,
   createCategorizeMessages,
   createSearchMessages,
+  normalizeSummarizeResponse,
   parseJsonResponse,
   SYSTEM_PROMPTS,
   type IssueContext,
@@ -58,6 +59,30 @@ describe("ai-prompt utilities", () => {
       expect(result).not.toContain("Type:");
       expect(result).not.toContain("Priority:");
       expect(result).not.toContain("Description:");
+    });
+
+    it("should include journals, time entries, and attachments when present", () => {
+      const richIssue: IssueContext = {
+        ...mockIssue,
+        journals: [
+          { author: "Jane", notes: "Investigated root cause", createdOn: "2024-01-16T10:00:00Z" },
+        ],
+        timeEntries: [
+          { hours: 1.5, activityName: "Debug", authorName: "Jane", comments: "trace logs", spentOn: "2024-01-16" },
+        ],
+        attachments: [
+          { filename: "error-log.txt", contentType: "text/plain", filesize: 2048, createdOn: "2024-01-16T10:00:00Z" },
+        ],
+      };
+
+      const result = formatIssueForPrompt(richIssue);
+
+      expect(result).toContain("Recent journals");
+      expect(result).toContain("Investigated root cause");
+      expect(result).toContain("Time spent:");
+      expect(result).toContain("By activity:");
+      expect(result).toContain("Attachments");
+      expect(result).toContain("error-log.txt");
     });
   });
 
@@ -132,6 +157,43 @@ describe("ai-prompt utilities", () => {
       const result = parseJsonResponse(text);
 
       expect(result).toEqual({ key: "value" });
+    });
+  });
+
+  describe("normalizeSummarizeResponse", () => {
+    it("should normalize structured summarize response", () => {
+      const parsed = {
+        summary: "Issue is blocked by API timeout.",
+        keyPoints: ["Status is In Progress", "Blocking timeout reproduced"],
+        actionItems: ["Increase timeout and re-test"],
+        risks: ["Release delay"],
+        openQuestions: ["Who owns API gateway change?"],
+        timeline: [{ at: "2024-01-16", author: "Jane", type: "journal", detail: "Investigated issue" }],
+        timeSpent: {
+          totalHours: 4.5,
+          entryCount: 3,
+          byActivity: [{ name: "Debug", hours: 3 }],
+          byAuthor: [{ name: "Jane", hours: 4.5 }],
+        },
+        attachments: [{ filename: "error.txt", type: "text/plain", sizeKb: 2, note: "stack trace" }],
+        confidence: 0.82,
+      };
+
+      const result = normalizeSummarizeResponse(parsed, mockIssue);
+      expect(result.summary).toContain("blocked");
+      expect(result.keyPoints.length).toBeGreaterThan(0);
+      expect(result.timeline[0].type).toBe("journal");
+      expect(result.timeSpent.totalHours).toBe(4.5);
+      expect(result.attachments[0].filename).toBe("error.txt");
+      expect(result.confidence).toBe(0.82);
+    });
+
+    it("should return fallback structure when parsed data is invalid", () => {
+      const result = normalizeSummarizeResponse("invalid", mockIssue);
+      expect(result.summary.length).toBeGreaterThan(0);
+      expect(Array.isArray(result.keyPoints)).toBe(true);
+      expect(Array.isArray(result.actionItems)).toBe(true);
+      expect(result.timeSpent.entryCount).toBe(0);
     });
   });
 });

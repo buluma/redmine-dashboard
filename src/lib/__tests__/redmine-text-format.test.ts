@@ -44,6 +44,18 @@ describe("normalizeRedmineText", () => {
     expect(output).toContain("![](https://example.com/img.png)");
   });
 
+  it("converts Redmine textile pipe tables into markdown tables", () => {
+    const input = `|. Field|. Value|
+| Type | Scanner |
+| Packages | openssl 3.5.5-r0 |`;
+    const output = normalizeRedmineText(input);
+
+    expect(output).toContain("| Field | Value |");
+    expect(output).toContain("| --- | --- |");
+    expect(output).toContain("| Type | Scanner |");
+    expect(output).toContain("| Packages | openssl 3.5.5-r0 |");
+  });
+
   it("converts styled Redmine attachment images to attachment placeholders", () => {
     const input = `open the rack form\n!{height:924px; width:435px;}20260319-131544-758.png!`;
     const output = normalizeRedmineText(input);
@@ -113,6 +125,66 @@ describe("normalizeRedmineText", () => {
 
     expect(output).toContain("SRC #99614\n\nLine one\n\tLine two");
     expect(output).not.toContain("\\n");
+  });
+
+  it("splits inline numbered repro steps into line-broken ordered markdown lines", () => {
+    const input = `Steps to reproduce:\n1 Open Project record 2 Ensure the tasks list exists 3 Review tab Project Tasks Gantt Chart`;
+    const output = normalizeRedmineText(input);
+
+    expect(output).toContain("Steps to reproduce:");
+    expect(output).toContain("1. Open Project record");
+    expect(output).toContain("2. Ensure the tasks list exists");
+    expect(output).toContain("3. Review tab Project Tasks Gantt Chart");
+  });
+
+  it("preserves non-step numeric prose", () => {
+    const input = `Server sizing + Ubuntu OS: 4 cores, 16 gb RAM (+ 8 swap), 80gb`;
+    const output = normalizeRedmineText(input);
+
+    expect(output).toBe(input);
+  });
+
+  it("formats bug template sections and steps consistently", () => {
+    const input = `Reason Dev:
+Reason QA:
+*What's wrong? (description):* Project Tasks Gantt Chart is empty
+*Steps to reproduce:*
+1
+2
+3
+%{background: orange;}Result%
+• Gantt chart is empty
+%{background: lightgreen;}Expected%
+• Gantt chart should render tasks
+CO checklist (please populate it in case of changes on production)
+{{collapse(show,hide)
+1) checklist item
+}}`;
+    const output = normalizeRedmineText(input);
+
+    expect(output).toContain("**Reason Dev:**");
+    expect(output).toContain("**Reason QA:**");
+    expect(output).toContain("**What's wrong? (description):** Project Tasks Gantt Chart is empty");
+    expect(output).toContain("**Steps to reproduce:**");
+    expect(output).toContain("1.");
+    expect(output).toContain("2.");
+    expect(output).toContain("3.");
+    expect(output).toContain("**Result:**");
+    expect(output).toContain("- Gantt chart is empty");
+    expect(output).toContain("**Expected:**");
+    expect(output).toContain("- Gantt chart should render tasks");
+    expect(output).toContain("**CO checklist:**");
+  });
+
+  it("normalizes collapse show/hide title to Details", () => {
+    const input = `Before\n{{collapse(show,hide)\nLine one\n}}\nAfter`;
+    const segments = splitRedmineCollapseSegments(input);
+
+    expect(segments[1]).toEqual({
+      type: "collapse",
+      title: "Details",
+      content: "Line one",
+    });
   });
 
   it("splits markdown and collapse segments for UI rendering", () => {
