@@ -27,10 +27,12 @@ export interface IssueContext {
     spentOn?: string | null;
   }>;
   attachments?: Array<{
+    redmineAttachmentId?: number;
     filename: string;
     contentType?: string | null;
     filesize?: number | null;
     createdOn?: string | null;
+    extractedText?: string | null;
   }>;
 }
 
@@ -158,7 +160,11 @@ export function formatIssueForPrompt(issue: IssueContext): string {
       const type = asCompactLine(attachment.contentType ?? "") || "unknown-type";
       const sizeKb = Math.max(0, Math.round((attachment.filesize ?? 0) / 1024));
       const created = attachment.createdOn ? new Date(attachment.createdOn).toISOString().slice(0, 10) : "unknown-date";
-      return `- ${attachment.filename} (${type}, ${sizeKb} KB, uploaded ${created})`;
+      const excerpt = attachment.extractedText
+        ? truncateText(asCompactLine(attachment.extractedText), 700)
+        : "";
+      const excerptLine = excerpt ? `\n  Extracted excerpt: ${excerpt}` : "";
+      return `- ${attachment.filename} (${type}, ${sizeKb} KB, uploaded ${created})${excerptLine}`;
     });
     parts.push(`\nAttachments (${attachments.length}):\n${attachmentLines.join("\n")}`);
   }
@@ -167,7 +173,7 @@ export function formatIssueForPrompt(issue: IssueContext): string {
 }
 
 export const SYSTEM_PROMPTS = {
-  summarize: `You are an expert project manager assistant helping to summarize Redmine issues. Build a structured, factual status summary based only on the provided issue context (description, journals, timelogs, attachments metadata).
+  summarize: `You are an expert project manager assistant helping to summarize Redmine issues. Build a structured, factual status summary based only on the provided issue context (description, journals, timelogs, and attachment details/excerpts when available).
 
 Respond ONLY with valid JSON in this exact format (no markdown, no prose outside JSON):
 {
