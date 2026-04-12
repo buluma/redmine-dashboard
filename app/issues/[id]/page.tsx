@@ -244,6 +244,8 @@ export default function IssueDetailPage() {
   const searchParams = useSearchParams();
   const issueId = Number(params.id);
   const activeTab = normalizeTab(searchParams.get("tab"));
+  const tabFromUrl = searchParams.get("tab");
+  const hasScrolledRef = useRef(false);
   const [issue, setIssue] = useState<Issue | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -560,13 +562,16 @@ export default function IssueDetailPage() {
     if (!issue) {
       return;
     }
-    // Only scroll when user explicitly clicks a tab, not on initial page load
+    // Skip scroll on first load only when no ?tab= param (default tab)
+    // If URL has ?tab=X, scroll so user sees the active tab section
     if (!hasScrolledRef.current) {
       hasScrolledRef.current = true;
-      return;
+      if (!tabFromUrl) {
+        return;
+      }
     }
     tabsRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
-  }, [activeTab, issue]);
+  }, [activeTab, issue, tabFromUrl]);
 
   const noteJournals = useMemo(() => {
     if (!issue) return [];
