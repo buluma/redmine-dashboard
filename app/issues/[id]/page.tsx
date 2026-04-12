@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { notFound, useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
@@ -579,12 +579,7 @@ export default function IssueDetailPage() {
   }
 
   if (error || !issue) {
-    return (
-      <main className="dashboard">
-        <p className="error-banner">{error ?? "Issue not found"}</p>
-        <p><Link href="/" className="primary-link">Back to dashboard</Link></p>
-      </main>
-    );
+    notFound();
   }
 
   return (
