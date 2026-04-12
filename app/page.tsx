@@ -391,6 +391,24 @@ function dayDiffFromNow(dateLike: string): number {
   return Math.floor((Date.now() - target) / (24 * 60 * 60 * 1000));
 }
 
+function latestIssueActivityTimestamp(issue: Pick<Issue, "updatedOnRemote" | "journals">): string {
+  let latest = issue.updatedOnRemote;
+  let latestMs = new Date(issue.updatedOnRemote).getTime();
+  if (Number.isNaN(latestMs)) {
+    latestMs = 0;
+  }
+
+  for (const journal of issue.journals) {
+    const journalMs = new Date(journal.createdOnRemote).getTime();
+    if (!Number.isNaN(journalMs) && journalMs > latestMs) {
+      latestMs = journalMs;
+      latest = journal.createdOnRemote;
+    }
+  }
+
+  return latest;
+}
+
 function matchesView(view: SavedView, state: {
   statusFilter: string;
   priorityFilter: string;
@@ -415,6 +433,13 @@ function formatDurationFromMs(durationMs: number): string {
     return `${hours}h ${minutes}m ${seconds}s`;
   }
   return `${minutes}m ${seconds}s`;
+}
+
+function openIssueInNewTab(issueId: number): void {
+  if (!Number.isInteger(issueId) || issueId <= 0) {
+    return;
+  }
+  window.open(`/issues/${issueId}`, "_blank", "noopener,noreferrer");
 }
 
 export default function Home() {
@@ -539,7 +564,7 @@ export default function Home() {
     let stale = 0;
     let dueToday = 0;
     let totalProgress = 0;
-    let openAgeDays = 0;
+    let openUpdateAgeDays = 0;
 
     for (const issue of issues) {
       byStatus.set(issue.statusName, (byStatus.get(issue.statusName) ?? 0) + 1);
@@ -548,12 +573,12 @@ export default function Home() {
       const openState = isOpenStatus(issue.statusName);
       const blockedState = isBlockedStatus(issue.statusName);
       const urgency = issueUrgency(issue);
-      const ageDays = dayDiffFromNow(issue.updatedOnRemote);
+      const ageDays = dayDiffFromNow(latestIssueActivityTimestamp(issue));
       const daysToDue = dueInDays(issue.dueDate);
 
       if (openState) {
         open += 1;
-        openAgeDays += ageDays;
+        openUpdateAgeDays += ageDays;
       }
       if (isInProgressStatus(issue.statusName)) inProgress += 1;
       if (isDoneStatus(issue.statusName)) done += 1;
@@ -645,7 +670,7 @@ export default function Home() {
       dueToday,
       completion,
       avgDoneRatio,
-      avgOpenAgeDays: open > 0 ? Math.round(openAgeDays / open) : 0,
+      avgOpenAgeDays: open > 0 ? Math.round(openUpdateAgeDays / open) : 0,
       topStatuses,
       priorityMix,
       atRisk,
@@ -1566,7 +1591,7 @@ export default function Home() {
             </div>
             <div className="metric-signal-row">
               <span>Due Today: {summary.dueToday}</span>
-              <span>Avg Open Age: {summary.avgOpenAgeDays}d</span>
+              <span>Avg Since Update: {summary.avgOpenAgeDays}d</span>
             </div>
           </article>
           <article className="card metric-card metric-open">
@@ -1592,7 +1617,7 @@ export default function Home() {
           <article className="card metric-card metric-stale">
             <p className="metric-label">Stale Queue</p>
             <p className="metric-value">{summary.stale}</p>
-            <p className="metric-foot">No update in 3+ days • Avg open age: {summary.avgOpenAgeDays}d</p>
+            <p className="metric-foot">No visible activity in 3+ days • Avg since update: {summary.avgOpenAgeDays}d</p>
           </article>
         </section>
       </header>
@@ -1763,7 +1788,7 @@ export default function Home() {
                   onMouseEnter={() => prefetchIssueDetail(issue.redmineIssueId)}
                   onFocus={() => prefetchIssueDetail(issue.redmineIssueId)}
                   onClick={() => {
-                    router.push(`/issues/${issue.redmineIssueId}`);
+                    openIssueInNewTab(issue.redmineIssueId);
                   }}
                 >
                   <span>
@@ -1799,7 +1824,7 @@ export default function Home() {
                   onMouseEnter={() => prefetchIssueDetail(event.issueId)}
                   onFocus={() => prefetchIssueDetail(event.issueId)}
                   onClick={() => {
-                    router.push(`/issues/${event.issueId}`);
+                    openIssueInNewTab(event.issueId);
                   }}
                 >
                   <span>
@@ -1961,7 +1986,7 @@ export default function Home() {
                         className={`issue-row ${selectedIssueId === issue.redmineIssueId ? "selected" : ""}`}
                         onMouseEnter={() => prefetchIssueDetail(issue.redmineIssueId)}
                         onClick={() => {
-                          router.push(`/issues/${issue.redmineIssueId}`);
+                          openIssueInNewTab(issue.redmineIssueId);
                         }}
                       >
                         <td onClick={(e) => e.stopPropagation()}>

@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/src/lib/db";
 import { requireRedmineClient } from "@/src/lib/auth";
 
@@ -20,13 +21,152 @@ function isInProgressStatus(status: string): boolean {
   return s.includes("progress") || s.includes("review") || s.includes("testing") || s.includes("redev");
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function parseDays(value: string | null): number {
+  const parsed = Number.parseInt(value ?? "30", 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 30;
+  }
+  return Math.min(parsed, 365);
+}
+
+function parseDateOnly(value: string | null): Date | null {
+  if (!value || value.trim().length === 0) {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return null;
+  }
+  const parsed = new Date(`${trimmed}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return parsed;
+}
+
+function startOfDay(date: Date): Date {
+  const out = new Date(date);
+  out.setHours(0, 0, 0, 0);
+  return out;
+}
+
+function endOfDay(date: Date): Date {
+  const out = new Date(date);
+  out.setHours(23, 59, 59, 999);
+  return out;
+}
+
+function dayKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function buildDaySeries(rawEntries: { day: string; value: number }[], windowStart: Date, windowEnd: Date) {
+  const map = new Map<string, number>();
+  for (const e of rawEntries) {
+    map.set(e.day, (map.get(e.day) ?? 0) + e.value);
+  }
+  const out: { key: string; value: number }[] = [];
+  const cursor = startOfDay(windowStart);
+  const end = startOfDay(windowEnd);
+  while (cursor.getTime() <= end.getTime()) {
+    const key = dayKey(cursor);
+    out.push({ key, value: map.get(key) ?? 0 });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return out;
+}
+
+function parseAssignees(value: string | null): string[] {
+  if (!value || value.trim().length === 0) {
+    return [];
+  }
+  return Array.from(
+    new Set(
+      value
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0),
+    ),
+  );
+}
+
 export async function GET(request: Request) {
   try {
     const { user } = await requireRedmineClient();
     const { searchParams } = new URL(request.url);
-    const days = parseInt(searchParams.get("days") ?? "30", 10);
-    const since = new Date();
-    since.setDate(since.getDate() - days);
+    const days = parseDays(searchParams.get("days"));
+    const issueIdRaw = searchParams.get("issueId");
+    const fromRaw = searchParams.get("from");
+    const toRaw = searchParams.get("to");
+    const assignees = parseAssignees(searchParams.get("assignees"));
+
+    let issueId: number | null = null;
+    if (issueIdRaw && issueIdRaw.trim().length > 0) {
+      const parsed = Number.parseInt(issueIdRaw.trim(), 10);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        return Response.json({ error: "Invalid issueId filter" }, { status: 400 });
+      }
+      issueId = parsed;
+    }
+
+    const fromDate = parseDateOnly(fromRaw);
+    const toDate = parseDateOnly(toRaw);
+    if ((fromRaw && !fromDate) || (toRaw && !toDate)) {
+      return Response.json({ error: "Invalid date filter. Expected YYYY-MM-DD." }, { status: 400 });
+    }
+
+    let windowStart: Date;
+    let windowEnd: Date;
+    if (fromDate && toDate) {
+      windowStart = startOfDay(fromDate);
+      windowEnd = endOfDay(toDate);
+    } else if (fromDate) {
+      windowStart = startOfDay(fromDate);
+      windowEnd = endOfDay(new Date());
+    } else if (toDate) {
+      windowEnd = endOfDay(toDate);
+      windowStart = startOfDay(new Date(windowEnd.getTime() - (days - 1) * DAY_MS));
+    } else {
+      windowEnd = endOfDay(new Date());
+      windowStart = startOfDay(new Date(windowEnd.getTime() - (days - 1) * DAY_MS));
+    }
+
+    if (windowStart.getTime() > windowEnd.getTime()) {
+      return Response.json({ error: "Invalid date range. 'from' must be before or equal to 'to'." }, { status: 400 });
+    }
+
+    const issueWhere: Prisma.IssueWhereInput = {
+      userId: user.id,
+      ...(issueId ? { redmineIssueId: issueId } : {}),
+      ...(fromDate || toDate
+        ? {
+            updatedOnRemote: {
+              ...(fromDate ? { gte: startOfDay(fromDate) } : {}),
+              ...(toDate ? { lte: endOfDay(toDate) } : {}),
+            },
+          }
+        : {}),
+    };
+
+    if (assignees.length > 0) {
+      issueWhere.OR = assignees.map((name) => {
+        const normalized = name.toLowerCase();
+        if (normalized === "unassigned" || normalized === "nobody") {
+          return {
+            OR: [
+              { assignedToName: null },
+              { assignedToName: "" },
+              { assignedToName: "Nobody" },
+            ],
+          };
+        }
+        return {
+          assignedToName: { equals: name, mode: "insensitive" },
+        };
+      });
+    }
 
     // Parallel aggregations
     const [
@@ -51,57 +191,57 @@ export async function GET(request: Request) {
       // Status distribution
       prisma.issue.groupBy({
         by: ["statusName"],
-        where: { userId: user.id },
+        where: issueWhere,
         _count: { statusName: true },
         orderBy: { _count: { statusName: "desc" } },
       }),
       // Priority distribution
       prisma.issue.groupBy({
         by: ["priority"],
-        where: { userId: user.id },
+        where: issueWhere,
         _count: { priority: true },
         orderBy: { _count: { priority: "desc" } },
       }),
       // Tracker distribution
       prisma.issue.groupBy({
         by: ["tracker"],
-        where: { userId: user.id },
+        where: issueWhere,
         _count: { tracker: true },
         orderBy: { _count: { tracker: "desc" } },
       }),
       // Category distribution
       prisma.issue.groupBy({
         by: ["categoryName"],
-        where: { userId: user.id },
+        where: issueWhere,
         _count: { categoryName: true },
         orderBy: { _count: { categoryName: "desc" } },
       }),
       // Project distribution
       prisma.issue.groupBy({
         by: ["projectName"],
-        where: { userId: user.id },
+        where: issueWhere,
         _count: { projectName: true },
         orderBy: { _count: { projectName: "desc" } },
       }),
       // Assignee distribution
       prisma.issue.groupBy({
         by: ["assignedToName"],
-        where: { userId: user.id },
+        where: issueWhere,
         _count: { assignedToName: true },
         orderBy: { _count: { assignedToName: "desc" } },
       }),
       // Total counts
-      prisma.issue.count({ where: { userId: user.id } }),
+      prisma.issue.count({ where: issueWhere }),
       prisma.issue.count({
         where: {
-          userId: user.id,
+          ...issueWhere,
           dueDate: { not: null },
         },
       }),
       // Overdue issues by parent
       prisma.issue.findMany({
         where: {
-          userId: user.id,
+          ...issueWhere,
           dueDate: { lte: new Date() },
           statusName: { notIn: ["Closed", "Resolved", "Success"] },
         },
@@ -111,8 +251,11 @@ export async function GET(request: Request) {
       prisma.issueJournal.groupBy({
         by: ["createdOnRemote"],
         where: {
-          issue: { userId: user.id },
-          createdOnRemote: { gte: since },
+          issue: issueWhere,
+          createdOnRemote: {
+            gte: windowStart,
+            lte: windowEnd,
+          },
         },
         _count: { id: true },
       }),
@@ -120,22 +263,37 @@ export async function GET(request: Request) {
       prisma.timeEntry.groupBy({
         by: ["spentOn"],
         where: {
-          issue: { userId: user.id },
-          spentOn: { gte: since },
+          issue: issueWhere,
+          spentOn: {
+            gte: windowStart,
+            lte: windowEnd,
+          },
         },
         _sum: { hours: true },
         _count: { id: true },
       }),
       // Total time entries
       prisma.timeEntry.aggregate({
-        where: { issue: { userId: user.id } },
+        where: {
+          issue: issueWhere,
+          spentOn: {
+            gte: windowStart,
+            lte: windowEnd,
+          },
+        },
         _sum: { hours: true },
         _count: { id: true },
       }),
       // Time entries by activity
       prisma.timeEntry.groupBy({
         by: ["activityName"],
-        where: { issue: { userId: user.id } },
+        where: {
+          issue: issueWhere,
+          spentOn: {
+            gte: windowStart,
+            lte: windowEnd,
+          },
+        },
         _sum: { hours: true },
         _count: { id: true },
         orderBy: { _sum: { hours: "desc" } },
@@ -143,14 +301,26 @@ export async function GET(request: Request) {
       // Time entries by user
       prisma.timeEntry.groupBy({
         by: ["authorName"],
-        where: { issue: { userId: user.id } },
+        where: {
+          issue: issueWhere,
+          spentOn: {
+            gte: windowStart,
+            lte: windowEnd,
+          },
+        },
         _sum: { hours: true },
         _count: { id: true },
         orderBy: { _sum: { hours: "desc" } },
       }),
       // Recent journals
       prisma.issueJournal.findMany({
-        where: { issue: { userId: user.id } },
+        where: {
+          issue: issueWhere,
+          createdOnRemote: {
+            gte: windowStart,
+            lte: windowEnd,
+          },
+        },
         orderBy: { createdOnRemote: "desc" },
         take: 20,
         select: {
@@ -163,7 +333,13 @@ export async function GET(request: Request) {
       }),
       // Recent time entries
       prisma.timeEntry.findMany({
-        where: { issue: { userId: user.id } },
+        where: {
+          issue: issueWhere,
+          spentOn: {
+            gte: windowStart,
+            lte: windowEnd,
+          },
+        },
         orderBy: { spentOn: "desc" },
         take: 20,
         select: {
@@ -177,7 +353,7 @@ export async function GET(request: Request) {
       }),
       // Health + risk computations
       prisma.issue.findMany({
-        where: { userId: user.id },
+        where: issueWhere,
         select: {
           statusName: true,
           dueDate: true,
@@ -217,25 +393,6 @@ export async function GET(request: Request) {
     }
 
     // Helper: group by day
-    function dayKey(date: Date): string {
-      return date.toISOString().slice(0, 10);
-    }
-
-    function buildDaySeries(rawEntries: { day: string; value: number }[], windowDays: number) {
-      const map = new Map<string, number>();
-      for (const e of rawEntries) {
-        map.set(e.day, (map.get(e.day) ?? 0) + e.value);
-      }
-      const out: { key: string; value: number }[] = [];
-      for (let i = windowDays - 1; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const key = dayKey(d);
-        out.push({ key, value: map.get(key) ?? 0 });
-      }
-      return out;
-    }
-
     const journalDayEntries = journalsByDay.map(j => ({
       day: dayKey(j.createdOnRemote),
       value: j._count.id,
@@ -373,8 +530,8 @@ export async function GET(request: Request) {
         overspentOpenIssues,
       },
       trends: {
-        journalDaySeries: buildDaySeries(journalDayEntries, days),
-        timeDaySeries: buildDaySeries(timeDayEntries, days),
+        journalDaySeries: buildDaySeries(journalDayEntries, windowStart, windowEnd),
+        timeDaySeries: buildDaySeries(timeDayEntries, windowStart, windowEnd),
         byActivity: timeEntriesByActivity.slice(0, 8).map(a => ({
           name: a.activityName || "Unknown",
           hours: Number((a._sum.hours ?? 0).toFixed(1)),
