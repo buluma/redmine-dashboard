@@ -3108,3 +3108,8 @@ kbd {
   color: #5c4900;
   border-color: #e6c200;
 }
+
+/* Analytics Dashboard Card */
+.charts-card .dashboard-widgets {
+  margin-top: 0.5rem;
+}
