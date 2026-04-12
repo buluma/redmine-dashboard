@@ -70,21 +70,28 @@ describe("ai-prompt utilities", () => {
         timeEntries: [
           { hours: 1.5, activityName: "Debug", authorName: "Jane", comments: "trace logs", spentOn: "2024-01-16" },
         ],
-        attachments: [
-          { filename: "error-log.txt", contentType: "text/plain", filesize: 2048, createdOn: "2024-01-16T10:00:00Z" },
-        ],
-      };
+	        attachments: [
+	          {
+	            filename: "error-log.txt",
+	            contentType: "text/plain",
+	            filesize: 2048,
+	            createdOn: "2024-01-16T10:00:00Z",
+	            extractedText: "Timeout while connecting to upstream API",
+	          },
+	        ],
+	      };
 
       const result = formatIssueForPrompt(richIssue);
 
       expect(result).toContain("Recent journals");
       expect(result).toContain("Investigated root cause");
       expect(result).toContain("Time spent:");
-      expect(result).toContain("By activity:");
-      expect(result).toContain("Attachments");
-      expect(result).toContain("error-log.txt");
-    });
-  });
+	      expect(result).toContain("By activity:");
+	      expect(result).toContain("Attachments");
+	      expect(result).toContain("error-log.txt");
+	      expect(result).toContain("Extracted excerpt");
+	    });
+	  });
 
   describe("createSummarizeMessages", () => {
     it("should create messages with system prompt and user content", () => {

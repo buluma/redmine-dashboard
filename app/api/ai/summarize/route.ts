@@ -1,9 +1,10 @@
 import { getOllamaClient } from "@/src/lib/ollama";
+import { extractAttachmentSnippetsForAi } from "@/src/lib/attachment-ai";
 import { createSummarizeMessages, normalizeSummarizeResponse, parseJsonResponse } from "@/src/lib/ai-prompt";
 import { env } from "@/src/lib/env";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
-import { requireCurrentUser, requireMobileUser } from "@/src/lib/auth";
+import { requireCurrentUser, requireMobileUser, requireRedmineClientForUser } from "@/src/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -68,6 +69,23 @@ export async function POST(request: Request) {
     }
 
     const client = getOllamaClient();
+    let attachmentSnippets = new Map<number, string>();
+    try {
+      const { client: redmineClient } = await requireRedmineClientForUser(actorUserId);
+      attachmentSnippets = await extractAttachmentSnippetsForAi(
+        redmineClient,
+        issue.attachments.map((attachment) => ({
+          redmineAttachmentId: attachment.redmineAttachmentId,
+          filename: attachment.filename,
+          filesize: attachment.filesize,
+          contentType: attachment.contentType,
+          downloadUrl: attachment.downloadUrl,
+        }))
+      );
+    } catch {
+      // Continue without attachment content extraction when credentials are missing or fetch fails.
+    }
+
     const issueContext = {
       id: issue.id,
       redmineIssueId: issue.redmineIssueId,
@@ -95,10 +113,12 @@ export async function POST(request: Request) {
         spentOn: entry.spentOn.toISOString(),
       })),
       attachments: issue.attachments.map((attachment) => ({
+        redmineAttachmentId: attachment.redmineAttachmentId,
         filename: attachment.filename,
         contentType: attachment.contentType,
         filesize: attachment.filesize,
         createdOn: attachment.createdOnRemote?.toISOString() ?? attachment.createdAt.toISOString(),
+        extractedText: attachmentSnippets.get(attachment.redmineAttachmentId) ?? null,
       })),
     };
     const messages = createSummarizeMessages(issueContext);
