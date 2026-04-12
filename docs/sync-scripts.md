@@ -2,82 +2,143 @@
 
 This document describes the operational scripts in `scripts/` for syncing and maintaining data between Redmine and the Supabase database.
 
+## Quick Reference
+
+| Script | Purpose | Example |
+|---|---|---|
+| `sync-assigned.js` | Issues assigned to or authored by you | `node scripts/sync-assigned.js` |
+| `sync-children.js` | Children of a parent issue | `node scripts/sync-children.js 97459` |
+| `sync-query.js` | Issues from a saved Redmine query | `node scripts/sync-query.js 747` |
+| `sync-query-details.js` | Children + time entries for query issues | `node scripts/sync-query-details.js 754 747` |
+| `sync-time-entries.js` | Compare time entries Redmine vs local | `node scripts/sync-time-entries.js 113112` |
+| `sync-users.js` | Redmine users catalog | `node scripts/sync-users.js` |
+| `sync-enums.js` | Priorities and activities | `node scripts/sync-enums.js` |
+| `db-status.js` | Check DB state | `node scripts/db-status.js` |
+| `trigger-sync.js` | Trigger web sync via API | `node scripts/trigger-sync.js 'cookie'` |
+| `check-sync-jobs.js` | Sync job history | `node scripts/check-sync-jobs.js` |
+
 ## Issue Sync
 
-### `scripts/sync-all-issues.js`
+### `scripts/sync-assigned.js`
 
-Full paginated sync of ALL Redmine issues to Supabase.
+Syncs only issues **assigned to** or **authored by** the authenticated user. Much faster than full sync — typically a few hundred issues vs 100K+.
 
 ```bash
-# Sync all issues (fetches and upserts ~109K issues)
-node scripts/sync-all-issues.js
-
-# Dry run (estimates time, fetches 2 pages)
-node scripts/sync-all-issues.js --dry-run
-
-# Resume from a specific offset (e.g., after interruption)
-node scripts/sync-all-issues.js --from-offset 50000
+# Sync assigned + authored issues
+node scripts/sync-assigned.js
 ```
 
 **How it works:**
-- Fetches pages in batches of 50 (5,000 issues per batch)
-- Upserts 25 issues at a time in parallel
-- Tracks `parentIssueId` for parent-child relationships
-- Stores `childrenJson` with full nested child data
-- Rate-limit aware with retry logic
+- Fetches `assigned_to_id=me` and `author_id=me` separately
+- Merges and deduplicates by issue ID
+- Upserts all issues in parallel batches of 50
+- Supabase acts as source of truth — syncs are strictly additive (upsert only)
 
-**Issue fields synced:**
-| Field | Redmine Source |
-|---|---|
-| `subject`, `description`, `tracker`, `priority` | issue detail |
-| `statusId`, `statusName` | issue status |
-| `parentIssueId`, `parentIssueLabel` | issue parent |
-| `assignedToId`, `assignedToName`, `authorId`, `authorName` | user references |
-| `categoryId`, `categoryName` | issue category |
-| `startDate`, `dueDate`, `estimatedHours`, `spentHours` | dates and time |
-| `customFieldsJson` | custom fields array |
-| `childrenJson` | nested children array |
-| `doneRatio` | progress percentage |
+### `scripts/sync-children.js`
 
-### `scripts/sync-children-quick.js`
-
-Quick sync that updates `childrenJson` and upserts direct children for specific parent issues.
+Syncs all child issues for a specific parent issue.
 
 ```bash
-node scripts/sync-children-quick.js 101201 102084 97459
+node scripts/sync-children.js <parent_issue_id>
+
+# Example
+node scripts/sync-children.js 97459
 ```
 
-### `scripts/sync-issue-children.js`
+**How it works:**
+- Uses `parent_id=<parentId>` query parameter
+- Sets `parentIssueId` for all child issues (breadcrumb navigation)
+- Stores `childrenJson` on parent issue
 
-Full recursive sync that flattens nested children and syncs each as individual issues with `parentIssueId` set.
+### `scripts/sync-query.js`
+
+Syncs issues from a saved Redmine query.
 
 ```bash
-node scripts/sync-issue-children.js 101201
+node scripts/sync-query.js <query_id>
+
+# Examples
+node scripts/sync-query.js 744   # 8 issues
+node scripts/sync-query.js 747   # 69 issues
+node scripts/sync-query.js 749   # 21 issues
 ```
 
-## User Sync
+**Note:** Some queries may not be accessible via REST API (private queries or those requiring special permissions).
 
-### `scripts/sync-redmine-users.js`
+### `scripts/sync-query-details.js`
+
+Syncs children and time entries for all issues returned by one or more saved queries.
+
+```bash
+node scripts/sync-query-details.js <query_id1> <query_id2> ...
+
+# Example
+node scripts/sync-query-details.js 754 755 749 743 744 747
+```
+
+**How it works:**
+- Fetches issue IDs from all specified queries (lightweight)
+- For each unique issue: fetches children + time entries from Redmine
+- Upserts directly into Supabase
+- Processes 5 issues in parallel for speed
+
+### `scripts/sync-time-entries.js`
+
+Compares time entries between Redmine API and local Supabase database. Shows discrepancies for data integrity verification.
+
+```bash
+node scripts/sync-time-entries.js <issue_id>
+
+# Example
+node scripts/sync-time-entries.js 113112
+```
+
+**Output shows:**
+- Side-by-side comparison of all entries
+- Missing, extra, or mismatched entries
+- Total hours comparison
+
+## Catalog Sync
+
+### `scripts/sync-users.js`
 
 Extracts unique users from Redmine issues (author, assigned_to) and stores them in the `RedmineUser` table.
 
 ```bash
-node scripts/sync-redmine-users.js
+node scripts/sync-users.js
 ```
 
 **Usage:** The synced users are used for issue assignment in the Quick Actions panel.
 
-## Enumeration Sync
-
-### `scripts/sync-enumerations.js`
+### `scripts/sync-enums.js`
 
 Fetches Redmine enumerations (issue priorities, time entry activities, document categories) and stores them in `RedmineEnumeration`.
 
 ```bash
-node scripts/sync-enumerations.js
+node scripts/sync-enums.js
 ```
 
 ## Utility Scripts
+
+### `scripts/db-status.js`
+
+Quick check of database state — total issues, parent-child breakdown, and issues per user.
+
+```bash
+node scripts/db-status.js
+```
+
+**Sample output:**
+```
+📊 Supabase Issue Table
+━━━━━━━━━━━━━━━━━━━━━━━━
+Total issues:          393
+  With parent:         381
+  Without parent:      12
+
+👥 Issues per user:
+  cmnuhn4m...  393
+```
 
 ### `scripts/check-issues.js`
 
@@ -85,33 +146,14 @@ Quick check of issue count and latest issue in Supabase.
 
 ```bash
 node scripts/check-issues.js
-# Output:
-# Issues in Supabase: 47,484
-# Latest: #113112 - Week 20: Support for Vodacom SL Users (MBU) (...)
 ```
 
-### `scripts/check-children.js`
+### `scripts/check-sync-jobs.js`
 
-Inspect children data for a specific issue.
-
-```bash
-node scripts/check-children.js 101201
-```
-
-### `scripts/check-enums.js`
-
-Check enumeration data (priorities, activities).
+Check sync job history and status.
 
 ```bash
-node scripts/check-enums.js
-```
-
-### `scripts/test-time-entries.js`
-
-Compare time entries between Redmine API and local database.
-
-```bash
-node scripts/test-time-entries.js
+node scripts/check-sync-jobs.js
 ```
 
 ### `scripts/trigger-sync.js`
@@ -126,11 +168,17 @@ node scripts/trigger-sync.js 'session_cookie_here'
 
 All scripts require these in `.env`:
 
-```
+```bash
 REDMINE_BASE_URL="https://redmine.nasctech.com"
 REDMINE_API_KEY="your-api-key"
 DATABASE_URL="postgresql://..."   # Supabase connection
 ```
+
+## Data Safety
+
+**All syncs are strictly additive (upsert only).** The destructive `deleteMany` operation that previously ran during system sync jobs has been disabled to prevent accidental data loss.
+
+**Never run `DELETE FROM "Issue"` manually** unless you're intentionally clearing the database.
 
 ## Database Schema Reference
 
@@ -157,3 +205,17 @@ RedmineEnumeration.id (Redmine enumeration ID)
 | `RedmineUser` | `[name]` | User search |
 | `RedmineEnumeration` | `[kind, isActive]` | Active enumerations |
 | `RedmineEnumeration` | `[kind, position]` | Ordered enumerations |
+
+### Issue Fields Synced
+
+| Field | Redmine Source |
+|---|---|
+| `subject`, `description`, `tracker`, `priority` | issue detail |
+| `statusId`, `statusName` | issue status |
+| `parentIssueId`, `parentIssueLabel` | issue parent |
+| `assignedToId`, `assignedToName`, `authorId`, `authorName` | user references |
+| `categoryId`, `categoryName` | issue category |
+| `startDate`, `dueDate`, `estimatedHours`, `spentHours` | dates and time |
+| `customFieldsJson` | custom fields array |
+| `childrenJson` | nested children array |
+| `doneRatio` | progress percentage |
