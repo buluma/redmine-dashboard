@@ -4404,3 +4404,216 @@ textarea {
     width: calc(50% - 0.22rem);
   }
 }
+
+
+/* AI Summaries Page - Following Reports Design Pattern */
+.summaries-list {
+  display: grid;
+  gap: 0.7rem;
+  padding-top: 0.75rem;
+}
+
+.summary-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.75rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+  display: grid;
+  gap: 0.6rem;
+  transition: box-shadow 0.15s ease;
+}
+
+.summary-card:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.summary-issue-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.summary-issue-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1rem;
+  display: block;
+  margin-bottom: 0.35rem;
+  transition: color 0.15s ease;
+  text-align: left;
+}
+
+.summary-issue-link:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
+.summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.summary-status,
+.summary-priority,
+.summary-project {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.summary-status {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.summary-priority {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.summary-project {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.summary-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.summary-model {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+.summary-date {
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* AI Summaries - matches AiIssueActions rendering */
+.summary-content {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.ai-result {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.ai-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.ai-result-header h5 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #374151;
+}
+
+.ai-confidence {
+  font-size: 0.7rem;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.ai-section {
+  margin-top: 0.75rem;
+}
+
+.ai-section h6 {
+  margin: 0 0 0.4rem 0;
+  font-size: 0.8rem;
+  color: #4b5563;
+  font-weight: 600;
+}
+
+.ai-section p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #1f2937;
+}
+
+.ai-section ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #374151;
+}
+
+.ai-section ul li {
+  margin-bottom: 0.25rem;
+}
+
+.action-items {
+  list-style-type: square;
+}
+
+.ai-link {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.ai-link:hover {
+  color: #1d4ed8;
+}
+
+.summary-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.35rem;
+  border-top: 1px dashed var(--line);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 768px) {
+  .summary-header {
+    flex-direction: column;
+  }
+
+  .summary-side {
+    align-items: flex-start;
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+
+  .summary-footer {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}

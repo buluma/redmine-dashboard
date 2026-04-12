@@ -1579,6 +1579,9 @@ export default function Home() {
           <Link href="/reports" className="primary-link nav-link">
             Open Reports
           </Link>
+          <Link href="/ai-summaries" className="primary-link nav-link">
+            AI Summaries
+          </Link>
           <Link href="/ops" className="primary-link nav-link">
             Sync Ops
           </Link>
