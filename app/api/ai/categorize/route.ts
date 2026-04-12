@@ -3,9 +3,22 @@ import { createCategorizeMessages, parseJsonResponse, type CategorizeResponse } 
 import { env } from "@/src/lib/env";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
-import { requireCurrentUser } from "@/src/lib/auth";
+import { requireCurrentUser, requireMobileUser } from "@/src/lib/auth";
 
 export const runtime = "nodejs";
+
+async function resolveActorUserId(request: Request): Promise<string> {
+  try {
+    const user = await requireCurrentUser();
+    return user.id;
+  } catch (error) {
+    if (!(error instanceof Error) || error.message !== "Unauthorized") {
+      throw error;
+    }
+    const { user } = await requireMobileUser(request);
+    return user.id;
+  }
+}
 
 export async function POST(request: Request) {
   if (!env.enableAiFeatures || !env.aiCategorizeEnabled) {
@@ -14,14 +27,14 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
+    const actorUserId = await resolveActorUserId(request);
     let issueId = body.issueId as string | undefined;
 
     // If issueId looks like a number, treat it as redmineIssueId
     const numericId = parseInt(issueId ?? "", 10);
     if (!isNaN(numericId)) {
-      const user = await requireCurrentUser();
       const issue = await prisma.issue.findFirst({
-        where: { userId: user.id, redmineIssueId: numericId },
+        where: { userId: actorUserId, redmineIssueId: numericId },
       });
       if (!issue) return jsonError("Issue not found", 404);
       issueId = issue.id;
@@ -32,8 +45,8 @@ export async function POST(request: Request) {
     }
 
     // Fetch the issue from database
-    const issue = await prisma.issue.findUnique({
-      where: { id: issueId },
+    const issue = await prisma.issue.findFirst({
+      where: { id: issueId, userId: actorUserId },
     });
 
     if (!issue) {

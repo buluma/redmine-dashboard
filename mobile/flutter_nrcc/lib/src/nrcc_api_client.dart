@@ -8,12 +8,15 @@ class NrccApiClient {
   final Dio _dio;
   final TokenStore _tokenStore;
   final String _baseUrl;
+  final void Function()? _onUnauthorized;
 
   NrccApiClient({
     required String baseUrl,
     required TokenStore tokenStore,
+    void Function()? onUnauthorized,
   })  : _tokenStore = tokenStore,
         _baseUrl = baseUrl,
+        _onUnauthorized = onUnauthorized,
         _dio = Dio(BaseOptions(baseUrl: baseUrl)) {
     _dio.interceptors.add(
       InterceptorsWrapper(
@@ -27,6 +30,7 @@ class NrccApiClient {
         onError: (error, handler) async {
           if (error.response?.statusCode == 401) {
             await _tokenStore.clear();
+            _onUnauthorized?.call();
           }
           handler.next(error);
         },
@@ -466,7 +470,7 @@ class NrccApiClient {
   }) async {
     try {
       await _dio.patch<Map<String, dynamic>>(
-        "/api/time-entries/$redmineTimeEntryId",
+        "/api/mobile/v1/time-entries/$redmineTimeEntryId",
         data: <String, dynamic>{
           "hours": hours,
           "activityId": activityId,
@@ -483,7 +487,7 @@ class NrccApiClient {
     required int redmineTimeEntryId,
   }) async {
     try {
-      await _dio.delete<Map<String, dynamic>>("/api/time-entries/$redmineTimeEntryId");
+      await _dio.delete<Map<String, dynamic>>("/api/mobile/v1/time-entries/$redmineTimeEntryId");
     } on DioException catch (e) {
       _throwApiError(e);
     }

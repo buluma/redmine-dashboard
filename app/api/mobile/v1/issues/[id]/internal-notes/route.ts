@@ -1,13 +1,23 @@
 import { requireMobileUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError, parseJson } from "@/src/lib/http";
+import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
 import { z } from "zod";
+
+function parseIssueId(id: string): number {
+  const n = Number(id);
+  if (!Number.isInteger(n) || n <= 0) {
+    throw new Error("Invalid issue id");
+  }
+  return n;
+}
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    assertMobileApiEnabled();
     const { user } = await requireMobileUser(request);
     const { id } = await context.params;
-    const issueId = parseInt(id, 10);
+    const issueId = parseIssueId(id);
 
     const issue = await prisma.issue.findFirst({
       where: { userId: user.id, redmineIssueId: issueId },
@@ -22,7 +32,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     });
 
     return Response.json({
-      notes: notes.map(n => ({
+      notes: notes.map((n) => ({
         id: n.id,
         content: n.content,
         createdAt: n.createdAt.toISOString(),
@@ -30,7 +40,9 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       })),
     });
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "Unable to fetch notes", 500);
+    const message = error instanceof Error ? error.message : "Unable to fetch notes";
+    const status = message === "Mobile API is disabled" ? 404 : message === "Unauthorized" ? 401 : 400;
+    return jsonError(message, status);
   }
 }
 
@@ -40,9 +52,10 @@ const createNoteSchema = z.object({
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    assertMobileApiEnabled();
     const { user } = await requireMobileUser(request);
     const { id } = await context.params;
-    const issueId = parseInt(id, 10);
+    const issueId = parseIssueId(id);
     const body = await parseJson(request, createNoteSchema);
 
     const issue = await prisma.issue.findFirst({
@@ -65,6 +78,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       },
     });
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "Unable to create note", 500);
+    const message = error instanceof Error ? error.message : "Unable to create note";
+    const status = message === "Mobile API is disabled" ? 404 : message === "Unauthorized" ? 401 : 400;
+    return jsonError(message, status);
   }
 }

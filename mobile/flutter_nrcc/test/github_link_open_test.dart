@@ -39,7 +39,7 @@ void main() {
     ]);
 
     await _pumpIssueDetail(tester, issue: issue);
-    await tester.tap(find.text("GitHub Links"));
+    await _tapVisible(tester, find.text("GitHub Links"));
     await tester.pumpAndSettle();
 
     await _tapText(tester, "Existing link");
@@ -62,7 +62,7 @@ void main() {
     ]);
 
     await _pumpIssueDetail(tester, issue: issue);
-    await tester.tap(find.text("GitHub Links"));
+    await _tapVisible(tester, find.text("GitHub Links"));
     await tester.pumpAndSettle();
 
     await _tapText(tester, "acme/platform#42");
@@ -85,7 +85,7 @@ void main() {
     ]);
 
     await _pumpIssueDetail(tester, issue: issue);
-    await tester.tap(find.text("GitHub Links"));
+    await _tapVisible(tester, find.text("GitHub Links"));
     await tester.pumpAndSettle();
 
     await _tapText(tester, "Broken link");
@@ -118,8 +118,13 @@ Future<void> _pumpIssueDetail(
 
 Future<void> _tapText(WidgetTester tester, String text) async {
   final finder = find.text(text);
+  await _tapVisible(tester, finder);
+}
+
+Future<void> _tapVisible(WidgetTester tester, Finder finder) async {
   await tester.ensureVisible(finder);
-  await tester.tap(finder);
+  await tester.pump();
+  await tester.tap(finder, warnIfMissed: false);
 }
 
 Issue _issueWithLinks(List<GithubLink> links) {
@@ -149,6 +154,27 @@ class _FakeIssuesRepository extends IssuesRepository {
 
 class _FakeIssueActionsRepository extends IssueActionsRepository {
   _FakeIssueActionsRepository() : super(_dummyApiClient());
+
+  @override
+  Future<Map<String, String>> attachmentPreviewHeaders() async => const <String, String>{};
+
+  @override
+  Future<List<TimeEntry>> listTimeEntries({required int redmineIssueId}) async => const <TimeEntry>[];
+
+  @override
+  Future<List<Map<String, dynamic>>> listActivities() async => const <Map<String, dynamic>>[];
+
+  @override
+  Future<List<AssignableUser>> listAssignableUsers() async => const <AssignableUser>[];
+
+  @override
+  Future<List<Map<String, dynamic>>> getBreadcrumbs({required int redmineIssueId}) async => const <Map<String, dynamic>>[];
+
+  @override
+  Future<bool> isFavorited({required int redmineIssueId}) async => false;
+
+  @override
+  Future<List<InternalNote>> listInternalNotes({required int redmineIssueId}) async => const <InternalNote>[];
 
   @override
   Future<void> postComment({required int redmineIssueId, required String comment}) async {}
