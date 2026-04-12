@@ -117,6 +117,7 @@ model Issue {
   @@unique([userId, redmineBaseUrl, redmineIssueId])
   @@index([userId, statusId])
   @@index([userId, updatedOnRemote])
+  @@index([parentIssueId])
 }
 
 model IssueAttachment {
