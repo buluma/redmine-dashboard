@@ -12,8 +12,8 @@ const prisma = new PrismaClient();
 const REDMINE_BASE_URL = process.env.REDMINE_BASE_URL;
 const REDMINE_API_KEY = process.env.REDMINE_API_KEY;
 const PAGE_SIZE = 100;
-const BATCH_PAGES = 50; // Fetch 50 pages per batch = 5000 issues
-const UPSERT_CONCURRENCY = 25;
+const BATCH_PAGES = 10; // Fetch 10 pages per batch = 1000 issues
+const UPSERT_CONCURRENCY = 50;
 
 let userId, baseUrl;
 
@@ -109,7 +109,7 @@ async function main() {
     // Fetch batch
     const results = await Promise.all(
       pages.map(async (page) => {
-        await new Promise(r => setTimeout(r, 100)); // Rate limit spacing
+        await new Promise(r => setTimeout(r, 30)); // Minimal spacing
         const data = await fetchPage(page * PAGE_SIZE);
         return { page, data };
       })
@@ -125,7 +125,7 @@ async function main() {
     for (let i = 0; i < batchIssues.length; i += UPSERT_CONCURRENCY) {
       const chunk = batchIssues.slice(i, i + UPSERT_CONCURRENCY);
       const payloads = chunk.map(buildPayload).filter(Boolean);
-      
+
       const upResults = await Promise.allSettled(
         payloads.map(async (p) => {
           await prisma.issue.upsert({
@@ -139,7 +139,7 @@ async function main() {
           });
         })
       );
-      
+
       for (const r of upResults) {
         if (r.status === "fulfilled") totalUpserted++;
         else totalErrors++;
@@ -156,7 +156,7 @@ async function main() {
     process.stdout.write(`\r📦 Pages ${pagesDone}/${totalPages} (${pct}%) | ↑ ${totalUpserted.toLocaleString()} | err: ${totalErrors} | ${rate}/s | ETA: ~${etaMin}m`);
 
     // Pause between batches
-    if (pagesDone < totalPages) await new Promise(r => setTimeout(r, 1000));
+    if (pagesDone < totalPages) await new Promise(r => setTimeout(r, 500));
   }
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
