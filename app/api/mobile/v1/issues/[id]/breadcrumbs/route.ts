@@ -1,14 +1,22 @@
 import { requireMobileUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
+import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
+
+function parseIssueId(id: string): number {
+  const n = Number(id);
+  if (!Number.isInteger(n) || n <= 0) {
+    throw new Error("Invalid issue id");
+  }
+  return n;
+}
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    assertMobileApiEnabled();
     const { user } = await requireMobileUser(request);
     const { id } = await context.params;
-    const issueId = parseInt(id, 10);
-
-    if (isNaN(issueId)) return jsonError("Invalid issue ID", 400);
+    const issueId = parseIssueId(id);
 
     const breadcrumbs: Array<{ id: number; subject: string }> = [];
     let currentId: number | null = issueId;
@@ -37,6 +45,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     return Response.json({ breadcrumbs });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to fetch breadcrumbs";
-    return jsonError(message, 500);
+    const status = message === "Mobile API is disabled" ? 404 : message === "Unauthorized" ? 401 : 400;
+    return jsonError(message, status);
   }
 }

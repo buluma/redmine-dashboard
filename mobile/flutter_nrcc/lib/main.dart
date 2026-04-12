@@ -65,6 +65,13 @@ class _NrccAppState extends State<NrccApp> {
     _apiClient = NrccApiClient(
       baseUrl: _env("NRCC_BASE_URL", "http://100.100.245.3:3000"),
       tokenStore: _tokenStore,
+      onUnauthorized: () {
+        if (!mounted) return;
+        setState(() {
+          _paired = false;
+          _bootstrapping = false;
+        });
+      },
     );
     _authRepository = AuthRepository(_apiClient, _tokenStore);
     _issuesRepository = IssuesRepository(_apiClient);

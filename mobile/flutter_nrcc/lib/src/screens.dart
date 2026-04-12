@@ -120,6 +120,14 @@ class _PairScreenState extends State<PairScreen> {
   String? _error;
 
   @override
+  void dispose() {
+    _baseUrl.dispose();
+    _apiKey.dispose();
+    _deviceName.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Pair with NRCC")),
@@ -134,6 +142,9 @@ class _PairScreenState extends State<PairScreen> {
             TextField(
               controller: _apiKey,
               decoration: const InputDecoration(labelText: "Redmine API Key"),
+              obscureText: true,
+              enableSuggestions: false,
+              autocorrect: false,
             ),
             TextField(
               controller: _deviceName,
@@ -255,6 +266,12 @@ class _IssueListScreenState extends State<IssueListScreen> {
   }
 
   @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
@@ -304,7 +321,8 @@ class _IssueListScreenState extends State<IssueListScreen> {
               children: <Widget>[
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _sort,
+                    key: ValueKey<String>("sort-$_sort"),
+                    initialValue: _sort,
                     isDense: true,
                     decoration: const InputDecoration(
                       labelText: "Sort",
@@ -327,7 +345,8 @@ class _IssueListScreenState extends State<IssueListScreen> {
                 ),
                 const SizedBox(width: 8),
                 DropdownButtonFormField<String>(
-                  value: _searchMode,
+                  key: ValueKey<String>("mode-$_searchMode"),
+                  initialValue: _searchMode,
                   isDense: true,
                   decoration: const InputDecoration(
                     labelText: "Mode",
@@ -979,13 +998,6 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     );
   }
 
-  Future<void> _pickAndUploadAttachment(BuildContext context, ThemeData theme) async {
-    // Show a simple dialog with options for now
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Attachment upload: select file from device (coming soon)")),
-    );
-  }
-
   Future<void> _aiSummarize() async {
     setState(() {
       _aiLoading = true;
@@ -1115,6 +1127,17 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _comment.dispose();
+    _repo.dispose();
+    _ghIssue.dispose();
+    _relationIssue.dispose();
+    _timeHours.dispose();
+    _timeComment.dispose();
+    super.dispose();
   }
 
   @override
@@ -1369,7 +1392,8 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                     Expanded(
                                       flex: 3,
                                       child: DropdownButtonFormField<int>(
-                                        value: _timeActivityId,
+                                        key: ValueKey<int?>(_timeActivityId),
+                                        initialValue: _timeActivityId,
                                         isDense: true,
                                         decoration: const InputDecoration(labelText: "Activity", isDense: true),
                                         items: _activities
