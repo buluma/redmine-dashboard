@@ -1,4 +1,5 @@
 import { requireCurrentUser } from "@/src/lib/auth";
+import { recomputeIssueActivityIndex, recordIssueActivityEvent } from "@/src/lib/activity-index";
 import { prisma } from "@/src/lib/db";
 import { jsonError, parseJson } from "@/src/lib/http";
 import { z } from "zod";
@@ -36,6 +37,15 @@ export async function PATCH(
         user: { select: { id: true, displayName: true } },
       },
     });
+    await recordIssueActivityEvent({
+      issueId: updated.issueId,
+      eventType: "internal_note",
+      source: "local",
+      sourceRemoteId: updated.id,
+      eventAt: updated.updatedAt,
+      summary: updated.content,
+    });
+    await recomputeIssueActivityIndex(updated.issueId);
 
     return Response.json({
       note: {
@@ -78,6 +88,15 @@ export async function DELETE(
     }
 
     await prisma.internalNote.delete({ where: { id } });
+    await recordIssueActivityEvent({
+      issueId: note.issueId,
+      eventType: "internal_note",
+      source: "local",
+      sourceRemoteId: `${note.id}:deleted`,
+      eventAt: new Date(),
+      summary: "Internal note deleted",
+    });
+    await recomputeIssueActivityIndex(note.issueId);
     return Response.json({ ok: true });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {

@@ -1,4 +1,5 @@
 import { requireCurrentUser } from "@/src/lib/auth";
+import { recomputeIssueActivityIndex, recordIssueActivityEvent } from "@/src/lib/activity-index";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { isRateLimited } from "@/src/lib/rate-limit";
@@ -72,6 +73,15 @@ export async function DELETE(
     if (deleted.count === 0) {
       return jsonError("Link not found", 404);
     }
+    await recordIssueActivityEvent({
+      issueId: issue.id,
+      eventType: "github_link",
+      source: "local",
+      sourceRemoteId: `${linkId}:deleted`,
+      eventAt: new Date(),
+      summary: "GitHub link removed",
+    });
+    await recomputeIssueActivityIndex(issue.id);
 
     trackSuccess({
       event: "issue.github_link.delete.succeeded",

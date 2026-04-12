@@ -1,4 +1,5 @@
 import { requireCurrentUser } from "@/src/lib/auth";
+import { recomputeIssueActivityIndex, recordIssueActivityEvent } from "@/src/lib/activity-index";
 import { prisma } from "@/src/lib/db";
 import { jsonError, parseJson } from "@/src/lib/http";
 import { isRateLimited } from "@/src/lib/rate-limit";
@@ -142,6 +143,15 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         title: payload.title ?? null,
       },
     });
+    await recordIssueActivityEvent({
+      issueId: issue.id,
+      eventType: "github_link",
+      source: "local",
+      sourceRemoteId: link.id,
+      eventAt: link.updatedAt,
+      summary: link.url,
+    });
+    await recomputeIssueActivityIndex(issue.id);
 
     trackSuccess({
       event: "issue.github_link.create.succeeded",

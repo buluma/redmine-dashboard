@@ -19,24 +19,26 @@ function comparePriorityAsc(a: string | null, b: string | null): number {
 }
 
 function compareIssuesBySort(
-  a: { updatedOnRemote: Date; dueDate: Date | null; priority: string | null },
-  b: { updatedOnRemote: Date; dueDate: Date | null; priority: string | null },
+  a: { lastActivityAt: Date | null; updatedOnRemote: Date; dueDate: Date | null; priority: string | null },
+  b: { lastActivityAt: Date | null; updatedOnRemote: Date; dueDate: Date | null; priority: string | null },
   sort: SortMode,
 ): number {
+  const leftTs = (a.lastActivityAt ?? a.updatedOnRemote).getTime();
+  const rightTs = (b.lastActivityAt ?? b.updatedOnRemote).getTime();
   if (sort === "updated_asc") {
-    return a.updatedOnRemote.getTime() - b.updatedOnRemote.getTime();
+    return leftTs - rightTs;
   }
   if (sort === "priority") {
     const byPriority = comparePriorityAsc(a.priority, b.priority);
     if (byPriority !== 0) return byPriority;
-    return b.updatedOnRemote.getTime() - a.updatedOnRemote.getTime();
+    return rightTs - leftTs;
   }
   if (sort === "due_date") {
     const byDueDate = compareNullableDateAsc(a.dueDate, b.dueDate);
     if (byDueDate !== 0) return byDueDate;
-    return b.updatedOnRemote.getTime() - a.updatedOnRemote.getTime();
+    return rightTs - leftTs;
   }
-  return b.updatedOnRemote.getTime() - a.updatedOnRemote.getTime();
+  return rightTs - leftTs;
 }
 
 export async function GET(request: Request) {

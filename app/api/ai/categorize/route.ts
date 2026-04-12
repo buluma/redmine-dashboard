@@ -67,7 +67,7 @@ export async function POST(request: Request) {
       assignedToName: issue.assignedToName,
       dueDate: issue.dueDate?.toISOString() ?? null,
       doneRatio: issue.doneRatio,
-      updatedOn: issue.updatedOnRemote.toISOString(),
+      updatedOn: (issue.lastActivityAt ?? issue.updatedOnRemote).toISOString(),
     });
 
     // Try primary model, fallback on error

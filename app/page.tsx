@@ -92,6 +92,8 @@ type Issue = {
   assignedToName: string | null;
   updatedAt: string;
   updatedOnRemote: string;
+  lastActivityAt: string | null;
+  lastActivityType: string | null;
   dueDate: string | null;
   doneRatio: number | null;
   githubLinks: GithubLink[];
@@ -405,22 +407,15 @@ function dayDiffFromNow(dateLike: string): number {
   return Math.floor((Date.now() - target) / (24 * 60 * 60 * 1000));
 }
 
-function latestIssueActivityTimestamp(issue: Pick<Issue, "updatedOnRemote" | "journals">): string {
-  let latest = issue.updatedOnRemote;
-  let latestMs = new Date(issue.updatedOnRemote).getTime();
-  if (Number.isNaN(latestMs)) {
-    latestMs = 0;
-  }
+function latestIssueActivityTimestamp(issue: Pick<Issue, "updatedOnRemote" | "lastActivityAt">): string {
+  return issue.lastActivityAt ?? issue.updatedOnRemote;
+}
 
-  for (const journal of issue.journals) {
-    const journalMs = new Date(journal.createdOnRemote).getTime();
-    if (!Number.isNaN(journalMs) && journalMs > latestMs) {
-      latestMs = journalMs;
-      latest = journal.createdOnRemote;
-    }
-  }
-
-  return latest;
+function activityTypeLabel(type: string | null | undefined): string {
+  const normalized = (type ?? "").trim().toLowerCase();
+  if (!normalized) return "issue update";
+  if (normalized === "issue_update") return "issue update";
+  return normalized.replace(/_/g, " ");
 }
 
 function matchesView(view: SavedView, state: {
@@ -660,8 +655,8 @@ export default function Home() {
       activityFeed.push({
         issueId: issue.redmineIssueId,
         issueSubject: issue.subject,
-        timestamp: issue.updatedOnRemote,
-        detail: `Issue updated (${issue.statusName})`,
+        timestamp: latestIssueActivityTimestamp(issue),
+        detail: `Latest activity: ${activityTypeLabel(issue.lastActivityType)}`,
       });
 
       for (const journal of issue.journals.slice(0, 3)) {
@@ -698,7 +693,7 @@ export default function Home() {
     const atRisk = atRiskCandidates
       .sort((a, b) => {
         if (b.severity !== a.severity) return b.severity - a.severity;
-        return new Date(a.issue.updatedOnRemote).getTime() - new Date(b.issue.updatedOnRemote).getTime();
+        return new Date(latestIssueActivityTimestamp(a.issue)).getTime() - new Date(latestIssueActivityTimestamp(b.issue)).getTime();
       })
       .slice(0, 7);
 
@@ -1684,7 +1679,7 @@ export default function Home() {
           <article className="card metric-card metric-stale">
             <p className="metric-label">Stale Queue</p>
             <p className="metric-value">{summary.stale}</p>
-            <p className="metric-foot">No visible activity in 3+ days • Avg since update: {summary.avgOpenAgeDays}d</p>
+            <p className="metric-foot">No visible activity in 3+ days • Avg since activity: {summary.avgOpenAgeDays}d</p>
           </article>
           <article className="card metric-card metric-ai-insights">
             <p className="metric-label">AI Insights</p>
@@ -1729,8 +1724,8 @@ export default function Home() {
           <label className="filter-field">
             Sort
             <select value={sort} onChange={(e) => setSort(e.target.value)}>
-              <option value="updated_desc">Updated (Newest)</option>
-              <option value="updated_asc">Updated (Oldest)</option>
+              <option value="updated_desc">Activity (Newest)</option>
+              <option value="updated_asc">Activity (Oldest)</option>
               <option value="priority">Priority</option>
               <option value="due_date">Due Date</option>
             </select>
@@ -2051,7 +2046,7 @@ export default function Home() {
                       style={{ cursor: "pointer" }}
                       title="Sort by update time"
                     >
-                      Updated{getSortIndicator("updated")}
+                      Activity{getSortIndicator("updated")}
                     </th>
                   </tr>
                   </thead>
@@ -2133,7 +2128,7 @@ export default function Home() {
                         <td>{issue.priority ?? "-"}</td>
                         <td>{issue.dueDate ? new Date(issue.dueDate).toLocaleDateString() : "-"}</td>
                         <td>{issue.doneRatio ?? 0}%</td>
-                        <td>{new Date(issue.updatedOnRemote).toLocaleString()}</td>
+                        <td>{new Date(latestIssueActivityTimestamp(issue)).toLocaleString()}</td>
                       </tr>
                     );
                   });

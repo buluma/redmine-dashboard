@@ -210,6 +210,7 @@ export function calculateStats(issues: {
   priorityId?: number | null;
   priorityName?: string | null;
   updatedAt?: string;
+  lastActivityAt?: string | null;
   closedAt?: string | null;
 }[]): DashboardStats {
   const totalIssues = issues.length;
@@ -246,8 +247,9 @@ export function calculateStats(issues: {
     dateMap.set(key, 0);
   }
   issues.forEach(issue => {
-    if (issue.updatedAt) {
-      const date = new Date(issue.updatedAt);
+    const activity = issue.lastActivityAt ?? issue.updatedAt;
+    if (activity) {
+      const date = new Date(activity);
       const key = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
       if (dateMap.has(key)) {
         dateMap.set(key, (dateMap.get(key) || 0) + 1);

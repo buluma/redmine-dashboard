@@ -3,6 +3,7 @@ import { prisma } from "@/src/lib/db";
 import { env } from "@/src/lib/env";
 import { logEvent } from "@/src/lib/log";
 import { RedmineClient } from "@/src/lib/redmine";
+import { recordIssueActivityEvent, recomputeIssueActivityIndex } from "@/src/lib/activity-index";
 
 function asObject(value: unknown): Record<string, unknown> {
   return (value ?? {}) as Record<string, unknown>;
@@ -135,6 +136,8 @@ async function upsertIssueFromRemote(userId: string, redmineBaseUrl: string, iss
       ? (issueRaw.custom_fields as Prisma.InputJsonValue)
       : Prisma.DbNull,
     updatedOnRemote: updatedOn,
+    lastActivityAt: updatedOn,
+    lastActivityType: "issue_update",
     dueDate: asDate(issueRaw.due_date),
     doneRatio: asNumber(issueRaw.done_ratio),
     allowedStatusesJson: parseAllowedStatuses(issueRaw) as Prisma.InputJsonValue,
@@ -153,6 +156,15 @@ async function upsertIssueFromRemote(userId: string, redmineBaseUrl: string, iss
       ...payload,
     },
     create: payload,
+  });
+
+  await recordIssueActivityEvent({
+    issueId: issue.id,
+    eventType: "issue_update",
+    source: "redmine",
+    sourceRemoteId: String(remoteId),
+    eventAt: updatedOn,
+    summary: asString(issueRaw.subject),
   });
 
   return issue;
@@ -179,6 +191,7 @@ export async function upsertAttachmentsForIssue(issueId: string, issueRaw: Recor
     }
 
     seenIds.push(remoteId);
+    const createdOn = asDate(item.created_on) ?? new Date();
     await prisma.issueAttachment.upsert({
       where: { issueId_redmineAttachmentId: { issueId, redmineAttachmentId: remoteId } },
       update: {
@@ -187,7 +200,7 @@ export async function upsertAttachmentsForIssue(issueId: string, issueRaw: Recor
         filesize: asNumber(item.filesize) ?? 0,
         contentType: asString(item.content_type),
         author: nestedName(item.author),
-        createdOnRemote: asDate(item.created_on),
+        createdOnRemote: createdOn,
         downloadUrl,
       },
       create: {
@@ -197,9 +210,17 @@ export async function upsertAttachmentsForIssue(issueId: string, issueRaw: Recor
         filesize: asNumber(item.filesize) ?? 0,
         contentType: asString(item.content_type),
         author: nestedName(item.author),
-        createdOnRemote: asDate(item.created_on),
+        createdOnRemote: createdOn,
         downloadUrl,
       },
+    });
+    await recordIssueActivityEvent({
+      issueId,
+      eventType: "attachment",
+      source: "redmine",
+      sourceRemoteId: String(remoteId),
+      eventAt: createdOn,
+      summary: filename,
     });
   }
 
@@ -237,6 +258,7 @@ async function upsertRelationsForIssue(issueId: string, issueRaw: Record<string,
     }
 
     seenIds.push(remoteId);
+    const relationAt = asDate(item.updated_on) ?? asDate(item.created_on) ?? new Date();
     await prisma.issueRelation.upsert({
       where: { issueId_redmineRelationId: { issueId, redmineRelationId: remoteId } },
       update: {
@@ -252,6 +274,14 @@ async function upsertRelationsForIssue(issueId: string, issueRaw: Record<string,
         targetIssueId: issueToId,
         delay: asNumber(item.delay),
       },
+    });
+    await recordIssueActivityEvent({
+      issueId,
+      eventType: "relation",
+      source: "redmine",
+      sourceRemoteId: String(remoteId),
+      eventAt: relationAt,
+      summary: `${relationType} #${issueToId}`,
     });
   }
 
@@ -281,20 +311,31 @@ async function upsertJournals(issueId: string, issueRaw: Record<string, unknown>
       continue;
     }
 
+    const createdOnRemote = asDate(journal.created_on) ?? new Date();
+    const notes = asString(journal.notes);
+
     await prisma.issueJournal.upsert({
       where: { issueId_redmineJournalId: { issueId, redmineJournalId: remoteId } },
       update: {
         author: nestedName(journal.user),
-        notes: asString(journal.notes),
-        createdOnRemote: asDate(journal.created_on) ?? new Date(),
+        notes,
+        createdOnRemote,
       },
       create: {
         redmineJournalId: remoteId,
         issueId,
         author: nestedName(journal.user),
-        notes: asString(journal.notes),
-        createdOnRemote: asDate(journal.created_on) ?? new Date(),
+        notes,
+        createdOnRemote,
       },
+    });
+    await recordIssueActivityEvent({
+      issueId,
+      eventType: "journal",
+      source: "redmine",
+      sourceRemoteId: String(remoteId),
+      eventAt: createdOnRemote,
+      summary: notes,
     });
   }
 }
@@ -317,6 +358,9 @@ async function upsertTimeEntriesForIssue(
     }
 
     seenIds.push(remoteId);
+    const comments = asString(entry.comments);
+    const spentOn = asDate(entry.spent_on) ?? new Date();
+
     await prisma.timeEntry.upsert({
       where: { issueId_redmineTimeEntryId: { issueId, redmineTimeEntryId: remoteId } },
       update: {
@@ -326,8 +370,8 @@ async function upsertTimeEntriesForIssue(
         activityId: nestedId(entry.activity) ?? 0,
         activityName: nestedName(entry.activity),
         authorName: nestedName(entry.user),
-        comments: asString(entry.comments),
-        spentOn: asDate(entry.spent_on) ?? new Date(),
+        comments,
+        spentOn,
       },
       create: {
         redmineTimeEntryId: remoteId,
@@ -337,9 +381,17 @@ async function upsertTimeEntriesForIssue(
         activityId: nestedId(entry.activity) ?? 0,
         activityName: nestedName(entry.activity),
         authorName: nestedName(entry.user),
-        comments: asString(entry.comments),
-        spentOn: asDate(entry.spent_on) ?? new Date(),
+        comments,
+        spentOn,
       },
+    });
+    await recordIssueActivityEvent({
+      issueId,
+      eventType: "time_entry",
+      source: "redmine",
+      sourceRemoteId: String(remoteId),
+      eventAt: spentOn,
+      summary: comments,
     });
   }
 
@@ -458,6 +510,7 @@ export async function syncSingleIssue(
     client,
     Boolean(options?.pruneTimeEntries),
   );
+  await recomputeIssueActivityIndex(issue.id);
 
   // Build breadcrumbs by fetching parent chain
   const breadcrumbs = await buildBreadcrumbChain(client, remoteIssueId);

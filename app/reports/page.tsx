@@ -526,11 +526,11 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Row 4: Staleness, Progress, Overdue by Parent (3 columns or 2) */}
+      {/* Row 4: Activity aging, Progress, Overdue by Parent (3 columns or 2) */}
       <div className="reports-charts-grid reports-charts-row-3">
         <div className="card report-panel">
           <div className="report-panel-head">
-            <h3>Staleness</h3>
+            <h3>Activity Aging</h3>
           </div>
           <BarChartEnhanced
             items={trends.agingBuckets.map((b) => ({ name: b.name, value: b.count }))}

@@ -2,16 +2,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RedmineClient } from "@/src/lib/redmine";
 
 const mockIssueUpsert = vi.fn();
+const mockIssueFindUnique = vi.fn();
+const mockIssueUpdate = vi.fn();
 const mockAttachmentDeleteMany = vi.fn();
 const mockRelationDeleteMany = vi.fn();
+const mockIssueActivityEventUpsert = vi.fn();
+const mockIssueActivityEventFindFirst = vi.fn();
 
 vi.mock("@/src/lib/db", () => ({
   prisma: {
-    issue: { upsert: mockIssueUpsert },
+    issue: { upsert: mockIssueUpsert, findUnique: mockIssueFindUnique, update: mockIssueUpdate },
     issueAttachment: { deleteMany: mockAttachmentDeleteMany, upsert: vi.fn() },
     issueRelation: { deleteMany: mockRelationDeleteMany, upsert: vi.fn() },
     issueJournal: { upsert: vi.fn() },
     timeEntry: { deleteMany: vi.fn(), upsert: vi.fn() },
+    issueActivityEvent: { upsert: mockIssueActivityEventUpsert, findFirst: mockIssueActivityEventFindFirst },
   },
 }));
 
@@ -19,6 +24,12 @@ describe("syncSingleIssue", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIssueUpsert.mockImplementation(({ create }) => Promise.resolve({ id: `${create.userId}:${create.redmineBaseUrl}` }));
+    mockIssueFindUnique.mockImplementation(({ where }) => Promise.resolve({
+      id: where.id,
+      updatedOnRemote: new Date("2026-04-11T00:00:00Z"),
+    }));
+    mockIssueActivityEventFindFirst.mockResolvedValue(null);
+    mockIssueUpdate.mockResolvedValue(null);
   });
 
   it("keys cached issues by user and Redmine base URL as well as remote issue id", async () => {

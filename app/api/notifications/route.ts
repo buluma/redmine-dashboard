@@ -53,15 +53,21 @@ export async function GET() {
       }
     }
 
-    // Check for issues assigned to user recently (last 24h)
+    // Check for recent activity in the last 24h
     const recentIssues = await prisma.issue.findMany({
       where: {
         userId: user.id,
-        updatedAt: {
-          gte: new Date(now.getTime() - 24 * 60 * 60 * 1000),
-        },
+        OR: [
+          { lastActivityAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) } },
+          {
+            AND: [
+              { lastActivityAt: null },
+              { updatedOnRemote: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) } },
+            ],
+          },
+        ],
       },
-      orderBy: { updatedAt: "desc" },
+      orderBy: [{ lastActivityAt: "desc" }, { updatedOnRemote: "desc" }],
       take: 5,
     });
 
@@ -69,8 +75,8 @@ export async function GET() {
       notifications.push({
         id: "recent-updates",
         type: "info",
-        title: "Recent Updates",
-        message: `${recentIssues.length} issue(s) updated in the last 24 hours`,
+        title: "Recent Activity",
+        message: `${recentIssues.length} issue(s) had activity in the last 24 hours`,
         timestamp: now.toISOString(),
         read: false,
         link: "/",
