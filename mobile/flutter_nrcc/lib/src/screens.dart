@@ -474,12 +474,17 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   bool _expandGithub = false;
   bool _expandAttachments = false;
   bool _expandRelations = false;
+  bool _expandAi = false;
   String? _statusError;
   String? _assignError;
   List<TimeEntry> _timeEntries = <TimeEntry>[];
   List<Map<String, dynamic>> _activities = <Map<String, dynamic>>[];
   List<AssignableUser> _assignableUsers = <AssignableUser>[];
   List<Map<String, dynamic>> _breadcrumbs = <Map<String, dynamic>>[];
+  AiSummaryResponse? _aiSummary;
+  AiCategorizeResponse? _aiCategory;
+  bool _aiLoading = false;
+  String? _aiError;
   final _timeHours = TextEditingController();
   final _timeComment = TextEditingController();
   String? _timeSpentOn;
@@ -781,6 +786,36 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     }
   }
 
+  Future<void> _aiSummarize() async {
+    setState(() {
+      _aiLoading = true;
+      _aiError = null;
+    });
+    try {
+      final summary = await widget.actionsRepository.summarizeIssue(redmineIssueId: widget.issueId);
+      if (mounted) setState(() => _aiSummary = summary);
+    } catch (e) {
+      if (mounted) setState(() => _aiError = "Summarize failed: $e");
+    } finally {
+      if (mounted) setState(() => _aiLoading = false);
+    }
+  }
+
+  Future<void> _aiCategorize() async {
+    setState(() {
+      _aiLoading = true;
+      _aiError = null;
+    });
+    try {
+      final category = await widget.actionsRepository.categorizeIssue(redmineIssueId: widget.issueId);
+      if (mounted) setState(() => _aiCategory = category);
+    } catch (e) {
+      if (mounted) setState(() => _aiError = "Categorize failed: $e");
+    } finally {
+      if (mounted) setState(() => _aiLoading = false);
+    }
+  }
+
   Future<void> _postComment() async {
     if (_comment.text.trim().isEmpty) return;
     await widget.actionsRepository.postComment(
@@ -915,6 +950,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                     _expandStatus = true;
                                     _expandAssign = true;
                                     _expandTime = true;
+                                    _expandAi = true;
                                     _expandAllowed = true;
                                     _expandComment = true;
                                     _expandGithub = true;
@@ -933,6 +969,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                     _expandStatus = false;
                                     _expandAssign = false;
                                     _expandTime = false;
+                                    _expandAi = false;
                                     _expandAllowed = false;
                                     _expandComment = false;
                                     _expandGithub = false;
@@ -1173,6 +1210,93 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                               : null,
                                         ),
                                       )),
+                                ],
+                              ],
+                            ),
+                          ),
+                          _sectionCard(
+                            context: context,
+                            sectionId: "ai",
+                            title: "AI Insights",
+                            expanded: _expandAi,
+                            onExpandedChanged: (value) => setState(() => _expandAi = value),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                if (_aiError != null)
+                                  Text(_aiError!, style: TextStyle(color: theme.colorScheme.error)),
+                                Row(
+                                  children: <Widget>[
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        onPressed: _aiLoading ? null : _aiSummarize,
+                                        icon: _aiLoading && _aiSummary == null
+                                            ? const SizedBox(
+                                                width: 16, height: 16,
+                                                child: CircularProgressIndicator(strokeWidth: 2),
+                                              )
+                                            : const Icon(Icons.summarize, size: 18),
+                                        label: const Text("Summarize"),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: OutlinedButton.icon(
+                                        onPressed: _aiLoading ? null : _aiCategorize,
+                                        icon: const Icon(Icons.label, size: 18),
+                                        label: const Text("Categorize"),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (_aiSummary != null) ...<Widget>[
+                                  const SizedBox(height: 12),
+                                  Text("Summary", style: theme.textTheme.labelLarge),
+                                  const SizedBox(height: 4),
+                                  Text(_aiSummary!.summary, style: theme.textTheme.bodyMedium),
+                                  if (_aiSummary!.keyPoints.isNotEmpty) ...<Widget>[
+                                    const SizedBox(height: 8),
+                                    Text("Key Points", style: theme.textTheme.labelLarge),
+                                    ..._aiSummary!.keyPoints.map((p) => Padding(
+                                          padding: const EdgeInsets.only(left: 12, top: 2),
+                                          child: Text("• $p", style: theme.textTheme.bodySmall),
+                                        )),
+                                  ],
+                                  if (_aiSummary!.actionItems.isNotEmpty) ...<Widget>[
+                                    const SizedBox(height: 8),
+                                    Text("Action Items", style: theme.textTheme.labelLarge),
+                                    ..._aiSummary!.actionItems.map((a) => Padding(
+                                          padding: const EdgeInsets.only(left: 12, top: 2),
+                                          child: Text("□ $a", style: theme.textTheme.bodySmall),
+                                        )),
+                                  ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    "Confidence: ${(_aiSummary!.confidence * 100).toInt()}% • ${_aiSummary!.modelUsed}",
+                                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                                  ),
+                                ],
+                                if (_aiCategory != null) ...<Widget>[
+                                  const SizedBox(height: 12),
+                                  if (_aiCategory!.suggestedPriority != null)
+                                    Text(
+                                      "Suggested Priority: ${_aiCategory!.suggestedPriority!["name"]}",
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
+                                  if (_aiCategory!.suggestedCategory != null)
+                                    Text(
+                                      "Category: ${_aiCategory!.suggestedCategory!["name"]}",
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
+                                  if (_aiCategory!.reasoning.isNotEmpty) ...<Widget>[
+                                    const SizedBox(height: 4),
+                                    Text(_aiCategory!.reasoning, style: theme.textTheme.bodySmall),
+                                  ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _aiCategory!.modelUsed,
+                                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                                  ),
                                 ],
                               ],
                             ),

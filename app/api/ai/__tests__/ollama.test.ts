@@ -9,7 +9,7 @@ vi.mock("@/src/lib/env", () => ({
     ollamaEmbedModel: "nomic-embed-text-v2-moe:latest",
     ollamaTimeoutMs: 120000,
     ollamaStream: false,
-    ollamaChatModelFallback: "qwen2.5-coder:3b",
+    ollamaChatModelFallback: "gpt-oss:20b-cloud",
     ollamaEmbedModelFallback: "nomic-embed-text:latest",
     enableAiFeatures: true,
     aiSummarizeEnabled: true,
@@ -31,7 +31,7 @@ describe("OllamaClient", () => {
 
   it("should return current chat model", () => {
     expect(client.getCurrentChatModel(false)).toBe("qwen3.5:cloud");
-    expect(client.getCurrentChatModel(true)).toBe("qwen2.5-coder:3b");
+    expect(client.getCurrentChatModel(true)).toBe("gpt-oss:20b-cloud");
   });
 });
 
