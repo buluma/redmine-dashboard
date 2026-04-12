@@ -277,6 +277,7 @@ export default function IssueDetailPage() {
   }>>([]);
   const [newNoteContent, setNewNoteContent] = useState("");
   const [noteBusy, setNoteBusy] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
   const tabsRef = useRef<HTMLDivElement | null>(null);
 
   // Edit mode state
@@ -583,6 +584,34 @@ export default function IssueDetailPage() {
     }
   }
 
+  async function toggleFavorite() {
+    try {
+      const res = await fetch(`/api/issues/${issueId}/favorite`, {
+        method: isFavorited ? "DELETE" : "POST",
+      });
+      if (res.ok) {
+        setIsFavorited(!isFavorited);
+      }
+    } catch {
+      // Ignore errors
+    }
+  }
+
+  useEffect(() => {
+    if (!issue) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/issues/${issueId}/favorite`);
+        if (res.ok) {
+          const data = await res.json();
+          setIsFavorited(data.favorited ?? false);
+        }
+      } catch {
+        // Ignore errors
+      }
+    })();
+  }, [issue, issueId]);
+
   async function submitComment(event: React.FormEvent) {
     event.preventDefault();
     const trimmed = comment.trim();
@@ -715,6 +744,11 @@ export default function IssueDetailPage() {
             </div>
           </div>
           <div className="hero-actions">
+            {!editMode && (
+              <button type="button" className={`favorite-btn ${isFavorited ? "favorited" : ""}`} onClick={toggleFavorite} title={isFavorited ? "Remove from favorites" : "Add to favorites"}>
+                {isFavorited ? "★ Favorited" : "☆ Favorite"}
+              </button>
+            )}
             {!editMode && (
               <button type="button" className="primary-link" onClick={startEditMode}>
                 Edit
