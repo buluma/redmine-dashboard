@@ -1076,10 +1076,10 @@ export default function Home() {
       due: ["due_date", "updated_desc"],
       updated: ["updated_desc", "updated_asc"],
     };
-    
+
     const options = sortMap[column];
     if (!options) return;
-    
+
     const [defaultSort, alternateSort] = options;
     if (sort === defaultSort) {
       setSort(alternateSort);
@@ -1531,7 +1531,7 @@ export default function Home() {
         <div className="hero-top">
           <div className="hero-heading">
             <p className="kicker">Redmine Control Room</p>
-            <h1 className="hero-title">NRCC - Nasc Redmine Command Center</h1>
+            <h1 className="hero-title">Nasc Redmine Command Center (NRCC)</h1>
             <p className="muted">
               Signed in as <strong>{user.displayName}</strong> ({user.username})
             </p>
@@ -1618,6 +1618,11 @@ export default function Home() {
             <p className="metric-label">Stale Queue</p>
             <p className="metric-value">{summary.stale}</p>
             <p className="metric-foot">No visible activity in 3+ days • Avg since update: {summary.avgOpenAgeDays}d</p>
+          </article>
+          <article className="card metric-card metric-ai-insights">
+            <p className="metric-label">AI Insights</p>
+            <p className="metric-value">0</p>
+            <p className="metric-foot">No avaible AI insights. Check again later!</p>
           </article>
         </section>
       </header>
@@ -1938,7 +1943,7 @@ export default function Home() {
                     <th>ID</th>
                     <th>Subject</th>
                     <th>Status</th>
-                    <th 
+                    <th
                       className="sortable-header"
                       onClick={() => handleSort("priority")}
                       style={{ cursor: "pointer" }}
@@ -1946,7 +1951,7 @@ export default function Home() {
                     >
                       Priority{getSortIndicator("priority")}
                     </th>
-                    <th 
+                    <th
                       className="sortable-header"
                       onClick={() => handleSort("due")}
                       style={{ cursor: "pointer" }}
@@ -1955,7 +1960,7 @@ export default function Home() {
                       Due{getSortIndicator("due")}
                     </th>
                     <th>Progress</th>
-                    <th 
+                    <th
                       className="sortable-header"
                       onClick={() => handleSort("updated")}
                       style={{ cursor: "pointer" }}

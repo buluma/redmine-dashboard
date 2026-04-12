@@ -18,7 +18,7 @@ const display = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "NRCC - Nasc Redmine Command Center",
+  title: "Nasc Redmine Command Center (NRCC)",
   description: "Dashboard for assigned Redmine issues with status, comments, timelog, and sync.",
 };
 

@@ -1,4 +1,4 @@
-# NRCC - Nasc Redmine Command Center
+# Nasc Redmine Command Center (NRCC)
 
 NRCC is a Next.js + Prisma dashboard for Redmine issues assigned to the signed-in user.
 It provides fast local reads from a synced cache, with all final state owned by Redmine.
