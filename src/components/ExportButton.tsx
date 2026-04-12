@@ -7,9 +7,9 @@ interface ExportOptions {
     redmineIssueId: number;
     subject: string;
     statusName: string;
-    priorityName?: string;
-    projectName?: string;
-    assignedToName?: string;
+    priorityName?: string | null;
+    projectName?: string | null;
+    assignedToName?: string | null;
     dueDate?: string | null;
     updatedAt: string;
   }[];

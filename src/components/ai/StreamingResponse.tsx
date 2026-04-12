@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useMemo } from "react";
 
 interface StreamingResponseProps {
   content: string;
@@ -15,30 +15,13 @@ export function StreamingResponse({
   modelUsed,
   onDone,
 }: StreamingResponseProps) {
-  const [displayedContent, setDisplayedContent] = useState("");
-  const [isDone, setIsDone] = useState(!isStreaming);
-  const contentRef = useRef(content);
+  const displayedContent = useMemo(() => content, [content]);
 
   useEffect(() => {
-    if (isStreaming && content !== contentRef.current) {
-      // Streaming mode - gradually reveal content
-      const newChars = content.slice(contentRef.current.length);
-      if (newChars.length > 0) {
-        setDisplayedContent(content);
-        contentRef.current = content;
-      }
-    } else if (!isStreaming) {
-      // Non-streaming - show all at once
-      setDisplayedContent(content);
-      setIsDone(true);
-    }
-  }, [content, isStreaming]);
-
-  useEffect(() => {
-    if (isDone && onDone) {
+    if (!isStreaming && onDone) {
       onDone();
     }
-  }, [isDone, onDone]);
+  }, [isStreaming, onDone]);
 
   return (
     <div className="relative">
@@ -71,24 +54,24 @@ export function JsonStreamingResponse({
   isStreaming = false,
   modelUsed,
 }: JsonStreamingResponseProps) {
-  const [displayedContent, setDisplayedContent] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
+  const { displayedContent, error } = useMemo(() => {
     try {
       if (content) {
         // Try to parse and pretty-print
         const parsed = JSON.parse(content);
-        setDisplayedContent(JSON.stringify(parsed, null, 2));
-        setError(null);
+        return {
+          displayedContent: JSON.stringify(parsed, null, 2),
+          error: null as string | null,
+        };
       }
     } catch {
       // Not valid JSON yet, show raw content
-      setDisplayedContent(content);
-      if (content.includes("}")) {
-        setError(null); // Likely still typing
-      }
+      return {
+        displayedContent: content,
+        error: content.includes("}") ? null : "incomplete-json",
+      };
     }
+    return { displayedContent: "", error: null as string | null };
   }, [content]);
 
   return (

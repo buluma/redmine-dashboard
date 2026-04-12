@@ -9,7 +9,7 @@ export interface FilterState {
   assignedToMe: boolean;
   hasGithubLinks: boolean;
   hasAttachments: boolean;
-  dueInDays?: number; // null = any, number = within N days
+  dueInDays?: number | "overdue"; // null = any, number = within N days, "overdue" = past due
   updatedAfter?: string; // ISO date
 }
 
@@ -174,14 +174,14 @@ export function applyFilters<T extends {
   subject: string;
   statusId: number;
   statusName: string;
-  priorityId: number;
+  priorityId?: number | null;
   priorityName?: string;
   assignedToId?: number;
   githubLinks?: unknown[];
   attachments?: unknown[];
   dueDate?: string | null;
   updatedAt?: string;
-}>(issues: T[], filters: FilterState, currentUserId?: number): T[] {
+}>(issues: T[], filters: FilterState): T[] {
   return issues.filter((issue) => {
     // Search
     if (filters.search) {
@@ -197,7 +197,7 @@ export function applyFilters<T extends {
     }
 
     // Priority filter
-    if (filters.priorityIds.length > 0 && !filters.priorityIds.includes(issue.priorityId)) {
+    if (filters.priorityIds.length > 0 && (issue.priorityId == null || !filters.priorityIds.includes(issue.priorityId))) {
       return false;
     }
 
@@ -229,7 +229,7 @@ export function applyFilters<T extends {
     }
 
     // Updated after filter
-    if (filters.updatedAfter) {
+    if (filters.updatedAfter && issue.updatedAt) {
       const updated = new Date(issue.updatedAt);
       const after = new Date(filters.updatedAfter);
       if (updated < after) return false;

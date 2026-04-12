@@ -89,11 +89,8 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       return jsonError("No fields to update", 400);
     }
 
-    // Update in Redmine via direct PUT
-    await client.request(`/issues/${issueId}.json`, {
-      method: "PUT",
-      body: JSON.stringify({ issue: redminePayload }),
-    });
+    // Update in Redmine via API
+    await client.updateIssue(issueId, redminePayload);
 
     // Re-sync the issue to get updated data
     await syncSingleIssue(user.id, client, issueId);

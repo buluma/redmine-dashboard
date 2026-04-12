@@ -1,4 +1,5 @@
 import { requireMobileUser } from "@/src/lib/auth";
+import { requireRedmineClientForUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError, parseJson } from "@/src/lib/http";
 import { syncSingleIssue } from "@/src/lib/sync";
@@ -15,7 +16,8 @@ const editSchema = z.object({
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { user, client } = await requireMobileUser(request);
+    const { user } = await requireMobileUser(request);
+    const { client } = await requireRedmineClientForUser(user.id);
     const { id } = await context.params;
     const issueId = parseInt(id, 10);
     const body = await parseJson(request, editSchema);
@@ -27,23 +29,19 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     if (!issue) return jsonError("Issue not found", 404);
 
     // Build Redmine update payload
-    const redminePayload: Record<string, unknown> = {};
-    if (body.subject !== undefined) redminePayload.subject = body.subject;
-    if (body.description !== undefined) redminePayload.description = body.description;
-    if (body.priority !== undefined) redminePayload.priority_name = body.priority;
-    if (body.dueDate !== undefined) redminePayload.due_date = body.dueDate;
-    if (body.startDate !== undefined) redminePayload.start_date = body.startDate;
-    if (body.estimatedHours !== undefined) redminePayload.estimated_hours = body.estimatedHours;
+    const updates: Record<string, unknown> = {};
+    if (body.subject !== undefined) updates.subject = body.subject;
+    if (body.description !== undefined) updates.description = body.description;
+    if (body.priority !== undefined) updates.priority_id = body.priority;
+    if (body.dueDate !== undefined) updates.due_date = body.dueDate;
+    if (body.startDate !== undefined) updates.start_date = body.startDate;
+    if (body.estimatedHours !== undefined) updates.estimated_hours = body.estimatedHours;
 
-    if (Object.keys(redminePayload).length === 0) {
+    if (Object.keys(updates).length === 0) {
       return jsonError("No fields to update", 400);
     }
 
-    await client.request(`/issues/${issueId}.json`, {
-      method: "PUT",
-      body: JSON.stringify({ issue: redminePayload }),
-    });
-
+    await client.updateIssue(issueId, updates);
     await syncSingleIssue(user.id, client, issueId);
     return Response.json({ ok: true });
   } catch (error) {

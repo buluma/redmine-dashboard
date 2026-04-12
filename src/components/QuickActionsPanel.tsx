@@ -125,7 +125,7 @@ export function QuickActionsPanel({
             >
               <option value={0}>Select user...</option>
               {filteredUsers.length === 0 && userSearch ? (
-                <option disabled>No users match "{userSearch}"</option>
+                <option disabled>No users match &quot;{userSearch}&quot;</option>
               ) : (
                 filteredUsers.map((u) => (
                   <option key={u.id} value={u.id}>{u.name}</option>

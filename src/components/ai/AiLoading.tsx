@@ -23,6 +23,7 @@ export function AiLoading({ message = "Loading...", size = "md" }: AiLoadingProp
 }
 
 export function AiSkeleton({ lines = 3 }: { lines?: number }) {
+  const widths = [92, 86, 79, 95, 83];
   return (
     <div className="space-y-2 py-2">
       {Array.from({ length: lines }).map((_, i) => (
@@ -30,7 +31,7 @@ export function AiSkeleton({ lines = 3 }: { lines?: number }) {
           key={i}
           className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"
           style={{
-            width: `${Math.random() * 30 + 70}%`,
+            width: `${widths[i % widths.length]}%`,
           }}
         />
       ))}

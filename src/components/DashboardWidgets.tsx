@@ -13,7 +13,7 @@ import {
   Legend,
   ArcElement,
 } from "chart.js";
-import { Bar, Doughnut, Line } from "react-chartjs-2";
+import { Doughnut, Line } from "react-chartjs-2";
 
 // Register Chart.js components
 ChartJS.register(
@@ -41,15 +41,15 @@ interface DashboardWidgetsProps {
   stats: DashboardStats;
 }
 
-export function DashboardWidgets({ stats }: DashboardWidgetsProps) {
-  const statusColors = [
-    "#2a7f52", // green
-    "#c65d1f", // orange
-    "#006d77", // teal
-    "#9f2f2f", // red
-    "#5b6a7b", // gray
-  ];
+const statusColors = [
+  "#2a7f52", // green
+  "#c65d1f", // orange
+  "#006d77", // teal
+  "#9f2f2f", // red
+  "#5b6a7b", // gray
+];
 
+export function DashboardWidgets({ stats }: DashboardWidgetsProps) {
   // Status distribution chart
   const statusChartData = useMemo(() => ({
     labels: stats.issuesByStatus.map(s => s.status),
@@ -158,8 +158,8 @@ export function DashboardWidgets({ stats }: DashboardWidgetsProps) {
 export function calculateStats(issues: {
   statusId: number;
   statusName?: string;
-  priorityId: number;
-  priorityName?: string;
+  priorityId?: number | null;
+  priorityName?: string | null;
   updatedAt?: string;
   closedAt?: string | null;
 }[]): DashboardStats {

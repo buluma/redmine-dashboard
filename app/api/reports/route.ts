@@ -8,7 +8,6 @@ export async function GET(request: Request) {
     const days = parseInt(searchParams.get("days") ?? "30", 10);
     const since = new Date();
     since.setDate(since.getDate() - days);
-    const sinceISO = since.toISOString();
 
     // Parallel aggregations
     const [
@@ -155,7 +154,7 @@ export async function GET(request: Request) {
     if (overdueByParent.length > 0) {
       const parentIds = overdueByParent
         .map(i => i.parentIssueLabel)
-        .filter(Boolean)
+        .filter((l): l is string => l != null && typeof l === "string")
         .map(l => parseInt(l.replace("#", ""), 10))
         .filter(n => !isNaN(n));
 

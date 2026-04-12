@@ -22,6 +22,7 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
+    setIsLoading(true);
     try {
       const res = await fetch("/api/notifications");
       if (res.ok) {
@@ -30,15 +31,23 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
       }
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
   // Initial fetch and polling
   useEffect(() => {
-    fetchNotifications();
-    
-    const interval = setInterval(fetchNotifications, pollingInterval);
-    return () => clearInterval(interval);
+    const initialLoad = window.setTimeout(() => {
+      void fetchNotifications();
+    }, 0);
+    const interval = window.setInterval(() => {
+      void fetchNotifications();
+    }, pollingInterval);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(interval);
+    };
   }, [fetchNotifications, pollingInterval]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;

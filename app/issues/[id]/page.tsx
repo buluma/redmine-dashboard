@@ -1,8 +1,9 @@
 "use client";
 
+import { AllowedStatusView } from "@/src/lib/issue-shape";
 import Link from "next/link";
 import { notFound, useParams, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
@@ -98,7 +99,7 @@ type Issue = {
   timeEntries: TimeEntry[];
   attachments: Attachment[];
   relations: Relation[];
-  allowedStatuses: AllowedStatus[];
+  allowedStatuses: AllowedStatusView[];
   children: IssueChild[];
 };
 
@@ -262,7 +263,7 @@ export default function IssueDetailPage() {
   const [commentBusy, setCommentBusy] = useState(false);
   const [aiStatus, setAiStatus] = useState<{ available: boolean } | null>(null);
   const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
-  const [transitionStatuses, setTransitionStatuses] = useState<AllowedStatus[]>([]);
+  const [transitionStatuses, setTransitionStatuses] = useState<AllowedStatusView[]>([]);
   const [activities, setActivities] = useState<Array<{ id: number; name: string }>>([]);
   const [users, setUsers] = useState<Array<{ id: number; name: string }>>([]);
   const [priorities, setPriorities] = useState<Array<{ id: number; name: string; isDefault: boolean }>>([]);
@@ -450,6 +451,19 @@ export default function IssueDetailPage() {
     };
   }, [issue]);
 
+  const loadInternalNotes = useCallback(async () => {
+    try {
+      if (!issue) return;
+      const res = await fetch(`/api/internal/notes?issueId=${issue.id}`, { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setInternalNotes(data.notes ?? []);
+      }
+    } catch {
+      // Ignore errors
+    }
+  }, [issue]);
+
   // Load activities and assignable users
   useEffect(() => {
     void (async () => {
@@ -479,7 +493,7 @@ export default function IssueDetailPage() {
         // Ignore errors
       }
     })();
-  }, []);
+  }, [activeTab, loadInternalNotes]);
 
   async function submitGithubLink(event: React.FormEvent) {
     event.preventDefault();
@@ -539,23 +553,12 @@ export default function IssueDetailPage() {
     }
   }
 
-  async function loadInternalNotes() {
-    try {
-      const res = await fetch(`/api/internal/notes?issueId=${issue.id}`, { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        setInternalNotes(data.notes ?? []);
-      }
-    } catch {
-      // Ignore errors
-    }
-  }
-
   async function submitInternalNote(event: React.FormEvent) {
     event.preventDefault();
     if (!newNoteContent.trim() || noteBusy) return;
     setNoteBusy(true);
     try {
+      if (!issue) { setNoteBusy(false); return; }
       const res = await fetch("/api/internal/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -990,11 +993,10 @@ export default function IssueDetailPage() {
                 .filter((field) => editMode ? true : (field.value && field.value.trim().length > 0))
                 .map((field) => {
                   // Special handling for "Possible assignee" custom field
-                  if (field.name === "Possible assignee") {
-                    if (editMode && editDraft) {
-                      const assigneeUserId = parseInt(editDraft.customFields[field.id] || "0", 10);
-                      const matchedUser = users.find((u) => u.id === assigneeUserId);
-                      return (
+                    if (field.name === "Possible assignee") {
+                      if (editMode && editDraft) {
+                        const assigneeUserId = parseInt(editDraft.customFields[field.id] || "0", 10);
+                        return (
                         <div key={field.id} className="metadata-item metadata-item-assignee">
                           <span className="metadata-label">{field.name}</span>
                           <span className="metadata-value">

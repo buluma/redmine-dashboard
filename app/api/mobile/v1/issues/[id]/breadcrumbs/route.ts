@@ -16,18 +16,18 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
     while (currentId !== null && !visited.has(currentId)) {
       visited.add(currentId);
-      const issue = await prisma.issue.findFirst({
+      const found: { parentIssueId: number | null } | null = await prisma.issue.findFirst({
         where: { userId: user.id, redmineIssueId: currentId },
-        select: { parentIssueId: true, subject: true },
-      });
+        select: { parentIssueId: true },
+      }) as { parentIssueId: number | null } | null;
 
-      if (!issue || issue.parentIssueId == null) break;
-      currentId = issue.parentIssueId;
+      if (!found || found.parentIssueId == null) break;
+      currentId = found.parentIssueId;
 
-      const parent = await prisma.issue.findFirst({
+      const parent: { redmineIssueId: number; subject: string } | null = await prisma.issue.findFirst({
         where: { userId: user.id, redmineIssueId: currentId },
         select: { redmineIssueId: true, subject: true },
-      });
+      }) as { redmineIssueId: number; subject: string } | null;
 
       if (parent) {
         breadcrumbs.unshift({ id: parent.redmineIssueId, subject: parent.subject });

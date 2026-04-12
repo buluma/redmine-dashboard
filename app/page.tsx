@@ -1,7 +1,7 @@
 "use client";
 
+import { AllowedStatusView } from "@/src/lib/issue-shape";
 import Link from "next/link";
-import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
@@ -11,7 +11,7 @@ import { normalizeRedmineText } from "@/src/lib/redmine-text-format";
 import { AiIssueActions } from "@/src/components/ai/AiIssueActions";
 import { AiSearchBar } from "@/src/components/ai/AiSearchBar";
 import { DashboardWidgets, calculateStats } from "@/src/components/DashboardWidgets";
-import { AdvancedFilters, applyFilters } from "@/src/components/AdvancedFilters";
+import { AdvancedFilters } from "@/src/components/AdvancedFilters";
 import { ProjectFilter } from "@/src/components/ProjectFilter";
 import { ExportButton } from "@/src/components/ExportButton";
 import { ShortcutHelp } from "@/src/components/ShortcutHelp";
@@ -69,12 +69,6 @@ type Relation = {
   delay: number | null;
 };
 
-type AllowedStatus = {
-  id: number;
-  name: string;
-  isClosed?: boolean;
-};
-
 type IssueChild = {
   id: number;
   subject: string;
@@ -91,9 +85,12 @@ type Issue = {
   parentIssueLabel: string | null;
   tracker: string | null;
   priority: string | null;
+  priorityId: number | null;
+  priorityName: string | null;
   statusId: number;
   statusName: string;
   assignedToName: string | null;
+  updatedAt: string;
   updatedOnRemote: string;
   dueDate: string | null;
   doneRatio: number | null;
@@ -102,7 +99,7 @@ type Issue = {
   timeEntries: TimeEntry[];
   attachments: Attachment[];
   relations: Relation[];
-  allowedStatuses: AllowedStatus[];
+  allowedStatuses: AllowedStatusView[];
   children: IssueChild[];
 };
 
@@ -407,7 +404,6 @@ export default function Home() {
   const [selectedIssueIds, setSelectedIssueIds] = useState<number[]>([]);
   const [bulkStatusId, setBulkStatusId] = useState(0);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [syncState, setSyncState] = useState<SyncState>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -8,7 +8,7 @@ interface CacheOptions {
   key?: string;
 }
 
-export async function withCache<T>(
+export async function withCache(
   request: NextRequest,
   handler: (req: NextRequest) => Promise<NextResponse>,
   options: CacheOptions = {},

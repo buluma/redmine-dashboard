@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+mobile/flutter_nrcc/build/
 /out/
 
 # production
