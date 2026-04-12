@@ -60,9 +60,7 @@ type GithubLink = {
 type IssueChild = {
   id: number;
   subject: string;
-  statusId?: number | null;
-  statusName?: string | null;
-  priority?: string | null;
+  tracker?: string | null;
 };
 
 type Issue = {
@@ -1014,9 +1012,8 @@ export default function IssueDetailPage() {
                   <thead>
                     <tr>
                       <th>#</th>
+                      <th>Tracker</th>
                       <th>Subject</th>
-                      <th>Status</th>
-                      <th>Priority</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1027,17 +1024,16 @@ export default function IssueDetailPage() {
                             #{child.id}
                           </Link>
                         </td>
+                        <td className="child-tracker">
+                          <span className={`tracker-chip ${(child.tracker ?? "").toLowerCase().replace(" ", "-")}`}>
+                            {child.tracker ?? "-"}
+                          </span>
+                        </td>
                         <td className="child-subject">
                           <Link href={`/issues/${child.id}`}>
                             {child.subject}
                           </Link>
                         </td>
-                        <td>
-                          <span className="status-chip child-status">
-                            {child.statusName ?? "-"}
-                          </span>
-                        </td>
-                        <td className="child-priority">{child.priority ?? "-"}</td>
                       </tr>
                     ))}
                   </tbody>

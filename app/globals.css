@@ -155,6 +155,14 @@ body {
   white-space: nowrap;
 }
 
+.children-table th:nth-child(1) {
+  width: 80px;
+}
+
+.children-table th:nth-child(2) {
+  width: 100px;
+}
+
 .children-table td {
   padding: 0.45rem 0.6rem;
   border-bottom: 1px solid var(--line);
@@ -163,10 +171,6 @@ body {
 
 .children-table tr:hover {
   background: #f8f4ec;
-}
-
-.children-table td:first-child {
-  width: 80px;
 }
 
 .child-issue-link {
@@ -191,16 +195,35 @@ body {
   text-decoration: underline;
 }
 
-.child-status {
-  font-size: 0.78rem;
-  padding: 0.15rem 0.45rem;
-  white-space: nowrap;
+.tracker-chip {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.12rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: #f0ece2;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
 }
 
-.child-priority {
-  font-weight: 600;
+.tracker-chip.bug {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: rgba(159, 47, 47, 0.2);
+}
+
+.tracker-chip.hot-fix {
+  background: var(--signal-soft);
   color: var(--signal);
-  white-space: nowrap;
+  border-color: rgba(198, 93, 31, 0.2);
+}
+
+.tracker-chip.task {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  border-color: rgba(0, 109, 119, 0.2);
 }
 
 .card {
