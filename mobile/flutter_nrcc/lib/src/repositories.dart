@@ -111,6 +111,10 @@ class IssueActionsRepository {
     return _api.listActivities();
   }
 
+  Future<List<Map<String, dynamic>>> getBreadcrumbs({required int redmineIssueId}) {
+    return _api.getBreadcrumbs(redmineIssueId: redmineIssueId);
+  }
+
   Future<void> postComment({
     required int redmineIssueId,
     required String comment,

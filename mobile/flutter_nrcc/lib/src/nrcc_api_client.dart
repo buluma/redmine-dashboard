@@ -216,6 +216,18 @@ class NrccApiClient {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getBreadcrumbs({required int redmineIssueId}) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        "/api/mobile/v1/issues/$redmineIssueId/breadcrumbs",
+      );
+      final items = (response.data?["breadcrumbs"] as List<dynamic>?) ?? const <dynamic>[];
+      return items.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
+  }
+
   Future<void> addGithubLink({
     required int redmineIssueId,
     required String repositoryFullName,

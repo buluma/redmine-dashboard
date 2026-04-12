@@ -479,6 +479,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   List<TimeEntry> _timeEntries = <TimeEntry>[];
   List<Map<String, dynamic>> _activities = <Map<String, dynamic>>[];
   List<AssignableUser> _assignableUsers = <AssignableUser>[];
+  List<Map<String, dynamic>> _breadcrumbs = <Map<String, dynamic>>[];
   final _timeHours = TextEditingController();
   final _timeComment = TextEditingController();
   String? _timeSpentOn;
@@ -730,6 +731,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
       await _loadAttachmentHeaders();
       await _loadTimeEntries();
       await _loadAssignableUsers();
+      await _loadBreadcrumbs();
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -765,6 +767,17 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
       }
     } catch (_) {
       // Assignable users are optional
+    }
+  }
+
+  Future<void> _loadBreadcrumbs() async {
+    try {
+      final breadcrumbs = await widget.actionsRepository.getBreadcrumbs(redmineIssueId: widget.issueId);
+      if (mounted) {
+        setState(() => _breadcrumbs = breadcrumbs);
+      }
+    } catch (_) {
+      // Breadcrumbs are optional
     }
   }
 
@@ -966,6 +979,46 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                               ],
                             ),
                           ),
+                          if (_breadcrumbs.isNotEmpty)
+                            Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Text(
+                                      "Parent Issues",
+                                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: _breadcrumbs.map((bc) {
+                                        final id = bc["id"] as int;
+                                        final subject = bc["subject"] as String;
+                                        return ActionChip(
+                                          avatar: const Icon(Icons.arrow_upward, size: 14),
+                                          label: Text("#$id $subject", maxLines: 1, overflow: TextOverflow.ellipsis),
+                                          onPressed: () {
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute<void>(
+                                                builder: (_) => IssueDetailScreen(
+                                                  issueId: id,
+                                                  issuesRepository: widget.issuesRepository,
+                                                  actionsRepository: widget.actionsRepository,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           _sectionCard(
                             context: context,
                             sectionId: "description",
