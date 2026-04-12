@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Sync only issues assigned to the authenticated user.
+ * Sync only issues assigned to or authored by the authenticated user.
  * Much faster than full sync — typically a few hundred issues vs 100K+.
- * 
- * Usage: node scripts/sync-assigned-issues.js
+ *
+ * Usage: node scripts/sync-assigned.js
  */
 
 require("dotenv").config({ path: ".env" });
@@ -13,7 +13,7 @@ const prisma = new PrismaClient();
 const REDMINE_BASE_URL = process.env.REDMINE_BASE_URL;
 const REDMINE_API_KEY = process.env.REDMINE_API_KEY;
 const PAGE_SIZE = 100;
-const BATCH_PAGES = 20; // 2000 issues per batch (usually plenty for assigned)
+const BATCH_PAGES = 20;
 
 function asNumber(val) { const n = Number(val); return Number.isFinite(n) ? n : null; }
 function asString(val) { return typeof val === "string" ? val : null; }
@@ -21,9 +21,9 @@ function asDate(val) { if (!val) return null; const d = new Date(val); return is
 function nestedName(obj) { if (!obj || typeof obj !== "object") return null; return asString(obj.name) ?? null; }
 function nestedId(obj) { if (!obj || typeof obj !== "object") return null; return asNumber(obj.id); }
 
-async function fetchPage(offset, retries = 3) {
-  // assigned_to_id=me filters to current user's issues
-  const url = `${REDMINE_BASE_URL}/issues.json?key=${REDMINE_API_KEY}&limit=${PAGE_SIZE}&offset=${offset}&assigned_to_id=me&status_id=*`;
+async function fetchPage(filter, offset, retries = 3) {
+  // filter: "assigned_to_id=me" or "author_id=me"
+  const url = `${REDMINE_BASE_URL}/issues.json?key=${REDMINE_API_KEY}&limit=${PAGE_SIZE}&offset=${offset}&${filter}&status_id=*`;
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const res = await fetch(url);
@@ -74,37 +74,18 @@ function buildPayload(userId, issueRaw, baseUrl) {
   };
 }
 
-async function bulkUpsert(payloads) {
-  if (payloads.length === 0) return { created: 0, updated: 0 };
+async function fetchAllIssues(filter) {
+  const allIssues = [];
+  const countData = await fetchPage(filter, 0);
+  if (!countData) return { total: 0, issues: [] };
+  const totalCount = countData.total_count || 0;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
-  const BATCH_SIZE = 50;
-  let created = 0;
-  let updated = 0;
-
-  for (let i = 0; i < payloads.length; i += BATCH_SIZE) {
-    const batch = payloads.slice(i, i + BATCH_SIZE);
-    const results = await Promise.allSettled(
-      batch.map(async (p) => {
-        await prisma.issue.upsert({
-          where: {
-            userId_redmineBaseUrl_redmineIssueId: {
-              userId: p.userId,
-              redmineBaseUrl: p.redmineBaseUrl,
-              redmineIssueId: p.redmineIssueId,
-            },
-          },
-          update: p,
-          create: p,
-        });
-      })
-    );
-
-    for (const r of results) {
-      if (r.status === 'fulfilled') updated++;
-    }
+  for (let p = 0; p < totalPages; p++) {
+    const data = await fetchPage(filter, p * PAGE_SIZE);
+    if (data?.issues?.length > 0) allIssues.push(...data.issues);
   }
-
-  return { created, updated };
+  return { total: totalCount, issues: allIssues };
 }
 
 async function main() {
@@ -121,42 +102,65 @@ async function main() {
   const userId = cred.userId;
   const baseUrl = cred.baseUrl.replace(/\/+$/, "");
 
-  console.log("👤 Syncing assigned issues only (assigned_to_id=me)");
+  console.log("👤 Syncing assigned and authored issues");
   console.log(`🔗 Redmine: ${REDMINE_BASE_URL}`);
   console.log(`📊 Database: Supabase\n`);
 
-  // Get total count
-  console.log("📏 Getting count...");
-  const countData = await fetchPage(0);
-  if (!countData) { console.error("❌ Failed to connect to Redmine"); process.exit(1); }
-  const totalCount = countData.total_count || 0;
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-  console.log(`📋 Total assigned issues: ${totalCount.toLocaleString()} (${totalPages} pages)\n`);
+  // Fetch both assigned and authored issues
+  console.log("📏 Fetching assigned issues...");
+  const assigned = await fetchAllIssues("assigned_to_id=me");
+  console.log(`   ${assigned.total.toLocaleString()} assigned`);
+
+  console.log("📏 Fetching authored issues...");
+  const authored = await fetchAllIssues("author_id=me");
+  console.log(`   ${authored.total.toLocaleString()} authored`);
+
+  // Merge and deduplicate by issue ID
+  const issueMap = new Map();
+  for (const issue of [...assigned.issues, ...authored.issues]) {
+    issueMap.set(issue.id, issue);
+  }
+  const allIssues = Array.from(issueMap.values());
+  console.log(`\n📋 Total unique issues: ${allIssues.length.toLocaleString()}\n`);
+
+  if (allIssues.length === 0) {
+    console.log("✅ No issues found.");
+    await prisma.$disconnect();
+    return;
+  }
 
   const startTime = Date.now();
   let totalUpserted = 0;
 
-  for (let batchStart = 0; batchStart < totalPages; batchStart += BATCH_PAGES) {
-    const batchEnd = Math.min(batchStart + BATCH_PAGES, totalPages);
-    let batchIssues = [];
+  for (let i = 0; i < allIssues.length; i += BATCH_PAGES * PAGE_SIZE) {
+    const batchEnd = Math.min(i + BATCH_PAGES * PAGE_SIZE, allIssues.length);
+    const batch = allIssues.slice(i, batchEnd);
+    const payloads = batch.map(issue => buildPayload(userId, issue, baseUrl)).filter(Boolean);
 
-    for (let p = batchStart; p < batchEnd; p++) {
-      const data = await fetchPage(p * PAGE_SIZE);
-      if (data?.issues?.length > 0) batchIssues.push(...data.issues);
+    const results = await Promise.allSettled(
+      payloads.map(async (p) => {
+        await prisma.issue.upsert({
+          where: {
+            userId_redmineBaseUrl_redmineIssueId: {
+              userId: p.userId,
+              redmineBaseUrl: p.redmineBaseUrl,
+              redmineIssueId: p.redmineIssueId,
+            },
+          },
+          update: p,
+          create: p,
+        });
+      })
+    );
+
+    for (const r of results) {
+      if (r.status === 'fulfilled') totalUpserted++;
     }
 
-    if (batchIssues.length === 0) continue;
-
-    const payloads = batchIssues.map(issue => buildPayload(userId, issue, baseUrl)).filter(Boolean);
-    await bulkUpsert(payloads);
-    totalUpserted += payloads.length;
-
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
-    const pct = ((batchEnd / totalPages) * 100).toFixed(1);
+    const pct = ((batchEnd / allIssues.length) * 100).toFixed(1);
     const rate = (totalUpserted / Math.max(1, (Date.now() - startTime) / 1000)).toFixed(1);
-    process.stdout.write(`\r📦 Pages ${batchEnd}/${totalPages} (${pct}%) | ↑ ${totalUpserted.toLocaleString()} | ${rate}/s | ${elapsed}s`);
-
-    if (batchEnd < totalPages) await new Promise(r => setTimeout(r, 1000));
+    process.stdout.write(`\r📦 Issues ${batchEnd}/${allIssues.length} (${pct}%) | ↑ ${totalUpserted.toLocaleString()} | ${rate}/s | ${elapsed}s`);
   }
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
@@ -166,7 +170,9 @@ async function main() {
   console.log(`\n\n✅ Done in ${elapsed}s`);
   console.log(`📈 Total issues in DB for user: ${totalInDb.toLocaleString()}`);
   console.log(`📎 Issues with parent: ${withParent.toLocaleString()}`);
-  console.log(`📥 Assigned issues synced: ${totalUpserted.toLocaleString()}`);
+  console.log(`📥 Assigned issues: ${assigned.total.toLocaleString()}`);
+  console.log(`📥 Authored issues: ${authored.total.toLocaleString()}`);
+  console.log(`📥 Total unique synced: ${totalUpserted.toLocaleString()}`);
 
   await prisma.$disconnect();
 }
