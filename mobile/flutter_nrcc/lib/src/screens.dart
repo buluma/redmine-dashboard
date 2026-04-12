@@ -201,6 +201,7 @@ class _IssueListScreenState extends State<IssueListScreen> {
   String _sort = "updated_desc";
   int _page = 1;
   final int _pageSize = 20;
+  bool _showFavoritesOnly = false;
   List<Issue> _issues = <Issue>[];
   bool _loading = false;
   bool _hasMore = false;
@@ -261,13 +262,20 @@ class _IssueListScreenState extends State<IssueListScreen> {
         title: const Text("My Issues"),
         actions: <Widget>[
           IconButton(
+            onPressed: () => setState(() => _showFavoritesOnly = !_showFavoritesOnly),
+            icon: Icon(_showFavoritesOnly ? Icons.star : Icons.star_border),
+            tooltip: _showFavoritesOnly ? "Show all" : "Show favorites",
+          ),
+          IconButton(
             onPressed: widget.onLogout,
             icon: const Icon(Icons.logout),
             tooltip: "Logout",
           ),
         ],
       ),
-      body: Column(
+      body: RefreshIndicator(
+        onRefresh: () => _load(reset: true),
+        child: Column(
         children: <Widget>[
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
@@ -415,7 +423,18 @@ class _IssueListScreenState extends State<IssueListScreen> {
                         ],
                       ),
                     ),
-                    trailing: const Icon(Icons.chevron_right),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Icon(
+                          issue.isFavorited ? Icons.star : Icons.star_border,
+                          color: issue.isFavorited ? Colors.amber : theme.colorScheme.outline,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
@@ -433,6 +452,7 @@ class _IssueListScreenState extends State<IssueListScreen> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -481,6 +501,8 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   List<Map<String, dynamic>> _activities = <Map<String, dynamic>>[];
   List<AssignableUser> _assignableUsers = <AssignableUser>[];
   List<Map<String, dynamic>> _breadcrumbs = <Map<String, dynamic>>[];
+  List<InternalNote> _internalNotes = <InternalNote>[];
+  bool _isFavorited = false;
   AiSummaryResponse? _aiSummary;
   AiCategorizeResponse? _aiCategory;
   bool _aiLoading = false;
@@ -737,6 +759,8 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
       await _loadTimeEntries();
       await _loadAssignableUsers();
       await _loadBreadcrumbs();
+      await _loadFavoriteStatus();
+      await _loadInternalNotes();
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -784,6 +808,182 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     } catch (_) {
       // Breadcrumbs are optional
     }
+  }
+
+  Future<void> _loadFavoriteStatus() async {
+    try {
+      final favorited = await widget.actionsRepository.isFavorited(redmineIssueId: widget.issueId);
+      if (mounted) setState(() => _isFavorited = favorited);
+    } catch (_) {}
+  }
+
+  Future<void> _toggleFavorite() async {
+    try {
+      final favorited = await widget.actionsRepository.toggleFavorite(redmineIssueId: widget.issueId);
+      if (mounted) setState(() => _isFavorited = favorited);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to toggle favorite: $e")));
+      }
+    }
+  }
+
+  Future<void> _loadInternalNotes() async {
+    try {
+      final notes = await widget.actionsRepository.listInternalNotes(redmineIssueId: widget.issueId);
+      if (mounted) setState(() => _internalNotes = notes);
+    } catch (_) {}
+  }
+
+  Future<void> _addInternalNote(String content) async {
+    try {
+      await widget.actionsRepository.createInternalNote(redmineIssueId: widget.issueId, content: content);
+      await _loadInternalNotes();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to add note: $e")));
+      }
+    }
+  }
+
+  Future<void> _editIssue({
+    String? subject,
+    String? description,
+    String? priority,
+    String? dueDate,
+    String? startDate,
+    double? estimatedHours,
+  }) async {
+    await widget.actionsRepository.editIssue(
+      redmineIssueId: widget.issueId,
+      subject: subject,
+      description: description,
+      priority: priority,
+      dueDate: dueDate,
+      startDate: startDate,
+      estimatedHours: estimatedHours,
+    );
+    await _load();
+  }
+
+  void _showEditDialog(BuildContext context, ThemeData theme) {
+    final subjectCtrl = TextEditingController(text: _issue?.subject);
+    final descCtrl = TextEditingController(text: _issue?.description);
+    final priorityCtrl = TextEditingController(text: _issue?.priority ?? "");
+    String? dueDate = _issue?.dueDate;
+    String? startDate = _issue?.startDate;
+    final estHoursCtrl = TextEditingController(text: _issue?.estimatedHours?.toString() ?? "");
+
+    showDialog<void>(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text("Edit Issue"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                TextField(controller: subjectCtrl, decoration: const InputDecoration(labelText: "Subject")),
+                const SizedBox(height: 8),
+                TextField(controller: descCtrl, decoration: const InputDecoration(labelText: "Description"), maxLines: 3),
+                const SizedBox(height: 8),
+                TextField(controller: priorityCtrl, decoration: const InputDecoration(labelText: "Priority")),
+                const SizedBox(height: 8),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          final s = startDate;
+                          final initDate = s != null ? (DateTime.tryParse(s) ?? DateTime.now()) : DateTime.now();
+                          final d = await showDatePicker(context: ctx, initialDate: initDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
+                          if (d != null) setDialogState(() => startDate = d.toIso8601String().split("T").first);
+                        },
+                        icon: const Icon(Icons.calendar_today),
+                        label: Text(startDate ?? "Start Date"),
+                      ),
+                    ),
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          final dd = dueDate;
+                          final initDate = dd != null ? (DateTime.tryParse(dd) ?? DateTime.now()) : DateTime.now();
+                          final d = await showDatePicker(context: ctx, initialDate: initDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
+                          if (d != null) setDialogState(() => dueDate = d.toIso8601String().split("T").first);
+                        },
+                        icon: const Icon(Icons.event),
+                        label: Text(dueDate ?? "Due Date"),
+                      ),
+                    ),
+                  ],
+                ),
+                TextField(controller: estHoursCtrl, decoration: const InputDecoration(labelText: "Estimated Hours"), keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+            ElevatedButton(
+              onPressed: () {
+                _editIssue(
+                  subject: subjectCtrl.text.trim().isEmpty ? null : subjectCtrl.text.trim(),
+                  description: descCtrl.text.isEmpty ? null : descCtrl.text,
+                  priority: priorityCtrl.text.trim().isEmpty ? null : priorityCtrl.text.trim(),
+                  dueDate: dueDate,
+                  startDate: startDate,
+                  estimatedHours: estHoursCtrl.text.isEmpty ? null : double.tryParse(estHoursCtrl.text),
+                );
+                Navigator.pop(ctx);
+              },
+              child: const Text("Save"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatRelative(String isoDate) {
+    final dt = DateTime.parse(isoDate);
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return "now";
+    if (diff.inHours < 1) return "${diff.inMinutes}m ago";
+    if (diff.inDays < 1) return "${diff.inHours}h ago";
+    return "${diff.inDays}d ago";
+  }
+
+  void _showAddNoteDialog(BuildContext context) {
+    final ctrl = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Add Internal Note"),
+        content: TextField(
+          controller: ctrl,
+          decoration: const InputDecoration(labelText: "Note", hintText: "Private note visible only to your team"),
+          maxLines: 3,
+        ),
+        actions: <Widget>[
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          ElevatedButton(
+            onPressed: () {
+              if (ctrl.text.trim().isNotEmpty) {
+                _addInternalNote(ctrl.text.trim());
+              }
+              Navigator.pop(context);
+            },
+            child: const Text("Add"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickAndUploadAttachment(BuildContext context, ThemeData theme) async {
+    // Show a simple dialog with options for now
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Attachment upload: select file from device (coming soon)")),
+    );
   }
 
   Future<void> _aiSummarize() async {
@@ -921,7 +1121,21 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text("Issue #${widget.issueId}")),
+      appBar: AppBar(
+        title: Text("Issue #${widget.issueId}"),
+        actions: <Widget>[
+          IconButton(
+            onPressed: () => _showEditDialog(context, theme),
+            icon: const Icon(Icons.edit),
+            tooltip: "Edit Issue",
+          ),
+          IconButton(
+            onPressed: _toggleFavorite,
+            icon: Icon(_isFavorited ? Icons.star : Icons.star_border),
+            tooltip: _isFavorited ? "Remove from favorites" : "Add to favorites",
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -1297,6 +1511,44 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                     _aiCategory!.modelUsed,
                                     style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                   ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            child: ExpansionTile(
+                              tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                              childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                              onExpansionChanged: (value) {
+                                if (value && _internalNotes.isEmpty) _loadInternalNotes();
+                              },
+                              title: Text("Internal Notes", style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                              children: <Widget>[
+                                ElevatedButton.icon(
+                                  onPressed: () => _showAddNoteDialog(context),
+                                  icon: const Icon(Icons.add_comment, size: 18),
+                                  label: const Text("Add Note"),
+                                ),
+                                if (_internalNotes.isNotEmpty) ...<Widget>[
+                                  const SizedBox(height: 8),
+                                  ..._internalNotes.map((note) => Padding(
+                                        padding: const EdgeInsets.only(bottom: 8),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: <Widget>[
+                                            Row(
+                                              children: <Widget>[
+                                                Text(note.authorName, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold)),
+                                                const SizedBox(width: 8),
+                                                Text(_formatRelative(note.createdAt), style: theme.textTheme.labelSmall),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(note.content, style: theme.textTheme.bodySmall),
+                                          ],
+                                        ),
+                                      )),
                                 ],
                               ],
                             ),

@@ -129,6 +129,42 @@ class IssueActionsRepository {
     return _api.getAiStatus();
   }
 
+  Future<void> editIssue({
+    required int redmineIssueId,
+    String? subject,
+    String? description,
+    String? priority,
+    String? dueDate,
+    String? startDate,
+    double? estimatedHours,
+  }) async {
+    await _api.editIssue(
+      redmineIssueId: redmineIssueId,
+      subject: subject,
+      description: description,
+      priority: priority,
+      dueDate: dueDate,
+      startDate: startDate,
+      estimatedHours: estimatedHours,
+    );
+  }
+
+  Future<List<InternalNote>> listInternalNotes({required int redmineIssueId}) {
+    return _api.listInternalNotes(redmineIssueId: redmineIssueId);
+  }
+
+  Future<InternalNote> createInternalNote({required int redmineIssueId, required String content}) {
+    return _api.createInternalNote(redmineIssueId: redmineIssueId, content: content);
+  }
+
+  Future<bool> toggleFavorite({required int redmineIssueId}) {
+    return _api.toggleFavorite(redmineIssueId: redmineIssueId);
+  }
+
+  Future<bool> isFavorited({required int redmineIssueId}) {
+    return _api.isFavorited(redmineIssueId: redmineIssueId);
+  }
+
   Future<void> postComment({
     required int redmineIssueId,
     required String comment,
