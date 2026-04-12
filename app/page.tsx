@@ -396,6 +396,8 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
   const [statuses, setStatuses] = useState<StatusCatalog[]>([]);
   const [priorities, setPriorities] = useState<string[]>([]);
   const [searchSource, setSearchSource] = useState("local_cache");
@@ -711,7 +713,7 @@ export default function Home() {
 
   async function loadIssues() {
     if (!user) return;
-    const res = await fetch(`/api/issues?${queryString}`, { cache: "no-store" });
+    const res = await fetch(`/api/issues?${queryString}&page=${page}&pageSize=${pageSize}`, { cache: "no-store" });
     if (!res.ok) {
       const data = await res.json();
       throw new Error(data.error ?? "Failed to load issues");
@@ -736,6 +738,10 @@ export default function Home() {
         setActivityId(fetched[0].id);
       }
     }
+  }
+
+  function resetPage() {
+    setPage(1);
   }
 
   async function loadFavorites() {
@@ -1546,7 +1552,7 @@ export default function Home() {
         <div className="filters-grid">
           <label className="filter-field">
             Status
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); resetPage(); }}>
               <option value="">All Statuses</option>
               {statuses.map((s) => (
                 <option key={s.id} value={s.name}>
@@ -1558,7 +1564,7 @@ export default function Home() {
 
           <label className="filter-field">
             Priority
-            <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
+            <select value={priorityFilter} onChange={(e) => { setPriorityFilter(e.target.value); resetPage(); }}>
               <option value="">All Priorities</option>
               {priorities.map((p) => (
                 <option key={p} value={p}>
@@ -1584,7 +1590,7 @@ export default function Home() {
               ref={searchInputRef}
               placeholder="Subject, description, assignee"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); resetPage(); }}
             />
           </label>
 
@@ -1959,6 +1965,48 @@ export default function Home() {
                   })}
                 </tbody>
               </table>
+
+              {/* Pagination Controls */}
+              {total > pageSize && (
+                <div className="pagination-bar">
+                  <button
+                    type="button"
+                    className="pagination-btn"
+                    onClick={() => { setPage(1); }}
+                    disabled={page === 1}
+                  >
+                    ««
+                  </button>
+                  <button
+                    type="button"
+                    className="pagination-btn"
+                    onClick={() => { setPage(p => Math.max(1, p - 1)); }}
+                    disabled={page === 1}
+                  >
+                    «
+                  </button>
+                  <span className="pagination-info">
+                    Page <strong>{page}</strong> of <strong>{Math.ceil(total / pageSize)}</strong>
+                    {" · "}Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}
+                  </span>
+                  <button
+                    type="button"
+                    className="pagination-btn"
+                    onClick={() => { setPage(p => p + 1); }}
+                    disabled={page >= Math.ceil(total / pageSize)}
+                  >
+                    »
+                  </button>
+                  <button
+                    type="button"
+                    className="pagination-btn"
+                    onClick={() => { setPage(Math.ceil(total / pageSize)); }}
+                    disabled={page >= Math.ceil(total / pageSize)}
+                  >
+                    »»
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <p className="muted collapsible-meta">
