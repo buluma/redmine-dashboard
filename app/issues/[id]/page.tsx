@@ -120,19 +120,24 @@ function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: { c
     return textFromNode(props?.children ?? "");
   }
 
-  function CodePre(props: { children?: ReactNode }) {
-    const raw = textFromNode(props.children ?? "");
-    const lines = raw.split("\n").filter((line) => line.trim().length > 0).length;
-    const shouldCollapse = lines >= 10 || raw.trim().length >= 80;
-    if (!shouldCollapse) {
-      return <pre>{props.children}</pre>;
-    }
-    return (
-      <details className="md-collapsible-code">
-        <summary>Show code ({lines} lines)</summary>
-        <pre>{props.children}</pre>
-      </details>
-    );
+  function createCodePre(disableCollapse: boolean) {
+    return function CodePre(props: { children?: ReactNode }) {
+      if (disableCollapse) {
+        return <pre>{props.children}</pre>;
+      }
+      const raw = textFromNode(props.children ?? "");
+      const lines = raw.split("\n").filter((line) => line.trim().length > 0).length;
+      const shouldCollapse = lines >= 10 || raw.trim().length >= 80;
+      if (!shouldCollapse) {
+        return <pre>{props.children}</pre>;
+      }
+      return (
+        <details className="md-collapsible-code">
+          <summary>Show code ({lines} lines)</summary>
+          <pre>{props.children}</pre>
+        </details>
+      );
+    };
   }
 
   // Custom img component to handle attachment images in markdown
@@ -176,9 +181,10 @@ function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: { c
     );
   }
 
-  function renderMarkdown(markdown: string, key: string) {
+  function renderMarkdown(markdown: string, key: string, options?: { disableCodeCollapse?: boolean }) {
     const normalized = normalizeRedmineText(markdown);
     if (!normalized.trim()) return null;
+    const CodePre = createCodePre(options?.disableCodeCollapse ?? false);
     return (
       <ReactMarkdown
         key={key}
@@ -208,7 +214,7 @@ function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: { c
         return (
           <details key={`collapse-${index}`} className="redmine-collapse">
             <summary>{segment.title}</summary>
-            {renderMarkdown(segment.content, `collapse-body-${index}`)}
+            {renderMarkdown(segment.content, `collapse-body-${index}`, { disableCodeCollapse: true })}
           </details>
         );
       })}
@@ -416,6 +422,7 @@ export default function IssueDetailPage() {
   const [newNoteContent, setNewNoteContent] = useState("");
   const [noteBusy, setNoteBusy] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [refreshBusy, setRefreshBusy] = useState(false);
   const [hydratedRelatedIds, setHydratedRelatedIds] = useState<Set<number>>(new Set());
   const tabsRef = useRef<HTMLDivElement | null>(null);
   const prefetchedRelatedIdsRef = useRef<Set<number>>(new Set());
@@ -442,6 +449,25 @@ export default function IssueDetailPage() {
       throw new Error(data.error ?? "Failed to load issue");
     }
     setIssue(data.issue ?? null);
+  }
+
+  async function refreshIssueFromRedmine() {
+    setRefreshBusy(true);
+    setActionError(null);
+    setActionInfo(null);
+    try {
+      const res = await fetch(`/api/issues/${issueId}/refresh`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Unable to refresh issue");
+      }
+      await reloadIssue();
+      setActionInfo("Issue refreshed from Redmine.");
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Unable to refresh issue");
+    } finally {
+      setRefreshBusy(false);
+    }
   }
 
   function startEditMode() {
@@ -996,7 +1022,7 @@ export default function IssueDetailPage() {
         </nav>
       )}
       <header className="card hero issue-hero">
-        <div className="hero-top">
+        <div className="hero-top issue-hero-top">
           <div className="issue-heading">
             <p className="kicker">{issue.tracker ?? "Issue"}</p>
             <div className="issue-title-line">
@@ -1054,10 +1080,15 @@ export default function IssueDetailPage() {
               </div>
             </div>
           </div>
-          <div className="hero-actions">
+          <div className="hero-actions issue-hero-actions">
             {!editMode && (
               <button type="button" className={`favorite-btn ${isFavorited ? "favorited" : ""}`} onClick={toggleFavorite} title={isFavorited ? "Remove from favorites" : "Add to favorites"}>
                 {isFavorited ? "★ Favorited" : "☆ Favorite"}
+              </button>
+            )}
+            {!editMode && (
+              <button type="button" className="secondary-button issue-refresh-button" onClick={() => void refreshIssueFromRedmine()} disabled={refreshBusy}>
+                {refreshBusy ? "Refreshing..." : "Refresh"}
               </button>
             )}
             {!editMode && (
@@ -1065,7 +1096,7 @@ export default function IssueDetailPage() {
                 Edit
               </button>
             )}
-            <Link href="/" className="primary-link">Back to Dashboard</Link>
+            <Link href="/" className="primary-link issue-back-link">Back to Dashboard</Link>
           </div>
         </div>
       </header>
@@ -1174,8 +1205,8 @@ export default function IssueDetailPage() {
         {/* Issue Metadata Section */}
         {(issue.authorName || issue.categoryName || issue.startDate || issue.estimatedHours || issue.spentHours || (issue.customFieldsJson && issue.customFieldsJson.length > 0)) && (
           <article className="report-card issue-metadata-card">
-            <div className="metadata-head-row">
-              <h3>Issue Metadata</h3>
+            <details className="issue-collapsible">
+              <summary>Issue Metadata</summary>
               {editMode && editDraft && (
                 <div className="edit-actions">
                   <button type="button" className="edit-save-btn" onClick={saveEdit} disabled={editSaving}>
@@ -1186,227 +1217,227 @@ export default function IssueDetailPage() {
                   </button>
                 </div>
               )}
-            </div>
-            <div className="metadata-grid">
-              {/* Show read-only fields only when NOT in edit mode */}
-              {!editMode && issue.authorName && (
-                <div className="metadata-item">
-                  <span className="metadata-label">Author</span>
-                  <span className="metadata-value">{issue.authorName}</span>
-                </div>
-              )}
-              {issue.categoryName && !editMode && (
-                <div className="metadata-item">
-                  <span className="metadata-label">Category</span>
-                  <span className="metadata-value">{issue.categoryName}</span>
-                </div>
-              )}
-              {editMode && editDraft ? (
-                <>
-                  <div className="metadata-item metadata-item-editable">
-                    <span className="metadata-label">Start Date</span>
-                    <input
-                      type="date"
-                      className="edit-metadata-input edit-date-input"
-                      value={editDraft.startDate}
-                      onChange={(e) => setEditDraft({ ...editDraft, startDate: e.target.value })}
-                    />
+              <div className="metadata-grid">
+                {/* Show read-only fields only when NOT in edit mode */}
+                {!editMode && issue.authorName && (
+                  <div className="metadata-item">
+                    <span className="metadata-label">Author</span>
+                    <span className="metadata-value">{issue.authorName}</span>
                   </div>
-                  <div className="metadata-item metadata-item-editable">
-                    <span className="metadata-label">Due Date</span>
-                    <input
-                      type="date"
-                      className="edit-metadata-input edit-date-input"
-                      value={editDraft.dueDate}
-                      onChange={(e) => setEditDraft({ ...editDraft, dueDate: e.target.value })}
-                    />
-                  </div>
-                  <div className="metadata-item metadata-item-editable">
+                )}
+                {issue.categoryName && !editMode && (
+                  <div className="metadata-item">
                     <span className="metadata-label">Category</span>
-                    <select
-                      className="edit-metadata-input edit-category-select"
-                      value={editDraft.categoryId}
-                      onChange={(e) => setEditDraft({ ...editDraft, categoryId: e.target.value })}
-                    >
-                      <option value="">— No category —</option>
-                      <option value="32">activities</option>
-                      <option value="33">bugs</option>
-                      <option value="34">features</option>
-                    </select>
+                    <span className="metadata-value">{issue.categoryName}</span>
                   </div>
-                  <div className="metadata-item metadata-item-editable">
-                    <span className="metadata-label">Priority</span>
-                    <select
-                      className="edit-metadata-input edit-priority-select"
-                      value={editDraft.priorityId}
-                      onChange={(e) => setEditDraft({ ...editDraft, priorityId: e.target.value })}
-                    >
-                      <option value="">— No priority —</option>
-                      {priorities.map((p) => (
-                        <option key={p.id} value={p.id}>{p.name}{p.isDefault ? " (default)" : ""}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="metadata-item metadata-item-editable">
-                    <span className="metadata-label">Estimated Hours</span>
-                    <input
-                      type="number"
-                      className="edit-metadata-input"
-                      value={editDraft.estimatedHours}
-                      onChange={(e) => setEditDraft({ ...editDraft, estimatedHours: e.target.value })}
-                      step="0.25"
-                      min="0"
-                      placeholder="0"
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  {issue.startDate && (
-                    <div className="metadata-item">
+                )}
+                {editMode && editDraft ? (
+                  <>
+                    <div className="metadata-item metadata-item-editable">
                       <span className="metadata-label">Start Date</span>
-                      <span className="metadata-value">{new Date(issue.startDate).toLocaleDateString()}</span>
+                      <input
+                        type="date"
+                        className="edit-metadata-input edit-date-input"
+                        value={editDraft.startDate}
+                        onChange={(e) => setEditDraft({ ...editDraft, startDate: e.target.value })}
+                      />
                     </div>
-                  )}
-                  {issue.dueDate && (
-                    <div className="metadata-item">
+                    <div className="metadata-item metadata-item-editable">
                       <span className="metadata-label">Due Date</span>
-                      <span className="metadata-value">{new Date(issue.dueDate).toLocaleDateString()}</span>
+                      <input
+                        type="date"
+                        className="edit-metadata-input edit-date-input"
+                        value={editDraft.dueDate}
+                        onChange={(e) => setEditDraft({ ...editDraft, dueDate: e.target.value })}
+                      />
                     </div>
-                  )}
-                  {issue.priority && (
-                    <div className="metadata-item">
+                    <div className="metadata-item metadata-item-editable">
+                      <span className="metadata-label">Category</span>
+                      <select
+                        className="edit-metadata-input edit-category-select"
+                        value={editDraft.categoryId}
+                        onChange={(e) => setEditDraft({ ...editDraft, categoryId: e.target.value })}
+                      >
+                        <option value="">— No category —</option>
+                        <option value="32">activities</option>
+                        <option value="33">bugs</option>
+                        <option value="34">features</option>
+                      </select>
+                    </div>
+                    <div className="metadata-item metadata-item-editable">
                       <span className="metadata-label">Priority</span>
-                      <span className="metadata-value">{issue.priority}</span>
+                      <select
+                        className="edit-metadata-input edit-priority-select"
+                        value={editDraft.priorityId}
+                        onChange={(e) => setEditDraft({ ...editDraft, priorityId: e.target.value })}
+                      >
+                        <option value="">— No priority —</option>
+                        {priorities.map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}{p.isDefault ? " (default)" : ""}</option>
+                        ))}
+                      </select>
                     </div>
-                  )}
-                  {issue.estimatedHours != null && (
-                    <div className="metadata-item">
+                    <div className="metadata-item metadata-item-editable">
                       <span className="metadata-label">Estimated Hours</span>
-                      <span className="metadata-value">{issue.estimatedHours.toFixed(2)}h</span>
+                      <input
+                        type="number"
+                        className="edit-metadata-input"
+                        value={editDraft.estimatedHours}
+                        onChange={(e) => setEditDraft({ ...editDraft, estimatedHours: e.target.value })}
+                        step="0.25"
+                        min="0"
+                        placeholder="0"
+                      />
                     </div>
-                  )}
-                </>
-              )}
-              {/* Always show spent hours as read-only (not editable) */}
-              {issue.spentHours != null && (
-                <div className="metadata-item metadata-item-readonly">
-                  <span className="metadata-label">Spent Hours (Redmine)</span>
-                  <span className="metadata-value">{issue.spentHours.toFixed(2)}h</span>
-                </div>
-              )}
+                  </>
+                ) : (
+                  <>
+                    {issue.startDate && (
+                      <div className="metadata-item">
+                        <span className="metadata-label">Start Date</span>
+                        <span className="metadata-value">{new Date(issue.startDate).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {issue.dueDate && (
+                      <div className="metadata-item">
+                        <span className="metadata-label">Due Date</span>
+                        <span className="metadata-value">{new Date(issue.dueDate).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {issue.priority && (
+                      <div className="metadata-item">
+                        <span className="metadata-label">Priority</span>
+                        <span className="metadata-value">{issue.priority}</span>
+                      </div>
+                    )}
+                    {issue.estimatedHours != null && (
+                      <div className="metadata-item">
+                        <span className="metadata-label">Estimated Hours</span>
+                        <span className="metadata-value">{issue.estimatedHours.toFixed(2)}h</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                {/* Always show spent hours as read-only (not editable) */}
+                {issue.spentHours != null && (
+                  <div className="metadata-item metadata-item-readonly">
+                    <span className="metadata-label">Spent Hours (Redmine)</span>
+                    <span className="metadata-value">{issue.spentHours.toFixed(2)}h</span>
+                  </div>
+                )}
 
-              {/* Custom fields with values */}
-              {issue.customFieldsJson && issue.customFieldsJson
-                .filter((field) => editMode ? true : (field.value && field.value.trim().length > 0))
-                .map((field) => {
-                  // Special handling for "Possible assignee" custom field
-                    if (field.name === "Possible assignee") {
-                      if (editMode && editDraft) {
-                        const assigneeUserId = parseInt(editDraft.customFields[field.id] || "0", 10);
+                {/* Custom fields with values */}
+                {issue.customFieldsJson && issue.customFieldsJson
+                  .filter((field) => editMode ? true : (field.value && field.value.trim().length > 0))
+                  .map((field) => {
+                    // Special handling for "Possible assignee" custom field
+                      if (field.name === "Possible assignee") {
+                        if (editMode && editDraft) {
+                          const assigneeUserId = parseInt(editDraft.customFields[field.id] || "0", 10);
+                          return (
+                          <div key={field.id} className="metadata-item metadata-item-assignee">
+                            <span className="metadata-label">{field.name}</span>
+                            <span className="metadata-value">
+                              <select
+                                className="edit-custom-user-select"
+                                value={assigneeUserId || ""}
+                                onChange={(e) => updateCustomField(String(field.id), e.target.value)}
+                              >
+                                <option value="">— Unset —</option>
+                                {users.map((u) => (
+                                  <option key={u.id} value={u.id}>{u.name}</option>
+                                ))}
+                              </select>
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      if (field.value) {
+                        const assigneeUserId = parseInt(field.value, 10);
+                        const matchedUser = users.find((u) => u.id === assigneeUserId);
                         return (
-                        <div key={field.id} className="metadata-item metadata-item-assignee">
-                          <span className="metadata-label">{field.name}</span>
-                          <span className="metadata-value">
-                            <select
-                              className="edit-custom-user-select"
-                              value={assigneeUserId || ""}
-                              onChange={(e) => updateCustomField(String(field.id), e.target.value)}
-                            >
-                              <option value="">— Unset —</option>
-                              {users.map((u) => (
-                                <option key={u.id} value={u.id}>{u.name}</option>
-                              ))}
-                            </select>
-                          </span>
-                        </div>
-                      );
-                    }
-
-                    if (field.value) {
-                      const assigneeUserId = parseInt(field.value, 10);
-                      const matchedUser = users.find((u) => u.id === assigneeUserId);
-                      return (
-                        <div key={field.id} className="metadata-item metadata-item-assignee">
-                          <span className="metadata-label">{field.name}</span>
-                          <span className="metadata-value">
-                            {matchedUser ? (
-                              <span className="assignee-user">
-                                👤 {matchedUser.name}
-                                <button
-                                  type="button"
-                                  className="assign-btn"
-                                  onClick={async () => {
-                                    try {
-                                      const res = await fetch(`/api/issues/${issueId}/assign`, {
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ userId: assigneeUserId }),
-                                      });
-                                      if (!res.ok) {
-                                        const data = await res.json();
-                                        throw new Error(data.error || "Failed to assign");
+                          <div key={field.id} className="metadata-item metadata-item-assignee">
+                            <span className="metadata-label">{field.name}</span>
+                            <span className="metadata-value">
+                              {matchedUser ? (
+                                <span className="assignee-user">
+                                  👤 {matchedUser.name}
+                                  <button
+                                    type="button"
+                                    className="assign-btn"
+                                    onClick={async () => {
+                                      try {
+                                        const res = await fetch(`/api/issues/${issueId}/assign`, {
+                                          method: "POST",
+                                          headers: { "Content-Type": "application/json" },
+                                          body: JSON.stringify({ userId: assigneeUserId }),
+                                        });
+                                        if (!res.ok) {
+                                          const data = await res.json();
+                                          throw new Error(data.error || "Failed to assign");
+                                        }
+                                        await reloadIssue();
+                                        setActionInfo(`Assigned to ${matchedUser.name}`);
+                                      } catch (e) {
+                                        setActionError(e instanceof Error ? e.message : "Failed to assign");
                                       }
-                                      await reloadIssue();
-                                      setActionInfo(`Assigned to ${matchedUser.name}`);
-                                    } catch (e) {
-                                      setActionError(e instanceof Error ? e.message : "Failed to assign");
-                                    }
-                                  }}
-                                  title={`Assign to ${matchedUser.name}`}
-                                >
-                                  Assign
-                                </button>
-                              </span>
-                            ) : (
-                              `User #${assigneeUserId}`
-                            )}
-                          </span>
+                                    }}
+                                    title={`Assign to ${matchedUser.name}`}
+                                  >
+                                    Assign
+                                  </button>
+                                </span>
+                              ) : (
+                                `User #${assigneeUserId}`
+                              )}
+                            </span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }
+
+                    // Editable custom field
+                    if (editMode && editDraft) {
+                      const isDateField = /due\s*date|date|sd\s*due|temp\s*fix/i.test(field.name);
+                      return (
+                        <div key={field.id} className="metadata-item metadata-item-editable">
+                          <span className="metadata-label">{field.name}</span>
+                          {isDateField ? (
+                            <input
+                              type="date"
+                              className="edit-metadata-input edit-date-input"
+                              value={editDraft.customFields[field.id] || ""}
+                              onChange={(e) => updateCustomField(String(field.id), e.target.value)}
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              className="edit-metadata-input"
+                              value={editDraft.customFields[field.id] || ""}
+                              onChange={(e) => updateCustomField(String(field.id), e.target.value)}
+                              placeholder={field.name}
+                            />
+                          )}
                         </div>
                       );
                     }
+
+                    // Display custom field
+                    if (field.value && field.value.trim().length > 0) {
+                      return (
+                        <div key={field.id} className="metadata-item">
+                          <span className="metadata-label">{field.name}</span>
+                          <span className="metadata-value">{field.value}</span>
+                        </div>
+                      );
+                    }
+
                     return null;
-                  }
-
-                  // Editable custom field
-                  if (editMode && editDraft) {
-                    const isDateField = /due\s*date|date|sd\s*due|temp\s*fix/i.test(field.name);
-                    return (
-                      <div key={field.id} className="metadata-item metadata-item-editable">
-                        <span className="metadata-label">{field.name}</span>
-                        {isDateField ? (
-                          <input
-                            type="date"
-                            className="edit-metadata-input edit-date-input"
-                            value={editDraft.customFields[field.id] || ""}
-                            onChange={(e) => updateCustomField(String(field.id), e.target.value)}
-                          />
-                        ) : (
-                          <input
-                            type="text"
-                            className="edit-metadata-input"
-                            value={editDraft.customFields[field.id] || ""}
-                            onChange={(e) => updateCustomField(String(field.id), e.target.value)}
-                            placeholder={field.name}
-                          />
-                        )}
-                      </div>
-                    );
-                  }
-
-                  // Display custom field
-                  if (field.value && field.value.trim().length > 0) {
-                    return (
-                      <div key={field.id} className="metadata-item">
-                        <span className="metadata-label">{field.name}</span>
-                        <span className="metadata-value">{field.value}</span>
-                      </div>
-                    );
-                  }
-
-                  return null;
-                })}
-            </div>
+                  })}
+              </div>
+            </details>
           </article>
         )}
 

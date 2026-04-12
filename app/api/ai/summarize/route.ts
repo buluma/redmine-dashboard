@@ -1,5 +1,5 @@
 import { getOllamaClient } from "@/src/lib/ollama";
-import { createSummarizeMessages, parseJsonResponse, type SummarizeResponse } from "@/src/lib/ai-prompt";
+import { createSummarizeMessages, normalizeSummarizeResponse, parseJsonResponse } from "@/src/lib/ai-prompt";
 import { env } from "@/src/lib/env";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
@@ -47,6 +47,20 @@ export async function POST(request: Request) {
     // Fetch the issue from database
     const issue = await prisma.issue.findFirst({
       where: { id: issueId, userId: actorUserId },
+      include: {
+        journals: {
+          orderBy: { createdOnRemote: "desc" },
+          take: 30,
+        },
+        timeEntries: {
+          orderBy: { spentOn: "desc" },
+          take: 30,
+        },
+        attachments: {
+          orderBy: [{ createdOnRemote: "desc" }, { createdAt: "desc" }],
+          take: 20,
+        },
+      },
     });
 
     if (!issue) {
@@ -54,7 +68,7 @@ export async function POST(request: Request) {
     }
 
     const client = getOllamaClient();
-    const messages = createSummarizeMessages({
+    const issueContext = {
       id: issue.id,
       redmineIssueId: issue.redmineIssueId,
       subject: issue.subject,
@@ -68,7 +82,26 @@ export async function POST(request: Request) {
       dueDate: issue.dueDate?.toISOString() ?? null,
       doneRatio: issue.doneRatio,
       updatedOn: issue.updatedOnRemote.toISOString(),
-    });
+      journals: issue.journals.map((journal) => ({
+        author: journal.author,
+        notes: journal.notes,
+        createdOn: journal.createdOnRemote.toISOString(),
+      })),
+      timeEntries: issue.timeEntries.map((entry) => ({
+        hours: entry.hours,
+        activityName: entry.activityName,
+        authorName: entry.authorName,
+        comments: entry.comments,
+        spentOn: entry.spentOn.toISOString(),
+      })),
+      attachments: issue.attachments.map((attachment) => ({
+        filename: attachment.filename,
+        contentType: attachment.contentType,
+        filesize: attachment.filesize,
+        createdOn: attachment.createdOnRemote?.toISOString() ?? attachment.createdAt.toISOString(),
+      })),
+    };
+    const messages = createSummarizeMessages(issueContext);
 
     // Try primary model, fallback on error
     let result;
@@ -82,11 +115,9 @@ export async function POST(request: Request) {
     }
 
     // Parse JSON response
-    const parsed = parseJsonResponse<SummarizeResponse>(result.content);
-
-    const summaryText = parsed
-      ? JSON.stringify(parsed)
-      : result.content;
+    const parsed = parseJsonResponse<unknown>(result.content);
+    const structured = normalizeSummarizeResponse(parsed, issueContext);
+    const summaryText = JSON.stringify(structured);
 
     // Persist summary to database
     await prisma.aiSummary.upsert({
@@ -102,21 +133,11 @@ export async function POST(request: Request) {
       },
     });
 
-    if (!parsed) {
-      return Response.json({
-        summary: result.content,
-        keyPoints: [],
-        actionItems: [],
-        confidence: 0.5,
-        modelUsed: result.model,
-        rawResponse: true,
-      });
-    }
-
     return Response.json({
-      ...parsed,
+      ...structured,
       modelUsed: result.model,
       usedFallback: result.usedFallback,
+      rawResponse: !parsed,
     });
   } catch (error) {
     console.error("Summarize error:", error);

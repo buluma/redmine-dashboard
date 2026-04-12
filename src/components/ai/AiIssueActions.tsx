@@ -15,6 +15,26 @@ interface ParsedSummary {
   summary: string;
   keyPoints: string[];
   actionItems: string[];
+  risks: string[];
+  openQuestions: string[];
+  timeline: Array<{
+    at: string;
+    author: string;
+    type: "journal" | "time" | "status" | "other";
+    detail: string;
+  }>;
+  timeSpent: {
+    totalHours: number;
+    entryCount: number;
+    byActivity: Array<{ name: string; hours: number }>;
+    byAuthor: Array<{ name: string; hours: number }>;
+  } | null;
+  attachments: Array<{
+    filename: string;
+    type: string;
+    sizeKb: number;
+    note: string;
+  }>;
   confidence: number;
 }
 
@@ -26,11 +46,16 @@ function parseSummaryText(text: string | null): ParsedSummary | null {
       summary: parsed.summary ?? "",
       keyPoints: parsed.keyPoints ?? [],
       actionItems: parsed.actionItems ?? [],
+      risks: parsed.risks ?? [],
+      openQuestions: parsed.openQuestions ?? [],
+      timeline: parsed.timeline ?? [],
+      timeSpent: parsed.timeSpent ?? null,
+      attachments: parsed.attachments ?? [],
       confidence: parsed.confidence ?? 0,
     };
   } catch {
     // If not JSON, treat as plain text summary
-    return { summary: text, keyPoints: [], actionItems: [], confidence: 0 };
+    return { summary: text, keyPoints: [], actionItems: [], risks: [], openQuestions: [], timeline: [], timeSpent: null, attachments: [], confidence: 0 };
   }
 }
 
@@ -84,8 +109,20 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
       if (!res.ok) {
         throw new Error(data.error || "Summarization failed");
       }
-      setSummary(data.summary);
-      onSummary?.(data.summary);
+      const structured = {
+        summary: data.summary ?? "",
+        keyPoints: Array.isArray(data.keyPoints) ? data.keyPoints : [],
+        actionItems: Array.isArray(data.actionItems) ? data.actionItems : [],
+        risks: Array.isArray(data.risks) ? data.risks : [],
+        openQuestions: Array.isArray(data.openQuestions) ? data.openQuestions : [],
+        timeline: Array.isArray(data.timeline) ? data.timeline : [],
+        timeSpent: data.timeSpent ?? null,
+        attachments: Array.isArray(data.attachments) ? data.attachments : [],
+        confidence: typeof data.confidence === "number" ? data.confidence : 0,
+      };
+      const serialized = JSON.stringify(structured);
+      setSummary(serialized);
+      onSummary?.(serialized);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to summarize");
     } finally {
@@ -172,6 +209,73 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
               <ul className="action-items">
                 {parsedSummary.actionItems.map((item, i) => (
                   <li key={i}>{linkify(item)}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {parsedSummary.risks.length > 0 && (
+            <div className="ai-section">
+              <h6>Risks / Blockers</h6>
+              <ul>
+                {parsedSummary.risks.map((risk, i) => (
+                  <li key={i}>{linkify(risk)}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {parsedSummary.openQuestions.length > 0 && (
+            <div className="ai-section">
+              <h6>Open Questions</h6>
+              <ul>
+                {parsedSummary.openQuestions.map((question, i) => (
+                  <li key={i}>{linkify(question)}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {parsedSummary.timeSpent && (
+            <div className="ai-section">
+              <h6>Time Spent</h6>
+              <p>
+                {parsedSummary.timeSpent.totalHours.toFixed(2)}h across {parsedSummary.timeSpent.entryCount} entries
+              </p>
+              {parsedSummary.timeSpent.byActivity.length > 0 && (
+                <ul>
+                  {parsedSummary.timeSpent.byActivity.map((item, i) => (
+                    <li key={`activity-${i}`}>{item.name}: {item.hours.toFixed(2)}h</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {parsedSummary.timeline.length > 0 && (
+            <div className="ai-section">
+              <h6>Recent Timeline</h6>
+              <ul>
+                {parsedSummary.timeline.map((entry, i) => (
+                  <li key={`timeline-${i}`}>
+                    {entry.at ? `[${entry.at}] ` : ""}
+                    {entry.author ? `${entry.author} • ` : ""}
+                    {entry.type}: {linkify(entry.detail)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {parsedSummary.attachments.length > 0 && (
+            <div className="ai-section">
+              <h6>Attachments Mentioned</h6>
+              <ul>
+                {parsedSummary.attachments.map((attachment, i) => (
+                  <li key={`attachment-${i}`}>
+                    {attachment.filename} ({attachment.type}, {attachment.sizeKb} KB)
+                    {attachment.note ? ` - ${attachment.note}` : ""}
+                  </li>
                 ))}
               </ul>
             </div>

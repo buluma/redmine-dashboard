@@ -201,24 +201,30 @@ function MarkdownBlock({ content, attachments = [], issueId }: { content: string
     );
   }
 
-  function CodePre(props: { children?: ReactNode }) {
-    const raw = textFromNode(props.children ?? "");
-    const lines = raw.split("\n").filter((line) => line.trim().length > 0).length;
-    const shouldCollapse = lines >= 10 || raw.trim().length >= 80;
-    if (!shouldCollapse) {
-      return <pre>{props.children}</pre>;
-    }
-    return (
-      <details className="md-collapsible-code">
-        <summary>Show code ({lines} lines)</summary>
-        <pre>{props.children}</pre>
-      </details>
-    );
+  function createCodePre(disableCollapse: boolean) {
+    return function CodePre(props: { children?: ReactNode }) {
+      if (disableCollapse) {
+        return <pre>{props.children}</pre>;
+      }
+      const raw = textFromNode(props.children ?? "");
+      const lines = raw.split("\n").filter((line) => line.trim().length > 0).length;
+      const shouldCollapse = lines >= 10 || raw.trim().length >= 80;
+      if (!shouldCollapse) {
+        return <pre>{props.children}</pre>;
+      }
+      return (
+        <details className="md-collapsible-code">
+          <summary>Show code ({lines} lines)</summary>
+          <pre>{props.children}</pre>
+        </details>
+      );
+    };
   }
 
-  function renderMarkdown(markdown: string, key: string) {
+  function renderMarkdown(markdown: string, key: string, options?: { disableCodeCollapse?: boolean }) {
     const normalized = normalizeRedmineText(markdown);
     if (!normalized.trim()) return null;
+    const CodePre = createCodePre(options?.disableCodeCollapse ?? false);
     return (
       <ReactMarkdown
         key={key}
@@ -248,7 +254,7 @@ function MarkdownBlock({ content, attachments = [], issueId }: { content: string
         return (
           <details key={`collapse-${index}`} className="redmine-collapse">
             <summary>{segment.title}</summary>
-            {renderMarkdown(segment.content, `collapse-body-${index}`)}
+            {renderMarkdown(segment.content, `collapse-body-${index}`, { disableCodeCollapse: true })}
           </details>
         );
       })}
@@ -1695,7 +1701,7 @@ export default function Home() {
       </header>
 
       <section className="card filters-panel">
-        <div className="filters-grid">
+        <div className="filters-grid home-filters-grid">
           <label className="filter-field">
             Status
             <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); resetPage(); }}>
@@ -1741,17 +1747,6 @@ export default function Home() {
           </label>
 
           <label className="filter-field">
-            <button
-              type="button"
-              className={`ai-toggle ${aiSearchOpen ? "active" : ""}`}
-              onClick={() => setAiSearchOpen(!aiSearchOpen)}
-              disabled={!aiStatus?.available}
-            >
-              🤖 AI Search {aiStatus?.available ? "" : "(offline)"}
-            </button>
-          </label>
-
-          <label className="filter-field">
             Search Source
             <select value={searchMode} onChange={(e) => setSearchMode((e.target.value as "local" | "hybrid"))}>
               <option value="local">Local Cache</option>
@@ -1786,6 +1781,17 @@ export default function Home() {
               </div>
             ))}
           </div>
+        </div>
+
+        <div className="home-filters-footer">
+          <button
+            type="button"
+            className={`ai-toggle ${aiSearchOpen ? "active" : ""}`}
+            onClick={() => setAiSearchOpen(!aiSearchOpen)}
+            disabled={!aiStatus?.available}
+          >
+            🤖 AI Search {aiStatus?.available ? "" : "(offline)"}
+          </button>
         </div>
       </section>
 
