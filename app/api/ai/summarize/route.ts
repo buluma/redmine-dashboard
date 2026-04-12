@@ -139,17 +139,33 @@ export async function POST(request: Request) {
     const structured = normalizeSummarizeResponse(parsed, issueContext);
     const summaryText = JSON.stringify(structured);
 
+    // Helper to convert number to BigInt safely
+    const toBigInt = (val: number | undefined | null): bigint | null =>
+      val != null ? BigInt(val) : null;
+
     // Persist summary to database
     await prisma.aiSummary.upsert({
       where: { issueId },
       update: {
         summary: summaryText,
         model: result.model,
+        totalDuration: toBigInt(result.total_duration),
+        loadDuration: toBigInt(result.load_duration),
+        promptEvalCount: result.prompt_eval_count ?? null,
+        promptEvalDuration: toBigInt(result.prompt_eval_duration),
+        evalCount: result.eval_count ?? null,
+        evalDuration: toBigInt(result.eval_duration),
       },
       create: {
         issueId,
         summary: summaryText,
         model: result.model,
+        totalDuration: toBigInt(result.total_duration),
+        loadDuration: toBigInt(result.load_duration),
+        promptEvalCount: result.prompt_eval_count ?? null,
+        promptEvalDuration: toBigInt(result.prompt_eval_duration),
+        evalCount: result.eval_count ?? null,
+        evalDuration: toBigInt(result.eval_duration),
       },
     });
 
@@ -158,6 +174,14 @@ export async function POST(request: Request) {
       modelUsed: result.model,
       usedFallback: result.usedFallback,
       rawResponse: !parsed,
+      metrics: {
+        totalDuration: result.total_duration != null ? String(result.total_duration) : null,
+        loadDuration: result.load_duration != null ? String(result.load_duration) : null,
+        promptEvalCount: result.prompt_eval_count ?? null,
+        promptEvalDuration: result.prompt_eval_duration != null ? String(result.prompt_eval_duration) : null,
+        evalCount: result.eval_count ?? null,
+        evalDuration: result.eval_duration != null ? String(result.eval_duration) : null,
+      },
     });
   } catch (error) {
     console.error("Summarize error:", error);

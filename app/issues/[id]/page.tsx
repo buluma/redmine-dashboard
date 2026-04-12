@@ -248,8 +248,11 @@ function isPdfAttachment(attachment: Attachment): boolean {
   return type === "application/pdf" || attachment.filename.toLowerCase().endsWith(".pdf");
 }
 
-function formatAgo(dateLike: string): string {
-  const deltaSec = Math.max(1, Math.floor((Date.now() - new Date(dateLike).getTime()) / 1000));
+function formatAgo(dateLike: string | undefined | null): string {
+  if (!dateLike) return "—";
+  const ts = new Date(dateLike).getTime();
+  if (Number.isNaN(ts)) return "—";
+  const deltaSec = Math.max(1, Math.floor((Date.now() - ts) / 1000));
   if (deltaSec < 60) return `${deltaSec}s ago`;
   const mins = Math.floor(deltaSec / 60);
   if (mins < 60) return `${mins}m ago`;
@@ -1448,9 +1451,9 @@ export default function IssueDetailPage() {
         )}
 
         {aiStatus?.available && (
-          <AiIssueActions 
-            issueId={issue.id} 
-            existingSummaries={(issue as unknown as { aiSummaries?: Array<{ id: string; summary: string; model: string; createdAt: string }> }).aiSummaries ?? []} 
+          <AiIssueActions
+            issueId={issue.id}
+            existingSummaries={(issue as unknown as { aiSummaries?: Array<{ id: string; summary: string; model: string; createdAt: string; totalDuration: string | null; loadDuration: string | null; promptEvalCount: number | null; promptEvalDuration: string | null; evalCount: number | null; evalDuration: string | null }> }).aiSummaries ?? []}
           />
         )}
 
