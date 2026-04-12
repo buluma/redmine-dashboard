@@ -625,14 +625,17 @@ export default function IssueDetailPage() {
           const data = await prioritiesRes.json();
           setPriorities(data.priorities ?? []);
         }
-        // Load internal notes if on that tab
-        if (activeTab === "internal-notes") {
-          await loadInternalNotes();
-        }
       } catch {
         // Ignore errors
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== "internal-notes") {
+      return;
+    }
+    void loadInternalNotes();
   }, [activeTab, loadInternalNotes]);
 
   async function submitGithubLink(event: React.FormEvent) {

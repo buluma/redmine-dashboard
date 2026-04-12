@@ -158,17 +158,21 @@ export async function GET(request: Request) {
       hybridTotal = Math.max(total, remote.total_count);
     }
 
-    const favoritedIssueIds = new Set<number>(
-      (
-        await prisma.favorite.findMany({
+    let favoritedIssueIds = new Set<number>();
+    if (merged.length > 0) {
+      try {
+        const favorites = await prisma.favorite.findMany({
           where: {
             userId: user.id,
             issueId: { in: merged.map((issue) => issue.redmineIssueId) },
           },
           select: { issueId: true },
-        })
-      ).map((item) => item.issueId),
-    );
+        });
+        favoritedIssueIds = new Set<number>(favorites.map((item) => item.issueId));
+      } catch {
+        // Keep listing issues even if favorite lookup fails.
+      }
+    }
 
     return Response.json({
       items: merged.map((issue) => ({
