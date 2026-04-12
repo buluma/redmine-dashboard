@@ -647,17 +647,19 @@ export async function executeSyncJob(jobId: string): Promise<void> {
       });
     }
 
-    if (job.jobType === "full_manual") {
-      await prisma.issue.deleteMany({
-        where: {
-          userId: job.userId,
-          redmineBaseUrl: client.normalizedBaseUrl,
-          redmineIssueId: {
-            notIn: Array.from(seenRemoteIssueIds),
-          },
-        },
-      });
-    }
+    // SAFETY: Do NOT delete issues that weren't seen during sync.
+    // The sync may not fetch ALL issues (pagination limits, rate limiting,
+    // interrupted jobs, or scoped queries like assigned/open).
+    // Deleting unseen issues would cause data loss.
+    // if (job.jobType === "full_manual") {
+    //   await prisma.issue.deleteMany({
+    //     where: {
+    //       userId: job.userId,
+    //       redmineBaseUrl: client.normalizedBaseUrl,
+    //       redmineIssueId: { notIn: Array.from(seenRemoteIssueIds) },
+    //     },
+    //   });
+    // }
 
     await prisma.syncJob.update({
       where: { id: jobId },
