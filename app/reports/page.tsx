@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 type TrendPoint = { key: string; value: number };
@@ -77,6 +77,22 @@ type Drilldown =
   | { type: "assignee"; value: string }
   | { type: "day"; value: string; metric: "journals" | "time" }
   | null;
+
+type ReportsFilters = {
+  days: number;
+  issueId: string;
+  from: string;
+  to: string;
+  assignees: string;
+};
+
+const DEFAULT_FILTERS: ReportsFilters = {
+  days: 30,
+  issueId: "",
+  from: "",
+  to: "",
+  assignees: "",
+};
 
 function formatDayLabel(key: string): string {
   const d = new Date(`${key}T00:00:00`);
@@ -238,7 +254,8 @@ export default function ReportsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [days, setDays] = useState(30);
+  const [filters, setFilters] = useState<ReportsFilters>(DEFAULT_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState<ReportsFilters>(DEFAULT_FILTERS);
   const [drilldown, setDrilldown] = useState<Drilldown>(null);
   const [data, setData] = useState<ReportData | null>(null);
   const prefetchedIssueIdsRef = useRef<Set<number>>(new Set());
@@ -258,15 +275,31 @@ export default function ReportsPage() {
   }, [router]);
 
   const loadReportData = useCallback(async () => {
-    const res = await fetch(`/api/reports?days=${days}`, { cache: "no-store" });
+    const params = new URLSearchParams();
+    params.set("days", String(appliedFilters.days));
+    if (appliedFilters.issueId.trim().length > 0) {
+      params.set("issueId", appliedFilters.issueId.trim());
+    }
+    if (appliedFilters.from.trim().length > 0) {
+      params.set("from", appliedFilters.from.trim());
+    }
+    if (appliedFilters.to.trim().length > 0) {
+      params.set("to", appliedFilters.to.trim());
+    }
+    if (appliedFilters.assignees.trim().length > 0) {
+      params.set("assignees", appliedFilters.assignees.trim());
+    }
+
+    const res = await fetch(`/api/reports?${params.toString()}`, { cache: "no-store" });
     const json = (await res.json()) as ReportData & { error?: string };
     if (!res.ok) throw new Error(json.error ?? "Unable to load reports");
     setData(json);
-  }, [days]);
+  }, [appliedFilters]);
 
   useEffect(() => {
     void (async () => {
       setLoading(true);
+      setError(null);
       try {
         await loadReportData();
         setDrilldown(null);
@@ -296,12 +329,37 @@ export default function ReportsPage() {
 
   const peakJournals = journalTrend.reduce((acc: TrendPoint, p: TrendPoint) => p.value > acc.value ? p : acc, { key: "-", value: 0 });
 
-  const avgHoursPerDay = days > 0 ? Number((timeTotal / days).toFixed(1)) : 0;
+  const avgHoursPerDay = timeTrend.length > 0 ? Number((timeTotal / timeTrend.length).toFixed(1)) : 0;
   const openRate = stats.totalIssues > 0 ? Math.round((stats.openIssues / stats.totalIssues) * 100) : 0;
   const overdueOpenRate = stats.openIssues > 0 ? Math.round((stats.overdueOpenIssues / stats.openIssues) * 100) : 0;
   const unassignedOpenRate = stats.openIssues > 0 ? Math.round((stats.unassignedOpenIssues / stats.openIssues) * 100) : 0;
   const staleOpenRate = stats.openIssues > 0 ? Math.round((stats.staleOpenIssues30d / stats.openIssues) * 100) : 0;
   const overspentRate = stats.estimatedOpenIssues > 0 ? Math.round((stats.overspentOpenIssues / stats.estimatedOpenIssues) * 100) : 0;
+  const knownAssignees = aggregates.byAssignee
+    .map((item) => item.name)
+    .filter((item) => item && item !== "Unassigned");
+
+  function applyFilters(event?: FormEvent) {
+    event?.preventDefault();
+    const trimmedIssueId = filters.issueId.trim();
+    if (trimmedIssueId && (!/^\d+$/.test(trimmedIssueId) || Number.parseInt(trimmedIssueId, 10) <= 0)) {
+      setError("Issue ID must be a positive number.");
+      return;
+    }
+    if (filters.from && filters.to && new Date(filters.from).getTime() > new Date(filters.to).getTime()) {
+      setError("Date range is invalid: 'From' must be before or equal to 'To'.");
+      return;
+    }
+    setError(null);
+    setAppliedFilters(filters);
+  }
+
+  function resetFilters() {
+    setError(null);
+    setFilters(DEFAULT_FILTERS);
+    setAppliedFilters(DEFAULT_FILTERS);
+    setDrilldown(null);
+  }
   const recentActivity = [
     ...recent.journals.map((j) => ({
       timestamp: j.createdOnRemote,
@@ -344,9 +402,32 @@ export default function ReportsPage() {
             <p className="muted">Insights across {stats.totalIssues.toLocaleString()} issues</p>
           </div>
           <div className="hero-actions">
-            <label>
+            {loading && <span className="reports-refresh-pill" role="status">Refreshing...</span>}
+            <Link href="/" className="primary-link">Back to Dashboard</Link>
+          </div>
+        </div>
+      </header>
+
+      {error && (
+        <p className="error-banner">{error}</p>
+      )}
+
+      <section className="card reports-filter-section">
+        <div className="reports-head">
+          <div>
+            <h2>Filters</h2>
+            <p className="muted">Adjust the reporting scope, then rebuild.</p>
+          </div>
+        </div>
+        <form className="reports-filter-form" onSubmit={applyFilters}>
+          <div className="reports-filter-grid">
+            <label className="reports-filter-field">
               Time Window
-              <select value={days} onChange={(e) => setDays(Number(e.target.value))} disabled={loading}>
+              <select
+                value={filters.days}
+                onChange={(e) => setFilters((prev) => ({ ...prev, days: Number(e.target.value) }))}
+                disabled={loading}
+              >
                 <option value={7}>7 days</option>
                 <option value={14}>14 days</option>
                 <option value={30}>30 days</option>
@@ -354,11 +435,64 @@ export default function ReportsPage() {
                 <option value={90}>90 days</option>
               </select>
             </label>
-            {loading && <span className="reports-refresh-pill" role="status">Refreshing...</span>}
-            <Link href="/" className="primary-link">Back to Dashboard</Link>
+            <label className="reports-filter-field">
+              Issue ID
+              <input
+                type="number"
+                min={1}
+                placeholder="e.g. 113112"
+                value={filters.issueId}
+                onChange={(e) => setFilters((prev) => ({ ...prev, issueId: e.target.value }))}
+                disabled={loading}
+              />
+            </label>
+            <label className="reports-filter-field">
+              From
+              <input
+                type="date"
+                value={filters.from}
+                onChange={(e) => setFilters((prev) => ({ ...prev, from: e.target.value }))}
+                disabled={loading}
+              />
+            </label>
+            <label className="reports-filter-field">
+              To
+              <input
+                type="date"
+                value={filters.to}
+                onChange={(e) => setFilters((prev) => ({ ...prev, to: e.target.value }))}
+                disabled={loading}
+              />
+            </label>
+            <label className="reports-filter-field reports-filter-field-wide">
+              Assignees
+              <input
+                type="text"
+                placeholder="Comma-separated names or 'Unassigned'"
+                value={filters.assignees}
+                onChange={(e) => setFilters((prev) => ({ ...prev, assignees: e.target.value }))}
+                list="reports-assignees-list"
+                disabled={loading}
+              />
+              <datalist id="reports-assignees-list">
+                {knownAssignees.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+                <option value="Unassigned" />
+              </datalist>
+            </label>
           </div>
-        </div>
-      </header>
+          <div className="reports-filter-actions">
+            <button type="submit" className="primary-link" disabled={loading}>
+              Apply Filters
+            </button>
+            <button type="button" className="secondary-button" onClick={resetFilters} disabled={loading}>
+              Reset
+            </button>
+            {loading && <span className="reports-refresh-pill" role="status">Rebuilding report...</span>}
+          </div>
+        </form>
+      </section>
 
       <section className="card reports-shell">
         <div className="reports-head">
@@ -584,6 +718,8 @@ export default function ReportsPage() {
                 key={`${event.issueId}-${event.timestamp}-${idx}`}
                 href={`/issues/${event.issueId}`}
                 className="activity-row static"
+                target="_blank"
+                rel="noopener noreferrer"
                 onMouseEnter={() => prefetchIssueDetail(event.issueId)}
                 onFocus={() => prefetchIssueDetail(event.issueId)}
               >

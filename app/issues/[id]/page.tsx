@@ -962,12 +962,12 @@ export default function IssueDetailPage() {
           {breadcrumbItems.map((crumb, i) => (
             <span key={crumb.id} className="breadcrumb-chain">
               {crumb.isCached !== false ? (
-                <Link href={`/issues/${crumb.id}`} className="breadcrumb-item">
+                <Link href={`/issues/${crumb.id}`} className="breadcrumb-item" target="_blank" rel="noopener noreferrer">
                   {crumb.tracker && <span className="breadcrumb-tracker">{crumb.tracker}</span>}
                   #{crumb.id}: {crumb.subject}
                 </Link>
               ) : hydratedRelatedIds.has(crumb.id) ? (
-                <Link href={`/issues/${crumb.id}`} className="breadcrumb-item">
+                <Link href={`/issues/${crumb.id}`} className="breadcrumb-item" target="_blank" rel="noopener noreferrer">
                   {crumb.tracker && <span className="breadcrumb-tracker">{crumb.tracker}</span>}
                   #{crumb.id}: {crumb.subject}
                 </Link>
@@ -1437,7 +1437,7 @@ export default function IssueDetailPage() {
                     {issue.children.map((child) => (
                       <tr key={child.id}>
                         <td>
-                          <Link href={`/issues/${child.id}`} className="child-issue-link">
+                          <Link href={`/issues/${child.id}`} className="child-issue-link" target="_blank" rel="noopener noreferrer">
                             #{child.id}
                           </Link>
                         </td>
@@ -1447,7 +1447,7 @@ export default function IssueDetailPage() {
                           </span>
                         </td>
                         <td className="child-subject">
-                          <Link href={`/issues/${child.id}`}>
+                          <Link href={`/issues/${child.id}`} target="_blank" rel="noopener noreferrer">
                             {child.subject}
                           </Link>
                         </td>
