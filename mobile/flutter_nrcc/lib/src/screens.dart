@@ -30,7 +30,9 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
     if (className == null || className.trim().isEmpty) {
       return null;
     }
-    final match = RegExp(r"(?:^|\s)language-([A-Za-z0-9_+\-]+)(?:\s|$)").firstMatch(className);
+    final match = RegExp(
+      r"(?:^|\s)language-([A-Za-z0-9_+\-]+)(?:\s|$)",
+    ).firstMatch(className);
     if (match == null) {
       return null;
     }
@@ -129,61 +131,150 @@ class _PairScreenState extends State<PairScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text("Pair with NRCC")),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: <Widget>[
-            TextField(
-              controller: _baseUrl,
-              decoration: const InputDecoration(labelText: "Redmine Base URL"),
-            ),
-            TextField(
-              controller: _apiKey,
-              decoration: const InputDecoration(labelText: "Redmine API Key"),
-              obscureText: true,
-              enableSuggestions: false,
-              autocorrect: false,
-            ),
-            TextField(
-              controller: _deviceName,
-              decoration: const InputDecoration(labelText: "Device Name"),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loading
-                  ? null
-                  : () async {
-                      setState(() {
-                        _loading = true;
-                        _error = null;
-                      });
-                      try {
-                        await widget.authRepository.pair(
-                          redmineBaseUrl: _baseUrl.text.trim(),
-                          redmineApiKey: _apiKey.text.trim(),
-                          deviceName: _deviceName.text.trim(),
-                        );
-                        widget.onPaired();
-                      } catch (e) {
-                        setState(() => _error = e.toString());
-                      } finally {
-                        if (mounted) {
-                          setState(() => _loading = false);
-                        }
-                      }
-                    },
-              child: Text(_loading ? "Pairing..." : "Pair"),
-            ),
-            if (_error != null) ...<Widget>[
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: <Widget>[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[scheme.primary, scheme.primaryContainer],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: scheme.outlineVariant.withValues(alpha: 0.6),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Icon(
+                      Icons.phonelink_lock,
+                      color: scheme.onPrimary,
+                      size: 24,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Connect this phone to Redmine Dashboard",
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: scheme.onPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Use your base URL and API key from web settings.",
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onPrimary.withValues(alpha: 0.86),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(height: 12),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    children: <Widget>[
+                      TextField(
+                        controller: _baseUrl,
+                        decoration: const InputDecoration(
+                          labelText: "Redmine Base URL",
+                          prefixIcon: Icon(Icons.link),
+                        ),
+                        keyboardType: TextInputType.url,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _apiKey,
+                        decoration: const InputDecoration(
+                          labelText: "Redmine API Key",
+                          prefixIcon: Icon(Icons.key),
+                        ),
+                        obscureText: true,
+                        enableSuggestions: false,
+                        autocorrect: false,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _deviceName,
+                        decoration: const InputDecoration(
+                          labelText: "Device Name",
+                          prefixIcon: Icon(Icons.smartphone),
+                        ),
+                        textInputAction: TextInputAction.done,
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _loading
+                              ? null
+                              : () async {
+                                  setState(() {
+                                    _loading = true;
+                                    _error = null;
+                                  });
+                                  try {
+                                    await widget.authRepository.pair(
+                                      redmineBaseUrl: _baseUrl.text.trim(),
+                                      redmineApiKey: _apiKey.text.trim(),
+                                      deviceName: _deviceName.text.trim(),
+                                    );
+                                    widget.onPaired();
+                                  } catch (e) {
+                                    setState(() => _error = e.toString());
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() => _loading = false);
+                                    }
+                                  }
+                                },
+                          icon: _loading
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.login),
+                          label: Text(_loading ? "Pairing..." : "Pair Device"),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (_error != null) ...<Widget>[
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    _error!,
+                    style: TextStyle(color: theme.colorScheme.onErrorContainer),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -271,15 +362,36 @@ class _IssueListScreenState extends State<IssueListScreen> {
     super.dispose();
   }
 
+  bool _isHighPriority(String? value) {
+    final normalized = (value ?? "").toLowerCase();
+    return normalized.contains("urgent") ||
+        normalized.contains("high") ||
+        normalized.contains("critical") ||
+        normalized.contains("immediate");
+  }
+
+  bool _isDoneStatus(String value) {
+    final normalized = value.toLowerCase();
+    return normalized.contains("closed") ||
+        normalized.contains("resolved") ||
+        normalized.contains("done");
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final visibleIssues = _showFavoritesOnly
+        ? _issues.where((issue) => issue.isFavorited).toList(growable: false)
+        : _issues;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("My Issues"),
         actions: <Widget>[
           IconButton(
-            onPressed: () => setState(() => _showFavoritesOnly = !_showFavoritesOnly),
+            onPressed: () =>
+                setState(() => _showFavoritesOnly = !_showFavoritesOnly),
             icon: Icon(_showFavoritesOnly ? Icons.star : Icons.star_border),
             tooltip: _showFavoritesOnly ? "Show all" : "Show favorites",
           ),
@@ -290,187 +402,322 @@ class _IssueListScreenState extends State<IssueListScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => _load(reset: true),
-        child: Column(
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: TextField(
-                    controller: _search,
-                    decoration: const InputDecoration(
-                      labelText: "Search",
-                      isDense: true,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                ElevatedButton(
-                  onPressed: _loading ? null : () => _load(reset: true),
-                  child: const Text("Load"),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    key: ValueKey<String>("sort-$_sort"),
-                    initialValue: _sort,
-                    isDense: true,
-                    decoration: const InputDecoration(
-                      labelText: "Sort",
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    ),
-                    items: const <DropdownMenuItem<String>>[
-                      DropdownMenuItem(value: "updated_desc", child: Text("Updated ↓")),
-                      DropdownMenuItem(value: "updated_asc", child: Text("Updated ↑")),
-                      DropdownMenuItem(value: "priority", child: Text("Priority")),
-                      DropdownMenuItem(value: "due_date", child: Text("Due Date")),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() => _sort = value);
-                      _load(reset: true);
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                DropdownButtonFormField<String>(
-                  key: ValueKey<String>("mode-$_searchMode"),
-                  initialValue: _searchMode,
-                  isDense: true,
-                  decoration: const InputDecoration(
-                    labelText: "Mode",
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
-                  items: const <DropdownMenuItem<String>>[
-                    DropdownMenuItem(value: "local", child: Text("Local")),
-                    DropdownMenuItem(value: "hybrid", child: Text("Hybrid")),
-                  ],
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() => _searchMode = value);
-                    _load(reset: true);
-                  },
-                ),
-              ],
-            ),
-          ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
-          if (_loading && _issues.isEmpty) const LinearProgressIndicator(),
-          if (_issues.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  Text(
-                    "Page $_page · ${_issues.length} issues",
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  Row(
-                    children: <Widget>[
-                      TextButton.icon(
-                        onPressed: _page > 1 && !_loading ? _prevPage : null,
-                        icon: const Icon(Icons.chevron_left, size: 18),
-                        label: const Text("Prev"),
-                      ),
-                      TextButton.icon(
-                        onPressed: _hasMore && !_loading ? _nextPage : null,
-                        label: const Text("Next"),
-                        icon: const Icon(Icons.chevron_right, size: 18),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _issues.length,
-              itemBuilder: (context, index) {
-                final issue = _issues[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    title: Text(
-                      "#${issue.redmineIssueId} ${issue.subject}",
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: <Widget>[
-                          Chip(
-                            label: Text(issue.statusName),
-                            visualDensity: VisualDensity.compact,
-                            side: BorderSide(color: theme.colorScheme.outlineVariant),
-                          ),
-                          Chip(
-                            label: Text(issue.priority ?? "No priority"),
-                            visualDensity: VisualDensity.compact,
-                            side: BorderSide(color: theme.colorScheme.outlineVariant),
-                          ),
-                          if (issue.assignedToName != null)
-                            Chip(
-                              label: Text("👤 ${issue.assignedToName!}"),
-                              visualDensity: VisualDensity.compact,
-                              side: BorderSide(color: theme.colorScheme.outlineVariant),
-                            ),
-                        ],
-                      ),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () => _load(reset: true),
+          child: Column(
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
                       children: <Widget>[
-                        Icon(
-                          issue.isFavorited ? Icons.star : Icons.star_border,
-                          color: issue.isFavorited ? Colors.amber : theme.colorScheme.outline,
-                          size: 20,
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: TextField(
+                                controller: _search,
+                                decoration: const InputDecoration(
+                                  labelText: "Search issues",
+                                  prefixIcon: Icon(Icons.search),
+                                ),
+                                textInputAction: TextInputAction.search,
+                                onSubmitted: (_) => _load(reset: true),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              onPressed: _loading
+                                  ? null
+                                  : () => _load(reset: true),
+                              icon: const Icon(Icons.sync),
+                              label: const Text("Load"),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.chevron_right),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                key: ValueKey<String>("sort-$_sort"),
+                                initialValue: _sort,
+                                decoration: const InputDecoration(
+                                  labelText: "Sort",
+                                ),
+                                items: const <DropdownMenuItem<String>>[
+                                  DropdownMenuItem(
+                                    value: "updated_desc",
+                                    child: Text("Updated ↓"),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: "updated_asc",
+                                    child: Text("Updated ↑"),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: "priority",
+                                    child: Text("Priority"),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: "due_date",
+                                    child: Text("Due Date"),
+                                  ),
+                                ],
+                                onChanged: (value) {
+                                  if (value == null) return;
+                                  setState(() => _sort = value);
+                                  _load(reset: true);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                key: ValueKey<String>("mode-$_searchMode"),
+                                initialValue: _searchMode,
+                                decoration: const InputDecoration(
+                                  labelText: "Mode",
+                                ),
+                                items: const <DropdownMenuItem<String>>[
+                                  DropdownMenuItem(
+                                    value: "local",
+                                    child: Text("Local"),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: "hybrid",
+                                    child: Text("Hybrid"),
+                                  ),
+                                ],
+                                onChanged: (value) {
+                                  if (value == null) return;
+                                  setState(() => _searchMode = value);
+                                  _load(reset: true);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => IssueDetailScreen(
-                            issueId: issue.redmineIssueId,
-                            issuesRepository: widget.issuesRepository,
-                            actionsRepository: widget.actionsRepository,
-                          ),
-                        ),
-                      );
-                    },
                   ),
-                );
-              },
-            ),
+                ),
+              ),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: scheme.errorContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      _error!,
+                      style: TextStyle(color: scheme.onErrorContainer),
+                    ),
+                  ),
+                ),
+              if (_loading && _issues.isEmpty) const LinearProgressIndicator(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    Text(
+                      "Page $_page · ${visibleIssues.length} issues",
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    Row(
+                      children: <Widget>[
+                        TextButton.icon(
+                          onPressed: _page > 1 && !_loading ? _prevPage : null,
+                          icon: const Icon(Icons.chevron_left, size: 18),
+                          label: const Text("Prev"),
+                        ),
+                        TextButton.icon(
+                          onPressed: _hasMore && !_loading ? _nextPage : null,
+                          label: const Text("Next"),
+                          icon: const Icon(Icons.chevron_right, size: 18),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: visibleIssues.isEmpty
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: <Widget>[
+                          const SizedBox(height: 56),
+                          Icon(
+                            _showFavoritesOnly
+                                ? Icons.star_border
+                                : Icons.inbox_outlined,
+                            size: 34,
+                            color: scheme.outline,
+                          ),
+                          const SizedBox(height: 10),
+                          Center(
+                            child: Text(
+                              _showFavoritesOnly
+                                  ? "No favorited issues on this page."
+                                  : "No issues found.",
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : ListView.builder(
+                        itemCount: visibleIssues.length,
+                        itemBuilder: (context, index) {
+                          final issue = visibleIssues[index];
+                          final isDone = _isDoneStatus(issue.statusName);
+                          final statusBg = isDone
+                              ? scheme.tertiaryContainer
+                              : scheme.primaryContainer;
+                          final statusFg = isDone
+                              ? scheme.onTertiaryContainer
+                              : scheme.onPrimaryContainer;
+                          final priorityBg = _isHighPriority(issue.priority)
+                              ? scheme.secondaryContainer
+                              : scheme.surfaceContainerHighest;
+                          final priorityFg = _isHighPriority(issue.priority)
+                              ? scheme.onSecondaryContainer
+                              : scheme.onSurfaceVariant;
+
+                          return Card(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              leading: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: scheme.primaryContainer,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                alignment: Alignment.center,
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    "#${issue.redmineIssueId}",
+                                    style: theme.textTheme.labelMedium
+                                        ?.copyWith(
+                                          color: scheme.onPrimaryContainer,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                                ),
+                              ),
+                              title: Text(
+                                issue.subject,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    if (issue.projectName != null &&
+                                        issue.projectName!.trim().isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 6,
+                                        ),
+                                        child: Text(
+                                          issue.projectName!,
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: scheme.onSurfaceVariant,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                      ),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: <Widget>[
+                                        Chip(
+                                          label: Text(issue.statusName),
+                                          backgroundColor: statusBg,
+                                          labelStyle: TextStyle(
+                                            color: statusFg,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                        Chip(
+                                          label: Text(
+                                            issue.priority ?? "No priority",
+                                          ),
+                                          backgroundColor: priorityBg,
+                                          labelStyle: TextStyle(
+                                            color: priorityFg,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                        if (issue.assignedToName != null)
+                                          Chip(
+                                            label: Text(
+                                              "Assigned: ${issue.assignedToName!}",
+                                            ),
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  Icon(
+                                    issue.isFavorited
+                                        ? Icons.star
+                                        : Icons.star_border,
+                                    color: issue.isFavorited
+                                        ? scheme.secondary
+                                        : scheme.outline,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.chevron_right),
+                                ],
+                              ),
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => IssueDetailScreen(
+                                      issueId: issue.redmineIssueId,
+                                      issuesRepository: widget.issuesRepository,
+                                      actionsRepository:
+                                          widget.actionsRepository,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           ),
-        ],
         ),
       ),
     );
@@ -541,7 +788,10 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
 
     // Strip Redmine TOC/notextile macros that do not map to flutter_markdown.
     out = out
-        .replaceAll(RegExp(r"^\s*\{\{>?toc(?:\([^)]*\))?\}\}\s*$", multiLine: true), "")
+        .replaceAll(
+          RegExp(r"^\s*\{\{>?toc(?:\([^)]*\))?\}\}\s*$", multiLine: true),
+          "",
+        )
         .replaceAll(RegExp(r"</?notextile>", caseSensitive: false), "");
 
     // Convert Textile headings (h1. / h2.) into Markdown headings.
@@ -554,10 +804,15 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     out = out.replaceAllMapped(
       RegExp(r"\{\{collapse(?:\(([^)]*)\))?\s*\n([\s\S]*?)\n\}\}"),
       (m) {
-        final title = (m.group(1) ?? "Details").trim().isEmpty ? "Details" : (m.group(1) ?? "Details").trim();
+        final title = (m.group(1) ?? "Details").trim().isEmpty
+            ? "Details"
+            : (m.group(1) ?? "Details").trim();
         final body = (m.group(2) ?? "").trim();
         if (body.isEmpty) return "> **$title**";
-        final quoted = body.split("\n").map((line) => line.trim().isEmpty ? ">" : "> $line").join("\n");
+        final quoted = body
+            .split("\n")
+            .map((line) => line.trim().isEmpty ? ">" : "> $line")
+            .join("\n");
         return "> **$title**\n>\n$quoted";
       },
     );
@@ -576,8 +831,14 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
 
     // Convert Textile inline code and image syntax.
     out = out
-        .replaceAllMapped(RegExp(r"(^|[^\w`])@([^\n@]+?)@(?=[^\w`]|$)"), (m) => "${m.group(1)}`${m.group(2)}`")
-        .replaceAllMapped(RegExp(r"!((?:https?:\/\/|\/)[^\s!]+)!"), (m) => "![](${m.group(1)})");
+        .replaceAllMapped(
+          RegExp(r"(^|[^\w`])@([^\n@]+?)@(?=[^\w`]|$)"),
+          (m) => "${m.group(1)}`${m.group(2)}`",
+        )
+        .replaceAllMapped(
+          RegExp(r"!((?:https?:\/\/|\/)[^\s!]+)!"),
+          (m) => "![](${m.group(1)})",
+        );
 
     // Convert any remaining bare URLs to markdown links.
     out = out.replaceAllMapped(
@@ -596,21 +857,78 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     required bool expanded,
     required ValueChanged<bool> onExpandedChanged,
   }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    IconData sectionIcon(String id) {
+      switch (id) {
+        case "overview":
+          return Icons.info_outline;
+        case "description":
+          return Icons.notes;
+        case "status":
+          return Icons.sync_alt;
+        case "assign":
+          return Icons.person_add_alt_1;
+        case "time":
+          return Icons.timer_outlined;
+        case "ai":
+          return Icons.auto_awesome;
+        case "allowed":
+          return Icons.rule;
+        case "comment":
+          return Icons.chat_bubble_outline;
+        case "github":
+          return Icons.link;
+        case "attachments":
+          return Icons.attach_file;
+        case "relations":
+          return Icons.device_hub;
+        default:
+          return Icons.tune;
+      }
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: ExpansionTile(
-        key: ValueKey<String>("$sectionId:$expanded"),
-        tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-        childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-        initiallyExpanded: expanded,
-        onExpansionChanged: onExpandedChanged,
-        title: Text(
-          title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        data: theme.copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          key: ValueKey<String>("$sectionId:$expanded"),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          initiallyExpanded: expanded,
+          onExpansionChanged: onExpandedChanged,
+          iconColor: scheme.primary,
+          collapsedIconColor: scheme.onSurfaceVariant,
+          title: Row(
+            children: <Widget>[
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  sectionIcon(sectionId),
+                  size: 14,
+                  color: scheme.onPrimaryContainer,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          children: <Widget>[child],
         ),
-        children: <Widget>[
-          child,
-        ],
       ),
     );
   }
@@ -621,9 +939,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     if (uri == null) return;
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Could not open link: $href")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Could not open link: $href")));
     }
   }
 
@@ -631,22 +949,22 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     final type = (attachment.contentType ?? "").toLowerCase();
     if (type.startsWith("image/")) return true;
     final file = attachment.filename.toLowerCase();
-    return file.endsWith(".png")
-        || file.endsWith(".jpg")
-        || file.endsWith(".jpeg")
-        || file.endsWith(".gif")
-        || file.endsWith(".webp")
-        || file.endsWith(".bmp");
+    return file.endsWith(".png") ||
+        file.endsWith(".jpg") ||
+        file.endsWith(".jpeg") ||
+        file.endsWith(".gif") ||
+        file.endsWith(".webp") ||
+        file.endsWith(".bmp");
   }
 
   bool _isTextDocAttachment(IssueAttachment attachment) {
     final type = (attachment.contentType ?? "").toLowerCase();
     if (type.startsWith("text/")) return true;
-    return type == "application/json"
-        || type == "application/xml"
-        || type == "application/yaml"
-        || type == "application/x-yaml"
-        || type == "application/javascript";
+    return type == "application/json" ||
+        type == "application/xml" ||
+        type == "application/yaml" ||
+        type == "application/x-yaml" ||
+        type == "application/javascript";
   }
 
   String _attachmentUrl(IssueAttachment attachment) {
@@ -666,7 +984,8 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     final rawUrl = link.url.trim();
     if (rawUrl.isNotEmpty) {
       final parsed = Uri.tryParse(rawUrl);
-      if (parsed != null && (parsed.scheme == "http" || parsed.scheme == "https")) {
+      if (parsed != null &&
+          (parsed.scheme == "http" || parsed.scheme == "https")) {
         return parsed;
       }
     }
@@ -716,7 +1035,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Could not open GitHub link: ${uri.toString()}")),
+        SnackBar(
+          content: Text("Could not open GitHub link: ${uri.toString()}"),
+        ),
       );
     }
   }
@@ -748,7 +1069,10 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
         color: theme.colorScheme.onSurfaceVariant,
         height: 1.45,
       ),
-      blockquotePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      blockquotePadding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 8,
+      ),
       blockquoteDecoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLow,
         border: Border(
@@ -758,7 +1082,10 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
       tableHead: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
       tableBody: textTheme.bodyMedium,
       tableBorder: TableBorder.all(color: theme.colorScheme.outlineVariant),
-      tableCellsPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      tableCellsPadding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 8,
+      ),
       a: textTheme.bodyMedium?.copyWith(
         color: theme.colorScheme.primary,
         decoration: TextDecoration.underline,
@@ -791,7 +1118,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
 
   Future<void> _loadTimeEntries() async {
     try {
-      final entries = await widget.actionsRepository.listTimeEntries(redmineIssueId: widget.issueId);
+      final entries = await widget.actionsRepository.listTimeEntries(
+        redmineIssueId: widget.issueId,
+      );
       final activities = await widget.actionsRepository.listActivities();
       if (mounted) {
         setState(() {
@@ -820,7 +1149,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
 
   Future<void> _loadBreadcrumbs() async {
     try {
-      final breadcrumbs = await widget.actionsRepository.getBreadcrumbs(redmineIssueId: widget.issueId);
+      final breadcrumbs = await widget.actionsRepository.getBreadcrumbs(
+        redmineIssueId: widget.issueId,
+      );
       if (mounted) {
         setState(() => _breadcrumbs = breadcrumbs);
       }
@@ -831,36 +1162,49 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
 
   Future<void> _loadFavoriteStatus() async {
     try {
-      final favorited = await widget.actionsRepository.isFavorited(redmineIssueId: widget.issueId);
+      final favorited = await widget.actionsRepository.isFavorited(
+        redmineIssueId: widget.issueId,
+      );
       if (mounted) setState(() => _isFavorited = favorited);
     } catch (_) {}
   }
 
   Future<void> _toggleFavorite() async {
     try {
-      final favorited = await widget.actionsRepository.toggleFavorite(redmineIssueId: widget.issueId);
+      final favorited = await widget.actionsRepository.toggleFavorite(
+        redmineIssueId: widget.issueId,
+      );
       if (mounted) setState(() => _isFavorited = favorited);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to toggle favorite: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to toggle favorite: $e")),
+        );
       }
     }
   }
 
   Future<void> _loadInternalNotes() async {
     try {
-      final notes = await widget.actionsRepository.listInternalNotes(redmineIssueId: widget.issueId);
+      final notes = await widget.actionsRepository.listInternalNotes(
+        redmineIssueId: widget.issueId,
+      );
       if (mounted) setState(() => _internalNotes = notes);
     } catch (_) {}
   }
 
   Future<void> _addInternalNote(String content) async {
     try {
-      await widget.actionsRepository.createInternalNote(redmineIssueId: widget.issueId, content: content);
+      await widget.actionsRepository.createInternalNote(
+        redmineIssueId: widget.issueId,
+        content: content,
+      );
       await _loadInternalNotes();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to add note: $e")));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Failed to add note: $e")));
       }
     }
   }
@@ -891,7 +1235,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     final priorityCtrl = TextEditingController(text: _issue?.priority ?? "");
     String? dueDate = _issue?.dueDate;
     String? startDate = _issue?.startDate;
-    final estHoursCtrl = TextEditingController(text: _issue?.estimatedHours?.toString() ?? "");
+    final estHoursCtrl = TextEditingController(
+      text: _issue?.estimatedHours?.toString() ?? "",
+    );
 
     showDialog<void>(
       context: context,
@@ -902,11 +1248,21 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                TextField(controller: subjectCtrl, decoration: const InputDecoration(labelText: "Subject")),
+                TextField(
+                  controller: subjectCtrl,
+                  decoration: const InputDecoration(labelText: "Subject"),
+                ),
                 const SizedBox(height: 8),
-                TextField(controller: descCtrl, decoration: const InputDecoration(labelText: "Description"), maxLines: 3),
+                TextField(
+                  controller: descCtrl,
+                  decoration: const InputDecoration(labelText: "Description"),
+                  maxLines: 3,
+                ),
                 const SizedBox(height: 8),
-                TextField(controller: priorityCtrl, decoration: const InputDecoration(labelText: "Priority")),
+                TextField(
+                  controller: priorityCtrl,
+                  decoration: const InputDecoration(labelText: "Priority"),
+                ),
                 const SizedBox(height: 8),
                 Row(
                   children: <Widget>[
@@ -914,9 +1270,23 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                       child: TextButton.icon(
                         onPressed: () async {
                           final s = startDate;
-                          final initDate = s != null ? (DateTime.tryParse(s) ?? DateTime.now()) : DateTime.now();
-                          final d = await showDatePicker(context: ctx, initialDate: initDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
-                          if (d != null) setDialogState(() => startDate = d.toIso8601String().split("T").first);
+                          final initDate = s != null
+                              ? (DateTime.tryParse(s) ?? DateTime.now())
+                              : DateTime.now();
+                          final d = await showDatePicker(
+                            context: ctx,
+                            initialDate: initDate,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (d != null) {
+                            setDialogState(
+                              () => startDate = d
+                                  .toIso8601String()
+                                  .split("T")
+                                  .first,
+                            );
+                          }
                         },
                         icon: const Icon(Icons.calendar_today),
                         label: Text(startDate ?? "Start Date"),
@@ -926,9 +1296,23 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                       child: TextButton.icon(
                         onPressed: () async {
                           final dd = dueDate;
-                          final initDate = dd != null ? (DateTime.tryParse(dd) ?? DateTime.now()) : DateTime.now();
-                          final d = await showDatePicker(context: ctx, initialDate: initDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
-                          if (d != null) setDialogState(() => dueDate = d.toIso8601String().split("T").first);
+                          final initDate = dd != null
+                              ? (DateTime.tryParse(dd) ?? DateTime.now())
+                              : DateTime.now();
+                          final d = await showDatePicker(
+                            context: ctx,
+                            initialDate: initDate,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (d != null) {
+                            setDialogState(
+                              () => dueDate = d
+                                  .toIso8601String()
+                                  .split("T")
+                                  .first,
+                            );
+                          }
                         },
                         icon: const Icon(Icons.event),
                         label: Text(dueDate ?? "Due Date"),
@@ -936,21 +1320,38 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                     ),
                   ],
                 ),
-                TextField(controller: estHoursCtrl, decoration: const InputDecoration(labelText: "Estimated Hours"), keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+                TextField(
+                  controller: estHoursCtrl,
+                  decoration: const InputDecoration(
+                    labelText: "Estimated Hours",
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
               ],
             ),
           ),
           actions: <Widget>[
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("Cancel"),
+            ),
             ElevatedButton(
               onPressed: () {
                 _editIssue(
-                  subject: subjectCtrl.text.trim().isEmpty ? null : subjectCtrl.text.trim(),
+                  subject: subjectCtrl.text.trim().isEmpty
+                      ? null
+                      : subjectCtrl.text.trim(),
                   description: descCtrl.text.isEmpty ? null : descCtrl.text,
-                  priority: priorityCtrl.text.trim().isEmpty ? null : priorityCtrl.text.trim(),
+                  priority: priorityCtrl.text.trim().isEmpty
+                      ? null
+                      : priorityCtrl.text.trim(),
                   dueDate: dueDate,
                   startDate: startDate,
-                  estimatedHours: estHoursCtrl.text.isEmpty ? null : double.tryParse(estHoursCtrl.text),
+                  estimatedHours: estHoursCtrl.text.isEmpty
+                      ? null
+                      : double.tryParse(estHoursCtrl.text),
                 );
                 Navigator.pop(ctx);
               },
@@ -979,11 +1380,17 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
         title: const Text("Add Internal Note"),
         content: TextField(
           controller: ctrl,
-          decoration: const InputDecoration(labelText: "Note", hintText: "Private note visible only to your team"),
+          decoration: const InputDecoration(
+            labelText: "Note",
+            hintText: "Private note visible only to your team",
+          ),
           maxLines: 3,
         ),
         actions: <Widget>[
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
           ElevatedButton(
             onPressed: () {
               if (ctrl.text.trim().isNotEmpty) {
@@ -1004,7 +1411,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
       _aiError = null;
     });
     try {
-      final summary = await widget.actionsRepository.summarizeIssue(redmineIssueId: widget.issueId);
+      final summary = await widget.actionsRepository.summarizeIssue(
+        redmineIssueId: widget.issueId,
+      );
       if (mounted) setState(() => _aiSummary = summary);
     } catch (e) {
       if (mounted) setState(() => _aiError = "Summarize failed: $e");
@@ -1019,7 +1428,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
       _aiError = null;
     });
     try {
-      final category = await widget.actionsRepository.categorizeIssue(redmineIssueId: widget.issueId);
+      final category = await widget.actionsRepository.categorizeIssue(
+        redmineIssueId: widget.issueId,
+      );
       if (mounted) setState(() => _aiCategory = category);
     } catch (e) {
       if (mounted) setState(() => _aiError = "Categorize failed: $e");
@@ -1073,7 +1484,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
         redmineIssueId: widget.issueId,
         hours: hours,
         activityId: _timeActivityId!,
-        comment: _timeComment.text.trim().isEmpty ? null : _timeComment.text.trim(),
+        comment: _timeComment.text.trim().isEmpty
+            ? null
+            : _timeComment.text.trim(),
         spentOn: _timeSpentOn,
       );
       _timeHours.clear();
@@ -1081,7 +1494,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
       await _loadTimeEntries();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to log time: $e")));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Failed to log time: $e")));
       }
     } finally {
       if (mounted) setState(() => _timeLoading = false);
@@ -1090,11 +1505,15 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
 
   Future<void> _deleteTimeEntry(int entryId) async {
     try {
-      await widget.actionsRepository.deleteTimeEntry(redmineTimeEntryId: entryId);
+      await widget.actionsRepository.deleteTimeEntry(
+        redmineTimeEntryId: entryId,
+      );
       await _loadTimeEntries();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to delete: $e")));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Failed to delete: $e")));
       }
     }
   }
@@ -1155,712 +1574,995 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
           IconButton(
             onPressed: _toggleFavorite,
             icon: Icon(_isFavorited ? Icons.star : Icons.star_border),
-            tooltip: _isFavorited ? "Remove from favorites" : "Add to favorites",
+            tooltip: _isFavorited
+                ? "Remove from favorites"
+                : "Add to favorites",
           ),
         ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Text(
-                    _error!,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
-                  ),
-                )
-              : _issue == null
-                  ? const Center(child: Text("Issue not found"))
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: <Widget>[
-                              OutlinedButton.icon(
-                                onPressed: () {
-                                  setState(() {
-                                    _expandOverview = true;
-                                    _expandDescription = true;
-                                    _expandStatus = true;
-                                    _expandAssign = true;
-                                    _expandTime = true;
-                                    _expandAi = true;
-                                    _expandAllowed = true;
-                                    _expandComment = true;
-                                    _expandGithub = true;
-                                    _expandAttachments = true;
-                                    _expandRelations = true;
-                                  });
-                                },
-                                icon: const Icon(Icons.unfold_more, size: 18),
-                                label: const Text("Expand all"),
-                              ),
-                              OutlinedButton.icon(
-                                onPressed: () {
-                                  setState(() {
-                                    _expandOverview = false;
-                                    _expandDescription = false;
-                                    _expandStatus = false;
-                                    _expandAssign = false;
-                                    _expandTime = false;
-                                    _expandAi = false;
-                                    _expandAllowed = false;
-                                    _expandComment = false;
-                                    _expandGithub = false;
-                                    _expandAttachments = false;
-                                    _expandRelations = false;
-                                  });
-                                },
-                                icon: const Icon(Icons.unfold_less, size: 18),
-                                label: const Text("Collapse all"),
-                              ),
-                            ],
+          ? Center(
+              child: Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            )
+          : _issue == null
+          ? const Center(child: Text("Issue not found"))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: <Color>[
+                          theme.colorScheme.primaryContainer,
+                          theme.colorScheme.surfaceContainerHighest,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant.withValues(
+                          alpha: 0.7,
+                        ),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          "#${_issue!.redmineIssueId}",
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: theme.colorScheme.onPrimaryContainer,
+                            fontWeight: FontWeight.w700,
                           ),
-                          const SizedBox(height: 8),
-                          _sectionCard(
-                            context: context,
-                            sectionId: "overview",
-                            title: "Overview",
-                            expanded: _expandOverview,
-                            onExpandedChanged: (value) => setState(() => _expandOverview = value),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Text(_issue!.subject, style: theme.textTheme.headlineSmall),
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: <Widget>[
-                                    Chip(
-                                      label: Text(_issue!.statusName),
-                                      backgroundColor: theme.colorScheme.primaryContainer,
-                                    ),
-                                    Chip(
-                                      label: Text(_issue!.priority ?? "No priority"),
-                                      side: BorderSide(color: theme.colorScheme.outlineVariant),
-                                    ),
-                                    if (_issue!.children.isNotEmpty)
-                                      Chip(
-                                        label: Text("Children ${_issue!.children.length}"),
-                                        side: BorderSide(color: theme.colorScheme.outlineVariant),
-                                      ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _issue!.subject,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
                           ),
-                          if (_breadcrumbs.isNotEmpty)
-                            Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Text(
-                                      "Parent Issues",
-                                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Wrap(
-                                      spacing: 6,
-                                      runSpacing: 6,
-                                      children: _breadcrumbs.map((bc) {
-                                        final id = bc["id"] as int;
-                                        final subject = bc["subject"] as String;
-                                        return ActionChip(
-                                          avatar: const Icon(Icons.arrow_upward, size: 14),
-                                          label: Text("#$id $subject", maxLines: 1, overflow: TextOverflow.ellipsis),
-                                          onPressed: () {
-                                            Navigator.of(context).push(
-                                              MaterialPageRoute<void>(
-                                                builder: (_) => IssueDetailScreen(
-                                                  issueId: id,
-                                                  issuesRepository: widget.issuesRepository,
-                                                  actionsRepository: widget.actionsRepository,
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          _sectionCard(
-                            context: context,
-                            sectionId: "description",
-                            title: "Description",
-                            expanded: _expandDescription,
-                            onExpandedChanged: (value) => setState(() => _expandDescription = value),
-                            child: MarkdownBody(
-                              data: _normalizeIssueDescription(_issue!.description),
-                              selectable: true,
-                              extensionSet: md.ExtensionSet.gitHubWeb,
-                              styleSheet: _markdownStyle(context),
-                              builders: <String, MarkdownElementBuilder>{
-                                "pre": _CodeBlockBuilder(theme: theme),
-                              },
-                              onTapLink: (text, href, title) => _openMarkdownLink(href),
-                            ),
-                          ),
-                          _sectionCard(
-                            context: context,
-                            sectionId: "status",
-                            title: "Change Status",
-                            expanded: _expandStatus,
-                            onExpandedChanged: (value) => setState(() => _expandStatus = value),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Text("Current: ${_issue!.statusName}", style: theme.textTheme.bodyMedium),
-                                const SizedBox(height: 8),
-                                if (_statusError != null)
-                                  Text(_statusError!, style: TextStyle(color: theme.colorScheme.error)),
-                                Wrap(
-                                  spacing: 6,
-                                  runSpacing: 6,
-                                  children: _issue!.allowedStatuses.map((s) {
-                                    final isCurrent = s.name == _issue!.statusName;
-                                    return ChoiceChip(
-                                      label: Text(s.name),
-                                      selected: isCurrent,
-                                      onSelected: isCurrent ? null : (_) => _updateStatus(s.id),
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-                            ),
-                          ),
-                          _sectionCard(
-                            context: context,
-                            sectionId: "assign",
-                            title: "Assign",
-                            expanded: _expandAssign,
-                            onExpandedChanged: (value) => setState(() => _expandAssign = value),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Text("Current: ${_issue!.assignedToName ?? "Unassigned"}", style: theme.textTheme.bodyMedium),
-                                const SizedBox(height: 8),
-                                if (_assignError != null)
-                                  Text(_assignError!, style: TextStyle(color: theme.colorScheme.error)),
-                                if (_assignableUsers.isEmpty)
-                                  const Text("No assignable users available.")
-                                else
-                                  Wrap(
-                                    spacing: 6,
-                                    runSpacing: 6,
-                                    children: _assignableUsers.map((u) {
-                                      final isCurrent = _issue!.assignedToName == u.name;
-                                      return ChoiceChip(
-                                        label: Text(u.name),
-                                        selected: isCurrent,
-                                        onSelected: isCurrent ? null : (_) => _assignUser(u.id),
-                                      );
-                                    }).toList(),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          _sectionCard(
-                            context: context,
-                            sectionId: "time",
-                            title: "Time Tracking",
-                            expanded: _expandTime,
-                            onExpandedChanged: (value) => setState(() => _expandTime = value),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Row(
-                                  children: <Widget>[
-                                    Expanded(
-                                      flex: 2,
-                                      child: TextField(
-                                        controller: _timeHours,
-                                        decoration: const InputDecoration(labelText: "Hours", isDense: true),
-                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      flex: 3,
-                                      child: DropdownButtonFormField<int>(
-                                        key: ValueKey<int?>(_timeActivityId),
-                                        initialValue: _timeActivityId,
-                                        isDense: true,
-                                        decoration: const InputDecoration(labelText: "Activity", isDense: true),
-                                        items: _activities
-                                            .map((a) => DropdownMenuItem<int>(
-                                                  value: a["id"] as int,
-                                                  child: Text(a["name"] as String, overflow: TextOverflow.ellipsis),
-                                                ))
-                                            .toList(),
-                                        onChanged: (v) => setState(() => _timeActivityId = v),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                TextField(
-                                  controller: _timeComment,
-                                  decoration: const InputDecoration(labelText: "Comment (optional)", isDense: true),
-                                  maxLines: 1,
-                                ),
-                                const SizedBox(height: 8),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: _timeLoading ? null : _logTime,
-                                    child: _timeLoading
-                                        ? const SizedBox(
-                                            width: 16, height: 16,
-                                            child: CircularProgressIndicator(strokeWidth: 2),
-                                          )
-                                        : const Text("Log Time"),
-                                  ),
-                                ),
-                                if (_timeEntries.isNotEmpty) ...<Widget>[
-                                  const SizedBox(height: 12),
-                                  Text("Recent Entries (${_timeEntries.length})", style: theme.textTheme.labelLarge),
-                                  ..._timeEntries.take(10).map((entry) => ListTile(
-                                        contentPadding: EdgeInsets.zero,
-                                        dense: true,
-                                        title: Text(
-                                          "${entry.hours}h${entry.activityName != null ? " - ${entry.activityName}" : ""}",
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        subtitle: Text(
-                                          "${entry.comments ?? "No comment"} • ${entry.spentOn}",
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        trailing: IconButton(
-                                          icon: const Icon(Icons.delete_outline, size: 18),
-                                          onPressed: entry.redmineTimeEntryId != null
-                                              ? () => _deleteTimeEntry(entry.redmineTimeEntryId!)
-                                              : null,
-                                        ),
-                                      )),
-                                ],
-                              ],
-                            ),
-                          ),
-                          _sectionCard(
-                            context: context,
-                            sectionId: "ai",
-                            title: "AI Insights",
-                            expanded: _expandAi,
-                            onExpandedChanged: (value) => setState(() => _expandAi = value),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                if (_aiError != null)
-                                  Text(_aiError!, style: TextStyle(color: theme.colorScheme.error)),
-                                Row(
-                                  children: <Widget>[
-                                    Expanded(
-                                      child: ElevatedButton.icon(
-                                        onPressed: _aiLoading ? null : _aiSummarize,
-                                        icon: _aiLoading && _aiSummary == null
-                                            ? const SizedBox(
-                                                width: 16, height: 16,
-                                                child: CircularProgressIndicator(strokeWidth: 2),
-                                              )
-                                            : const Icon(Icons.summarize, size: 18),
-                                        label: const Text("Summarize"),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: OutlinedButton.icon(
-                                        onPressed: _aiLoading ? null : _aiCategorize,
-                                        icon: const Icon(Icons.label, size: 18),
-                                        label: const Text("Categorize"),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (_aiSummary != null) ...<Widget>[
-                                  const SizedBox(height: 12),
-                                  Text("Summary", style: theme.textTheme.labelLarge),
-                                  const SizedBox(height: 4),
-                                  Text(_aiSummary!.summary, style: theme.textTheme.bodyMedium),
-                                  if (_aiSummary!.keyPoints.isNotEmpty) ...<Widget>[
-                                    const SizedBox(height: 8),
-                                    Text("Key Points", style: theme.textTheme.labelLarge),
-                                    ..._aiSummary!.keyPoints.map((p) => Padding(
-                                          padding: const EdgeInsets.only(left: 12, top: 2),
-                                          child: Text("• $p", style: theme.textTheme.bodySmall),
-                                        )),
-                                  ],
-                                  if (_aiSummary!.actionItems.isNotEmpty) ...<Widget>[
-                                    const SizedBox(height: 8),
-                                    Text("Action Items", style: theme.textTheme.labelLarge),
-                                    ..._aiSummary!.actionItems.map((a) => Padding(
-                                          padding: const EdgeInsets.only(left: 12, top: 2),
-                                          child: Text("□ $a", style: theme.textTheme.bodySmall),
-                                        )),
-                                  ],
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    "Confidence: ${(_aiSummary!.confidence * 100).toInt()}% • ${_aiSummary!.modelUsed}",
-                                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                                  ),
-                                ],
-                                if (_aiCategory != null) ...<Widget>[
-                                  const SizedBox(height: 12),
-                                  if (_aiCategory!.suggestedPriority != null)
-                                    Text(
-                                      "Suggested Priority: ${_aiCategory!.suggestedPriority!["name"]}",
-                                      style: theme.textTheme.bodyMedium,
-                                    ),
-                                  if (_aiCategory!.suggestedCategory != null)
-                                    Text(
-                                      "Category: ${_aiCategory!.suggestedCategory!["name"]}",
-                                      style: theme.textTheme.bodyMedium,
-                                    ),
-                                  if (_aiCategory!.reasoning.isNotEmpty) ...<Widget>[
-                                    const SizedBox(height: 4),
-                                    Text(_aiCategory!.reasoning, style: theme.textTheme.bodySmall),
-                                  ],
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _aiCategory!.modelUsed,
-                                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: ExpansionTile(
-                              tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                              childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                              onExpansionChanged: (value) {
-                                if (value && _internalNotes.isEmpty) _loadInternalNotes();
-                              },
-                              title: Text("Internal Notes", style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                              children: <Widget>[
-                                ElevatedButton.icon(
-                                  onPressed: () => _showAddNoteDialog(context),
-                                  icon: const Icon(Icons.add_comment, size: 18),
-                                  label: const Text("Add Note"),
-                                ),
-                                if (_internalNotes.isNotEmpty) ...<Widget>[
-                                  const SizedBox(height: 8),
-                                  ..._internalNotes.map((note) => Padding(
-                                        padding: const EdgeInsets.only(bottom: 8),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: <Widget>[
-                                            Row(
-                                              children: <Widget>[
-                                                Text(note.authorName, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold)),
-                                                const SizedBox(width: 8),
-                                                Text(_formatRelative(note.createdAt), style: theme.textTheme.labelSmall),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(note.content, style: theme.textTheme.bodySmall),
-                                          ],
-                                        ),
-                                      )),
-                                ],
-                              ],
-                            ),
-                          ),
-                          _sectionCard(
-                            context: context,
-                            sectionId: "allowed",
-                            title: "Allowed Statuses",
-                            expanded: _expandAllowed,
-                            onExpandedChanged: (value) => setState(() => _expandAllowed = value),
-                            child: _issue!.allowedStatuses.isEmpty
-                                ? const Text("No transition data from server.")
-                                : Wrap(
-                                    spacing: 6,
-                                    runSpacing: 6,
-                                    children: _issue!.allowedStatuses
-                                        .map((s) => Chip(
-                                              label: Text(s.name),
-                                              visualDensity: VisualDensity.compact,
-                                              side: BorderSide(color: theme.colorScheme.outlineVariant),
-                                            ))
-                                        .toList(),
-                                  ),
-                          ),
-                          _sectionCard(
-                            context: context,
-                            sectionId: "comment",
-                            title: "Add Comment",
-                            expanded: _expandComment,
-                            onExpandedChanged: (value) => setState(() => _expandComment = value),
-                            child: Column(
-                              children: <Widget>[
-                                TextField(
-                                  controller: _comment,
-                                  decoration: const InputDecoration(labelText: "Comment"),
-                                  minLines: 2,
-                                  maxLines: 4,
-                                ),
-                                const SizedBox(height: 8),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: _postComment,
-                                    child: const Text("Post Comment"),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          _sectionCard(
-                            context: context,
-                            sectionId: "github",
-                            title: "GitHub Links",
-                            expanded: _expandGithub,
-                            onExpandedChanged: (value) => setState(() => _expandGithub = value),
-                            child: Column(
-                              children: <Widget>[
-                                TextField(
-                                  controller: _repo,
-                                  decoration: const InputDecoration(labelText: "Repository (owner/repo)"),
-                                ),
-                                TextField(
-                                  controller: _ghIssue,
-                                  decoration: const InputDecoration(labelText: "GitHub Issue #"),
-                                  keyboardType: TextInputType.number,
-                                ),
-                                const SizedBox(height: 8),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: _addGithubLink,
-                                    child: const Text("Add GitHub Link"),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                if (_issue!.githubLinks.isEmpty)
-                                  const Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text("No GitHub links."),
-                                  )
-                                else
-                                  ..._issue!.githubLinks.map(
-                                    (link) => ListTile(
-                                      contentPadding: EdgeInsets.zero,
-                                      onTap: () => _openGithubLink(link),
-                                      leading: const Icon(Icons.open_in_new),
-                                      title: Text(
-                                        _githubLinkDisplayTitle(link),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      subtitle: Text(
-                                        link.url.trim().isNotEmpty ? link.url : link.repositoryFullName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      trailing: IconButton(
-                                        icon: const Icon(Icons.delete_outline),
-                                        onPressed: () async {
-                                          await widget.actionsRepository.removeGithubLink(
-                                            redmineIssueId: widget.issueId,
-                                            linkId: link.id,
-                                          );
-                                          await _load();
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          _sectionCard(
-                            context: context,
-                            sectionId: "attachments",
-                            title: "Attachments",
-                            expanded: _expandAttachments,
-                            onExpandedChanged: (value) => setState(() => _expandAttachments = value),
-                            child: _issue!.attachments.isEmpty
-                                ? const Text("No attachments.")
-                                : Column(
-                                    children: _issue!.attachments
-                                        .map(
-                                          (attachment) => ListTile(
-                                            contentPadding: EdgeInsets.zero,
-                                            title: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: <Widget>[
-                                                Row(
-                                                  children: <Widget>[
-                                                    const Icon(Icons.attach_file),
-                                                    const SizedBox(width: 6),
-                                                    Expanded(
-                                                      child: Text(
-                                                        attachment.filename,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                const SizedBox(height: 6),
-                                                Text(
-                                                  "${(attachment.filesize / 1024).toStringAsFixed(1)} KB"
-                                                  "${attachment.author != null ? " • ${attachment.author}" : ""}",
-                                                ),
-                                                if (_isImageAttachment(attachment)) ...<Widget>[
-                                                  const SizedBox(height: 8),
-                                                  ClipRRect(
-                                                    borderRadius: BorderRadius.circular(8),
-                                                    child: Image.network(
-                                                      _attachmentUrl(attachment),
-                                                      headers: _attachmentHeaders,
-                                                      height: 180,
-                                                      width: double.infinity,
-                                                      fit: BoxFit.cover,
-                                                      errorBuilder: (context, error, stackTrace) {
-                                                        return Container(
-                                                          height: 80,
-                                                          alignment: Alignment.center,
-                                                          color: theme.colorScheme.surfaceContainerHighest,
-                                                          child: const Text("Image preview unavailable"),
-                                                        );
-                                                      },
-                                                    ),
-                                                  ),
-                                                ],
-                                                if (_isTextDocAttachment(attachment)) ...<Widget>[
-                                                  const SizedBox(height: 8),
-                                                  FutureBuilder<String?>(
-                                                    future: widget.actionsRepository.attachmentTextPreview(
-                                                      redmineIssueId: widget.issueId,
-                                                      redmineAttachmentId: attachment.redmineAttachmentId,
-                                                      maxChars: 420,
-                                                    ),
-                                                    builder: (context, snapshot) {
-                                                      if (snapshot.connectionState == ConnectionState.waiting) {
-                                                        return const SizedBox(
-                                                          height: 28,
-                                                          child: Align(
-                                                            alignment: Alignment.centerLeft,
-                                                            child: Text("Loading text preview..."),
-                                                          ),
-                                                        );
-                                                      }
-                                                      final preview = snapshot.data?.trim();
-                                                      if (preview == null || preview.isEmpty) {
-                                                        return const Text("Text preview unavailable");
-                                                      }
-                                                      return Container(
-                                                        width: double.infinity,
-                                                        padding: const EdgeInsets.all(10),
-                                                        decoration: BoxDecoration(
-                                                          color: theme.colorScheme.surfaceContainerHighest,
-                                                          borderRadius: BorderRadius.circular(8),
-                                                          border: Border.all(color: theme.colorScheme.outlineVariant),
-                                                        ),
-                                                        child: Text(
-                                                          preview,
-                                                          maxLines: 7,
-                                                          overflow: TextOverflow.ellipsis,
-                                                          style: theme.textTheme.bodySmall?.copyWith(
-                                                            fontFamily: "monospace",
-                                                            height: 1.3,
-                                                          ),
-                                                        ),
-                                                      );
-                                                    },
-                                                  ),
-                                                ],
-                                              ],
-                                            ),
-                                          ),
-                                        )
-                                        .toList(),
-                                  ),
-                          ),
-                          _sectionCard(
-                            context: context,
-                            sectionId: "relations",
-                            title: "Relations",
-                            expanded: _expandRelations,
-                            onExpandedChanged: (value) => setState(() => _expandRelations = value),
-                            child: Column(
-                              children: <Widget>[
-                                TextField(
-                                  controller: _relationIssue,
-                                  decoration: const InputDecoration(labelText: "Related issue #"),
-                                  keyboardType: TextInputType.number,
-                                ),
-                                const SizedBox(height: 8),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: DropdownButton<String>(
-                                    value: _relationType,
-                                    items: const <DropdownMenuItem<String>>[
-                                      DropdownMenuItem<String>(value: "relates", child: Text("relates")),
-                                      DropdownMenuItem<String>(value: "duplicated", child: Text("duplicated")),
-                                      DropdownMenuItem<String>(value: "blocks", child: Text("blocks")),
-                                      DropdownMenuItem<String>(value: "blocked", child: Text("blocked")),
-                                      DropdownMenuItem<String>(value: "precedes", child: Text("precedes")),
-                                      DropdownMenuItem<String>(value: "follows", child: Text("follows")),
-                                      DropdownMenuItem<String>(value: "duplicates", child: Text("duplicates")),
-                                      DropdownMenuItem<String>(value: "copied_to", child: Text("copied_to")),
-                                      DropdownMenuItem<String>(value: "copied_from", child: Text("copied_from")),
-                                    ],
-                                    onChanged: (value) {
-                                      if (value == null) return;
-                                      setState(() => _relationType = value);
-                                    },
-                                  ),
-                                ),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: _addRelation,
-                                    child: const Text("Add Relation"),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                if (_issue!.relations.isEmpty)
-                                  const Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text("No relations."),
-                                  )
-                                else
-                                  ..._issue!.relations.map(
-                                    (relation) => ListTile(
-                                      contentPadding: EdgeInsets.zero,
-                                      title: Text("${relation.relationType} #${relation.targetIssueId}"),
-                                      subtitle: relation.delay == null ? null : Text("Delay: ${relation.delay}"),
-                                      trailing: IconButton(
-                                        icon: const Icon(Icons.delete_outline),
-                                        onPressed: () async {
-                                          await widget.actionsRepository.removeRelation(
-                                            redmineIssueId: widget.issueId,
-                                            relationId: relation.redmineRelationId,
-                                          );
-                                          await _load();
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                              ],
+                        ),
+                        if (_issue!.projectName != null &&
+                            _issue!.projectName!.trim().isNotEmpty) ...<Widget>[
+                          const SizedBox(height: 6),
+                          Text(
+                            _issue!.projectName!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
+                      ],
+                    ),
+                  ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: <Widget>[
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _expandOverview = true;
+                            _expandDescription = true;
+                            _expandStatus = true;
+                            _expandAssign = true;
+                            _expandTime = true;
+                            _expandAi = true;
+                            _expandAllowed = true;
+                            _expandComment = true;
+                            _expandGithub = true;
+                            _expandAttachments = true;
+                            _expandRelations = true;
+                          });
+                        },
+                        icon: const Icon(Icons.unfold_more, size: 18),
+                        label: const Text("Expand all"),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _expandOverview = false;
+                            _expandDescription = false;
+                            _expandStatus = false;
+                            _expandAssign = false;
+                            _expandTime = false;
+                            _expandAi = false;
+                            _expandAllowed = false;
+                            _expandComment = false;
+                            _expandGithub = false;
+                            _expandAttachments = false;
+                            _expandRelations = false;
+                          });
+                        },
+                        icon: const Icon(Icons.unfold_less, size: 18),
+                        label: const Text("Collapse all"),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _sectionCard(
+                    context: context,
+                    sectionId: "overview",
+                    title: "Overview",
+                    expanded: _expandOverview,
+                    onExpandedChanged: (value) =>
+                        setState(() => _expandOverview = value),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: <Widget>[
+                            Chip(
+                              label: Text(_issue!.statusName),
+                              backgroundColor:
+                                  theme.colorScheme.primaryContainer,
+                            ),
+                            Chip(
+                              label: Text(_issue!.priority ?? "No priority"),
+                              side: BorderSide(
+                                color: theme.colorScheme.outlineVariant,
+                              ),
+                            ),
+                            if (_issue!.children.isNotEmpty)
+                              Chip(
+                                label: Text(
+                                  "Children ${_issue!.children.length}",
+                                ),
+                                side: BorderSide(
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                              ),
+                            if (_issue!.dueDate != null)
+                              Chip(
+                                label: Text("Due ${_issue!.dueDate!}"),
+                                side: BorderSide(
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_breadcrumbs.isNotEmpty)
+                    Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              "Parent Issues",
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: _breadcrumbs.map((bc) {
+                                final id = bc["id"] as int;
+                                final subject = bc["subject"] as String;
+                                return ActionChip(
+                                  avatar: const Icon(
+                                    Icons.arrow_upward,
+                                    size: 14,
+                                  ),
+                                  label: Text(
+                                    "#$id $subject",
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => IssueDetailScreen(
+                                          issueId: id,
+                                          issuesRepository:
+                                              widget.issuesRepository,
+                                          actionsRepository:
+                                              widget.actionsRepository,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
+                  _sectionCard(
+                    context: context,
+                    sectionId: "description",
+                    title: "Description",
+                    expanded: _expandDescription,
+                    onExpandedChanged: (value) =>
+                        setState(() => _expandDescription = value),
+                    child: MarkdownBody(
+                      data: _normalizeIssueDescription(_issue!.description),
+                      selectable: true,
+                      extensionSet: md.ExtensionSet.gitHubWeb,
+                      styleSheet: _markdownStyle(context),
+                      builders: <String, MarkdownElementBuilder>{
+                        "pre": _CodeBlockBuilder(theme: theme),
+                      },
+                      onTapLink: (text, href, title) => _openMarkdownLink(href),
+                    ),
+                  ),
+                  _sectionCard(
+                    context: context,
+                    sectionId: "status",
+                    title: "Change Status",
+                    expanded: _expandStatus,
+                    onExpandedChanged: (value) =>
+                        setState(() => _expandStatus = value),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          "Current: ${_issue!.statusName}",
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        if (_statusError != null)
+                          Text(
+                            _statusError!,
+                            style: TextStyle(color: theme.colorScheme.error),
+                          ),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: _issue!.allowedStatuses.map((s) {
+                            final isCurrent = s.name == _issue!.statusName;
+                            return ChoiceChip(
+                              label: Text(s.name),
+                              selected: isCurrent,
+                              onSelected: isCurrent
+                                  ? null
+                                  : (_) => _updateStatus(s.id),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _sectionCard(
+                    context: context,
+                    sectionId: "assign",
+                    title: "Assign",
+                    expanded: _expandAssign,
+                    onExpandedChanged: (value) =>
+                        setState(() => _expandAssign = value),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          "Current: ${_issue!.assignedToName ?? "Unassigned"}",
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        if (_assignError != null)
+                          Text(
+                            _assignError!,
+                            style: TextStyle(color: theme.colorScheme.error),
+                          ),
+                        if (_assignableUsers.isEmpty)
+                          const Text("No assignable users available.")
+                        else
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: _assignableUsers.map((u) {
+                              final isCurrent =
+                                  _issue!.assignedToName == u.name;
+                              return ChoiceChip(
+                                label: Text(u.name),
+                                selected: isCurrent,
+                                onSelected: isCurrent
+                                    ? null
+                                    : (_) => _assignUser(u.id),
+                              );
+                            }).toList(),
+                          ),
+                      ],
+                    ),
+                  ),
+                  _sectionCard(
+                    context: context,
+                    sectionId: "time",
+                    title: "Time Tracking",
+                    expanded: _expandTime,
+                    onExpandedChanged: (value) =>
+                        setState(() => _expandTime = value),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              flex: 2,
+                              child: TextField(
+                                controller: _timeHours,
+                                decoration: const InputDecoration(
+                                  labelText: "Hours",
+                                  isDense: true,
+                                ),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 3,
+                              child: DropdownButtonFormField<int>(
+                                key: ValueKey<int?>(_timeActivityId),
+                                initialValue: _timeActivityId,
+                                isDense: true,
+                                decoration: const InputDecoration(
+                                  labelText: "Activity",
+                                  isDense: true,
+                                ),
+                                items: _activities
+                                    .map(
+                                      (a) => DropdownMenuItem<int>(
+                                        value: a["id"] as int,
+                                        child: Text(
+                                          a["name"] as String,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (v) =>
+                                    setState(() => _timeActivityId = v),
+                              ),
+                            ),
+                          ],
+                        ),
+                        TextField(
+                          controller: _timeComment,
+                          decoration: const InputDecoration(
+                            labelText: "Comment (optional)",
+                            isDense: true,
+                          ),
+                          maxLines: 1,
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _timeLoading ? null : _logTime,
+                            child: _timeLoading
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text("Log Time"),
+                          ),
+                        ),
+                        if (_timeEntries.isNotEmpty) ...<Widget>[
+                          const SizedBox(height: 12),
+                          Text(
+                            "Recent Entries (${_timeEntries.length})",
+                            style: theme.textTheme.labelLarge,
+                          ),
+                          ..._timeEntries
+                              .take(10)
+                              .map(
+                                (entry) => ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  dense: true,
+                                  title: Text(
+                                    "${entry.hours}h${entry.activityName != null ? " - ${entry.activityName}" : ""}",
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  subtitle: Text(
+                                    "${entry.comments ?? "No comment"} • ${entry.spentOn}",
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  trailing: IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      size: 18,
+                                    ),
+                                    onPressed: entry.redmineTimeEntryId != null
+                                        ? () => _deleteTimeEntry(
+                                            entry.redmineTimeEntryId!,
+                                          )
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  _sectionCard(
+                    context: context,
+                    sectionId: "ai",
+                    title: "AI Insights",
+                    expanded: _expandAi,
+                    onExpandedChanged: (value) =>
+                        setState(() => _expandAi = value),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        if (_aiError != null)
+                          Text(
+                            _aiError!,
+                            style: TextStyle(color: theme.colorScheme.error),
+                          ),
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _aiLoading ? null : _aiSummarize,
+                                icon: _aiLoading && _aiSummary == null
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.summarize, size: 18),
+                                label: const Text("Summarize"),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _aiLoading ? null : _aiCategorize,
+                                icon: const Icon(Icons.label, size: 18),
+                                label: const Text("Categorize"),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_aiSummary != null) ...<Widget>[
+                          const SizedBox(height: 12),
+                          Text("Summary", style: theme.textTheme.labelLarge),
+                          const SizedBox(height: 4),
+                          Text(
+                            _aiSummary!.summary,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          if (_aiSummary!.keyPoints.isNotEmpty) ...<Widget>[
+                            const SizedBox(height: 8),
+                            Text(
+                              "Key Points",
+                              style: theme.textTheme.labelLarge,
+                            ),
+                            ..._aiSummary!.keyPoints.map(
+                              (p) => Padding(
+                                padding: const EdgeInsets.only(
+                                  left: 12,
+                                  top: 2,
+                                ),
+                                child: Text(
+                                  "• $p",
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              ),
+                            ),
+                          ],
+                          if (_aiSummary!.actionItems.isNotEmpty) ...<Widget>[
+                            const SizedBox(height: 8),
+                            Text(
+                              "Action Items",
+                              style: theme.textTheme.labelLarge,
+                            ),
+                            ..._aiSummary!.actionItems.map(
+                              (a) => Padding(
+                                padding: const EdgeInsets.only(
+                                  left: 12,
+                                  top: 2,
+                                ),
+                                child: Text(
+                                  "□ $a",
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 4),
+                          Text(
+                            "Confidence: ${(_aiSummary!.confidence * 100).toInt()}% • ${_aiSummary!.modelUsed}",
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                        if (_aiCategory != null) ...<Widget>[
+                          const SizedBox(height: 12),
+                          if (_aiCategory!.suggestedPriority != null)
+                            Text(
+                              "Suggested Priority: ${_aiCategory!.suggestedPriority!["name"]}",
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          if (_aiCategory!.suggestedCategory != null)
+                            Text(
+                              "Category: ${_aiCategory!.suggestedCategory!["name"]}",
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          if (_aiCategory!.reasoning.isNotEmpty) ...<Widget>[
+                            const SizedBox(height: 4),
+                            Text(
+                              _aiCategory!.reasoning,
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ],
+                          const SizedBox(height: 4),
+                          Text(
+                            _aiCategory!.modelUsed,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ExpansionTile(
+                      tilePadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 2,
+                      ),
+                      childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      onExpansionChanged: (value) {
+                        if (value && _internalNotes.isEmpty) {
+                          _loadInternalNotes();
+                        }
+                      },
+                      title: Text(
+                        "Internal Notes",
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      children: <Widget>[
+                        ElevatedButton.icon(
+                          onPressed: () => _showAddNoteDialog(context),
+                          icon: const Icon(Icons.add_comment, size: 18),
+                          label: const Text("Add Note"),
+                        ),
+                        if (_internalNotes.isNotEmpty) ...<Widget>[
+                          const SizedBox(height: 8),
+                          ..._internalNotes.map(
+                            (note) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Row(
+                                    children: <Widget>[
+                                      Text(
+                                        note.authorName,
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        _formatRelative(note.createdAt),
+                                        style: theme.textTheme.labelSmall,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    note.content,
+                                    style: theme.textTheme.bodySmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  _sectionCard(
+                    context: context,
+                    sectionId: "allowed",
+                    title: "Allowed Statuses",
+                    expanded: _expandAllowed,
+                    onExpandedChanged: (value) =>
+                        setState(() => _expandAllowed = value),
+                    child: _issue!.allowedStatuses.isEmpty
+                        ? const Text("No transition data from server.")
+                        : Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: _issue!.allowedStatuses
+                                .map(
+                                  (s) => Chip(
+                                    label: Text(s.name),
+                                    visualDensity: VisualDensity.compact,
+                                    side: BorderSide(
+                                      color: theme.colorScheme.outlineVariant,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                  ),
+                  _sectionCard(
+                    context: context,
+                    sectionId: "comment",
+                    title: "Add Comment",
+                    expanded: _expandComment,
+                    onExpandedChanged: (value) =>
+                        setState(() => _expandComment = value),
+                    child: Column(
+                      children: <Widget>[
+                        TextField(
+                          controller: _comment,
+                          decoration: const InputDecoration(
+                            labelText: "Comment",
+                          ),
+                          minLines: 2,
+                          maxLines: 4,
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _postComment,
+                            child: const Text("Post Comment"),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _sectionCard(
+                    context: context,
+                    sectionId: "github",
+                    title: "GitHub Links",
+                    expanded: _expandGithub,
+                    onExpandedChanged: (value) =>
+                        setState(() => _expandGithub = value),
+                    child: Column(
+                      children: <Widget>[
+                        TextField(
+                          controller: _repo,
+                          decoration: const InputDecoration(
+                            labelText: "Repository (owner/repo)",
+                          ),
+                        ),
+                        TextField(
+                          controller: _ghIssue,
+                          decoration: const InputDecoration(
+                            labelText: "GitHub Issue #",
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _addGithubLink,
+                            child: const Text("Add GitHub Link"),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (_issue!.githubLinks.isEmpty)
+                          const Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text("No GitHub links."),
+                          )
+                        else
+                          ..._issue!.githubLinks.map(
+                            (link) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              onTap: () => _openGithubLink(link),
+                              leading: const Icon(Icons.open_in_new),
+                              title: Text(
+                                _githubLinkDisplayTitle(link),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                link.url.trim().isNotEmpty
+                                    ? link.url
+                                    : link.repositoryFullName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                onPressed: () async {
+                                  await widget.actionsRepository
+                                      .removeGithubLink(
+                                        redmineIssueId: widget.issueId,
+                                        linkId: link.id,
+                                      );
+                                  await _load();
+                                },
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  _sectionCard(
+                    context: context,
+                    sectionId: "attachments",
+                    title: "Attachments",
+                    expanded: _expandAttachments,
+                    onExpandedChanged: (value) =>
+                        setState(() => _expandAttachments = value),
+                    child: _issue!.attachments.isEmpty
+                        ? const Text("No attachments.")
+                        : Column(
+                            children: _issue!.attachments
+                                .map(
+                                  (attachment) => ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    title: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        Row(
+                                          children: <Widget>[
+                                            const Icon(Icons.attach_file),
+                                            const SizedBox(width: 6),
+                                            Expanded(
+                                              child: Text(
+                                                attachment.filename,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          "${(attachment.filesize / 1024).toStringAsFixed(1)} KB"
+                                          "${attachment.author != null ? " • ${attachment.author}" : ""}",
+                                        ),
+                                        if (_isImageAttachment(
+                                          attachment,
+                                        )) ...<Widget>[
+                                          const SizedBox(height: 8),
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            child: Image.network(
+                                              _attachmentUrl(attachment),
+                                              headers: _attachmentHeaders,
+                                              height: 180,
+                                              width: double.infinity,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                    return Container(
+                                                      height: 80,
+                                                      alignment:
+                                                          Alignment.center,
+                                                      color: theme
+                                                          .colorScheme
+                                                          .surfaceContainerHighest,
+                                                      child: const Text(
+                                                        "Image preview unavailable",
+                                                      ),
+                                                    );
+                                                  },
+                                            ),
+                                          ),
+                                        ],
+                                        if (_isTextDocAttachment(
+                                          attachment,
+                                        )) ...<Widget>[
+                                          const SizedBox(height: 8),
+                                          FutureBuilder<String?>(
+                                            future: widget.actionsRepository
+                                                .attachmentTextPreview(
+                                                  redmineIssueId:
+                                                      widget.issueId,
+                                                  redmineAttachmentId:
+                                                      attachment
+                                                          .redmineAttachmentId,
+                                                  maxChars: 420,
+                                                ),
+                                            builder: (context, snapshot) {
+                                              if (snapshot.connectionState ==
+                                                  ConnectionState.waiting) {
+                                                return const SizedBox(
+                                                  height: 28,
+                                                  child: Align(
+                                                    alignment:
+                                                        Alignment.centerLeft,
+                                                    child: Text(
+                                                      "Loading text preview...",
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                              final preview = snapshot.data
+                                                  ?.trim();
+                                              if (preview == null ||
+                                                  preview.isEmpty) {
+                                                return const Text(
+                                                  "Text preview unavailable",
+                                                );
+                                              }
+                                              return Container(
+                                                width: double.infinity,
+                                                padding: const EdgeInsets.all(
+                                                  10,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: theme
+                                                      .colorScheme
+                                                      .surfaceContainerHighest,
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: theme
+                                                        .colorScheme
+                                                        .outlineVariant,
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  preview,
+                                                  maxLines: 7,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: theme
+                                                      .textTheme
+                                                      .bodySmall
+                                                      ?.copyWith(
+                                                        fontFamily: "monospace",
+                                                        height: 1.3,
+                                                      ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                  ),
+                  _sectionCard(
+                    context: context,
+                    sectionId: "relations",
+                    title: "Relations",
+                    expanded: _expandRelations,
+                    onExpandedChanged: (value) =>
+                        setState(() => _expandRelations = value),
+                    child: Column(
+                      children: <Widget>[
+                        TextField(
+                          controller: _relationIssue,
+                          decoration: const InputDecoration(
+                            labelText: "Related issue #",
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: DropdownButton<String>(
+                            value: _relationType,
+                            items: const <DropdownMenuItem<String>>[
+                              DropdownMenuItem<String>(
+                                value: "relates",
+                                child: Text("relates"),
+                              ),
+                              DropdownMenuItem<String>(
+                                value: "duplicated",
+                                child: Text("duplicated"),
+                              ),
+                              DropdownMenuItem<String>(
+                                value: "blocks",
+                                child: Text("blocks"),
+                              ),
+                              DropdownMenuItem<String>(
+                                value: "blocked",
+                                child: Text("blocked"),
+                              ),
+                              DropdownMenuItem<String>(
+                                value: "precedes",
+                                child: Text("precedes"),
+                              ),
+                              DropdownMenuItem<String>(
+                                value: "follows",
+                                child: Text("follows"),
+                              ),
+                              DropdownMenuItem<String>(
+                                value: "duplicates",
+                                child: Text("duplicates"),
+                              ),
+                              DropdownMenuItem<String>(
+                                value: "copied_to",
+                                child: Text("copied_to"),
+                              ),
+                              DropdownMenuItem<String>(
+                                value: "copied_from",
+                                child: Text("copied_from"),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value == null) return;
+                              setState(() => _relationType = value);
+                            },
+                          ),
+                        ),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _addRelation,
+                            child: const Text("Add Relation"),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (_issue!.relations.isEmpty)
+                          const Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text("No relations."),
+                          )
+                        else
+                          ..._issue!.relations.map(
+                            (relation) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                "${relation.relationType} #${relation.targetIssueId}",
+                              ),
+                              subtitle: relation.delay == null
+                                  ? null
+                                  : Text("Delay: ${relation.delay}"),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                onPressed: () async {
+                                  await widget.actionsRepository.removeRelation(
+                                    redmineIssueId: widget.issueId,
+                                    relationId: relation.redmineRelationId,
+                                  );
+                                  await _load();
+                                },
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }
