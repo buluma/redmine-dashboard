@@ -398,6 +398,7 @@ export default function Home() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const pageSize = 20;
+  const fetchPageSize = 100;
   const [statuses, setStatuses] = useState<StatusCatalog[]>([]);
   const [priorities, setPriorities] = useState<string[]>([]);
   const [searchSource, setSearchSource] = useState("local_cache");
@@ -713,7 +714,7 @@ export default function Home() {
 
   async function loadIssues() {
     if (!user) return;
-    const res = await fetch(`/api/issues?${queryString}&page=${page}&pageSize=${pageSize}`, { cache: "no-store" });
+    const res = await fetch(`/api/issues?${queryString}&pageSize=${fetchPageSize}`, { cache: "no-store" });
     if (!res.ok) {
       const data = await res.json();
       throw new Error(data.error ?? "Failed to load issues");
@@ -725,6 +726,7 @@ export default function Home() {
     setStatuses(data.filters?.statuses ?? []);
     setPriorities(uniqueStrings(data.filters?.priorities ?? []));
     setSearchSource(data.source ?? "local_cache");
+    setPage(1); // Reset to page 1 on fresh data
   }
 
   async function loadActivities() {
@@ -795,7 +797,7 @@ export default function Home() {
     return () => clearInterval(id);
     // refreshAll/loadActivities intentionally depend on current query + user snapshot.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryString, user, page]);
+  }, [queryString, user]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1887,7 +1889,13 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(showFavoritesOnly ? issues.filter(i => favoriteIssueIds.includes(i.redmineIssueId)) : issues).map((issue) => {
+                  {(() => {
+                    const filtered = showFavoritesOnly
+                      ? issues.filter(i => favoriteIssueIds.includes(i.redmineIssueId))
+                      : issues;
+                    const start = (page - 1) * pageSize;
+                    const paged = filtered.slice(start, start + pageSize);
+                    return paged.map((issue) => {
                     const urgency = issueUrgency(issue);
                     const allowedStatusIds = allowedStatusIdsByIssue[issue.redmineIssueId];
                     const selectableStatuses =
@@ -1962,18 +1970,27 @@ export default function Home() {
                         <td>{new Date(issue.updatedOnRemote).toLocaleString()}</td>
                       </tr>
                     );
-                  })}
+                  });
+                })()}
                 </tbody>
               </table>
 
               {/* Pagination Controls */}
-              {total > pageSize && (
+              {(() => {
+                const filtered = showFavoritesOnly
+                  ? issues.filter(i => favoriteIssueIds.includes(i.redmineIssueId))
+                  : issues;
+                const filteredTotal = filtered.length;
+                const maxPage = Math.max(1, Math.ceil(filteredTotal / pageSize));
+                const safePage = Math.min(page, maxPage);
+                if (filteredTotal <= pageSize) return null;
+                return (
                 <div className="pagination-bar">
                   <button
                     type="button"
                     className="pagination-btn"
                     onClick={() => { setPage(1); }}
-                    disabled={page === 1}
+                    disabled={safePage === 1}
                   >
                     ««
                   </button>
@@ -1981,32 +1998,34 @@ export default function Home() {
                     type="button"
                     className="pagination-btn"
                     onClick={() => { setPage(p => Math.max(1, p - 1)); }}
-                    disabled={page === 1}
+                    disabled={safePage === 1}
                   >
                     «
                   </button>
                   <span className="pagination-info">
-                    Page <strong>{page}</strong> of <strong>{Math.ceil(total / pageSize)}</strong>
-                    {" · "}Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}
+                    Page <strong>{safePage}</strong> of <strong>{maxPage}</strong>
+                    {" · "}Showing {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, filteredTotal)} of {filteredTotal}
+                    {filteredTotal < total ? ` (filtered from ${total.toLocaleString()})` : ""}
                   </span>
                   <button
                     type="button"
                     className="pagination-btn"
                     onClick={() => { setPage(p => p + 1); }}
-                    disabled={page >= Math.ceil(total / pageSize)}
+                    disabled={safePage >= maxPage}
                   >
                     »
                   </button>
                   <button
                     type="button"
                     className="pagination-btn"
-                    onClick={() => { setPage(Math.ceil(total / pageSize)); }}
-                    disabled={page >= Math.ceil(total / pageSize)}
+                    onClick={() => { setPage(maxPage); }}
+                    disabled={safePage >= maxPage}
                   >
                     »»
                   </button>
                 </div>
-              )}
+                );
+              })()}
             </>
           ) : (
             <p className="muted collapsible-meta">
