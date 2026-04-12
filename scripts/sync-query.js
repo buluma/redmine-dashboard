@@ -3,10 +3,11 @@
  * Sync issues from a Redmine saved query.
  * Uses: /issues.json?query_id=<queryId>
  *
- * Example queries:
- *   https://redmine.nasctech.com/projects/sl61/issues?query_id=744
+ * Note: Some saved queries may not be accessible via REST API
+ *       (private queries, or those requiring special permissions).
  *
  * Usage: node scripts/sync-query.js <query_id>
+ * My filters: 754 755 749 743 744 and 747
  * Example: node scripts/sync-query.js 744
  */
 
@@ -39,8 +40,10 @@ async function fetchPage(offset, retries = 3) {
       const res = await fetch(url);
       if (res.ok) return await res.json();
       if (res.status === 429) { await new Promise(r => setTimeout(r, 5000 * attempt)); continue; }
+      console.error(`   HTTP ${res.status} on attempt ${attempt}`);
       return null;
-    } catch {
+    } catch (err) {
+      console.error(`   Error on attempt ${attempt}: ${err.message}`);
       if (attempt < retries) await new Promise(r => setTimeout(r, 3000 * attempt));
       else return null;
     }
@@ -105,7 +108,15 @@ async function main() {
   // Get total count
   console.log("📏 Getting count...");
   const countData = await fetchPage(0);
-  if (!countData) { console.error("❌ Failed to connect to Redmine"); process.exit(1); }
+  if (!countData) {
+    console.error("❌ Failed to connect to Redmine");
+    console.error("\n💡 Possible reasons:");
+    console.error("   - Query #747 may be private or restricted");
+    console.error("   - API key may lack access to this query");
+    console.error("   - The query may not exist or was deleted");
+    console.error("   - Try using --project or --filters instead");
+    process.exit(1);
+  }
   const totalCount = countData.total_count || 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   console.log(`📋 Total issues in query: ${totalCount.toLocaleString()} (${totalPages} pages)\n`);
@@ -165,7 +176,7 @@ async function main() {
 
   console.log(`\n\n✅ Done in ${elapsed}s`);
   console.log(`📈 Total issues in DB for user: ${totalInDb.toLocaleString()}`);
-  console.log(`📥 Issues synced from query #${queryId}: ${totalUpserted.toLocaleString()}`);
+  console.log(`📥 Issues synced: ${totalUpserted.toLocaleString()}`);
 
   await prisma.$disconnect();
 }
