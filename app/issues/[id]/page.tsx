@@ -230,10 +230,11 @@ function formatAgo(dateLike: string): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-type IssueTab = "history" | "notes" | "properties" | "time_entries";
+type IssueTab = "history" | "notes" | "internal-notes" | "properties" | "time_entries";
 
 function normalizeTab(raw: string | null): IssueTab {
   if (raw === "notes") return "notes";
+  if (raw === "internal-notes") return "internal-notes";
   if (raw === "properties") return "properties";
   if (raw === "time_entries") return "time_entries";
   return "history";
@@ -265,6 +266,17 @@ export default function IssueDetailPage() {
   const [activities, setActivities] = useState<Array<{ id: number; name: string }>>([]);
   const [users, setUsers] = useState<Array<{ id: number; name: string }>>([]);
   const [priorities, setPriorities] = useState<Array<{ id: number; name: string; isDefault: boolean }>>([]);
+  const [internalNotes, setInternalNotes] = useState<Array<{
+    id: string;
+    issueId: string;
+    content: string;
+    createdAt: string;
+    updatedAt: string;
+    authorId: string;
+    authorName: string;
+  }>>([]);
+  const [newNoteContent, setNewNoteContent] = useState("");
+  const [noteBusy, setNoteBusy] = useState(false);
   const tabsRef = useRef<HTMLDivElement | null>(null);
 
   // Edit mode state
@@ -458,6 +470,10 @@ export default function IssueDetailPage() {
           const data = await prioritiesRes.json();
           setPriorities(data.priorities ?? []);
         }
+        // Load internal notes if on that tab
+        if (activeTab === "internal-notes") {
+          await loadInternalNotes();
+        }
       } catch {
         // Ignore errors
       }
@@ -519,6 +535,51 @@ export default function IssueDetailPage() {
       setActionError(e instanceof Error ? e.message : "Unable to remove GitHub link");
     } finally {
       setGithubBusy(false);
+    }
+  }
+
+  async function loadInternalNotes() {
+    try {
+      const res = await fetch(`/api/internal/notes?issueId=${issue.id}`, { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setInternalNotes(data.notes ?? []);
+      }
+    } catch {
+      // Ignore errors
+    }
+  }
+
+  async function submitInternalNote(event: React.FormEvent) {
+    event.preventDefault();
+    if (!newNoteContent.trim() || noteBusy) return;
+    setNoteBusy(true);
+    try {
+      const res = await fetch("/api/internal/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ issueId: issue.id, content: newNoteContent.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to add note");
+      }
+      setNewNoteContent("");
+      await loadInternalNotes();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to add note");
+    } finally {
+      setNoteBusy(false);
+    }
+  }
+
+  async function deleteInternalNote(noteId: string) {
+    try {
+      const res = await fetch(`/api/internal/notes/${noteId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete note");
+      await loadInternalNotes();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to delete note");
     }
   }
 
@@ -1231,6 +1292,9 @@ export default function IssueDetailPage() {
           <Link href={`/issues/${issue.redmineIssueId}?tab=notes`} scroll={false} className={activeTab === "notes" ? "active" : ""}>
             Notes
           </Link>
+          <Link href={`/issues/${issue.redmineIssueId}?tab=internal-notes`} scroll={false} className={activeTab === "internal-notes" ? "active" : ""}>
+            Internal Notes
+          </Link>
           <Link href={`/issues/${issue.redmineIssueId}?tab=properties`} scroll={false} className={activeTab === "properties" ? "active" : ""}>
             Property changes
           </Link>
@@ -1282,6 +1346,56 @@ export default function IssueDetailPage() {
                   />
                 </article>
               ))}
+            </div>
+          )}
+          {activeTab === "internal-notes" && (
+            <div className="internal-notes-section">
+              {actionError && <p className="error-banner">{actionError}</p>}
+              <form className="form" onSubmit={submitInternalNote}>
+                <label>
+                  Add Internal Note
+                  <textarea
+                    value={newNoteContent}
+                    onChange={(e) => setNewNoteContent(e.target.value)}
+                    placeholder="Private note — only visible to your team"
+                    rows={3}
+                  />
+                </label>
+                <button type="submit" disabled={noteBusy || newNoteContent.trim().length === 0}>
+                  {noteBusy ? "Saving..." : "Add Note"}
+                </button>
+              </form>
+              <div className="internal-notes-list">
+                {internalNotes.length === 0 && <p className="muted">No internal notes yet.</p>}
+                {internalNotes.map((note) => (
+                  <article key={note.id} className="internal-note-item">
+                    <div className="internal-note-head">
+                      <span className="internal-note-author">{note.authorName}</span>
+                      <span className="internal-note-date">{formatAgo(new Date(note.createdAt).toISOString())}</span>
+                    </div>
+                    <div className="internal-note-content">
+                      <MarkdownBlock
+                        content={note.content}
+                        attachments={issue.attachments}
+                        issueId={issue.redmineIssueId}
+                        onImageClick={(src, alt) => setLightboxImage({ src, alt })}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="internal-note-delete"
+                      onClick={() => {
+                        if (confirm("Delete this internal note?")) {
+                          void deleteInternalNote(note.id);
+                        }
+                      }}
+                      title="Delete note"
+                    >
+                      ✕
+                    </button>
+                  </article>
+                ))}
+              </div>
             </div>
           )}
           {activeTab === "properties" && (
