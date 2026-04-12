@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prisma:generate": "prisma generate",
-    "db:init": "sh scripts/db-init.sh"
+    "db:init": "sh scripts/db-init.sh",
+    "sync:all": "node scripts/sync-all-issues.js"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

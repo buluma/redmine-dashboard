@@ -1408,7 +1408,10 @@ export default function IssueDetailPage() {
         )}
 
         {aiStatus?.available && (
-          <AiIssueActions issueId={issue.id} />
+          <AiIssueActions 
+            issueId={issue.id} 
+            existingSummaries={(issue as unknown as { aiSummaries?: Array<{ id: string; summary: string; model: string; createdAt: string }> }).aiSummaries ?? []} 
+          />
         )}
 
         <article className="report-card">

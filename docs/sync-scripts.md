@@ -6,6 +6,7 @@ This document describes the operational scripts in `scripts/` for syncing and ma
 
 | Script | Purpose | Example |
 |---|---|---|
+| `sync-all-issues.js` | Full sync of all Redmine issues (100K+ capable) | `node scripts/sync-all-issues.js` |
 | `sync-assigned.js` | Issues assigned to or authored by you | `node scripts/sync-assigned.js` |
 | `sync-children.js` | Children of a parent issue | `node scripts/sync-children.js 97459` |
 | `sync-query.js` | Issues from a saved Redmine query | `node scripts/sync-query.js 747` |
@@ -18,6 +19,31 @@ This document describes the operational scripts in `scripts/` for syncing and ma
 | `check-sync-jobs.js` | Sync job history | `node scripts/check-sync-jobs.js` |
 
 ## Issue Sync
+
+### `scripts/sync-all-issues.js`
+
+Performs a full paginated sync of **all** Redmine issues (`status_id=*`) directly to the database, outside the web app sync-job queue.
+Use this for large datasets (e.g. ~109K tickets) when `sync/manual-pull` is too heavy for in-process jobs.
+
+```bash
+# Full all-issues sync
+node scripts/sync-all-issues.js
+
+# Resume automatically from checkpoint (default behavior)
+node scripts/sync-all-issues.js
+
+# Dry-run a subset (10 pages x 100 issues/page by default)
+node scripts/sync-all-issues.js --max-pages=10
+
+# Explicit start offset without checkpoint usage
+node scripts/sync-all-issues.js --from-offset=5000 --no-resume
+```
+
+**Key properties:**
+- Ignores `REDMINE_SYNC_ISSUE_SCOPE` runtime behavior; always syncs `status_id=*`.
+- Uses resumable checkpoints in `/tmp/redmine-sync-all-progress.json` by default.
+- Upsert-only behavior (no destructive issue deletes).
+- Supports interruption-safe runs (`Ctrl+C` saves progress and exits cleanly).
 
 ### `scripts/sync-assigned.js`
 

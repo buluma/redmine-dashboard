@@ -38,7 +38,7 @@ function csvFromEnv(key: string): string[] {
 }
 
 function syncIssueScopeFromEnv(): "assigned" | "open" | "all" {
-  const value = (process.env.REDMINE_SYNC_ISSUE_SCOPE ?? "all").trim().toLowerCase();
+  const value = (process.env.REDMINE_SYNC_ISSUE_SCOPE ?? "assigned").trim().toLowerCase();
   if (value === "assigned" || value === "open" || value === "all") {
     return value;
   }
