@@ -85,6 +85,33 @@ Request body:
 }
 ```
 
+### PUT /api/issues/[id]/edit
+Updates issue fields and pushes changes to Redmine.
+
+Request body (all fields optional; at least one required):
+```json
+{
+  "subject": "New title",
+  "description": "Updated description with *Textile* formatting",
+  "priorityId": 5,
+  "dueDate": "2026-05-01",
+  "startDate": "2026-04-01",
+  "estimatedHours": 20,
+  "categoryId": 32,
+  "customFields": [
+    { "id": 18, "value": "77" }
+  ]
+}
+```
+
+### POST /api/issues/[id]/assign
+Assigns issue to a Redmine user.
+
+Request body:
+```json
+{ "userId": 194 }
+```
+
 ### POST /api/issues/bulk-status
 Bulk status update with per-issue transition checks.
 
@@ -182,6 +209,12 @@ Returns time-entry activity catalog (cached from Redmine enumerations when avail
 Notes:
 - Requires authenticated web session.
 - Returns `401` when unauthenticated.
+
+### GET /api/internal/users
+Returns assignable Redmine users (from Redmine API if admin access, else local `RedmineUser` cache).
+
+### GET /api/internal/priorities
+Returns issue priority enumerations (from Redmine API if available, else local `RedmineEnumeration` cache).
 
 ### GET /api/health
 System health probe.
