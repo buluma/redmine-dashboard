@@ -59,6 +59,9 @@ class Issue {
   final String statusName;
   final String? priority;
   final String? assignedToName;
+  final String? parentIssueLabel;
+  final int? parentIssueId;
+  final String? projectName;
   final List<GithubLink> githubLinks;
   final List<IssueAttachment> attachments;
   final List<IssueRelation> relations;
@@ -74,6 +77,9 @@ class Issue {
     required this.statusName,
     required this.priority,
     this.assignedToName,
+    this.parentIssueLabel,
+    this.parentIssueId,
+    this.projectName,
     required this.githubLinks,
     required this.attachments,
     required this.relations,
@@ -90,6 +96,9 @@ class Issue {
         statusName: json["statusName"] as String,
         priority: json["priority"] as String?,
         assignedToName: json["assignedToName"] as String?,
+        parentIssueLabel: json["parentIssueLabel"] as String?,
+        parentIssueId: json["parentIssueId"] as int?,
+        projectName: json["projectName"] as String?,
         githubLinks: ((json["githubLinks"] as List<dynamic>?) ?? const <dynamic>[])
             .map((e) => GithubLink.fromJson(e as Map<String, dynamic>))
             .toList(),
