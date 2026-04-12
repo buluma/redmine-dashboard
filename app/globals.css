@@ -132,18 +132,7 @@ body {
   gap: 0.35rem;
 }
 
-/* Children / Sub-issues Table */
-.children-card {
-  margin-top: 0.5rem;
-}
-
-.children-card h3 {
-  margin: 0 0 0.65rem;
-  font-size: 1rem;
-  color: var(--ink-soft);
-  letter-spacing: -0.01em;
-}
-
+/* Children / Sub-tasks Table (inside collapsible) */
 .children-table-wrap {
   overflow-x: auto;
 }
@@ -206,12 +195,6 @@ body {
   font-size: 0.78rem;
   padding: 0.15rem 0.45rem;
   white-space: nowrap;
-}
-
-.child-status.status-open {
-  background: var(--ok-soft);
-  color: var(--ok);
-  border-color: rgba(42, 127, 82, 0.2);
 }
 
 .child-priority {
