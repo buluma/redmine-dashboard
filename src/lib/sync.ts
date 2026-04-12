@@ -158,7 +158,7 @@ async function upsertIssueFromRemote(userId: string, redmineBaseUrl: string, iss
   return issue;
 }
 
-async function upsertAttachmentsForIssue(issueId: string, issueRaw: Record<string, unknown>, pruneMissing: boolean) {
+export async function upsertAttachmentsForIssue(issueId: string, issueRaw: Record<string, unknown>, pruneMissing: boolean) {
   const attachments = asObject(issueRaw).attachments;
   if (!Array.isArray(attachments)) {
     if (pruneMissing) {

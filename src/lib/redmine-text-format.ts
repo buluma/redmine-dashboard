@@ -4,9 +4,10 @@ const TEXTILE_INLINE_LINK_RE = /"([^"\n]+)":(https?:\/\/[^\s<>"')\]]+)/g;
 const TEXTILE_IMAGE_RE = /!(?:\{[^}]*\})?((?:(?:https?:\/\/|\/)[^\s!]+)|(?:[^!\n]+?\.(?:png|jpe?g|gif|webp|bmp|svg)))!/gi;
 const REDMINE_IMAGE_REF_RE = /\[Image:\s*([^\]\n]+?\.(?:png|jpe?g|gif|webp|bmp|svg))\]/gi;
 const TEXTILE_STYLED_SPAN_RE = /%\{[^}\n]*\}([^%\n]+)%/g;
-const REDMINE_COLLAPSE_RE = /\{\{collapse(?:\(([^)]*)\))?\s*\n([\s\S]*?)\n\}\}/g;
-const REDMINE_COLLAPSE_INLINE_RE = /\{\{collapse(?:\(([^)]*)\))?\s*\|([\s\S]*?)\}\}/g;
+const REDMINE_COLLAPSE_RE = /\{\{collapse(?:\(([^)]*)\))?\s*\n([\s\S]*?)\n\}\}/gi;
+const REDMINE_COLLAPSE_INLINE_RE = /\{\{collapse(?:\(([^)]*)\))?\s*\|([\s\S]*?)\}\}/gi;
 const REDMINE_COLLAPSE_IMAGE_RE = /\{\{collapse\(([^)]*)\)\s*!\{([^}]*)\}([^!\s]+)!\s*\}\}/gi;
+const REDMINE_COLLAPSE_ANY_RE = /\{\{collapse(?:\(([^)]*)\))?\s*(?:\n([\s\S]*?)\n|\|([\s\S]*?))\}\}/gi;
 const TEXTILE_CODE_RE = /(^|[^\w`])@([^\n@]+?)@(?=[^\w`]|$)/g;
 const REDMINE_NOTEXTILE_RE = /<\/?notextile>/gim;
 const REDMINE_PRE_CODE_RE = /<pre(?:\s+[^>]*)?>\s*<code(?:\s+class=["']?([^"'>\s]+)["']?)?>([\s\S]*?)<\/(?:code>\s*<\/pre>|pre>\s*<\/code>)/gim;
@@ -119,6 +120,47 @@ function decodeEscapedWhitespace(input: string): string {
     .replaceAll("\\n", "\n")
     .replaceAll("\\r", "\n")
     .replaceAll("\\t", "\t");
+}
+
+export type RedmineTextSegment =
+  | { type: "markdown"; content: string }
+  | { type: "collapse"; title: string; content: string };
+
+export function splitRedmineCollapseSegments(input: string): RedmineTextSegment[] {
+  const source = decodeEscapedWhitespace(input);
+  const segments: RedmineTextSegment[] = [];
+  let cursor = 0;
+
+  REDMINE_COLLAPSE_ANY_RE.lastIndex = 0;
+  let match: RegExpExecArray | null = null;
+
+  while ((match = REDMINE_COLLAPSE_ANY_RE.exec(source)) !== null) {
+    const start = match.index;
+    const end = REDMINE_COLLAPSE_ANY_RE.lastIndex;
+    if (start > cursor) {
+      const plain = source.slice(cursor, start);
+      if (plain.trim().length > 0) {
+        segments.push({ type: "markdown", content: plain });
+      }
+    }
+
+    const title = (match[1] ?? "Details").trim() || "Details";
+    const body = (match[2] ?? match[3] ?? "").trim();
+    segments.push({ type: "collapse", title, content: body });
+    cursor = end;
+  }
+
+  if (cursor < source.length) {
+    const tail = source.slice(cursor);
+    if (tail.trim().length > 0) {
+      segments.push({ type: "markdown", content: tail });
+    }
+  }
+
+  if (segments.length === 0) {
+    return [{ type: "markdown", content: source }];
+  }
+  return segments;
 }
 
 export function normalizeRedmineText(input: string): string {

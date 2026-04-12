@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type TrendPoint = { key: string; value: number };
 type NamedCount = { name: string; count: number };
@@ -29,6 +30,7 @@ type ReportData = {
     byStatus: NamedCount[];
     byPriority: NamedCount[];
     byTracker: NamedCount[];
+    byCategory: NamedCount[];
     byProject: NamedCount[];
     byAssignee: NamedCount[];
   };
@@ -38,12 +40,27 @@ type ReportData = {
     overdueParents: OverdueParent[];
     totalTimeHours: number;
     totalTimelogs: number;
+    openIssues: number;
+    closedIssues: number;
+    blockedOpenIssues: number;
+    inProgressOpenIssues: number;
+    overdueOpenIssues: number;
+    unassignedOpenIssues: number;
+    staleOpenIssues7d: number;
+    staleOpenIssues30d: number;
+    avgDoneRatioOpen: number;
+    estimatedOpenIssues: number;
+    spentOpenIssues: number;
+    overspentOpenIssues: number;
   };
   trends: {
     journalDaySeries: TrendPoint[];
     timeDaySeries: TrendPoint[];
     byActivity: HoursMetric[];
     byUser: HoursMetric[];
+    dueBuckets: NamedCount[];
+    agingBuckets: NamedCount[];
+    progressBuckets: NamedCount[];
   };
   recent: {
     journals: RecentJournal[];
@@ -55,6 +72,7 @@ type Drilldown =
   | { type: "status"; value: string }
   | { type: "priority"; value: string }
   | { type: "tracker"; value: string }
+  | { type: "category"; value: string }
   | { type: "project"; value: string }
   | { type: "assignee"; value: string }
   | { type: "day"; value: string; metric: "journals" | "time" }
@@ -147,12 +165,97 @@ function BarChart({
   );
 }
 
+function ReportsLoadingShell() {
+  return (
+    <main className="dashboard reports-loading-page" aria-busy="true" aria-live="polite">
+      <header className="card hero reports-loading-hero">
+        <div className="hero-top">
+          <div className="reports-loading-head">
+            <div className="skeleton-line skeleton-title" />
+            <div className="skeleton-line skeleton-subtitle" />
+          </div>
+          <div className="reports-loading-actions">
+            <span className="reports-refresh-pill">Loading metrics...</span>
+            <div className="skeleton-line skeleton-button" />
+          </div>
+        </div>
+      </header>
+
+      <section className="card reports-shell reports-loading-shell">
+        <div className="reports-head">
+          <div className="reports-loading-head">
+            <div className="skeleton-line skeleton-section-title" />
+            <div className="skeleton-line skeleton-section-subtitle" />
+          </div>
+        </div>
+
+        <div className="reports-grid reports-loading-grid">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <article className="report-card report-skeleton-card" key={`summary-${idx}`}>
+              <div className="skeleton-line skeleton-label" />
+              <div className="skeleton-line skeleton-value" />
+              <div className="skeleton-line skeleton-foot" />
+            </article>
+          ))}
+        </div>
+
+        <div className="reports-grid reports-loading-grid">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <article className="report-card report-skeleton-card" key={`charts-${idx}`}>
+              <div className="skeleton-line skeleton-label" />
+              <div className="skeleton-chart" />
+            </article>
+          ))}
+        </div>
+
+        <div className="reports-grid reports-loading-grid">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <article className="report-card report-skeleton-card" key={`lists-${idx}`}>
+              <div className="skeleton-line skeleton-label" />
+              <div className="skeleton-list">
+                {Array.from({ length: 6 }).map((__, row) => (
+                  <div className="skeleton-line skeleton-list-row" key={`list-${idx}-${row}`} />
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="card reports-loading-activity">
+        <div className="skeleton-line skeleton-section-title" />
+        <div className="skeleton-list">
+          {Array.from({ length: 5 }).map((_, idx) => (
+            <div className="skeleton-line skeleton-list-row" key={`activity-${idx}`} />
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+}
+
 export default function ReportsPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(30);
   const [drilldown, setDrilldown] = useState<Drilldown>(null);
   const [data, setData] = useState<ReportData | null>(null);
+  const prefetchedIssueIdsRef = useRef<Set<number>>(new Set());
+
+  const prefetchIssueDetail = useCallback((targetIssueId: number) => {
+    if (!Number.isInteger(targetIssueId) || targetIssueId <= 0) {
+      return;
+    }
+    if (prefetchedIssueIdsRef.current.has(targetIssueId)) {
+      return;
+    }
+    prefetchedIssueIdsRef.current.add(targetIssueId);
+    router.prefetch(`/issues/${targetIssueId}`);
+    void fetch(`/api/issues/${targetIssueId}`, { cache: "no-store" }).catch(() => {
+      prefetchedIssueIdsRef.current.delete(targetIssueId);
+    });
+  }, [router]);
 
   const loadReportData = useCallback(async () => {
     const res = await fetch(`/api/reports?days=${days}`, { cache: "no-store" });
@@ -175,9 +278,7 @@ export default function ReportsPage() {
     })();
   }, [loadReportData]);
 
-  if (loading && !data) {
-    return <main className="dashboard"><p>Loading reports...</p></main>;
-  }
+  if (loading && !data) return <ReportsLoadingShell />;
 
   if (error && !data) {
     return <main className="dashboard"><p className="error-banner">{error}</p></main>;
@@ -196,6 +297,11 @@ export default function ReportsPage() {
   const peakJournals = journalTrend.reduce((acc: TrendPoint, p: TrendPoint) => p.value > acc.value ? p : acc, { key: "-", value: 0 });
 
   const avgHoursPerDay = days > 0 ? Number((timeTotal / days).toFixed(1)) : 0;
+  const openRate = stats.totalIssues > 0 ? Math.round((stats.openIssues / stats.totalIssues) * 100) : 0;
+  const overdueOpenRate = stats.openIssues > 0 ? Math.round((stats.overdueOpenIssues / stats.openIssues) * 100) : 0;
+  const unassignedOpenRate = stats.openIssues > 0 ? Math.round((stats.unassignedOpenIssues / stats.openIssues) * 100) : 0;
+  const staleOpenRate = stats.openIssues > 0 ? Math.round((stats.staleOpenIssues30d / stats.openIssues) * 100) : 0;
+  const overspentRate = stats.estimatedOpenIssues > 0 ? Math.round((stats.overspentOpenIssues / stats.estimatedOpenIssues) * 100) : 0;
   const recentActivity = [
     ...recent.journals.map((j) => ({
       timestamp: j.createdOnRemote,
@@ -219,6 +325,7 @@ export default function ReportsPage() {
       status: `Status: ${drilldown.value}`,
       priority: `Priority: ${drilldown.value}`,
       tracker: `Tracker: ${drilldown.value}`,
+      category: `Category: ${drilldown.value}`,
       project: `Project: ${drilldown.value}`,
       assignee: `Assignee: ${drilldown.value}`,
     };
@@ -239,7 +346,7 @@ export default function ReportsPage() {
           <div className="hero-actions">
             <label>
               Time Window
-              <select value={days} onChange={(e) => setDays(Number(e.target.value))}>
+              <select value={days} onChange={(e) => setDays(Number(e.target.value))} disabled={loading}>
                 <option value={7}>7 days</option>
                 <option value={14}>14 days</option>
                 <option value={30}>30 days</option>
@@ -247,6 +354,7 @@ export default function ReportsPage() {
                 <option value={90}>90 days</option>
               </select>
             </label>
+            {loading && <span className="reports-refresh-pill" role="status">Refreshing...</span>}
             <Link href="/" className="primary-link">Back to Dashboard</Link>
           </div>
         </div>
@@ -286,6 +394,37 @@ export default function ReportsPage() {
           </article>
         </div>
 
+        <div className="reports-grid reports-health-grid">
+          <article className="report-card report-health-card">
+            <p className="report-label">Open Queue</p>
+            <p className="report-value">{stats.openIssues.toLocaleString()}</p>
+            <p className="report-foot">
+              {openRate}% of total · {stats.inProgressOpenIssues.toLocaleString()} in progress
+            </p>
+          </article>
+          <article className="report-card report-health-card tone-danger">
+            <p className="report-label">Overdue Open</p>
+            <p className="report-value">{stats.overdueOpenIssues.toLocaleString()}</p>
+            <p className="report-foot">
+              {overdueOpenRate}% of open · {stats.blockedOpenIssues.toLocaleString()} blocked/hold
+            </p>
+          </article>
+          <article className="report-card report-health-card tone-warning">
+            <p className="report-label">Unassigned Open</p>
+            <p className="report-value">{stats.unassignedOpenIssues.toLocaleString()}</p>
+            <p className="report-foot">
+              {unassignedOpenRate}% of open · avg done {stats.avgDoneRatioOpen}%
+            </p>
+          </article>
+          <article className="report-card report-health-card tone-muted">
+            <p className="report-label">Stale Open (&gt;30d)</p>
+            <p className="report-value">{stats.staleOpenIssues30d.toLocaleString()}</p>
+            <p className="report-foot">
+              {staleOpenRate}% of open · {overspentRate}% over estimate
+            </p>
+          </article>
+        </div>
+
         <div className="reports-grid">
           <article className="report-card">
             <p className="report-label">Comments Trend</p>
@@ -314,7 +453,6 @@ export default function ReportsPage() {
             <BarChart
               items={trends.byActivity.map((a) => ({ name: a.name, value: a.hours }))}
               color="var(--signal)"
-              active={drilldown?.type === "tracker" ? drilldown.value : undefined}
             />
           </article>
         </div>
@@ -341,12 +479,12 @@ export default function ReportsPage() {
           </article>
 
           <article className="report-card">
-            <p className="report-label">Top Projects</p>
+            <p className="report-label">Tracker Distribution</p>
             <BarChart
-              items={aggregates.byProject.map((p) => ({ name: p.name, value: p.count }))}
+              items={aggregates.byTracker.map((t) => ({ name: t.name, value: t.count }))}
               color="var(--accent-strong)"
-              onClick={(name) => setDrilldown({ type: "project", value: name })}
-              active={drilldown?.type === "project" ? drilldown.value : undefined}
+              onClick={(name) => setDrilldown({ type: "tracker", value: name })}
+              active={drilldown?.type === "tracker" ? drilldown.value : undefined}
             />
           </article>
         </div>
@@ -381,6 +519,60 @@ export default function ReportsPage() {
             />
           </article>
         </div>
+
+        <div className="reports-grid">
+          <article className="report-card">
+            <p className="report-label">Due Risk Buckets</p>
+            <BarChart
+              items={trends.dueBuckets.map((bucket) => ({ name: bucket.name, value: bucket.count }))}
+              color="var(--signal)"
+            />
+          </article>
+
+          <article className="report-card">
+            <p className="report-label">Staleness Buckets</p>
+            <BarChart
+              items={trends.agingBuckets.map((bucket) => ({ name: bucket.name, value: bucket.count }))}
+              color="var(--accent)"
+            />
+          </article>
+
+          <article className="report-card">
+            <p className="report-label">Progress Buckets</p>
+            <BarChart
+              items={trends.progressBuckets.map((bucket) => ({ name: bucket.name, value: bucket.count }))}
+              color="var(--ok)"
+            />
+          </article>
+        </div>
+
+        <div className="reports-grid">
+          <article className="report-card">
+            <p className="report-label">Category Distribution</p>
+            <BarChart
+              items={aggregates.byCategory.map((c) => ({ name: c.name, value: c.count }))}
+              color="var(--accent-strong)"
+              onClick={(name) => setDrilldown({ type: "category", value: name })}
+              active={drilldown?.type === "category" ? drilldown.value : undefined}
+            />
+          </article>
+
+          <article className="report-card">
+            <p className="report-label">Closed Issues</p>
+            <p className="report-value">{stats.closedIssues.toLocaleString()}</p>
+            <p className="report-foot">
+              Estimated open: {stats.estimatedOpenIssues.toLocaleString()} · spent logged on {stats.spentOpenIssues.toLocaleString()}
+            </p>
+          </article>
+
+          <article className="report-card">
+            <p className="report-label">Estimate Overrun (Open)</p>
+            <p className="report-value">{stats.overspentOpenIssues.toLocaleString()}</p>
+            <p className="report-foot">
+              {overspentRate}% of open issues with estimates
+            </p>
+          </article>
+        </div>
       </section>
 
       {/* Recent Activity */}
@@ -388,7 +580,13 @@ export default function ReportsPage() {
         <h2>Recent Activity</h2>
         <div className="activity-feed">
           {recentActivity.map((event, idx: number) => (
-              <Link key={`${event.issueId}-${event.timestamp}-${idx}`} href={`/issues/${event.issueId}`} className="activity-row static">
+              <Link
+                key={`${event.issueId}-${event.timestamp}-${idx}`}
+                href={`/issues/${event.issueId}`}
+                className="activity-row static"
+                onMouseEnter={() => prefetchIssueDetail(event.issueId)}
+                onFocus={() => prefetchIssueDetail(event.issueId)}
+              >
                 <span>
                   #{event.issueId} {event.issueSubject}
                 </span>

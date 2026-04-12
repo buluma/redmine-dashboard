@@ -12,6 +12,7 @@ import {
   Tooltip,
   Legend,
   ArcElement,
+  type ChartOptions,
 } from "chart.js";
 import { Doughnut, Line } from "react-chartjs-2";
 
@@ -78,21 +79,69 @@ export function DashboardWidgets({ stats }: DashboardWidgetsProps) {
       data: stats.recentActivity.map(a => a.count),
       borderColor: "#006d77",
       backgroundColor: "rgba(0, 109, 119, 0.1)",
+      pointBackgroundColor: "#ffffff",
+      pointBorderColor: "#0a556a",
+      pointRadius: 3,
+      pointHoverRadius: 5,
       fill: true,
       tension: 0.3,
     }],
   }), [stats.recentActivity]);
 
-  const chartOptions = {
+  const doughnutOptions: ChartOptions<"doughnut"> = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: {
         position: "bottom" as const,
         labels: {
+          color: "#4f647c",
+          font: { size: 12, weight: 600 },
           padding: 20,
           usePointStyle: true,
         },
+      },
+      tooltip: {
+        backgroundColor: "#183042",
+        titleColor: "#f4fbff",
+        bodyColor: "#dceaf3",
+        borderColor: "#2d4f66",
+        borderWidth: 1,
+      },
+    },
+  };
+
+  const lineOptions: ChartOptions<"line"> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
+    plugins: {
+      legend: {
+        position: "bottom",
+        labels: {
+          color: "#4f647c",
+          font: { size: 12, weight: 600 },
+          usePointStyle: true,
+          padding: 18,
+        },
+      },
+      tooltip: {
+        backgroundColor: "#183042",
+        titleColor: "#f4fbff",
+        bodyColor: "#dceaf3",
+        borderColor: "#2d4f66",
+        borderWidth: 1,
+      },
+    },
+    scales: {
+      x: {
+        grid: { color: "rgba(153, 171, 190, 0.25)" },
+        ticks: { color: "#5a6d83", maxRotation: 0, autoSkip: true },
+      },
+      y: {
+        beginAtZero: true,
+        grid: { color: "rgba(153, 171, 190, 0.28)" },
+        ticks: { color: "#5a6d83", precision: 0 },
       },
     },
   };
@@ -121,7 +170,7 @@ export function DashboardWidgets({ stats }: DashboardWidgetsProps) {
           <h3>By Status</h3>
           <div className="chart-container">
             {stats.issuesByStatus.length > 0 ? (
-              <Doughnut data={statusChartData} options={chartOptions} />
+              <Doughnut data={statusChartData} options={doughnutOptions} />
             ) : (
               <p className="muted">No data</p>
             )}
@@ -132,7 +181,7 @@ export function DashboardWidgets({ stats }: DashboardWidgetsProps) {
           <h3>By Priority</h3>
           <div className="chart-container">
             {stats.issuesByPriority.length > 0 ? (
-              <Doughnut data={priorityChartData} options={chartOptions} />
+              <Doughnut data={priorityChartData} options={doughnutOptions} />
             ) : (
               <p className="muted">No data</p>
             )}
@@ -143,7 +192,7 @@ export function DashboardWidgets({ stats }: DashboardWidgetsProps) {
           <h3>Recent Activity</h3>
           <div className="chart-container">
             {stats.recentActivity.length > 0 ? (
-              <Line data={activityChartData} options={chartOptions} />
+              <Line data={activityChartData} options={lineOptions} />
             ) : (
               <p className="muted">No data</p>
             )}

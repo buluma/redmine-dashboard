@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeRedmineText } from "@/src/lib/redmine-text-format";
+import { normalizeRedmineText, splitRedmineCollapseSegments } from "@/src/lib/redmine-text-format";
 
 describe("normalizeRedmineText", () => {
   it("converts textile headings and links", () => {
@@ -17,6 +17,14 @@ describe("normalizeRedmineText", () => {
     expect(output).toContain("> **Why**");
     expect(output).toContain("> Line one");
     expect(output).toContain("> Line two");
+  });
+
+  it("handles uppercase Collapse macro variants", () => {
+    const input = `{{Collapse(Result)\nLine one\n}}`;
+    const output = normalizeRedmineText(input);
+
+    expect(output).toContain("> **Result**");
+    expect(output).toContain("> Line one");
   });
 
   it("removes toc macro and notextile tags", () => {
@@ -105,5 +113,19 @@ describe("normalizeRedmineText", () => {
 
     expect(output).toContain("SRC #99614\n\nLine one\n\tLine two");
     expect(output).not.toContain("\\n");
+  });
+
+  it("splits markdown and collapse segments for UI rendering", () => {
+    const input = `Intro text\n{{Collapse(Logs)\n!{width:300px;}clipboard-202602031412-xsdqg.png!\n@echo ok@\n}}\nTail text`;
+    const segments = splitRedmineCollapseSegments(input);
+
+    expect(segments.length).toBe(3);
+    expect(segments[0]).toEqual({ type: "markdown", content: "Intro text\n" });
+    expect(segments[1]).toEqual({
+      type: "collapse",
+      title: "Logs",
+      content: "!{width:300px;}clipboard-202602031412-xsdqg.png!\n@echo ok@",
+    });
+    expect(segments[2]).toEqual({ type: "markdown", content: "\nTail text" });
   });
 });

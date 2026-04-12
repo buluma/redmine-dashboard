@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
-import { normalizeRedmineText } from "@/src/lib/redmine-text-format";
+import { normalizeRedmineText, splitRedmineCollapseSegments } from "@/src/lib/redmine-text-format";
 import { AiIssueActions } from "@/src/components/ai/AiIssueActions";
 import { TimeTrackingPanel } from "@/src/components/TimeTrackingPanel";
 import { QuickActionsPanel } from "@/src/components/QuickActionsPanel";
@@ -90,7 +90,7 @@ type Issue = {
     name: string;
     value: string | null;
   }> | null;
-  breadcrumbs: Array<{ id: number; subject: string; tracker?: string }>;
+  breadcrumbs: Array<{ id: number; subject: string; tracker?: string; isCached?: boolean }>;
   updatedOnRemote: string;
   dueDate: string | null;
   doneRatio: number | null;
@@ -104,7 +104,7 @@ type Issue = {
 };
 
 function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: { content: string; attachments?: Attachment[]; issueId?: number; onImageClick?: (src: string, alt: string) => void }) {
-  const normalized = useMemo(() => normalizeRedmineText(content), [content]);
+  const segments = useMemo(() => splitRedmineCollapseSegments(content), [content]);
 
   function textFromNode(node: ReactNode): string {
     if (typeof node === "string" || typeof node === "number") {
@@ -145,7 +145,7 @@ function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: { c
       : srcText.split("/").pop() ?? alt ?? "image";
 
     if (srcText.includes(attachmentMarker)) {
-      const attachment = attachments.find(a => a.filename === filename);
+      const attachment = attachments.find((a) => filenamesMatch(a.filename, filename));
       if (!attachment || !issueId) return <span className="muted">[Image: {filename}]</span>;
       const url = attachmentUrl(issueId, attachment.redmineAttachmentId);
       return (
@@ -176,13 +176,16 @@ function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: { c
     );
   }
 
-  return (
-    <div className="markdown">
+  function renderMarkdown(markdown: string, key: string) {
+    const normalized = normalizeRedmineText(markdown);
+    if (!normalized.trim()) return null;
+    return (
       <ReactMarkdown
+        key={key}
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeHighlight, { ignoreMissing: true }]]}
-        components={{ 
-          pre: CodePre, 
+        components={{
+          pre: CodePre,
           img: MarkdownImage,
           a: ({ href, children }) => (
             <a href={href} target="_blank" rel="noopener noreferrer">
@@ -193,6 +196,22 @@ function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: { c
       >
         {normalized}
       </ReactMarkdown>
+    );
+  }
+
+  return (
+    <div className="markdown">
+      {segments.map((segment, index) => {
+        if (segment.type === "markdown") {
+          return renderMarkdown(segment.content, `md-${index}`);
+        }
+        return (
+          <details key={`collapse-${index}`} className="redmine-collapse">
+            <summary>{segment.title}</summary>
+            {renderMarkdown(segment.content, `collapse-body-${index}`)}
+          </details>
+        );
+      })}
     </div>
   );
 }
@@ -231,6 +250,38 @@ function formatAgo(dateLike: string): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+function formatDisplayDate(dateLike: string | null): string {
+  if (!dateLike) return "Not set";
+  const d = new Date(dateLike);
+  if (Number.isNaN(d.getTime())) return "Not set";
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+const ATTACHMENT_MARKER_RE = /\/api\/issues\/_ATTACHMENT_\/([^)]+)/gi;
+
+function normalizeAttachmentFilename(value: string): string {
+  const decoded = decodeURIComponent(value).trim();
+  const baseName = decoded.split("/").pop() ?? decoded;
+  return baseName.toLowerCase();
+}
+
+function filenamesMatch(left: string, right: string): boolean {
+  return normalizeAttachmentFilename(left) === normalizeAttachmentFilename(right);
+}
+
+function extractAttachmentRefsFromText(content: string): string[] {
+  const refs: string[] = [];
+  const normalized = normalizeRedmineText(content);
+  ATTACHMENT_MARKER_RE.lastIndex = 0;
+  let match: RegExpExecArray | null = null;
+  while ((match = ATTACHMENT_MARKER_RE.exec(normalized)) !== null) {
+    if (match[1]) {
+      refs.push(decodeURIComponent(match[1]));
+    }
+  }
+  return refs;
+}
+
 type IssueTab = "history" | "notes" | "internal-notes" | "properties" | "time_entries";
 
 function normalizeTab(raw: string | null): IssueTab {
@@ -239,6 +290,92 @@ function normalizeTab(raw: string | null): IssueTab {
   if (raw === "properties") return "properties";
   if (raw === "time_entries") return "time_entries";
   return "history";
+}
+
+function IssueLoadingShell() {
+  return (
+    <main className="dashboard issue-loading-page" aria-busy="true" aria-live="polite">
+      <div className="issue-loading-breadcrumb skeleton-line" />
+
+      <header className="card hero issue-hero issue-loading-hero">
+        <div className="hero-top issue-loading-hero-top">
+          <div className="issue-loading-head">
+            <div className="skeleton-line issue-loading-kicker" />
+            <div className="skeleton-line issue-loading-title" />
+            <div className="skeleton-line issue-loading-subtitle" />
+            <div className="issue-loading-chip-row">
+              <div className="skeleton-line issue-loading-chip" />
+              <div className="skeleton-line issue-loading-chip" />
+              <div className="skeleton-line issue-loading-chip" />
+            </div>
+          </div>
+          <div className="issue-loading-actions">
+            <div className="skeleton-line issue-loading-action" />
+            <div className="skeleton-line issue-loading-action" />
+            <div className="skeleton-line issue-loading-action" />
+          </div>
+        </div>
+      </header>
+
+      <section className="quick-actions-panel issue-loading-panel">
+        <div className="qa-header">
+          <div className="skeleton-line issue-loading-qa-title" />
+          <div className="skeleton-line issue-loading-qa-id" />
+        </div>
+        <div className="qa-meta-row">
+          <div className="skeleton-line issue-loading-meta-pill" />
+          <div className="skeleton-line issue-loading-meta-pill" />
+        </div>
+        <div className="qa-content issue-loading-qa-content">
+          <div className="skeleton-line issue-loading-input" />
+          <div className="skeleton-line issue-loading-input" />
+          <div className="skeleton-line issue-loading-submit" />
+        </div>
+      </section>
+
+      <section className="card reports-shell issue-detail-shell issue-loading-shell">
+        <div className="reports-grid issue-overview-grid">
+          <article className="report-card report-skeleton-card">
+            <div className="skeleton-line skeleton-label" />
+            <div className="skeleton-line skeleton-value" />
+            <div className="skeleton-line skeleton-foot" />
+          </article>
+          <article className="report-card report-skeleton-card">
+            <div className="skeleton-line skeleton-label" />
+            <div className="skeleton-line skeleton-value" />
+            <div className="skeleton-line skeleton-foot" />
+          </article>
+          <article className="report-card report-skeleton-card">
+            <div className="skeleton-line skeleton-label" />
+            <div className="skeleton-line skeleton-value" />
+            <div className="skeleton-line skeleton-foot" />
+          </article>
+        </div>
+
+        <article className="report-card report-skeleton-card issue-loading-description">
+          <div className="skeleton-line skeleton-section-title" />
+          <div className="skeleton-chart" />
+        </article>
+
+        <div className="issue-tabs issue-loading-tabs">
+          <div className="skeleton-line issue-loading-tab" />
+          <div className="skeleton-line issue-loading-tab" />
+          <div className="skeleton-line issue-loading-tab" />
+          <div className="skeleton-line issue-loading-tab" />
+          <div className="skeleton-line issue-loading-tab" />
+        </div>
+
+        <article className="report-card report-skeleton-card issue-loading-timeline">
+          <div className="skeleton-list">
+            <div className="skeleton-line skeleton-list-row" />
+            <div className="skeleton-line skeleton-list-row" />
+            <div className="skeleton-line skeleton-list-row" />
+            <div className="skeleton-line skeleton-list-row" />
+          </div>
+        </article>
+      </section>
+    </main>
+  );
 }
 
 export default function IssueDetailPage() {
@@ -279,7 +416,10 @@ export default function IssueDetailPage() {
   const [newNoteContent, setNewNoteContent] = useState("");
   const [noteBusy, setNoteBusy] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [hydratedRelatedIds, setHydratedRelatedIds] = useState<Set<number>>(new Set());
   const tabsRef = useRef<HTMLDivElement | null>(null);
+  const prefetchedRelatedIdsRef = useRef<Set<number>>(new Set());
+  const attachmentRefreshAttemptedRef = useRef<Set<number>>(new Set());
 
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
@@ -296,7 +436,7 @@ export default function IssueDetailPage() {
   const [editSaving, setEditSaving] = useState(false);
 
   async function reloadIssue() {
-    const res = await fetch(`/api/issues/${issueId}`, { cache: "no-store" });
+    const res = await fetch(`/api/issues/${issueId}?fresh=1`, { cache: "no-store" });
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.error ?? "Failed to load issue");
@@ -649,6 +789,73 @@ export default function IssueDetailPage() {
     return issue.timeEntries.reduce((sum, entry) => sum + entry.hours, 0);
   }, [issue]);
 
+  const relatedPrefetchKey = issue
+    ? Array.from(new Set([
+      ...issue.children.map((child) => child.id),
+      ...issue.breadcrumbs
+        .map((crumb) => crumb.id)
+        .filter((crumbId) => crumbId !== issue.redmineIssueId),
+    ]))
+      .sort((a, b) => a - b)
+      .join(",")
+    : "";
+
+  useEffect(() => {
+    if (!issue) {
+      return;
+    }
+
+    const breadcrumbIds = issue.breadcrumbs
+      .map((crumb) => crumb.id)
+      .filter((crumbId) => crumbId !== issue.redmineIssueId);
+    const childIds = issue.children
+      .map((child) => child.id)
+      .filter((childId) => childId !== issue.redmineIssueId);
+
+    const orderedRelatedIds = [...new Set([...breadcrumbIds, ...childIds])];
+    const pendingIds = orderedRelatedIds
+      .filter((relatedId) => !prefetchedRelatedIdsRef.current.has(relatedId))
+      .slice(0, 30);
+
+    if (pendingIds.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+    const batchSize = 3;
+
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        for (let i = 0; i < pendingIds.length && !cancelled; i += batchSize) {
+          const batch = pendingIds.slice(i, i + batchSize);
+          await Promise.allSettled(
+            batch.map(async (relatedId) => {
+              if (cancelled) return;
+              prefetchedRelatedIdsRef.current.add(relatedId);
+              const res = await fetch(`/api/issues/${relatedId}`, { cache: "no-store" });
+              if (!res.ok) {
+                // Retry eligible on a future parent view if hydration failed this time.
+                prefetchedRelatedIdsRef.current.delete(relatedId);
+                return;
+              }
+              setHydratedRelatedIds((prev) => {
+                if (prev.has(relatedId)) return prev;
+                const next = new Set(prev);
+                next.add(relatedId);
+                return next;
+              });
+            }),
+          );
+        }
+      })();
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [issue, relatedPrefetchKey]);
+
   useEffect(() => {
     if (!issue) {
       return;
@@ -664,10 +871,12 @@ export default function IssueDetailPage() {
     tabsRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
   }, [activeTab, issue, tabFromUrl]);
 
-  const noteJournals = useMemo(() => {
+  const historyJournals = useMemo(() => {
     if (!issue) return [];
     return issue.journals.filter((journal) => Boolean(journal.notes?.trim()));
   }, [issue]);
+
+  const noteJournals = historyJournals;
 
   const propertyJournals = useMemo(() => {
     if (!issue) return [];
@@ -675,10 +884,65 @@ export default function IssueDetailPage() {
     return issue.journals.filter((journal) => propertySignals.test(journal.notes ?? ""));
   }, [issue]);
 
+  const hasUnresolvedAttachmentRefs = useMemo(() => {
+    if (!issue) return false;
+    const attachmentNames = new Set(
+      issue.attachments.map((attachment) => normalizeAttachmentFilename(attachment.filename)),
+    );
+    const refs = [
+      ...(issue.description ? extractAttachmentRefsFromText(issue.description) : []),
+      ...issue.journals.flatMap((journal) => extractAttachmentRefsFromText(journal.notes ?? "")),
+    ];
+    if (refs.length === 0) return false;
+    return refs.some((ref) => !attachmentNames.has(normalizeAttachmentFilename(ref)));
+  }, [issue]);
+
+  useEffect(() => {
+    if (!issue || !hasUnresolvedAttachmentRefs) {
+      return;
+    }
+    if (attachmentRefreshAttemptedRef.current.has(issue.redmineIssueId)) {
+      return;
+    }
+    attachmentRefreshAttemptedRef.current.add(issue.redmineIssueId);
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/issues/${issue.redmineIssueId}/attachments?refresh=1`, { cache: "no-store" });
+        if (!res.ok) {
+          return;
+        }
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data.items)) {
+          setIssue((current) => {
+            if (!current || current.redmineIssueId !== issue.redmineIssueId) {
+              return current;
+            }
+            return {
+              ...current,
+              attachments: data.items,
+            };
+          });
+        }
+      } catch {
+        // Keep current payload when attachment refresh fails.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [issue, hasUnresolvedAttachmentRefs]);
+
   const externalIssueUrl = issue ? redmineIssueUrl(issue) : null;
+  const breadcrumbItems = issue?.breadcrumbs
+    ? issue.breadcrumbs.filter((crumb) => crumb.id !== issue.redmineIssueId)
+    : [];
+  const redmineBaseForCrumbs = issue?.redmineBaseUrl?.trim().replace(/\/+$/, "") ?? "";
 
   if (loading) {
-    return <main className="dashboard"><p>Loading issue...</p></main>;
+    return <IssueLoadingShell />;
   }
 
   if (error || !issue) {
@@ -688,17 +952,40 @@ export default function IssueDetailPage() {
   return (
     <main className="dashboard">
       {/* Breadcrumb Navigation */}
-      {issue.breadcrumbs && issue.breadcrumbs.length > 0 && (
+      {breadcrumbItems.length > 0 && (
         <nav className="breadcrumb-nav">
           <Link href="/" className="breadcrumb-item breadcrumb-home">Dashboard</Link>
           <span className="breadcrumb-sep">›</span>
-          {issue.breadcrumbs.map((crumb, i) => (
+          {breadcrumbItems.map((crumb, i) => (
             <span key={crumb.id} className="breadcrumb-chain">
-              <Link href={`/issues/${crumb.id}`} className="breadcrumb-item">
-                {crumb.tracker && <span className="breadcrumb-tracker">{crumb.tracker}</span>}
-                #{crumb.id}: {crumb.subject}
-              </Link>
-              {i < issue.breadcrumbs.length - 1 && <span className="breadcrumb-sep">›</span>}
+              {crumb.isCached !== false ? (
+                <Link href={`/issues/${crumb.id}`} className="breadcrumb-item">
+                  {crumb.tracker && <span className="breadcrumb-tracker">{crumb.tracker}</span>}
+                  #{crumb.id}: {crumb.subject}
+                </Link>
+              ) : hydratedRelatedIds.has(crumb.id) ? (
+                <Link href={`/issues/${crumb.id}`} className="breadcrumb-item">
+                  {crumb.tracker && <span className="breadcrumb-tracker">{crumb.tracker}</span>}
+                  #{crumb.id}: {crumb.subject}
+                </Link>
+              ) : redmineBaseForCrumbs ? (
+                <a
+                  href={`${redmineBaseForCrumbs}/issues/${crumb.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="breadcrumb-item breadcrumb-external"
+                  title="Open in Redmine (not cached locally)"
+                >
+                  {crumb.tracker && <span className="breadcrumb-tracker">{crumb.tracker}</span>}
+                  #{crumb.id}: {crumb.subject}
+                </a>
+              ) : (
+                <span className="breadcrumb-item breadcrumb-external" title="Not available locally">
+                  {crumb.tracker && <span className="breadcrumb-tracker">{crumb.tracker}</span>}
+                  #{crumb.id}: {crumb.subject}
+                </span>
+              )}
+              {i < breadcrumbItems.length - 1 && <span className="breadcrumb-sep">›</span>}
             </span>
           ))}
           <span className="breadcrumb-sep">›</span>
@@ -744,6 +1031,24 @@ export default function IssueDetailPage() {
               <span className="status-chip active">{issue.statusName}</span>
               <span className="status-chip">{issue.priority ?? "No priority"}</span>
               <span className="status-chip">{issue.assignedToName ?? "Unassigned"}</span>
+            </div>
+            <div className="issue-snapshot-row">
+              <div className="issue-snapshot">
+                <span>Due</span>
+                <strong>{formatDisplayDate(issue.dueDate)}</strong>
+              </div>
+              <div className="issue-snapshot">
+                <span>Progress</span>
+                <strong>{issue.doneRatio ?? 0}%</strong>
+              </div>
+              <div className="issue-snapshot">
+                <span>Logged</span>
+                <strong>{totalSpent.toFixed(1)}h</strong>
+              </div>
+              <div className="issue-snapshot">
+                <span>Last update</span>
+                <strong>{formatAgo(issue.updatedOnRemote)}</strong>
+              </div>
             </div>
           </div>
           <div className="hero-actions">
@@ -820,7 +1125,7 @@ export default function IssueDetailPage() {
         users={users}
       />
 
-      <section className="card reports-shell">
+      <section className="card reports-shell issue-detail-shell">
         <div className="reports-head">
           <div>
             <h2>Issue Overview</h2>
@@ -829,17 +1134,17 @@ export default function IssueDetailPage() {
         </div>
 
         <div className="reports-grid issue-overview-grid">
-          <article className="report-card">
+          <article className="report-card overview-card overview-card-status">
             <p className="report-label">Status</p>
             <p className="report-value">{issue.statusName}</p>
             <p className="report-foot">Priority: {issue.priority ?? "-"}</p>
           </article>
-          <article className="report-card">
+          <article className="report-card overview-card overview-card-due">
             <p className="report-label">Due Date</p>
             <p className="report-value">{issue.dueDate ? new Date(issue.dueDate).toLocaleDateString() : "-"}</p>
             <p className="report-foot">% Done: {issue.doneRatio ?? 0}%</p>
           </article>
-          <article className="report-card">
+          <article className="report-card overview-card overview-card-time">
             <p className="report-label">Spent Time</p>
             <p className="report-value">{totalSpent.toFixed(1)}h</p>
             <p className="report-foot">Assignee: {issue.assignedToName ?? "Unassigned"}</p>
@@ -1159,7 +1464,7 @@ export default function IssueDetailPage() {
             <div className="timeline">
               {issue.attachments.length === 0 && <p className="muted">No attachments.</p>}
               {issue.attachments.map((attachment) => (
-                <div key={attachment.id} className="timeline-item">
+                <div key={attachment.id} className="timeline-item timeline-item-attachment">
                   <div className="entry-head">
                     <a href={attachmentUrl(issue.redmineIssueId, attachment.redmineAttachmentId)} target="_blank" rel="noreferrer">
                       {attachment.filename}
@@ -1265,7 +1570,7 @@ export default function IssueDetailPage() {
             <div className="timeline">
               {issue.githubLinks.length === 0 && <p className="muted">No GitHub links yet.</p>}
               {issue.githubLinks.map((link) => (
-                <article key={link.id} className="timeline-item">
+                <article key={link.id} className="timeline-item timeline-item-github">
                   <div className="entry-head">
                     <a href={link.url} target="_blank" rel="noreferrer">
                       {link.title
@@ -1324,18 +1629,23 @@ export default function IssueDetailPage() {
         <div className="issue-tabs" ref={tabsRef}>
           <Link href={`/issues/${issue.redmineIssueId}?tab=history`} scroll={false} className={activeTab === "history" ? "active" : ""}>
             History
+            <span className="tab-count">{historyJournals.length}</span>
           </Link>
           <Link href={`/issues/${issue.redmineIssueId}?tab=notes`} scroll={false} className={activeTab === "notes" ? "active" : ""}>
             Notes
+            <span className="tab-count">{noteJournals.length}</span>
           </Link>
           <Link href={`/issues/${issue.redmineIssueId}?tab=internal-notes`} scroll={false} className={activeTab === "internal-notes" ? "active" : ""}>
             Internal Notes
+            <span className="tab-count">{internalNotes.length}</span>
           </Link>
           <Link href={`/issues/${issue.redmineIssueId}?tab=properties`} scroll={false} className={activeTab === "properties" ? "active" : ""}>
             Property changes
+            <span className="tab-count">{propertyJournals.length}</span>
           </Link>
           <Link href={`/issues/${issue.redmineIssueId}?tab=time_entries`} scroll={false} className={activeTab === "time_entries" ? "active" : ""}>
             Spent time
+            <span className="tab-count">{issue.timeEntries.length}</span>
           </Link>
         </div>
 
@@ -1348,20 +1658,18 @@ export default function IssueDetailPage() {
           </p>
           {activeTab === "history" && (
             <div className="timeline">
-              {issue.journals.length === 0 && <p className="muted">No history entries yet.</p>}
-              {issue.journals.map((journal) => (
-                <article key={journal.id} className="timeline-item">
+              {historyJournals.length === 0 && <p className="muted">No history entries yet.</p>}
+              {historyJournals.map((journal) => (
+                <article key={journal.id} className="timeline-item timeline-item-history">
                   <p className="muted">
                     <strong>{journal.author ?? "Unknown"}</strong> • {formatAgo(journal.createdOnRemote)}
                   </p>
-                  {journal.notes ? (
-                    <MarkdownBlock
-                      content={journal.notes}
-                      attachments={issue.attachments}
-                      issueId={issue.redmineIssueId}
-                      onImageClick={(src, alt) => setLightboxImage({ src, alt })}
-                    />
-                  ) : <p>(empty note)</p>}
+                  <MarkdownBlock
+                    content={journal.notes ?? ""}
+                    attachments={issue.attachments}
+                    issueId={issue.redmineIssueId}
+                    onImageClick={(src, alt) => setLightboxImage({ src, alt })}
+                  />
                 </article>
               ))}
             </div>
@@ -1370,7 +1678,7 @@ export default function IssueDetailPage() {
             <div className="timeline">
               {noteJournals.length === 0 && <p className="muted">No notes yet.</p>}
               {noteJournals.map((journal) => (
-                <article key={journal.id} className="timeline-item">
+                <article key={journal.id} className="timeline-item timeline-item-note">
                   <p className="muted">
                     <strong>{journal.author ?? "Unknown"}</strong> • {formatAgo(journal.createdOnRemote)}
                   </p>
@@ -1438,7 +1746,7 @@ export default function IssueDetailPage() {
             <div className="timeline">
               {propertyJournals.length === 0 && <p className="muted">No property changes detected.</p>}
               {propertyJournals.map((journal) => (
-                <article key={journal.id} className="timeline-item">
+                <article key={journal.id} className="timeline-item timeline-item-property">
                   <p className="muted">
                     <strong>{journal.author ?? "Unknown"}</strong> • {formatAgo(journal.createdOnRemote)}
                   </p>

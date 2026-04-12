@@ -2,12 +2,12 @@
 
 import { AllowedStatusView } from "@/src/lib/issue-shape";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
-import { normalizeRedmineText } from "@/src/lib/redmine-text-format";
+import { normalizeRedmineText, splitRedmineCollapseSegments } from "@/src/lib/redmine-text-format";
 import { AiIssueActions } from "@/src/components/ai/AiIssueActions";
 import { AiSearchBar } from "@/src/components/ai/AiSearchBar";
 import { DashboardWidgets, calculateStats } from "@/src/components/DashboardWidgets";
@@ -138,8 +138,18 @@ type ActivityEvent = {
 const POLL_INTERVAL_MS = 90_000;
 const SAVED_VIEWS_KEY = "nrcc.savedViews.v1";
 
+function normalizeAttachmentFilename(value: string): string {
+  const decoded = decodeURIComponent(value).trim();
+  const baseName = decoded.split("/").pop() ?? decoded;
+  return baseName.toLowerCase();
+}
+
+function filenamesMatch(left: string, right: string): boolean {
+  return normalizeAttachmentFilename(left) === normalizeAttachmentFilename(right);
+}
+
 function MarkdownBlock({ content, attachments = [], issueId }: { content: string; attachments?: Attachment[]; issueId?: number }) {
-  const normalized = useMemo(() => normalizeRedmineText(content), [content]);
+  const segments = useMemo(() => splitRedmineCollapseSegments(content), [content]);
 
   function textFromNode(node: ReactNode): string {
     if (typeof node === "string" || typeof node === "number") {
@@ -164,7 +174,7 @@ function MarkdownBlock({ content, attachments = [], issueId }: { content: string
       : srcText.split("/").pop() ?? alt ?? "image";
 
     if (srcText.includes(attachmentMarker)) {
-      const attachment = attachments.find((item) => item.filename === filename);
+      const attachment = attachments.find((item) => filenamesMatch(item.filename, filename));
       if (!attachment || !issueId) return <span className="muted">[Image: {filename}]</span>;
       const url = attachmentUrl(issueId, attachment.redmineAttachmentId);
       return (
@@ -198,9 +208,12 @@ function MarkdownBlock({ content, attachments = [], issueId }: { content: string
     );
   }
 
-  return (
-    <div className="markdown">
+  function renderMarkdown(markdown: string, key: string) {
+    const normalized = normalizeRedmineText(markdown);
+    if (!normalized.trim()) return null;
+    return (
       <ReactMarkdown
+        key={key}
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeHighlight, { ignoreMissing: true }]]}
         components={{
@@ -215,6 +228,22 @@ function MarkdownBlock({ content, attachments = [], issueId }: { content: string
       >
         {normalized}
       </ReactMarkdown>
+    );
+  }
+
+  return (
+    <div className="markdown">
+      {segments.map((segment, index) => {
+        if (segment.type === "markdown") {
+          return renderMarkdown(segment.content, `md-${index}`);
+        }
+        return (
+          <details key={`collapse-${index}`} className="redmine-collapse">
+            <summary>{segment.title}</summary>
+            {renderMarkdown(segment.content, `collapse-body-${index}`)}
+          </details>
+        );
+      })}
     </div>
   );
 }
@@ -460,6 +489,21 @@ export default function Home() {
   const [timerNowMs, setTimerNowMs] = useState(Date.now());
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const prefetchedIssueIdsRef = useRef<Set<number>>(new Set());
+
+  const prefetchIssueDetail = useCallback((targetIssueId: number) => {
+    if (!Number.isInteger(targetIssueId) || targetIssueId <= 0) {
+      return;
+    }
+    if (prefetchedIssueIdsRef.current.has(targetIssueId)) {
+      return;
+    }
+    prefetchedIssueIdsRef.current.add(targetIssueId);
+    router.prefetch(`/issues/${targetIssueId}`);
+    void fetch(`/api/issues/${targetIssueId}`, { cache: "no-store" }).catch(() => {
+      prefetchedIssueIdsRef.current.delete(targetIssueId);
+    });
+  }, [router]);
 
   const selectedIssue = useMemo(
     () => issues.find((i) => i.redmineIssueId === selectedIssueId) ?? null,
@@ -1460,25 +1504,29 @@ export default function Home() {
     <main className="dashboard">
       <header className="card hero">
         <div className="hero-top">
-          <div>
+          <div className="hero-heading">
             <p className="kicker">Redmine Control Room</p>
-            <h1>NRCC - Nasc Redmine Command Center</h1>
+            <h1 className="hero-title">NRCC - Nasc Redmine Command Center</h1>
             <p className="muted">
               Signed in as <strong>{user.displayName}</strong> ({user.username})
             </p>
           </div>
-          <div className={`sync-pill sync-${syncStateTone}`}>
-            Sync: {syncState?.lastSyncStatus ?? "idle"}
-            {lastSyncAt
-              ? ` • ${new Date(lastSyncAt).toLocaleString()}`
-              : " • Waiting for first sync"}
-          </div>
-          {aiStatus?.available && (
-            <div className="ai-status-pill">
-              🤖 AI: {aiStatus.usingFallback ? "Fallback" : "Cloud"}
+          <div className="hero-status-rail">
+            <div className={`sync-pill sync-${syncStateTone}`}>
+              Sync: {syncState?.lastSyncStatus ?? "idle"}
+              {lastSyncAt
+                ? ` • ${new Date(lastSyncAt).toLocaleString()}`
+                : " • Waiting for first sync"}
             </div>
-          )}
-          <NotificationsPanel />
+            {aiStatus?.available && (
+              <div className="ai-status-pill">
+                🤖 AI: {aiStatus.usingFallback ? "Fallback" : "Cloud"}
+              </div>
+            )}
+            <div className="notif-shell">
+              <NotificationsPanel />
+            </div>
+          </div>
         </div>
         {syncState?.lastSyncStatus === "failed" && (
           <p className="sync-error-inline">
@@ -1505,7 +1553,7 @@ export default function Home() {
         </div>
 
         <section className="metrics-grid">
-          <article className="card metric-card">
+          <article className="card metric-card metric-primary">
             <p className="metric-label">Visible / Total</p>
             <p className="metric-value">
               {summary.totalVisible} <span>/ {summary.total}</span>
@@ -1516,28 +1564,32 @@ export default function Home() {
                 style={{ width: `${Math.min(100, Math.round((summary.totalVisible / Math.max(1, summary.total)) * 100))}%` }}
               />
             </div>
+            <div className="metric-signal-row">
+              <span>Due Today: {summary.dueToday}</span>
+              <span>Avg Open Age: {summary.avgOpenAgeDays}d</span>
+            </div>
           </article>
-          <article className="card metric-card">
+          <article className="card metric-card metric-open">
             <p className="metric-label">Open</p>
             <p className="metric-value">{summary.open}</p>
             <p className="metric-foot">In progress: {summary.inProgress}</p>
           </article>
-          <article className="card metric-card">
+          <article className="card metric-card metric-risk">
             <p className="metric-label">Risk Bucket</p>
             <p className="metric-value">{summary.overdue}</p>
             <p className="metric-foot">Overdue issues • Due soon: {summary.dueSoon}</p>
           </article>
-          <article className="card metric-card">
+          <article className="card metric-card metric-health">
             <p className="metric-label">Delivery Health</p>
             <p className="metric-value">{summary.completion}%</p>
             <p className="metric-foot">Done: {summary.done} • Avg done ratio: {summary.avgDoneRatio}%</p>
           </article>
-          <article className="card metric-card">
+          <article className="card metric-card metric-blocked">
             <p className="metric-label">Blocked</p>
             <p className="metric-value">{summary.blocked}</p>
             <p className="metric-foot">Status contains blocked/hold/waiting</p>
           </article>
-          <article className="card metric-card">
+          <article className="card metric-card metric-stale">
             <p className="metric-label">Stale Queue</p>
             <p className="metric-value">{summary.stale}</p>
             <p className="metric-foot">No update in 3+ days • Avg open age: {summary.avgOpenAgeDays}d</p>
@@ -1707,7 +1759,9 @@ export default function Home() {
                 <button
                   key={issue.id}
                   type="button"
-                  className="alert-row"
+                  className={`alert-row ${reason.includes("overdue") ? "tone-critical" : reason.includes("blocked") ? "tone-warning" : "tone-stale"}`}
+                  onMouseEnter={() => prefetchIssueDetail(issue.redmineIssueId)}
+                  onFocus={() => prefetchIssueDetail(issue.redmineIssueId)}
                   onClick={() => {
                     router.push(`/issues/${issue.redmineIssueId}`);
                   }}
@@ -1741,7 +1795,9 @@ export default function Home() {
                 <button
                   key={`${event.issueId}-${event.timestamp}-${idx}`}
                   type="button"
-                  className="activity-row"
+                  className={`activity-row ${event.detail.includes("logged") ? "tone-time" : event.detail.includes("commented") ? "tone-comment" : "tone-update"}`}
+                  onMouseEnter={() => prefetchIssueDetail(event.issueId)}
+                  onFocus={() => prefetchIssueDetail(event.issueId)}
                   onClick={() => {
                     router.push(`/issues/${event.issueId}`);
                   }}
@@ -1842,8 +1898,9 @@ export default function Home() {
                 <ExportButton issues={issues} format="print" />
               </div>
 
-              <table className="issues-table">
-                <thead>
+              <div className="issues-table-wrap">
+                <table className="issues-table">
+                  <thead>
                   <tr>
                     <th>
                       <input
@@ -1882,8 +1939,8 @@ export default function Home() {
                       Updated{getSortIndicator("updated")}
                     </th>
                   </tr>
-                </thead>
-                <tbody>
+                  </thead>
+                  <tbody>
                   {(() => {
                     const filtered = showFavoritesOnly
                       ? issues.filter(i => favoriteIssueIds.includes(i.redmineIssueId))
@@ -1902,6 +1959,7 @@ export default function Home() {
                       <tr
                         key={issue.id}
                         className={`issue-row ${selectedIssueId === issue.redmineIssueId ? "selected" : ""}`}
+                        onMouseEnter={() => prefetchIssueDetail(issue.redmineIssueId)}
                         onClick={() => {
                           router.push(`/issues/${issue.redmineIssueId}`);
                         }}
@@ -1932,13 +1990,13 @@ export default function Home() {
                           <div className="subject-cell">
                             <p>{issue.subject}</p>
                             {issue.githubLinks.length > 0 && (
-                              <span className="muted">GH: {issue.githubLinks.length} link(s)</span>
+                              <span className="subject-meta">GH: {issue.githubLinks.length} link(s)</span>
                             )}
                             {issue.attachments.length > 0 && (
-                              <span className="muted">Attachments: {issue.attachments.length}</span>
+                              <span className="subject-meta">Attachments: {issue.attachments.length}</span>
                             )}
                             {issue.relations.length > 0 && (
-                              <span className="muted">Relations: {issue.relations.length}</span>
+                              <span className="subject-meta">Relations: {issue.relations.length}</span>
                             )}
                             <span className={`urgency-pill ${urgency}`}>{urgency}</span>
                           </div>
@@ -1967,8 +2025,9 @@ export default function Home() {
                     );
                   });
                 })()}
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
 
               {/* Pagination Controls */}
               {(() => {
@@ -2323,19 +2382,17 @@ export default function Home() {
                 <button type="submit">Post Comment</button>
               </form>
               <div className="timeline">
-                {selectedIssue.journals.length === 0 && <p className="muted">No comments yet.</p>}
-                {selectedIssue.journals.map((j) => (
+                {selectedIssue.journals.every((journal) => !journal.notes?.trim()) && <p className="muted">No comments yet.</p>}
+                {selectedIssue.journals.filter((journal) => Boolean(journal.notes?.trim())).map((j) => (
                   <div key={j.id} className="timeline-item">
                     <p className="muted">
                       <strong>{j.author ?? "Unknown"}</strong> • {new Date(j.createdOnRemote).toLocaleString()}
                     </p>
-                    {j.notes ? (
-                      <MarkdownBlock
-                        content={j.notes}
-                        attachments={selectedIssue.attachments}
-                        issueId={selectedIssue.redmineIssueId}
-                      />
-                    ) : <p>(empty note)</p>}
+                    <MarkdownBlock
+                      content={j.notes ?? ""}
+                      attachments={selectedIssue.attachments}
+                      issueId={selectedIssue.redmineIssueId}
+                    />
                   </div>
                 ))}
               </div>
