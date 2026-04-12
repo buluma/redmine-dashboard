@@ -1,5 +1,4 @@
 const required = ["DATABASE_URL", "APP_ENCRYPTION_KEY", "SESSION_SECRET"] as const;
-const optionalRequiredForAI = ["OLLAMA_BASE_URL", "OLLAMA_CHAT_MODEL"] as const;
 
 for (const key of required) {
   if (!process.env[key]) {

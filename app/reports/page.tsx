@@ -1,9 +1,55 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type TrendPoint = { key: string; value: number };
+type NamedCount = { name: string; count: number };
+type HoursMetric = { name: string; hours: number; count: number };
+type OverdueParent = { label: string; count: number };
+type RecentJournal = {
+  id: string;
+  issueId: number;
+  issueSubject: string;
+  author: string | null;
+  notes: string | null;
+  createdOnRemote: string;
+};
+type RecentTimeEntry = {
+  id: string;
+  issueId: number;
+  issueSubject: string;
+  hours: number;
+  activityName: string | null;
+  authorName: string | null;
+  spentOn: string;
+};
+type ReportData = {
+  aggregates: {
+    byStatus: NamedCount[];
+    byPriority: NamedCount[];
+    byTracker: NamedCount[];
+    byProject: NamedCount[];
+    byAssignee: NamedCount[];
+  };
+  stats: {
+    totalIssues: number;
+    totalWithDueDate: number;
+    overdueParents: OverdueParent[];
+    totalTimeHours: number;
+    totalTimelogs: number;
+  };
+  trends: {
+    journalDaySeries: TrendPoint[];
+    timeDaySeries: TrendPoint[];
+    byActivity: HoursMetric[];
+    byUser: HoursMetric[];
+  };
+  recent: {
+    journals: RecentJournal[];
+    timeEntries: RecentTimeEntry[];
+  };
+};
 
 type Drilldown =
   | { type: "status"; value: string }
@@ -106,14 +152,14 @@ export default function ReportsPage() {
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(30);
   const [drilldown, setDrilldown] = useState<Drilldown>(null);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ReportData | null>(null);
 
-  async function loadReportData() {
+  const loadReportData = useCallback(async () => {
     const res = await fetch(`/api/reports?days=${days}`, { cache: "no-store" });
-    const json = await res.json();
+    const json = (await res.json()) as ReportData & { error?: string };
     if (!res.ok) throw new Error(json.error ?? "Unable to load reports");
     setData(json);
-  }
+  }, [days]);
 
   useEffect(() => {
     void (async () => {
@@ -127,7 +173,7 @@ export default function ReportsPage() {
         setLoading(false);
       }
     })();
-  }, [days]);
+  }, [loadReportData]);
 
   if (loading && !data) {
     return <main className="dashboard"><p>Loading reports...</p></main>;
@@ -141,16 +187,31 @@ export default function ReportsPage() {
 
   const { aggregates, stats, trends, recent } = data;
 
-  const journalTrend = trends.journalDaySeries.map((p: any) => ({ key: p.key, value: p.value }));
-  const timeTrend = trends.timeDaySeries.map((p: any) => ({ key: p.key, value: p.value }));
+  const journalTrend = trends.journalDaySeries.map((p) => ({ key: p.key, value: p.value }));
+  const timeTrend = trends.timeDaySeries.map((p) => ({ key: p.key, value: p.value }));
 
   const journalTotal = journalTrend.reduce((s: number, p: TrendPoint) => s + p.value, 0);
-  const timeTotal = trends.timeDaySeries.reduce((s: number, p: any) => s + p.value, 0);
+  const timeTotal = timeTrend.reduce((s: number, p: TrendPoint) => s + p.value, 0);
 
   const peakJournals = journalTrend.reduce((acc: TrendPoint, p: TrendPoint) => p.value > acc.value ? p : acc, { key: "-", value: 0 });
-  const peakTime = timeTrend.reduce((acc: any, p: any) => p.value > acc.value ? p : acc, { key: "-", value: 0 });
 
   const avgHoursPerDay = days > 0 ? Number((timeTotal / days).toFixed(1)) : 0;
+  const recentActivity = [
+    ...recent.journals.map((j) => ({
+      timestamp: j.createdOnRemote,
+      issueId: j.issueId,
+      issueSubject: j.issueSubject,
+      detail: `${j.author ?? "Unknown"} commented`,
+    })),
+    ...recent.timeEntries.map((t) => ({
+      timestamp: t.spentOn,
+      issueId: t.issueId,
+      issueSubject: t.issueSubject,
+      detail: `${t.hours.toFixed(1)}h logged${t.activityName ? ` (${t.activityName})` : ""}`,
+    })),
+  ]
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 20);
 
   const drillTitle = () => {
     if (!drilldown) return "";
@@ -251,7 +312,7 @@ export default function ReportsPage() {
           <article className="report-card">
             <p className="report-label">Time by Activity</p>
             <BarChart
-              items={trends.byActivity.map((a: any) => ({ name: a.name, value: a.hours }))}
+              items={trends.byActivity.map((a) => ({ name: a.name, value: a.hours }))}
               color="var(--signal)"
               active={drilldown?.type === "tracker" ? drilldown.value : undefined}
             />
@@ -262,7 +323,7 @@ export default function ReportsPage() {
           <article className="report-card">
             <p className="report-label">Status Distribution</p>
             <BarChart
-              items={aggregates.byStatus.map((s: any) => ({ name: s.name, value: s.count }))}
+              items={aggregates.byStatus.map((s) => ({ name: s.name, value: s.count }))}
               color="var(--accent)"
               onClick={(name) => setDrilldown({ type: "status", value: name })}
               active={drilldown?.type === "status" ? drilldown.value : undefined}
@@ -272,7 +333,7 @@ export default function ReportsPage() {
           <article className="report-card">
             <p className="report-label">Priority Distribution</p>
             <BarChart
-              items={aggregates.byPriority.map((p: any) => ({ name: p.name, value: p.count }))}
+              items={aggregates.byPriority.map((p) => ({ name: p.name, value: p.count }))}
               color="var(--signal)"
               onClick={(name) => setDrilldown({ type: "priority", value: name })}
               active={drilldown?.type === "priority" ? drilldown.value : undefined}
@@ -282,7 +343,7 @@ export default function ReportsPage() {
           <article className="report-card">
             <p className="report-label">Top Projects</p>
             <BarChart
-              items={aggregates.byProject.map((p: any) => ({ name: p.name, value: p.count }))}
+              items={aggregates.byProject.map((p) => ({ name: p.name, value: p.count }))}
               color="var(--accent-strong)"
               onClick={(name) => setDrilldown({ type: "project", value: name })}
               active={drilldown?.type === "project" ? drilldown.value : undefined}
@@ -294,7 +355,7 @@ export default function ReportsPage() {
           <article className="report-card">
             <p className="report-label">Top Assignees</p>
             <BarChart
-              items={aggregates.byAssignee.map((a: any) => ({ name: a.name, value: a.count }))}
+              items={aggregates.byAssignee.map((a) => ({ name: a.name, value: a.count }))}
               color="var(--ok)"
               onClick={(name) => setDrilldown({ type: "assignee", value: name })}
               active={drilldown?.type === "assignee" ? drilldown.value : undefined}
@@ -304,7 +365,7 @@ export default function ReportsPage() {
           <article className="report-card">
             <p className="report-label">Overdue by Parent</p>
             {stats.overdueParents.length === 0 && <p className="muted">No overdue issues.</p>}
-            {stats.overdueParents.map((op: any) => (
+            {stats.overdueParents.map((op) => (
               <button key={op.label} type="button" className="report-list-row report-btn">
                 <span>{op.label}</span>
                 <strong>{op.count}</strong>
@@ -315,7 +376,7 @@ export default function ReportsPage() {
           <article className="report-card">
             <p className="report-label">Time by User</p>
             <BarChart
-              items={trends.byUser.map((u: any) => ({ name: u.name, value: u.hours }))}
+              items={trends.byUser.map((u) => ({ name: u.name, value: u.hours }))}
               color="var(--accent-soft)"
             />
           </article>
@@ -326,23 +387,7 @@ export default function ReportsPage() {
       <section className="card">
         <h2>Recent Activity</h2>
         <div className="activity-feed">
-          {[
-            ...recent.journals.map((j: any) => ({
-              timestamp: j.createdOnRemote,
-              issueId: j.issueId,
-              issueSubject: j.issueSubject,
-              detail: `${j.author ?? "Unknown"} commented`,
-            })),
-            ...recent.timeEntries.map((t: any) => ({
-              timestamp: t.spentOn,
-              issueId: t.issueId,
-              issueSubject: t.issueSubject,
-              detail: `${t.hours.toFixed(1)}h logged${t.activityName ? ` (${t.activityName})` : ""}`,
-            })),
-          ]
-            .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-            .slice(0, 20)
-            .map((event: any, idx: number) => (
+          {recentActivity.map((event, idx: number) => (
               <Link key={`${event.issueId}-${event.timestamp}-${idx}`} href={`/issues/${event.issueId}`} className="activity-row static">
                 <span>
                   #{event.issueId} {event.issueSubject}

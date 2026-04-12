@@ -3,6 +3,7 @@ import { createCategorizeMessages, parseJsonResponse, type CategorizeResponse } 
 import { env } from "@/src/lib/env";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
+import { requireCurrentUser } from "@/src/lib/auth";
 
 export const runtime = "nodejs";
 

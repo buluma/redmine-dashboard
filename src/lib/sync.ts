@@ -51,7 +51,6 @@ function asBoolean(value: unknown): boolean | null {
 }
 
 type AllowedStatus = { id: number; name: string; isClosed?: boolean };
-type IssueChild = { id: number; subject: string };
 
 function parseAllowedStatuses(issueRaw: Record<string, unknown>): AllowedStatus[] {
   const statuses = asObject(issueRaw).allowed_statuses;
@@ -86,19 +85,20 @@ function parseChildren(issueRaw: Record<string, unknown>): IssueChild[] {
     return [];
   }
 
-  return children
-    .map((row) => {
-      const item = asObject(row);
-      const id = asNumber(item.id);
-      const subject = asString(item.subject);
-      if (!id || !subject) return null;
+  const result: IssueChild[] = [];
+  for (const row of children) {
+    const item = asObject(row);
+    const id = asNumber(item.id);
+    const subject = asString(item.subject);
+    if (!id || !subject) continue;
 
-      const trackerObj = item.tracker as Record<string, unknown> | undefined;
-      const tracker = trackerObj ? asString(trackerObj.name) : undefined;
+    const trackerObj = item.tracker as Record<string, unknown> | undefined;
+    const trackerName = trackerObj ? asString(trackerObj.name) : null;
+    const tracker = trackerName ?? undefined;
 
-      return { id, subject, tracker };
-    })
-    .filter((x): x is IssueChild => Boolean(x));
+    result.push({ id, subject, tracker });
+  }
+  return result;
 }
 
 async function upsertIssueFromRemote(userId: string, redmineBaseUrl: string, issueRaw: Record<string, unknown>) {
@@ -131,7 +131,9 @@ async function upsertIssueFromRemote(userId: string, redmineBaseUrl: string, iss
     startDate: asDate(issueRaw.start_date),
     estimatedHours: asNumber(issueRaw.estimated_hours),
     spentHours: asNumber(issueRaw.spent_hours),
-    customFieldsJson: Array.isArray(issueRaw.custom_fields) ? issueRaw.custom_fields as Prisma.InputJsonValue : null,
+    customFieldsJson: Array.isArray(issueRaw.custom_fields)
+      ? (issueRaw.custom_fields as Prisma.InputJsonValue)
+      : Prisma.DbNull,
     updatedOnRemote: updatedOn,
     dueDate: asDate(issueRaw.due_date),
     doneRatio: asNumber(issueRaw.done_ratio),
@@ -477,17 +479,18 @@ export async function buildBreadcrumbChain(
     visited.add(currentId);
     try {
       const data = await client.getIssue(currentId, ["parent"]);
-      const issue = data?.issue;
-      if (!issue) break;
+      const issue = asObject(data?.issue);
+      const currentIssueId = asNumber(issue.id);
+      if (!currentIssueId) break;
 
       chain.unshift({
-        id: issue.id,
-        subject: issue.subject ?? `Issue #${issue.id}`,
-        tracker: issue.tracker?.name,
+        id: currentIssueId,
+        subject: asString(issue.subject) ?? `Issue #${currentIssueId}`,
+        tracker: nestedName(issue.tracker) ?? undefined,
       });
 
-      const parent = issue.parent;
-      currentId = parent?.id ? Number(parent.id) : null;
+      const parentId = nestedId(issue.parent);
+      currentId = parentId ? Number(parentId) : null;
       if (!currentId || !Number.isInteger(currentId) || currentId <= 0) break;
 
       depth++;

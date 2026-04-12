@@ -29,25 +29,21 @@ function parseAllowedStatuses(value: JsonValue | null): AllowedStatusView[] {
 
 function parseChildren(value: JsonValue | null): IssueChildView[] {
   if (!Array.isArray(value)) return [];
-  return value
-    .map((row) => {
-      if (!row || typeof row !== "object") return null;
-      const item = row as Record<string, unknown>;
-      const id = typeof item.id === "number" ? item.id : null;
-      const subject = typeof item.subject === "string" ? item.subject : null;
-      if (!id || !subject) return null;
+  const items = value as Array<Record<string, unknown> | null | undefined>;
+  const result: IssueChildView[] = [];
+  for (const row of items) {
+    if (!row || typeof row !== "object") continue;
+    const item = row as Record<string, unknown>;
+    const id = typeof item.id === "number" ? item.id : null;
+    const subject = typeof item.subject === "string" ? item.subject : null;
+    if (!id || !subject) continue;
 
-      // Extract tracker name
-      const tracker = item.tracker as Record<string, unknown> | undefined;
-      const trackerName = typeof tracker?.name === "string" ? tracker.name : null;
+    const tracker = item.tracker as Record<string, unknown> | undefined;
+    const trackerName = typeof tracker?.name === "string" ? tracker.name : null;
 
-      return {
-        id,
-        subject,
-        tracker: trackerName,
-      };
-    })
-    .filter((x): x is IssueChildView => Boolean(x));
+    result.push({ id, subject, tracker: trackerName });
+  }
+  return result;
 }
 
 export function toIssueView<T extends { allowedStatusesJson: JsonValue | null; childrenJson: JsonValue | null }>(issue: T) {
