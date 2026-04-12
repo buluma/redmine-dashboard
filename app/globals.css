@@ -489,6 +489,7 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-size: small;
 }
 
 .secondary-button:hover {
@@ -863,11 +864,13 @@ label {
   font-size: 1.45rem;
   font-weight: 800;
   line-height: 1;
+  text-align: center;
 }
 
 .report-foot {
   color: var(--ink-soft);
   font-size: 0.81rem;
+  text-align: center;
 }
 
 .sparkline {
@@ -1042,7 +1045,7 @@ label {
 .bar-value {
   font-size: 0.85rem;
   color: var(--ink-soft);
-  text-align: right;
+  text-align: center;
 }
 
 .bar-label-row {
@@ -3464,6 +3467,10 @@ textarea {
   background: linear-gradient(180deg, #ffffff 0%, #fcf3eb 100%);
 }
 
+.metric-ai-insights {
+  background: linear-gradient(180deg, #ffffff 0%, #e9f7f9 100%);
+}
+
 .metric-health {
   background: linear-gradient(180deg, #ffffff 0%, #e8f4f8 100%);
 }
@@ -3483,6 +3490,11 @@ textarea {
   padding: 0.16rem 0.45rem;
   font-size: 0.74rem;
   font-weight: 700;
+}
+
+.muted {
+    color: var(--ink-soft);
+    font-size: smaller;
 }
 
 .filters-panel {

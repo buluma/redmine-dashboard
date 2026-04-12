@@ -59,7 +59,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
-- Branding and page titles updated to `NRCC - Nasc Redmine Command Center`.
+- Branding and page titles updated to `Nasc Redmine Command Center (NRCC)`.
 - Polling cadence standardized at 90 seconds.
 - Dashboard details now open in a modal popup.
 - Main dashboard project filter removed from API/query model.
