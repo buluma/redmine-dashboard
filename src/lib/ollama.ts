@@ -46,6 +46,7 @@ export interface OllamaStatus {
 
 export class OllamaClient {
   private baseUrl: string;
+  private apiKey: string | null;
   private primaryChatModel: string;
   private fallbackChatModel: string;
   private primaryEmbedModel: string;
@@ -55,6 +56,7 @@ export class OllamaClient {
 
   constructor() {
     this.baseUrl = env.ollamaBaseUrl;
+    this.apiKey = process.env.OLLAMA_API_KEY || null;
     this.primaryChatModel = env.ollamaChatModel;
     this.fallbackChatModel = env.ollamaChatModelFallback;
     this.primaryEmbedModel = env.ollamaEmbedModel;
@@ -70,9 +72,16 @@ export class OllamaClient {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
+      ...(options.headers as Record<string, string> || {}),
+    };
+
     try {
       const response = await fetch(url, {
         ...options,
+        headers,
         signal: controller.signal,
       });
       return response;
@@ -161,9 +170,6 @@ export class OllamaClient {
 
     const response = await this.fetchWithTimeout(`${this.baseUrl}/api/chat`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({
         model,
         messages,
@@ -262,9 +268,6 @@ export class OllamaClient {
 
     const response = await this.fetchWithTimeout(`${this.baseUrl}/api/embeddings`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({
         model,
         prompt: texts[0], // Ollama embeddings API takes single prompt

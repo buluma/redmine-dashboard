@@ -656,7 +656,7 @@ export default function IssueDetailPage() {
           <div className="hero-actions">
             {!editMode && (
               <button type="button" className="primary-link" onClick={startEditMode}>
-                ✏️ Edit
+                Edit
               </button>
             )}
             <Link href="/" className="primary-link">Back to Dashboard</Link>
