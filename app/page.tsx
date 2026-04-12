@@ -398,7 +398,7 @@ export default function Home() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const pageSize = 20;
-  const fetchPageSize = 100;
+  const fetchPageSize = 1000;
   const [statuses, setStatuses] = useState<StatusCatalog[]>([]);
   const [priorities, setPriorities] = useState<string[]>([]);
   const [searchSource, setSearchSource] = useState("local_cache");
@@ -620,7 +620,6 @@ export default function Home() {
     if (search) params.set("search", search);
     params.set("searchMode", searchMode);
     params.set("scope", "issues");
-    params.set("openOnly", "true");
     if (sort) params.set("sort", sort);
     params.set("page", "1");
     params.set("pageSize", "100");

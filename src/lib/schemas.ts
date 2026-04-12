@@ -45,7 +45,7 @@ export const issueQuerySchema = z.object({
     .transform((value) => (typeof value === "string" ? value === "true" : value)),
   sort: z.enum(["updated_desc", "updated_asc", "priority", "due_date"]).default("updated_desc"),
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  pageSize: z.coerce.number().int().min(1).max(1000).default(25),
 });
 
 export const githubLinkCreateSchema = z
@@ -96,7 +96,7 @@ export const timeEntryQuerySchema = z.object({
   to: z.string().date().optional(),
   user: z.enum(["me"]).default("me"),
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  pageSize: z.coerce.number().int().min(1).max(1000).default(25),
 });
 
 export const timeEntryUpdateSchema = z.object({
