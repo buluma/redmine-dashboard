@@ -13,7 +13,18 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { issueId } = body;
+    let issueId = body.issueId as string | undefined;
+
+    // If issueId looks like a number, treat it as redmineIssueId
+    const numericId = parseInt(issueId ?? "", 10);
+    if (!isNaN(numericId)) {
+      const user = await requireCurrentUser();
+      const issue = await prisma.issue.findFirst({
+        where: { userId: user.id, redmineIssueId: numericId },
+      });
+      if (!issue) return jsonError("Issue not found", 404);
+      issueId = issue.id;
+    }
 
     if (!issueId) {
       return jsonError("issueId is required", 400);
