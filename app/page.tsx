@@ -435,6 +435,7 @@ export default function Home() {
   const [issueQueueOpen, setIssueQueueOpen] = useState(true);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [favoriteIssueIds, setFavoriteIssueIds] = useState<number[]>([]);
+  const [showCharts, setShowCharts] = useState(false);
 
   const [comment, setComment] = useState("");
   const [hours, setHours] = useState("1");
@@ -1755,6 +1756,22 @@ export default function Home() {
           )}
         </article>
 
+        {/* Analytics Dashboard */}
+        <article className="card charts-card">
+          <div className="collapsible-head">
+            <div>
+              <h2>📊 Analytics Dashboard</h2>
+              <p className="muted">Issue trends and workload distribution</p>
+            </div>
+            <button type="button" className="secondary-button" onClick={() => setShowCharts((c) => !c)}>
+              {showCharts ? "Collapse" : "Expand"}
+            </button>
+          </div>
+          {showCharts && issues.length > 0 && (
+            <DashboardWidgets stats={calculateStats(issues)} />
+          )}
+        </article>
+
         <article className="card issues-panel">
           <div className="collapsible-head">
             <div>
@@ -1796,11 +1813,6 @@ export default function Home() {
                   </button>
                 </div>
               </div>
-
-              {/* Dashboard Widgets */}
-              {issues.length > 0 && (
-                <DashboardWidgets stats={calculateStats(issues)} />
-              )}
 
               {/* Filters Bar */}
               <div className="filters-bar">
