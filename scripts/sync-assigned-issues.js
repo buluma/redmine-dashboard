@@ -77,46 +77,34 @@ function buildPayload(userId, issueRaw, baseUrl) {
 async function bulkUpsert(payloads) {
   if (payloads.length === 0) return { created: 0, updated: 0 };
 
-  const columns = [
-    'userId','redmineIssueId','redmineBaseUrl','subject','description','projectName',
-    'tracker','priority','priorityId','statusId','statusName','parentIssueId',
-    'parentIssueLabel','assignedToId','assignedToName','authorId','authorName',
-    'categoryId','categoryName','startDate','estimatedHours','spentHours',
-    'customFieldsJson','updatedOnRemote','dueDate','doneRatio','childrenJson'
-  ];
+  const BATCH_SIZE = 50;
+  let created = 0;
+  let updated = 0;
 
-  const updateCols = columns.filter(c => c !== 'userId' && c !== 'redmineIssueId' && c !== 'redmineBaseUrl');
-  const updateSet = updateCols.map(c => `"${c}" = EXCLUDED."${c}"`).join(', ');
+  for (let i = 0; i < payloads.length; i += BATCH_SIZE) {
+    const batch = payloads.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map(async (p) => {
+        await prisma.issue.upsert({
+          where: {
+            userId_redmineBaseUrl_redmineIssueId: {
+              userId: p.userId,
+              redmineBaseUrl: p.redmineBaseUrl,
+              redmineIssueId: p.redmineIssueId,
+            },
+          },
+          update: p,
+          create: p,
+        });
+      })
+    );
 
-  const values = payloads.map(p => {
-    const v = [
-      `'${p.userId}'`, p.redmineIssueId, `'${p.redmineBaseUrl}'`,
-      JSON.stringify(p.subject), JSON.stringify(p.description), JSON.stringify(p.projectName),
-      JSON.stringify(p.tracker), JSON.stringify(p.priority), p.priorityId ?? 'null',
-      p.statusId, JSON.stringify(p.statusName), p.parentIssueId ?? 'null',
-      JSON.stringify(p.parentIssueLabel), p.assignedToId ?? 'null', JSON.stringify(p.assignedToName),
-      p.authorId ?? 'null', JSON.stringify(p.authorName), p.categoryId ?? 'null',
-      JSON.stringify(p.categoryName), p.startDate ? `'${p.startDate.toISOString().slice(0, 23)}Z'` : 'null',
-      p.estimatedHours != null ? p.estimatedHours : 'null',
-      p.spentHours != null ? p.spentHours : 'null',
-      p.customFieldsJson ? JSON.stringify(p.customFieldsJson) : 'null',
-      `'${p.updatedOnRemote.toISOString().slice(0, 23)}Z'`,
-      p.dueDate ? `'${p.dueDate.toISOString().slice(0, 23)}Z'` : 'null',
-      p.doneRatio != null ? p.doneRatio : 'null',
-      p.childrenJson ? JSON.stringify(p.childrenJson) : 'null',
-    ];
-    return `(${v.join(',')})`;
-  });
+    for (const r of results) {
+      if (r.status === 'fulfilled') updated++;
+    }
+  }
 
-  const sql = `
-    INSERT INTO "Issue" (${columns.map(c => `"${c}"`).join(', ')})
-    VALUES ${values.join(', ')}
-    ON CONFLICT ("userId", "redmineBaseUrl", "redmineIssueId")
-    DO UPDATE SET ${updateSet}
-  `;
-
-  await prisma.$executeRawUnsafe(sql);
-  return { created: 0, updated: payloads.length };
+  return { created, updated };
 }
 
 async function main() {
