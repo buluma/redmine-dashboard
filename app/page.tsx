@@ -11,7 +11,7 @@ import { normalizeRedmineText, splitRedmineCollapseSegments } from "@/src/lib/re
 import { AiIssueActions } from "@/src/components/ai/AiIssueActions";
 import { AiSearchBar } from "@/src/components/ai/AiSearchBar";
 import { DashboardWidgets, calculateStats } from "@/src/components/DashboardWidgets";
-import { AdvancedFilters } from "@/src/components/AdvancedFilters";
+import { AdvancedFilters, applyFilters, type FilterState } from "@/src/components/AdvancedFilters";
 import { ProjectFilter } from "@/src/components/ProjectFilter";
 import { ExportButton } from "@/src/components/ExportButton";
 import { ShortcutHelp } from "@/src/components/ShortcutHelp";
@@ -137,6 +137,14 @@ type ActivityEvent = {
 
 const POLL_INTERVAL_MS = 90_000;
 const SAVED_VIEWS_KEY = "nrcc.savedViews.v1";
+const DEFAULT_ADVANCED_FILTERS: FilterState = {
+  search: "",
+  statusIds: [],
+  priorityIds: [],
+  assignedToMe: false,
+  hasGithubLinks: false,
+  hasAttachments: false,
+};
 
 function normalizeAttachmentFilename(value: string): string {
   const decoded = decodeURIComponent(value).trim();
@@ -479,6 +487,7 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [searchMode, setSearchMode] = useState<"local" | "hybrid">("local");
   const [sort, setSort] = useState("updated_desc");
+  const [advancedFilters, setAdvancedFilters] = useState<FilterState>(DEFAULT_ADVANCED_FILTERS);
 
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [viewDraftName, setViewDraftName] = useState("");
@@ -536,6 +545,39 @@ export default function Home() {
     [issues, selectedIssueId],
   );
 
+  const priorityOptions = useMemo(() => {
+    const discovered = new Map<number, string>();
+    for (const issue of issues) {
+      if (typeof issue.priorityId === "number" && issue.priorityId > 0) {
+        discovered.set(issue.priorityId, issue.priorityName ?? issue.priority ?? `Priority ${issue.priorityId}`);
+      }
+    }
+
+    if (discovered.size > 0) {
+      return Array.from(discovered.entries())
+        .map(([id, name]) => ({ id, name }))
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+    }
+
+    return priorities.map((name, index) => ({ id: index + 1, name }));
+  }, [issues, priorities]);
+
+  const visibleIssues = useMemo(() => {
+    let filtered = issues;
+
+    if (selectedProject) {
+      filtered = filtered.filter((issue) => issue.projectName === selectedProject);
+    }
+
+    filtered = applyFilters(filtered, advancedFilters);
+
+    if (showFavoritesOnly) {
+      filtered = filtered.filter((issue) => favoriteIssueIds.includes(issue.redmineIssueId));
+    }
+
+    return filtered;
+  }, [advancedFilters, favoriteIssueIds, issues, selectedProject, showFavoritesOnly]);
+
   const timerElapsedMs = useMemo(() => {
     if (!timerStartedAtMs || !timerIssueId) {
       return 0;
@@ -543,7 +585,7 @@ export default function Home() {
     return Math.max(0, timerNowMs - timerStartedAtMs);
   }, [timerIssueId, timerNowMs, timerStartedAtMs]);
 
-  const allVisibleIssueIds = useMemo(() => issues.map((i) => i.redmineIssueId), [issues]);
+  const allVisibleIssueIds = useMemo(() => visibleIssues.map((i) => i.redmineIssueId), [visibleIssues]);
 
   const selectedAllVisible = useMemo(
     () => allVisibleIssueIds.length > 0 && allVisibleIssueIds.every((id) => selectedIssueIds.includes(id)),
@@ -567,7 +609,7 @@ export default function Home() {
     let totalProgress = 0;
     let openUpdateAgeDays = 0;
 
-    for (const issue of issues) {
+    for (const issue of visibleIssues) {
       byStatus.set(issue.statusName, (byStatus.get(issue.statusName) ?? 0) + 1);
       byPriority.set(issue.priority ?? "Unspecified", (byPriority.get(issue.priority ?? "Unspecified") ?? 0) + 1);
 
@@ -643,7 +685,7 @@ export default function Home() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
 
-    const count = issues.length || 1;
+    const count = visibleIssues.length || 1;
     const completion = Math.round((done / count) * 100);
     const avgDoneRatio = Math.round(totalProgress / count);
 
@@ -659,7 +701,7 @@ export default function Home() {
       .slice(0, 12);
 
     return {
-      totalVisible: issues.length,
+      totalVisible: visibleIssues.length,
       total,
       open,
       inProgress,
@@ -677,7 +719,7 @@ export default function Home() {
       atRisk,
       recentActivity,
     };
-  }, [issues, total]);
+  }, [total, visibleIssues]);
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -1472,6 +1514,9 @@ export default function Home() {
     setSearch("");
     setSearchMode("local");
     setSort("updated_desc");
+    setSelectedProject(null);
+    setShowFavoritesOnly(false);
+    setAdvancedFilters(DEFAULT_ADVANCED_FILTERS);
     setActiveViewId(null);
   }
 
@@ -1878,8 +1923,8 @@ export default function Home() {
               {showCharts ? "Collapse" : "Expand"}
             </button>
           </div>
-          {showCharts && issues.length > 0 && (
-            <DashboardWidgets stats={calculateStats(issues)} />
+          {showCharts && visibleIssues.length > 0 && (
+            <DashboardWidgets stats={calculateStats(visibleIssues)} />
           )}
         </article>
 
@@ -1887,7 +1932,7 @@ export default function Home() {
           <div className="collapsible-head">
             <div>
               <h2>Issue Queue</h2>
-              <p className="muted">{loading ? "Refreshing..." : `${issues.length} loaded`}</p>
+              <p className="muted">{loading ? "Refreshing..." : `${visibleIssues.length} loaded`}</p>
             </div>
             <button type="button" className="secondary-button" onClick={() => setIssueQueueOpen((current) => !current)}>
               {issueQueueOpen ? "Collapse" : "Expand"}
@@ -1930,24 +1975,36 @@ export default function Home() {
                 <ProjectFilter
                   issues={issues}
                   selectedProject={selectedProject}
-                  onChange={setSelectedProject}
+                  onChange={(project) => {
+                    setSelectedProject(project);
+                    resetPage();
+                  }}
                 />
                 <AdvancedFilters
-                  filters={{ search: "", statusIds: [], priorityIds: [], assignedToMe: false, hasGithubLinks: false, hasAttachments: false }}
-                  onChange={() => {}}
-                  statuses={statuses.map(s => ({ id: s.id, name: s.name }))}
-                  priorities={priorities.map((p, index) => ({ id: index + 1, name: p }))}
-                  onClear={() => {}}
+                  filters={advancedFilters}
+                  onChange={(nextFilters) => {
+                    setAdvancedFilters(nextFilters);
+                    resetPage();
+                  }}
+                  statuses={statuses.map((s) => ({ id: s.id, name: s.name }))}
+                  priorities={priorityOptions}
+                  onClear={() => {
+                    setAdvancedFilters(DEFAULT_ADVANCED_FILTERS);
+                    resetPage();
+                  }}
                 />
                 <button
                   type="button"
                   className={`favorite-filter ${showFavoritesOnly ? "active" : ""}`}
-                  onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                  onClick={() => {
+                    setShowFavoritesOnly(!showFavoritesOnly);
+                    resetPage();
+                  }}
                 >
                   {showFavoritesOnly ? "★ Favorites" : "☆ Favorites"}
                 </button>
-                <ExportButton issues={issues} format="csv" />
-                <ExportButton issues={issues} format="print" />
+                <ExportButton issues={visibleIssues} format="csv" />
+                <ExportButton issues={visibleIssues} format="print" />
               </div>
 
               <div className="issues-table-wrap">
@@ -1994,9 +2051,7 @@ export default function Home() {
                   </thead>
                   <tbody>
                   {(() => {
-                    const filtered = showFavoritesOnly
-                      ? issues.filter(i => favoriteIssueIds.includes(i.redmineIssueId))
-                      : issues;
+                    const filtered = visibleIssues;
                     const start = (page - 1) * pageSize;
                     const paged = filtered.slice(start, start + pageSize);
                     return paged.map((issue) => {
@@ -2083,9 +2138,7 @@ export default function Home() {
 
               {/* Pagination Controls */}
               {(() => {
-                const filtered = showFavoritesOnly
-                  ? issues.filter(i => favoriteIssueIds.includes(i.redmineIssueId))
-                  : issues;
+                const filtered = visibleIssues;
                 const filteredTotal = filtered.length;
                 const maxPage = Math.max(1, Math.ceil(filteredTotal / pageSize));
                 const safePage = Math.min(page, maxPage);
@@ -2135,7 +2188,7 @@ export default function Home() {
             </>
           ) : (
             <p className="muted collapsible-meta">
-              Queue hidden. {issues.length} issue(s) loaded, {selectedIssueIds.length} selected.
+              Queue hidden. {visibleIssues.length} issue(s) loaded, {selectedIssueIds.length} selected.
             </p>
           )}
         </article>
