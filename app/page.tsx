@@ -2003,8 +2003,7 @@ export default function Home() {
               </div>
 
               {/* Filters Bar */}
-              <div className="filters-bar">
-                {/* Quick Status Filters */}
+              <div className="filters-bar filters-bar-compact">
                 <div className="quick-filters">
                   <button
                     type="button"
@@ -2045,9 +2044,8 @@ export default function Home() {
                   )}
                 </div>
 
-                <div className="filters-bar filters-bar-compact">
-                  <ProjectFilter
-                    issues={issues}
+                <ProjectFilter
+                  issues={issues}
                     selectedProject={selectedProject}
                     onChange={(project) => {
                       setSelectedProject(project);
