@@ -60,6 +60,7 @@ export default async function AiSummariesPage() {
 
   const modelsUsed = new Map<string, number>();
   const statusesMap = new Map<string, number>();
+  const prioritiesMap = new Map<string, number>();
   const projectsMap = new Map<string, number>();
   const totalSummaries = summaries.length;
   const totalChatMessages = chatMessages.length;
@@ -76,6 +77,9 @@ export default async function AiSummariesPage() {
     statusesMap.set(s.issue.statusName, (statusesMap.get(s.issue.statusName) ?? 0) + 1);
     if (s.issue.projectName) {
       projectsMap.set(s.issue.projectName, (projectsMap.get(s.issue.projectName) ?? 0) + 1);
+    }
+    if (s.issue.priority) {
+      prioritiesMap.set(s.issue.priority, (prioritiesMap.get(s.issue.priority) ?? 0) + 1);
     }
   }
 
@@ -94,6 +98,10 @@ export default async function AiSummariesPage() {
     .slice(0, 5);
 
   const topStatuses = Array.from(statusesMap.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
+
+  const topPriorities = Array.from(prioritiesMap.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6);
 
@@ -256,14 +264,14 @@ export default async function AiSummariesPage() {
 
             {/* Two Column Layout */}
             <div className="ai-overview-grid">
-              {/* Projects */}
+              {/* Priorities */}
               <div className="ai-overview-card">
-                <h4>By Project</h4>
-                {topProjects.length === 0 ? (
-                  <p className="muted">No project data</p>
+                <h4>By Priority</h4>
+                {topPriorities.length === 0 ? (
+                  <p className="muted">No priority data</p>
                 ) : (
                   <div className="ai-list">
-                    {topProjects.map(([name, count]) => (
+                    {topPriorities.map(([name, count]) => (
                       <div key={name} className="ai-list-row">
                         <span className="ai-list-name">{name}</span>
                         <span className="ai-list-count">{count}</span>
