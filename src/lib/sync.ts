@@ -798,8 +798,18 @@ export async function executeSyncJob(jobId: string): Promise<void> {
     await syncEnumerationCatalog(client);
 
     const syncState = await prisma.syncState.findUnique({ where: { userId: job.userId } });
+
+    // Determine the date filter for fetching issues:
+    // - incremental: uses lastIncrementalSyncAt from SyncState
+    // - full_manual: fetches only issues updated in the last 24 hours
+    //   to avoid expensive full-table scans on large Redmine instances
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const incrementalSince =
-      job.jobType === "incremental" ? (syncState?.lastIncrementalSyncAt ?? undefined) : undefined;
+      job.jobType === "incremental"
+        ? (syncState?.lastIncrementalSyncAt ?? undefined)
+        : job.jobType === "full_manual"
+          ? twentyFourHoursAgo
+          : undefined;
 
     const issueList = await client.listIssues(env.redmineSyncIssueScope, incrementalSince);
     const seenRemoteIssueIds = new Set<number>();
