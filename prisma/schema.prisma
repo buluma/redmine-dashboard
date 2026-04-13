@@ -380,3 +380,86 @@ model WebLog {
   @@index([userId])
   @@index([source])
 }
+
+// Streamline MBU Logs - Main application logs
+model MbuLog {
+  id          BigInt   @id // Remote log ID from Streamline
+  createdAt   DateTime
+  updatedAt   DateTime
+  backtrace   String   @db.Text // Log message/content
+  logLevel    String   @map("log_level") @db.VarChar(20) // TRACE, DEBUG, INFO, WARN, ERROR
+  traceType   String   @map("trace_type") @db.VarChar(20) // "log", "exception"
+  traceId     String   @map("trace_id") @db.VarChar(50)
+  code        String   @db.VarChar(100) // Error code if any
+  createdBy   Int?
+  updatedBy   Int?
+  ingestedAt  DateTime @default(now())
+  environment String   @default("staging") @db.VarChar(20)
+
+  @@unique([id, environment])
+  @@index([createdAt(sort: Desc)])
+  @@index([logLevel])
+  @@index([traceType])
+  @@index([logLevel, createdAt(sort: Desc)])
+  @@map("mbu_logs")
+}
+
+// Streamline Server-Side Rules Logs - Scheduled job execution logs
+model ServerSideRulesLog {
+  id              BigInt   @id // Remote log ID from Streamline
+  createdAt       DateTime
+  updatedAt       DateTime
+  actionName      String   @map("action_name") @db.VarChar(100) // "Scheduled job"
+  status          String   @db.VarChar(50) // "completed", "failed", "error"
+  scriptName      String   @map("script_name") @db.VarChar(200) // e.g. "205. Vandalism 48hr Calculate SLA v2"
+  duration        Decimal  @db.Decimal(10, 3) // Duration in seconds
+  ramUsage        Int      @map("ram_usage") // Memory usage in bytes
+  cpuUsage        Int      @map("cpu_usage") // CPU percentage
+  isError         Boolean  @map("is_error") @default(false)
+  errorDescr      String?  @map("error_descr") @db.Text // Error description if failed
+  processId       Int?     @map("process_id")
+  requestId       String?  @map("request_id") @db.VarChar(100)
+  threadId        BigInt?  @map("thread_id")
+  dbRequestsTime  Decimal? @map("db_requests_time") @db.Decimal(10, 3)
+  coModel         String?  @map("co_model") @db.VarChar(50)
+  coRecordId      Int?     @map("co_record_id")
+  resType         String?  @map("res_type") @db.VarChar(200)
+  ingestedAt      DateTime @default(now())
+  environment     String   @default("staging") @db.VarChar(20)
+
+  @@unique([id, environment])
+  @@index([createdAt(sort: Desc)])
+  @@index([status])
+  @@index([isError])
+  @@index([scriptName])
+  @@index([status, createdAt(sort: Desc)])
+  @@map("server_side_rules_log")
+}
+
+// Streamline Traces - General application traces
+model Trace {
+  id           BigInt   @id // Remote trace ID from Streamline
+  createdAt    DateTime
+  updatedAt    DateTime
+  traceId      BigInt   @map("trace_id")
+  traceType    String   @map("trace_type") @db.VarChar(20) // "log", "exception"
+  logLevel     String   @map("log_level") @db.VarChar(20) // TRACE, DEBUG, INFO, WARN, ERROR
+  backtrace    String   @db.Text // Trace message
+  code         String?  @db.VarChar(100)
+  context      String?  @db.Text
+  resourceId   Int?     @map("resource_id")
+  resourceType String?  @map("resource_type") @db.VarChar(200)
+  resourcePath String?  @map("resource_path") @db.VarChar(500)
+  createdBy    Int?
+  updatedBy    Int?
+  ingestedAt   DateTime @default(now())
+  environment  String   @default("staging") @db.VarChar(20)
+
+  @@unique([id, environment])
+  @@index([createdAt(sort: Desc)])
+  @@index([logLevel])
+  @@index([traceType])
+  @@index([resourceType])
+  @@index([logLevel, createdAt(sort: Desc)])
+  @@map("traces")
+}

@@ -18,6 +18,7 @@ The documentation includes:
 - **[API Reference](./docs/api-reference.md)**
 - **[Codebase Summary](./docs/codebase-summary.md)**
 - **[Design Guidelines](./docs/design-guidelines.md)**
+- **[Debugging & Streamline Logs](./debugging/README.md)** — Fetch Streamline application logs and import them into Supabase for troubleshooting.
 
 Mobile/Android integration is available through token-authenticated endpoints under `/api/mobile/v1/*`.
 

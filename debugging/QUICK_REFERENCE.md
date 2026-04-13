@@ -129,9 +129,22 @@ logs/
 
 ## ⚠️ Security
 
-- ✅ Use `export REST_API_TOKEN="..."` 
+- ✅ Use `export REST_API_TOKEN="..."`
 - ✅ Use Ansible Vault for production
 - ❌ Never commit tokens to git
+
+## 📊 Import to Supabase
+
+```bash
+# Import all logs from debugging/logs/
+node scripts/import-streamline-logs.js
+
+# Preview (dry run)
+node scripts/import-streamline-logs.js --dry-run
+
+# Import production logs
+node scripts/import-streamline-logs.js --env production
+```
 
 ## 🆘 Troubleshooting
 
