@@ -59,41 +59,6 @@ function getProviderIcon(model: string | null): string {
   return "🤖";
 }
 
-function CopyButton({ content }: { content: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(content);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback for older browsers
-      const textarea = document.createElement("textarea");
-      textarea.value = content;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  return (
-    <button
-      type="button"
-      className={`copy-btn ${copied ? "copied" : ""}`}
-      onClick={handleCopy}
-      title={copied ? "Copied!" : "Copy to clipboard"}
-    >
-      {copied ? "✓ Copied" : "📋 Copy"}
-    </button>
-  );
-}
-
 export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[] }) {
   const [expandedIssues, setExpandedIssues] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
@@ -307,6 +272,29 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
                               <div className="ai-result">
                                 <div className="ai-result-header">
                                   <h5>{msg.role === "user" ? "Your Question" : "AI Response"}</h5>
+                                  {msg.role === "assistant" && (
+                                    <button
+                                      type="button"
+                                      className={`summary-copy-btn ${false ? "copied" : ""}`}
+                                      onClick={async () => {
+                                        try {
+                                          await navigator.clipboard.writeText(msg.content);
+                                        } catch {
+                                          const textarea = document.createElement("textarea");
+                                          textarea.value = msg.content;
+                                          textarea.style.position = "fixed";
+                                          textarea.style.opacity = "0";
+                                          document.body.appendChild(textarea);
+                                          textarea.select();
+                                          document.execCommand("copy");
+                                          document.body.removeChild(textarea);
+                                        }
+                                      }}
+                                      title="Copy to clipboard"
+                                    >
+                                      📋 Copy
+                                    </button>
+                                  )}
                                 </div>
 
                                 <div className="ai-section">
@@ -337,7 +325,6 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
                                         <span className="ai-perf-badge">Gen: {formatDuration(msg.evalDuration)}</span>
                                       )}
                                     </div>
-                                    <CopyButton content={msg.content} />
                                   </>
                                 )}
                               </div>
@@ -389,6 +376,29 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
                   <div className="ai-result">
                     <div className="ai-result-header">
                       <h5>{msg.role === "user" ? "Your Question" : "AI Response"}</h5>
+                      {msg.role === "assistant" && (
+                        <button
+                          type="button"
+                          className="summary-copy-btn"
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(msg.content);
+                            } catch {
+                              const textarea = document.createElement("textarea");
+                              textarea.value = msg.content;
+                              textarea.style.position = "fixed";
+                              textarea.style.opacity = "0";
+                              document.body.appendChild(textarea);
+                              textarea.select();
+                              document.execCommand("copy");
+                              document.body.removeChild(textarea);
+                            }
+                          }}
+                          title="Copy to clipboard"
+                        >
+                          📋 Copy
+                        </button>
+                      )}
                     </div>
 
                     <div className="ai-section">
@@ -417,7 +427,6 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
                             <span className="ai-perf-badge">Gen: {formatDuration(msg.evalDuration)}</span>
                           )}
                         </div>
-                        <CopyButton content={msg.content} />
                       </>
                     )}
                   </div>
@@ -705,6 +714,17 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
           border-top: 1px solid #f3f4f6;
         }
 
+        .ai-result-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.5rem;
+        }
+
+        .ai-result-header h5 {
+          margin: 0;
+        }
+
         .ai-perf-badge {
           font-size: 0.7rem;
           padding: 0.2rem 0.5rem;
@@ -712,29 +732,6 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
           border-radius: 4px;
           color: #6b7280;
           font-family: monospace;
-        }
-
-        .copy-btn {
-          font-size: 0.7rem;
-          padding: 0.25rem 0.5rem;
-          border: 1px solid var(--border, #e5e7eb);
-          border-radius: 4px;
-          background: white;
-          cursor: pointer;
-          color: #6b7280;
-          transition: all 0.15s;
-        }
-
-        .copy-btn:hover {
-          background: #f3f4f6;
-          border-color: #8b5cf6;
-          color: #8b5cf6;
-        }
-
-        .copy-btn.copied {
-          background: #d1fae5;
-          border-color: #10b981;
-          color: #065f46;
         }
       `}</style>
     </div>
