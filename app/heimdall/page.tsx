@@ -4,7 +4,7 @@ import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { getSessionUserId } from "@/src/lib/session";
 import { HeimdallLogsClient } from "./heimdall-logs-client";
-import { RefreshButton } from "./refresh-button";
+import { HeimdallHeader } from "./heimdall-header";
 
 export const runtime = "nodejs";
 
@@ -119,21 +119,11 @@ export default async function HeimdallPage() {
 
   return (
     <main className="dashboard">
-      <header className="card hero">
-        <div className="hero-top">
-          <div>
-            <p className="kicker">Streamline</p>
-            <h1>Heimdall</h1>
-            <p className="muted">
-              Streamline Application Logs — {totalLogs} records · {allErrors.length} errors/warnings · {allHosts.length} host{allHosts.length !== 1 ? "s" : ""}
-            </p>
-          </div>
-          <div className="hero-actions">
-            <RefreshButton />
-            <Link href="/" className="primary-link">Back to Dashboard</Link>
-          </div>
-        </div>
-      </header>
+      <HeimdallHeader
+        totalLogs={totalLogs}
+        errorCount={allErrors.length}
+        hostCount={allHosts.length}
+      />
 
       {totalLogs === 0 ? (
         <section className="card">
