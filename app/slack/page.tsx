@@ -15,6 +15,7 @@ export default async function SlackPage() {
   let messages: Awaited<ReturnType<SlackClient["getChannelMessages"]>> = [];
   let channelInfo: { id: string; name: string } | null = null;
   let error: string | null = null;
+  let initialUserNames: Record<string, string> = {};
 
   if (!botToken) {
     error = "Slack bot token not configured. Please set SLACK_BOT_TOKEN in your environment.";
@@ -29,6 +30,22 @@ export default async function SlackPage() {
       ]);
       messages = fetchedMessages;
       channelInfo = fetchedChannel;
+      
+      // Fetch user names for all users in messages
+      const userIds = new Set<string>();
+      messages.forEach((msg) => {
+        if (msg.user) userIds.add(msg.user);
+        if (msg.replyUsers) {
+          msg.replyUsers.forEach((u) => userIds.add(u));
+        }
+      });
+      
+      if (userIds.size > 0) {
+        const userMap = await slackClient.getUsers(Array.from(userIds));
+        userMap.forEach((name, id) => {
+          initialUserNames[id] = name;
+        });
+      }
     } catch (err) {
       error = err instanceof Error ? err.message : "Failed to fetch Slack messages";
     }
@@ -78,6 +95,7 @@ export default async function SlackPage() {
 
           <SlackMessagesClient 
             initialMessages={messages} 
+            initialUserNames={initialUserNames}
             channelId={channelId ?? ""}
             channelName={channelInfo?.name ?? ""}
             refreshIntervalMs={env.slackRefreshIntervalMs}
