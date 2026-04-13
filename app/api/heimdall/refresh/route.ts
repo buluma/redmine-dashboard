@@ -24,6 +24,7 @@ export async function POST() {
 
     const result = await importStreamlineLogs(prisma, {
       environment: process.env.STREAMLINE_ENV || 'staging',
+      host: process.env.STREAMLINE_HOST || 'streamline.staging.vodacomsa-battery.nasctech.com',
       limit: 10, // Guard: max 10 records per file via refresh
     });
 

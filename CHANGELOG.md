@@ -9,8 +9,22 @@ All notable changes to this project are documented in this file.
 - **Streamline Logs Integration** — Import and query Streamline application logs in Supabase for troubleshooting.
   - New Prisma models: `MbuLog`, `ServerSideRulesLog`, `Trace` with optimized indexes for time-range and error-level queries.
   - Import script (`scripts/import-streamline-logs.js`) to parse Ansible-fetched JSON logs and upsert into Supabase.
-  - Supports staging/production environments with deduplication via `(id, environment)` composite keys.
+  - Supports staging/production environments with deduplication via `(id, environment, host)` composite keys.
   - Documentation: `debugging/README.md` for fetching logs, `scripts/import-streamline-logs.js --help` for import usage.
+
+- **Heimdall — Streamline Log Explorer** (`/heimdall`)
+  - Dashboard showing MBU logs, server side rules logs, and traces in collapsible sections.
+  - Real-time search, log-level filtering, and expandable log cards with duration/CPU/RAM badges.
+  - Errors & Warnings section aggregating issues across all tables.
+  - Refresh button with guard (max 10 records per file) to pull latest logs via `POST /api/heimdall/refresh`.
+
+### Changed
+
+- Added `host` column to `mbu_logs`, `server_side_rules_log`, and `traces` tables.
+  - Enables multi-project separation on shared tables.
+  - Default hosts: staging → `streamline.staging.vodacomsa-battery.nasctech.com`, production → `streamline.vodacomsa-battery.nasctech.com`.
+  - Override via `STREAMLINE_HOST` env var.
+  - Composite unique key: `(id, environment, host)`.
 
 ## 2026-02-26
 

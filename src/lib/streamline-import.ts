@@ -11,6 +11,16 @@ import path from 'path';
 
 const LOGS_DIR = path.join(process.cwd(), 'debugging', 'logs');
 
+// Default hosts per environment (can be overridden via options)
+const DEFAULT_HOSTS: Record<string, string> = {
+  staging: 'streamline.staging.vodacomsa-battery.nasctech.com',
+  production: 'streamline.vodacomsa-battery.nasctech.com',
+};
+
+function extractHostFromEnv(env: string): string {
+  return DEFAULT_HOSTS[env] || `${env}.example.com`;
+}
+
 export type ImportResult = {
   mbuLogs: { created: number; skipped: number };
   serverSideRules: { created: number; skipped: number };
@@ -52,7 +62,7 @@ function parseLogFile(filePath: string): { modelAlias: string; records: Record<s
 }
 
 // Transform MBU log record for DB
-function transformMbuLog(record: Record<string, unknown>, env: string) {
+function transformMbuLog(record: Record<string, unknown>, env: string, host: string) {
   return {
     id: BigInt(record.id as string | number),
     createdAt: new Date(record.created_at as string),
@@ -62,6 +72,7 @@ function transformMbuLog(record: Record<string, unknown>, env: string) {
     traceType: (record.trace_type as string) || 'log',
     traceId: String(record.trace_id || ''),
     code: (record.code as string) || '',
+    host,
     createdBy: record.created_by ? Number(record.created_by) : null,
     updatedBy: record.updated_by ? Number(record.updated_by) : null,
     environment: env,
@@ -69,7 +80,7 @@ function transformMbuLog(record: Record<string, unknown>, env: string) {
 }
 
 // Transform Server Side Rules log record for DB
-function transformServerSideRulesLog(record: Record<string, unknown>, env: string) {
+function transformServerSideRulesLog(record: Record<string, unknown>, env: string, host: string) {
   return {
     id: BigInt(record.id as string | number),
     createdAt: new Date(record.created_at as string),
@@ -80,6 +91,7 @@ function transformServerSideRulesLog(record: Record<string, unknown>, env: strin
     duration: new Prisma.Decimal(Number(record.duration ?? 0)),
     ramUsage: parseInt(record.ram_usage as string, 10) || 0,
     cpuUsage: parseInt(record.cpu_usage as string, 10) || 0,
+    host,
     isError: Boolean(record.is_error),
     errorDescr: (record.error_descr as string) || null,
     processId: record.process_id ? Number(record.process_id) : null,
@@ -96,7 +108,7 @@ function transformServerSideRulesLog(record: Record<string, unknown>, env: strin
 }
 
 // Transform Trace log record for DB
-function transformTraceLog(record: Record<string, unknown>, env: string) {
+function transformTraceLog(record: Record<string, unknown>, env: string, host: string) {
   return {
     id: BigInt(record.id as string | number),
     createdAt: new Date(record.created_at as string),
@@ -107,6 +119,7 @@ function transformTraceLog(record: Record<string, unknown>, env: string) {
     backtrace: (record.backtrace as string) || '',
     code: (record.code as string) || null,
     context: (record.context as string) || null,
+    host,
     resourceId: record.resource_id ? Number(record.resource_id) : null,
     resourceType: (record.resource_type as string) || null,
     resourcePath: (record.resource_path as string) || null,
@@ -116,25 +129,27 @@ function transformTraceLog(record: Record<string, unknown>, env: string) {
   };
 }
 
-// Upsert records (skip if already exists by id + environment)
+// Upsert records (skip if already exists by id + environment + host)
 async function upsertRecords(
   model: any,
   records: Record<string, unknown>[],
-  transformFn: (r: Record<string, unknown>, env: string) => Record<string, unknown>,
+  transformFn: (r: Record<string, unknown>, env: string, host: string) => Record<string, unknown>,
   env: string,
+  host: string,
 ): Promise<{ created: number; skipped: number }> {
   let created = 0;
   let skipped = 0;
 
   for (const record of records) {
-    const data = transformFn(record, env);
+    const data = transformFn(record, env, host);
 
     try {
       await model.upsert({
         where: {
-          id_environment: {
+          id_environment_host: {
             id: data.id,
             environment: env,
+            host,
           },
         },
         create: data,
@@ -155,13 +170,14 @@ async function upsertRecords(
 
 /**
  * Import all available log files from debugging/logs/ into Supabase.
- * Uses upsert so existing records (by id + environment) are skipped.
+ * Uses upsert so existing records (by id + environment + host) are skipped.
  */
 export async function importStreamlineLogs(
   prisma: PrismaClient,
-  options: { environment?: string; logFile?: string; limit?: number } = {},
+  options: { environment?: string; logFile?: string; limit?: number; host?: string } = {},
 ): Promise<ImportResult> {
   const env = options.environment || 'staging';
+  const host = options.host || extractHostFromEnv(env);
   const result: ImportResult = {
     mbuLogs: { created: 0, skipped: 0 },
     serverSideRules: { created: 0, skipped: 0 },
@@ -195,19 +211,19 @@ export async function importStreamlineLogs(
 
       switch (modelAlias) {
         case 'mbu_logs': {
-          const r = await upsertRecords(prisma.mbuLog, limitedRecords, transformMbuLog, env);
+          const r = await upsertRecords(prisma.mbuLog, limitedRecords, transformMbuLog, env, host);
           result.mbuLogs.created += r.created;
           result.mbuLogs.skipped += r.skipped;
           break;
         }
         case 'server_side_rules_log': {
-          const r = await upsertRecords(prisma.serverSideRulesLog, limitedRecords, transformServerSideRulesLog, env);
+          const r = await upsertRecords(prisma.serverSideRulesLog, limitedRecords, transformServerSideRulesLog, env, host);
           result.serverSideRules.created += r.created;
           result.serverSideRules.skipped += r.skipped;
           break;
         }
         case 'traces': {
-          const r = await upsertRecords(prisma.trace, limitedRecords, transformTraceLog, env);
+          const r = await upsertRecords(prisma.trace, limitedRecords, transformTraceLog, env, host);
           result.traces.created += r.created;
           result.traces.skipped += r.skipped;
           break;
