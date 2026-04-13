@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Sora, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import { ErrorLoggerProvider } from "@/src/components/ErrorLoggerProvider";
 
 const sora = Sora({
   variable: "--font-geist-sans",
@@ -30,7 +31,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${sora.variable} ${mono.variable} ${display.variable}`}>
-        {children}
+        <ErrorLoggerProvider>
+          {children}
+        </ErrorLoggerProvider>
       </body>
     </html>
   );

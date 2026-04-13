@@ -114,6 +114,7 @@ model Issue {
   relations        IssueRelation[]
   activityEvents   IssueActivityEvent[]
   aiSummaries      AiSummary[]
+  chatMessages     AiChatMessage[]
   internalNotes    InternalNote[]
   lastActivityAt   DateTime?
   lastActivityType String?
@@ -192,6 +193,25 @@ model AiSummary {
   updatedAt         DateTime @updatedAt
 
   @@unique([issueId])
+  @@index([issueId])
+}
+
+model AiChatMessage {
+  id                String   @id @default(cuid())
+  issueId           String
+  issue             Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  role              String   // "user" or "assistant"
+  content           String
+  model             String?
+  totalDuration     BigInt?
+  loadDuration      BigInt?
+  promptEvalCount   Int?
+  promptEvalDuration BigInt?
+  evalCount         Int?
+  evalDuration      BigInt?
+  createdAt         DateTime @default(now())
+
+  @@index([issueId, createdAt])
   @@index([issueId])
 }
 
@@ -341,4 +361,22 @@ model IssueEmbedding {
   updatedAt  DateTime @updatedAt
 
   @@index([issueId])
+}
+
+model WebLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  message   String
+  level     String   // "error", "warn", "info"
+  source    String?  // "client", "server", "api"
+  url       String?
+  stack     String?
+  userAgent String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([level])
+  @@index([userId])
+  @@index([source])
 }

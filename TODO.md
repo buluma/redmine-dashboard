@@ -1,2 +1,3 @@
 - wakatime api integration for worktime tracking
 - wrap ollama around tailscale aperture
+- integrate to streamline REST API + logs

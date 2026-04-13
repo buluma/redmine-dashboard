@@ -68,9 +68,9 @@ function parseSummaryText(text: string | null): ParsedSummary | null {
 function linkify(text: string): React.ReactElement {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRegex);
-  
+
   if (parts.length === 1) return <>{text}</>;
-  
+
   return (
     <>
       {parts.map((part, i) =>
@@ -187,14 +187,14 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
     <div className="ai-issue-actions">
       <div className="ai-actions-header">
         <h4>🤖 AI Actions</h4>
-        <span className="ai-powered-by">Powered by Ollama</span>
+        <span className="ai-powered-by">Powered by ShadowNet</span>
       </div>
-      
+
       <div className="ai-buttons-row">
         <AiButton onClick={handleSummarize} disabled={summaryLoading} size="sm">
           {summaryLoading ? "Summarizing..." : "Summarize Issue"}
         </AiButton>
-        
+
         <AiButton onClick={handleCategorize} disabled={categoryLoading} size="sm" variant="secondary">
           {categoryLoading ? "Categorizing..." : "Categorize"}
         </AiButton>
@@ -215,13 +215,13 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
               </span>
             )}
           </div>
-          
+
           {parsedSummary.summary && (
             <div className="ai-section">
               <p>{linkify(parsedSummary.summary)}</p>
             </div>
           )}
-          
+
           {parsedSummary.keyPoints.length > 0 && (
             <div className="ai-section">
               <h6>Key Points</h6>
@@ -232,7 +232,7 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
               </ul>
             </div>
           )}
-          
+
           {parsedSummary.actionItems.length > 0 && (
             <div className="ai-section">
               <h6>Action Items</h6>
@@ -365,36 +365,36 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
           border-radius: 8px;
           margin: 1rem 0;
         }
-        
+
         .ai-actions-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           margin-bottom: 0.75rem;
         }
-        
+
         .ai-actions-header h4 {
           margin: 0;
           font-size: 0.95rem;
         }
-        
+
         .ai-powered-by {
           font-size: 0.75rem;
           color: #666;
         }
-        
+
         .ai-buttons-row {
           display: flex;
           gap: 0.5rem;
           flex-wrap: wrap;
         }
-        
+
         .ai-error {
           color: #dc2626;
           font-size: 0.85rem;
           margin: 0.5rem 0 0 0;
         }
-        
+
         .ai-result {
           margin-top: 0.75rem;
           padding: 0.75rem;
@@ -402,20 +402,20 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
           border-radius: 6px;
           border: 1px solid #e5e7eb;
         }
-        
+
         .ai-result-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           margin-bottom: 0.5rem;
         }
-        
+
         .ai-result-header h5 {
           margin: 0;
           font-size: 0.85rem;
           color: #374151;
         }
-        
+
         .ai-confidence {
           font-size: 0.7rem;
           color: #6b7280;
@@ -423,25 +423,25 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
           padding: 0.15rem 0.4rem;
           border-radius: 4px;
         }
-        
+
         .ai-section {
           margin-top: 0.75rem;
         }
-        
+
         .ai-section h6 {
           margin: 0 0 0.4rem 0;
           font-size: 0.8rem;
           color: #4b5563;
           font-weight: 600;
         }
-        
+
         .ai-section p {
           margin: 0;
           font-size: 0.9rem;
           line-height: 1.5;
           color: #1f2937;
         }
-        
+
         .ai-section ul {
           margin: 0;
           padding-left: 1.2rem;
@@ -449,20 +449,20 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
           line-height: 1.6;
           color: #374151;
         }
-        
+
         .ai-section ul li {
           margin-bottom: 0.25rem;
         }
-        
+
         .action-items {
           list-style-type: square;
         }
-        
+
         .ai-link {
           color: #2563eb;
           text-decoration: underline;
         }
-        
+
         .ai-link:hover {
           color: #1d4ed8;
         }

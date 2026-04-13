@@ -37,6 +37,18 @@ type MobileToken = {
   createdAt: string;
 };
 
+type WebLog = {
+  id: string;
+  userId: string | null;
+  message: string;
+  level: string;
+  source: string | null;
+  url: string | null;
+  stack: string | null;
+  userAgent: string | null;
+  createdAt: string;
+};
+
 type HealthPayload = {
   status: "ok" | "degraded";
   timestamp: string;
@@ -89,6 +101,8 @@ export default function OpsPage() {
   const [jobs, setJobs] = useState<SyncJob[]>([]);
   const [health, setHealth] = useState<HealthPayload | null>(null);
   const [mobileTokens, setMobileTokens] = useState<MobileToken[]>([]);
+  const [logs, setLogs] = useState<WebLog[]>([]);
+  const [logFilter, setLogFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
   const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null);
@@ -111,11 +125,12 @@ export default function OpsPage() {
       return;
     }
 
-    const [statusRes, jobsRes, healthRes, tokensRes] = await Promise.all([
+    const [statusRes, jobsRes, healthRes, tokensRes, logsRes] = await Promise.all([
       fetch("/api/sync/status", { cache: "no-store" }),
       fetch("/api/sync/jobs?limit=60", { cache: "no-store" }),
       fetch("/api/health", { cache: "no-store" }),
       fetch("/api/mobile/tokens", { cache: "no-store" }),
+      fetch("/api/logs?limit=100", { cache: "no-store" }),
     ]);
 
     if (!statusRes.ok) {
@@ -142,6 +157,11 @@ export default function OpsPage() {
     }
     const tokensData = await tokensRes.json();
     setMobileTokens(tokensData.items ?? []);
+
+    if (logsRes.ok) {
+      const logsData = await logsRes.json();
+      setLogs(logsData.items ?? []);
+    }
   }
 
   useEffect(() => {
@@ -204,6 +224,22 @@ export default function OpsPage() {
 
   const runningJobs = useMemo(() => jobs.filter((job) => ["pending", "running"].includes(job.status)).length, [jobs]);
   const failedJobs = useMemo(() => jobs.filter((job) => job.status === "failed").length, [jobs]);
+  const errorLogs = useMemo(
+    () => logs.filter((l) => l.level === "error").length,
+    [logs],
+  );
+  const filteredLogs = useMemo(
+    () =>
+      logFilter
+        ? logs.filter(
+            (l) =>
+              l.message.toLowerCase().includes(logFilter.toLowerCase()) ||
+              (l.url ?? "").toLowerCase().includes(logFilter.toLowerCase()) ||
+              (l.stack ?? "").toLowerCase().includes(logFilter.toLowerCase()),
+          )
+        : logs,
+    [logs, logFilter],
+  );
 
   return (
     <main className="dashboard">
@@ -393,6 +429,46 @@ export default function OpsPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </section>
+
+          <section className="card">
+            <div className="table-toolbar">
+              <h2>Web Logs</h2>
+              <div className="toolbar-right">
+                <span className="muted">{filteredLogs.length} of {logs.length} rows · {errorLogs} errors</span>
+                <input
+                  type="text"
+                  placeholder="Filter..."
+                  value={logFilter}
+                  onChange={(e) => setLogFilter(e.target.value)}
+                  className="log-filter-input"
+                />
+              </div>
+            </div>
+            <div className="logs-list">
+              {filteredLogs.length === 0 && (
+                <p className="muted">No logs{logFilter ? " matching filter" : ""}.</p>
+              )}
+              {filteredLogs.map((log) => (
+                <article key={log.id} className={`log-entry log-${log.level}`}>
+                  <div className="log-head">
+                    <span className={`log-level-badge log-${log.level}`}>{log.level}</span>
+                    <span className="log-source">{log.source ?? "unknown"}</span>
+                    <span className="log-time">{new Date(log.createdAt).toLocaleString()}</span>
+                  </div>
+                  <div className="log-message">{log.message}</div>
+                  {log.url && (
+                    <div className="log-url">{log.url}</div>
+                  )}
+                  {log.stack && (
+                    <details className="log-stack">
+                      <summary>Stack trace</summary>
+                      <pre>{log.stack}</pre>
+                    </details>
+                  )}
+                </article>
+              ))}
             </div>
           </section>
         </>
