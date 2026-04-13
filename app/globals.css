@@ -6505,3 +6505,31 @@ textarea {
   color: #94a3b8;
   margin-top: 0.15rem;
 }
+
+.queue-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.queue-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: #f3f4f6;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.queue-stat.queue-warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.queue-stat.queue-stale {
+  background: #e5e7eb;
+  color: #6b7280;
+}
