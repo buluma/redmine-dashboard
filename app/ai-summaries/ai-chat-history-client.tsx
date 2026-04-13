@@ -286,7 +286,7 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
                                       <span className="ai-perf-badge">Load: {formatDuration(msg.loadDuration)}</span>
                                     )}
                                     {msg.totalDuration && (
-                                      <span className="ai-perf-badge">Total: {formatDuration(msg.totalDuration)}</span>
+                                      <span className="ai-perf-badge">Total Time: {formatDuration(msg.totalDuration)}</span>
                                     )}
                                     {msg.promptEvalCount != null && (
                                       <span className="ai-perf-badge">Prompt: {msg.promptEvalCount}</span>
@@ -363,7 +363,7 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
                           <span className="ai-perf-badge">Load: {formatDuration(msg.loadDuration)}</span>
                         )}
                         {msg.totalDuration && (
-                          <span className="ai-perf-badge">Total: {formatDuration(msg.totalDuration)}</span>
+                          <span className="ai-perf-badge">Total Time: {formatDuration(msg.totalDuration)}</span>
                         )}
                         {msg.promptEvalCount != null && (
                           <span className="ai-perf-badge">Prompt: {msg.promptEvalCount}</span>
