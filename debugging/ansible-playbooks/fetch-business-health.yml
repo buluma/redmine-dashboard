@@ -1,0 +1,190 @@
+---
+# Ansible Playbook: Fetch Business-Facing Models Health Check
+# Description: Checks health of business modules and retrieves recent records
+# Usage: ansible-playbook -i inventory/hosts.ini ansible-playbooks/fetch-business-health.yml
+
+- name: Business Models Health Check
+  hosts: localhost
+  connection: local
+  gather_facts: true
+
+  vars:
+    # Environment configuration
+    env: "{{ streamline_env | default('staging') }}"
+    api_token: "{{ lookup('env', 'REST_API_TOKEN') | default('', true) }}"
+    
+    # API endpoints based on environment
+    api_urls:
+      staging: "https://streamline.staging.vodacomsa-battery.nasctech.com/api/v1/custom_objects"
+      production: "https://streamline.vodacomsa-battery.nasctech.com/api/v1/custom_objects"
+    
+    base_url: "{{ api_urls[env] }}"
+    
+    # Query parameters
+    limit_count: "{{ log_count | default(10) }}"
+    
+    # Output directory
+    output_dir: "{{ playbook_dir }}/../logs"
+    timestamp: "{{ ansible_date_time.iso8601_basic_short | default(lookup('pipe', 'date +%Y%m%d_%H%M%S')) }}"
+    
+    # Date filtering - focus on today's data
+    today_date: "{{ ansible_date_time.date }}"  # YYYY-MM-DD format
+    
+    # Business-facing models (ordered by priority)
+    business_models:
+      - projects            # P1: Main projects
+      - ran_projects       # P2: RAN projects
+      - ran_field_jobs     # P3: RAN field jobs
+      - security_tickets  # P4: Security tickets
+      - battery_theft   # P5: Battery theft
+      - site_assets    # P6: Site assets
+      - vandalism_quotations # P7: Vandalism quotations
+      - registration_serial_numbers # P8: Registration serial numbers
+
+  tasks:
+    - name: Validate API token is set
+      fail:
+        msg: "API token is not set. Please set REST_API_TOKEN environment variable or pass --extra-vars 'api_token=YOUR_TOKEN'"
+      when: api_token == '' or api_token is none
+
+    - name: Display configuration
+      debug:
+        msg: |
+          ============================================
+          Business Models Health Check
+          ============================================
+          Environment: {{ env }}
+          Base URL: {{ base_url }}
+          Log Count: {{ limit_count }}
+          Output Directory: {{ output_dir }}
+          ============================================
+
+    - name: Create output directory
+      file:
+        path: "{{ output_dir }}"
+        state: directory
+        mode: '0755'
+
+    # ============================================
+    # GET RECORD COUNTS
+    # ============================================
+    - name: Get record counts for all business models
+      uri:
+        url: "{{ base_url }}/rest_test/count?token={{ api_token }}&model_alias={{ model }}"
+        method: GET
+        return_content: yes
+        status_code: 200
+        follow_redirects: none
+      loop: "{{ business_models }}"
+      loop_control:
+        loop_var: model
+      register: model_counts
+
+    - name: Display model counts summary
+      debug:
+        msg: |
+          ============================================
+          Business Model Record Counts
+          ============================================
+          {% for result in model_counts.results %}
+          {{ result.json.data.model_alias | default('unknown') }}: {{ result.json.data.count | default(0) }} records
+          {% endfor %}
+          ============================================
+
+    # ============================================
+    # GET RECENT RECORDS
+    # ============================================
+    - name: Fetch today's records for each business model
+      uri:
+        url: "{{ base_url }}/rest_test/get_all?token={{ api_token }}&model_alias={{ model }}&created_at={{ today_date }}&limit={{ limit_count }}"
+        method: GET
+        return_content: yes
+        status_code: 200
+        follow_redirects: none
+      loop: "{{ business_models }}"
+      loop_control:
+        loop_var: model
+      register: business_records
+      ignore_errors: yes
+
+    - name: Save business records to individual files
+      copy:
+        content: "{{ item | to_nice_json }}"
+        dest: "{{ output_dir }}/health_{{ item.model }}_{{ timestamp }}.json"
+        mode: '0644'
+      loop: "{{ business_records.results }}"
+      loop_control:
+        loop_var: item
+
+    - name: Display records summary
+      debug:
+        msg: |
+          ============================================
+          Business Model Records - TODAY ({{ today_date }})
+          ============================================
+          {% for result in business_records.results %}
+          {% if result.json.success is defined and result.json.success %}
+          Model: {{ result.model }}
+          Records Retrieved: {{ result.json.data.count | default(0) }}
+          {% else %}
+          Model: {{ result.model }}
+          Status: {{ result.json.status | default('error') }}
+          {% endif %}
+          {% endfor %}
+          ============================================
+
+    # ============================================
+    # CHECK FOR RECENT ERRORS
+    # ============================================
+    - name: Check for today's errors in projects
+      uri:
+        url: "{{ base_url }}/rest_test/get_all?token={{ api_token }}&model_alias=projects&status=Error&created_at={{ today_date }}&limit=5"
+        method: GET
+        return_content: yes
+        status_code: 200
+        follow_redirects: none
+      register: projects_errors
+      when: "'projects' in business_models"
+      ignore_errors: yes
+
+    - name: Check for today's errors in security_tickets
+      uri:
+        url: "{{ base_url }}/rest_test/get_all?token={{ api_token }}&model_alias=security_tickets&status=Error&created_at={{ today_date }}&limit=5"
+        method: GET
+        return_content: yes
+        status_code: 200
+        follow_redirects: none
+      register: security_errors
+      ignore_errors: yes
+
+    - name: Display error summary
+      debug:
+        msg: |
+          ============================================
+          Today's Errors / Issues ({{ today_date }})
+          ============================================
+          Projects Errors: {{ projects_errors.json.data.count | default(0) }}
+          Security Tickets Errors: {{ security_errors.json.data.count | default(0) }}
+          ============================================
+
+    # ============================================
+    # FINAL SUMMARY
+    # ============================================
+    - name: Display final summary
+      debug:
+        msg: |
+          ============================================
+          Health Check Complete
+          ============================================
+          Environment: {{ env }}
+          Timestamp: {{ timestamp }}
+          Log Files Saved To: {{ output_dir }}
+          
+          Files Created:
+          {% for model in business_models %}
+          - health_{{ model }}_{{ timestamp }}.json
+          {% endfor %}
+          ============================================
+          
+          To view records: cat {{ output_dir }}/health_projects_{{ timestamp }}.json | jq .
+          ============================================

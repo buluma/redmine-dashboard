@@ -1,0 +1,298 @@
+---
+# Ansible Playbook: Fetch Logs and Trace Models via Streamline API
+# Description: Fetches last 10 logs from priority models and traces them
+# Usage: ansible-playbook -i inventory/hosts.ini ansible-playbooks/fetch-logs.yml
+
+- name: Fetch Logs and Trace Models via Streamline API
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    # Environment configuration
+    env: "{{ streamline_env | default('staging') }}"
+    api_token: "{{ lookup('env', 'REST_API_TOKEN') | default('', true) }}"
+    
+    # API endpoints based on environment
+    api_urls:
+      staging: "https://streamline.staging.vodacomsa-battery.nasctech.com/api/v1/custom_objects"
+      production: "https://streamline.vodacomsa-battery.nasctech.com/api/v1/custom_objects"
+    
+    base_url: "{{ api_urls[env] }}"
+    
+    # Query parameters
+    limit_count: "{{ log_count | default(10) }}"
+    filter_log_level: "{{ log_level | default('') }}"
+    filter_trace_type: "{{ trace_type | default('') }}"
+    
+    # Output directory
+    output_dir: "{{ playbook_dir }}/../logs"
+    timestamp: "{{ ansible_date_time.iso8601_basic_short | default(lookup('pipe', 'date +%Y%m%d_%H%M%S')) }}"
+    
+    # Primary logging models (ordered by priority)
+    primary_logs_models:
+      - mbu_logs              # P1: Main logging model
+      - server_side_rules_log # P2: Server-side rule logging
+      - traces                # P3: General tracing
+    
+    # All models to trace
+    trace_models: "{{ primary_logs_models }}"
+
+  tasks:
+    - name: Check if .env file exists
+      stat:
+        path: "{{ playbook_dir }}/../.env"
+      register: env_file
+
+    - name: Warn if .env file exists but is empty
+      debug:
+        msg: "⚠️  Found debugging/.env file but REST_API_TOKEN is not set. Please add your token to the .env file."
+      when: env_file.stat.exists and api_token == ''
+
+    - name: Validate API token is set
+      fail:
+        msg: "API token is not set. Please set REST_API_TOKEN environment variable, add it to debugging/.env file, or pass --extra-vars 'api_token=YOUR_TOKEN'"
+      when: api_token == '' or api_token is none
+
+    - name: Display configuration
+      debug:
+        msg: |
+          ============================================
+          Streamline API Debug Configuration
+          ============================================
+          Environment: {{ env }}
+          Base URL: {{ base_url }}
+          Log Count: {{ limit_count }}
+          Log Level Filter: {{ filter_log_level | default('ALL') }}
+          Trace Type Filter: {{ filter_trace_type | default('ALL') }}
+          Output Directory: {{ output_dir }}
+          ============================================
+
+    - name: Create output directory
+      file:
+        path: "{{ output_dir }}"
+        state: directory
+        mode: '0755'
+
+    # ============================================
+    # FETCH PRIMARY LOGS
+    # ============================================
+    - name: Fetch last 10 logs from primary models (with filters)
+      uri:
+        url: "{{ base_url }}/rest_test/get_all?token={{ api_token }}&model_alias={{ model }}&order_by=id&order=DESC&limit={{ limit_count }}{% if filter_log_level != '' %}&log_level={{ filter_log_level }}{% endif %}{% if filter_trace_type != '' %}&trace_type={{ filter_trace_type }}{% endif %}"
+        method: GET
+        return_content: yes
+        status_code: 200
+        follow_redirects: none
+      loop: "{{ primary_logs_models }}"
+      loop_control:
+        loop_var: model
+      register: primary_logs_response
+
+    - name: Save primary logs response to files
+      copy:
+        content: "{{ item | to_nice_json }}"
+        dest: "{{ output_dir }}/{{ item.model }}_{{ timestamp }}.json"
+        mode: '0644'
+      loop: "{{ primary_logs_response.results }}"
+      loop_control:
+        loop_var: item
+
+    - name: Display primary logs summary
+      debug:
+        msg: |
+          ============================================
+          Primary Logs - Last {{ limit_count }} Records per Model
+          ============================================
+          {% for result in primary_logs_response.results %}
+          
+          Model: {{ result.model }}
+          Records Retrieved: {{ result.data.count | default(0) }}
+          {% endfor %}
+          ============================================
+
+    # ============================================
+    # TRACE MODELS
+    # ============================================
+    - name: Get record counts for all trace models
+      uri:
+        url: "{{ base_url }}/rest_test/count?token={{ api_token }}&model_alias={{ model }}"
+        method: GET
+        return_content: yes
+        status_code: 200
+        follow_redirects: none
+      loop: "{{ trace_models }}"
+      loop_control:
+        loop_var: model
+      register: model_counts
+
+    - name: Display model counts summary
+      debug:
+        msg: |
+          ============================================
+          Model Record Counts
+          ============================================
+          {% for result in model_counts.results %}
+          {{ result.model | default('unknown') }}: {{ result.data.count | default(0) }} records
+          {% endfor %}
+          ============================================
+
+    - name: Fetch recent records for each model
+      uri:
+        url: "{{ base_url }}/rest_test/get_all?token={{ api_token }}&model_alias={{ model }}&order_by=id&order=DESC&limit={{ limit_count }}"
+        method: GET
+        return_content: yes
+        status_code: 200
+        follow_redirects: none
+      loop: "{{ trace_models }}"
+      loop_control:
+        loop_var: model
+      register: model_traces
+
+    - name: Save model traces to individual files
+      copy:
+        content: "{{ item | to_nice_json }}"
+        dest: "{{ output_dir }}/trace_{{ item.model }}_{{ timestamp }}.json"
+        mode: '0644'
+      loop: "{{ model_traces.results }}"
+      loop_control:
+        loop_var: item
+
+    - name: Display traces summary
+      debug:
+        msg: |
+          ============================================
+          Model Traces - Recent Records
+          ============================================
+          {% for result in model_traces.results %}
+          
+          Model: {{ result.model }}
+          Records Retrieved: {{ result.data.count | default(0) }}
+          {% endfor %}
+          ============================================
+
+    # ============================================
+    # ERROR ANALYSIS
+    # ============================================
+    - name: Fetch ERROR level logs from primary models
+      uri:
+        url: "{{ base_url }}/rest_test/get_all?token={{ api_token }}&model_alias={{ model }}&log_level=ERROR&order_by=id&order=DESC&limit={{ limit_count }}"
+        method: GET
+        return_content: yes
+        status_code: 200
+        follow_redirects: none
+      loop: "{{ primary_logs_models }}"
+      loop_control:
+        loop_var: model
+      register: error_logs_response
+
+    - name: Save error logs to files
+      copy:
+        content: "{{ item | to_nice_json }}"
+        dest: "{{ output_dir }}/{{ item.model }}_errors_{{ timestamp }}.json"
+        mode: '0644'
+      loop: "{{ error_logs_response.results }}"
+      loop_control:
+        loop_var: item
+      when: item.data.count | default(0) > 0
+
+    - name: Display error logs summary
+      debug:
+        msg: |
+          ============================================
+          ERROR Logs - Last {{ limit_count }} Records per Model
+          ============================================
+          {% for result in error_logs_response.results %}
+          
+          Model: {{ result.model }}
+          Errors Found: {{ result.data.count | default(0) }}
+          {% endfor %}
+          ============================================
+
+    # ============================================
+    # EXCEPTION TRACING
+    # ============================================
+    - name: Fetch exception logs from primary models
+      uri:
+        url: "{{ base_url }}/rest_test/get_all?token={{ api_token }}&model_alias={{ model }}&trace_type=exception&order_by=id&order=DESC&limit={{ limit_count }}"
+        method: GET
+        return_content: yes
+        status_code: 200
+        follow_redirects: none
+      loop: "{{ primary_logs_models }}"
+      loop_control:
+        loop_var: model
+      register: exception_logs_response
+
+    - name: Save exception logs to files
+      copy:
+        content: "{{ item | to_nice_json }}"
+        dest: "{{ output_dir }}/{{ item.model }}_exceptions_{{ timestamp }}.json"
+        mode: '0644'
+      loop: "{{ exception_logs_response.results }}"
+      loop_control:
+        loop_var: item
+      when: item.data.count | default(0) > 0
+
+    - name: Display exception logs summary
+      debug:
+        msg: |
+          ============================================
+          EXCEPTION Logs - Last {{ limit_count }} Records per Model
+          ============================================
+          {% for result in exception_logs_response.results %}
+          
+          Model: {{ result.model }}
+          Exceptions Found: {{ result.data.count | default(0) }}
+          {% endfor %}
+          ============================================
+
+    # ============================================
+    # CLEANUP OLD LOGS
+    # ============================================
+    - name: Find old log files
+      find:
+        paths: "{{ output_dir }}"
+        patterns: "*.json"
+        age: "7d"
+      register: old_logs
+
+    - name: Display cleanup summary
+      debug:
+        msg: "🧹 Found {{ old_logs.matched }} log files older than 7 days"
+      when: old_logs.matched > 0
+
+    - name: Cleanup old log files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ old_logs.files | map(attribute='path') | list }}"
+      when: old_logs.matched > 0
+
+    # ============================================
+    # FINAL SUMMARY
+    # ============================================
+    - name: Display final summary
+      debug:
+        msg: |
+          ============================================
+          Debug Session Complete
+          ============================================
+          Environment: {{ env }}
+          Timestamp: {{ timestamp }}
+          Log Files Saved To: {{ output_dir }}
+          
+          Files Created:
+          {% for model in primary_logs_models %}
+          - {{ model }}_{{ timestamp }}.json ({{ model }} logs)
+          - {{ model }}_errors_{{ timestamp }}.json ({{ model }} errors)
+          - {{ model }}_exceptions_{{ timestamp }}.json ({{ model }} exceptions)
+          {% endfor %}
+          {% for model in trace_models %}
+          - trace_{{ model }}_{{ timestamp }}.json ({{ model }} traces)
+          {% endfor %}
+          ============================================
+          
+          To view logs: cat {{ output_dir }}/{{ primary_logs_models[0] }}_{{ timestamp }}.json | jq .
+          To view errors: cat {{ output_dir }}/{{ primary_logs_models[0] }}_errors_{{ timestamp }}.json | jq .
+          ============================================
