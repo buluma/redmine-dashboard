@@ -1634,6 +1634,9 @@ export default function Home() {
           <Link href="/heimdall" className="primary-link nav-link">
             Heimdall
           </Link>
+          <Link href="/slack" className="primary-link nav-link">
+            Slack
+          </Link>
           <button className="secondary-button" type="button" onClick={resetFilters}>
             Reset Filters
           </button>

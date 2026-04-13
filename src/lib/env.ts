@@ -75,4 +75,7 @@ export const env = {
   aiSummarizeEnabled: boolFromEnv("AI_SUMMARIZE_ENABLED", true),
   aiSearchEnabled: boolFromEnv("AI_SEARCH_ENABLED", true),
   aiCategorizeEnabled: boolFromEnv("AI_CATEGORIZE_ENABLED", true),
+  // Slack Configuration
+  slackBotToken: process.env.SLACK_BOT_TOKEN,
+  slackDefaultChannelId: process.env.SLACK_DEFAULT_CHANNEL_ID,
 };
