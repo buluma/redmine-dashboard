@@ -1,7 +1,7 @@
 import { env } from "./env";
 import { getOllamaClient } from "./ollama";
 
-export type LLMProvider = "ollama" | "openai" | "anthropic";
+export type LLMProvider = "ollama" | "openai" | "anthropic" | "openrouter";
 
 export interface LLMModel {
   id: string;
@@ -66,7 +66,7 @@ export class LLMProviderManager {
 
   private detectProvider(): LLMProvider {
     const configured = env.llmProvider;
-    if (configured && ["ollama", "openai", "anthropic"].includes(configured)) {
+    if (configured && ["ollama", "openai", "anthropic", "openrouter"].includes(configured)) {
       return configured as LLMProvider;
     }
     // Default to ollama
@@ -85,6 +85,8 @@ export class LLMProviderManager {
         return this.checkOpenAIHealth();
       } else if (this.provider === "anthropic") {
         return this.checkAnthropicHealth();
+      } else if (this.provider === "openrouter") {
+        return this.checkOpenRouterHealth();
       }
       return { available: false, provider: this.provider, models: [], primaryModel: "", usingFallback: false, error: "Unknown provider" };
     } catch (error) {
@@ -191,6 +193,43 @@ export class LLMProviderManager {
     }
   }
 
+  private async checkOpenRouterHealth(): Promise<LLMStatus> {
+    if (!env.openrouterApiKey) {
+      return { available: false, provider: "openrouter", models: [], primaryModel: "", usingFallback: false, error: "OpenRouter API key not configured" };
+    }
+
+    try {
+      // OpenRouter uses OpenAI-compatible API
+      const response = await fetch("https://openrouter.ai/api/v1/models", {
+        headers: { Authorization: `Bearer ${env.openrouterApiKey}` }
+      });
+
+      if (!response.ok) {
+        return { available: false, provider: "openrouter", models: [], primaryModel: "", usingFallback: false, error: `OpenRouter API error: ${response.status}` };
+      }
+
+      const data = await response.json();
+      const models: LLMModel[] = (data.data || [])
+        .slice(0, 30)
+        .map((m: { id: string }) => ({
+          id: m.id,
+          name: m.id,
+          provider: "openrouter" as LLMProvider,
+          description: "OpenRouter model"
+        }));
+
+      return {
+        available: true,
+        provider: "openrouter",
+        models,
+        primaryModel: env.openrouterChatModel,
+        usingFallback: false
+      };
+    } catch (error) {
+      return { available: false, provider: "openrouter", models: [], primaryModel: "", usingFallback: false, error: error instanceof Error ? error.message : "Failed to connect" };
+    }
+  }
+
   async getAvailableModels(): Promise<LLMModel[]> {
     const status = await this.checkHealth();
     return status.models;
@@ -206,6 +245,8 @@ export class LLMProviderManager {
         return this.openaiChat(messages, { stream, temperature, maxTokens });
       } else if (this.provider === "anthropic") {
         return this.anthropicChat(messages, { maxTokens });
+      } else if (this.provider === "openrouter") {
+        return this.openrouterChat(messages, { temperature, maxTokens });
       }
       throw new Error(`Unsupported provider: ${this.provider}`);
     } catch (error) {
@@ -370,6 +411,45 @@ export class LLMProviderManager {
         totalTokens: data.usage?.input_tokens + data.usage?.output_tokens,
         promptTokens: data.usage?.input_tokens,
         completionTokens: data.usage?.output_tokens
+      }
+    };
+  }
+
+  private async openrouterChat(messages: LLMChatMessage[], options: { temperature?: number; maxTokens?: number }): Promise<LLMResponse> {
+    const apiKey = env.openrouterApiKey;
+    if (!apiKey) throw new Error("OpenRouter API key not configured");
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        "HTTP-Referer": "https://converge.local",
+        "X-Title": "Converge"
+      },
+      body: JSON.stringify({
+        model: env.openrouterChatModel,
+        messages,
+        temperature: options.temperature ?? 0.7,
+        max_tokens: options.maxTokens ?? 4096
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+    return {
+      content: data.choices?.[0]?.message?.content || "",
+      model: data.model,
+      provider: "openrouter",
+      done: true,
+      usage: {
+        totalTokens: data.usage?.total_tokens,
+        promptTokens: data.usage?.prompt_tokens,
+        completionTokens: data.usage?.completion_tokens
       }
     };
   }

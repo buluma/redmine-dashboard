@@ -76,13 +76,16 @@ export const env = {
   aiSearchEnabled: boolFromEnv("AI_SEARCH_ENABLED", true),
   aiCategorizeEnabled: boolFromEnv("AI_CATEGORIZE_ENABLED", true),
   // LLM Provider Configuration
-  llmProvider: (process.env.LLM_PROVIDER as "ollama" | "openai" | "anthropic") || "ollama",
+  llmProvider: (process.env.LLM_PROVIDER as "ollama" | "openai" | "anthropic" | "openrouter") || "ollama",
   // OpenAI Configuration (alternative to Ollama)
   openaiApiKey: process.env.OPENAI_API_KEY,
   openaiChatModel: process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini",
   // Anthropic Configuration (alternative to Ollama)
   anthropicApiKey: process.env.ANTHROPIC_API_KEY,
   anthropicChatModel: process.env.ANTHROPIC_CHAT_MODEL || "claude-3-5-haiku-20250620",
+  // OpenRouter Configuration (alternative to Ollama) - https://openrouter.ai/docs/quickstart
+  openrouterApiKey: process.env.OPENROUTER_API_KEY,
+  openrouterChatModel: process.env.OPENROUTER_CHAT_MODEL || "anthropic/claude-3.5-haiku",
   // Slack Configuration
   slackBotToken: process.env.SLACK_BOT_TOKEN,
   slackDefaultChannelId: process.env.SLACK_DEFAULT_CHANNEL_ID,
