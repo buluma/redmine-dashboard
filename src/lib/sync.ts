@@ -102,10 +102,47 @@ function parseChildren(issueRaw: Record<string, unknown>): IssueChild[] {
   return result;
 }
 
-async function upsertIssueFromRemote(userId: string, redmineBaseUrl: string, issueRaw: Record<string, unknown>) {
+async function upsertIssueFromRemote(
+  userId: string, 
+  redmineBaseUrl: string, 
+  issueRaw: Record<string, unknown>,
+  trackChanges: boolean = false
+): Promise<{ issue: typeof issue; wasCreated: boolean; oldState: { statusName: string; priorityName: string | null; assignedToName: string | null; subject: string; dueDate: Date | null; doneRatio: number | null; } | null }> {
   const remoteId = asNumber(issueRaw.id);
   if (!remoteId) {
     throw new Error("Missing remote issue id");
+  }
+
+  // Fetch existing issue to track changes (if requested)
+  let oldState: { statusName: string; priorityName: string | null; assignedToName: string | null; subject: string; dueDate: Date | null; doneRatio: number | null; } | null = null;
+  if (trackChanges) {
+    const existing = await prisma.issue.findUnique({
+      where: {
+        userId_redmineBaseUrl_redmineIssueId: {
+          userId,
+          redmineBaseUrl,
+          redmineIssueId: remoteId,
+        },
+      },
+      select: {
+        statusName: true,
+        priority: true,  // priorityName is stored in 'priority' field
+        assignedToName: true,
+        subject: true,
+        dueDate: true,
+        doneRatio: true,
+      },
+    });
+    if (existing) {
+      oldState = {
+        statusName: existing.statusName,
+        priorityName: existing.priority,  // Map priority field to priorityName
+        assignedToName: existing.assignedToName,
+        subject: existing.subject,
+        dueDate: existing.dueDate,
+        doneRatio: existing.doneRatio,
+      };
+    }
   }
 
   const updatedOn = asDate(issueRaw.updated_on) ?? new Date();
@@ -144,6 +181,17 @@ async function upsertIssueFromRemote(userId: string, redmineBaseUrl: string, iss
     childrenJson: parseChildren(issueRaw) as Prisma.InputJsonValue,
   };
 
+  // Check if issue exists to determine if this is a create
+  const existingBeforeUpsert = await prisma.issue.findUnique({
+    where: {
+      userId_redmineBaseUrl_redmineIssueId: {
+        userId,
+        redmineBaseUrl,
+        redmineIssueId: remoteId,
+      },
+    },
+  });
+
   const issue = await prisma.issue.upsert({
     where: {
       userId_redmineBaseUrl_redmineIssueId: {
@@ -158,6 +206,8 @@ async function upsertIssueFromRemote(userId: string, redmineBaseUrl: string, iss
     create: payload,
   });
 
+  const wasCreated = !existingBeforeUpsert;
+
   await recordIssueActivityEvent({
     issueId: issue.id,
     eventType: "issue_update",
@@ -167,7 +217,18 @@ async function upsertIssueFromRemote(userId: string, redmineBaseUrl: string, iss
     summary: asString(issueRaw.subject),
   });
 
-  return issue;
+  // Build oldState with updated format if it was set
+  const oldStateWithFormat = oldState ? {
+    ...oldState,
+    dueDate: oldState.dueDate,
+    doneRatio: oldState.doneRatio,
+  } : null;
+
+  return {
+    issue,
+    wasCreated,
+    oldState: oldStateWithFormat,
+  };
 }
 
 export async function upsertAttachmentsForIssue(issueId: string, issueRaw: Record<string, unknown>, pruneMissing: boolean) {
@@ -490,7 +551,12 @@ export async function syncSingleIssue(
   userId: string,
   client: RedmineClient,
   remoteIssueId: number,
-  options?: { pruneTimeEntries?: boolean; pruneAttachments?: boolean; pruneRelations?: boolean },
+  options?: { 
+    pruneTimeEntries?: boolean; 
+    pruneAttachments?: boolean; 
+    pruneRelations?: boolean;
+    sendNotifications?: boolean;
+  },
 ) {
   const detail = await client.getIssue(remoteIssueId, [
     "journals",
@@ -499,7 +565,17 @@ export async function syncSingleIssue(
     "allowed_statuses",
     "children",
   ]);
-  const issue = await upsertIssueFromRemote(userId, client.normalizedBaseUrl, detail.issue);
+  
+  // Track changes if notifications are enabled
+  const trackChanges = options?.sendNotifications ?? false;
+  const upsertResult = await upsertIssueFromRemote(
+    userId, 
+    client.normalizedBaseUrl, 
+    detail.issue,
+    trackChanges
+  );
+  const issue = upsertResult.issue;
+  
   await upsertJournals(issue.id, detail.issue);
   await upsertAttachmentsForIssue(issue.id, detail.issue, options?.pruneAttachments ?? true);
   await upsertRelationsForIssue(issue.id, detail.issue, options?.pruneRelations ?? true);
@@ -515,7 +591,46 @@ export async function syncSingleIssue(
   // Build breadcrumbs by fetching parent chain
   const breadcrumbs = await buildBreadcrumbChain(client, remoteIssueId);
 
-  return { ...issue, breadcrumbs };
+  // Send Slack notification if enabled
+  let notificationResult = null;
+  if (options?.sendNotifications) {
+    try {
+      const { getSlackNotificationService } = await import("@/src/lib/slack-notification-service");
+      const service = getSlackNotificationService();
+      
+      // Build oldState from upsertResult if this was an update
+      let oldStateForNotification = null;
+      if (!upsertResult.wasCreated && upsertResult.oldState) {
+        oldStateForNotification = {
+          id: issue.id,
+          redmineIssueId: issue.redmineIssueId,
+          subject: upsertResult.oldState.subject,
+          projectName: issue.projectName,
+          statusName: upsertResult.oldState.statusName,
+          priorityName: upsertResult.oldState.priorityName,
+          assignedToName: upsertResult.oldState.assignedToName,
+          updatedAt: issue.updatedAt?.toISOString() || new Date().toISOString(),
+          dueDate: upsertResult.oldState.dueDate?.toISOString() || null,
+          doneRatio: upsertResult.oldState.doneRatio,
+        };
+      }
+      
+      const newState = service.toIssueState(issue);
+      notificationResult = await service.notifyIssueChanges(oldStateForNotification, newState);
+    } catch (notifyError) {
+      logEvent("sync.notification.error", {
+        issueId: issue.redmineIssueId,
+        error: notifyError instanceof Error ? notifyError.message : "Unknown error",
+      }, "error");
+    }
+  }
+
+  return { 
+    ...issue, 
+    breadcrumbs,
+    wasCreated: upsertResult.wasCreated,
+    notificationResult,
+  };
 }
 
 export async function buildBreadcrumbChain(
@@ -700,6 +815,7 @@ export async function executeSyncJob(jobId: string): Promise<void> {
         pruneTimeEntries: job.jobType === "full_manual",
         pruneAttachments: true,
         pruneRelations: true,
+        sendNotifications: env.slackNotifyEnabled,
       });
     }
 
