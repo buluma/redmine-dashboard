@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireCurrentUser } from "@/src/lib/auth";
 import { env } from "@/src/lib/env";
 import { SlackMessagesClient } from "./slack-client";
 import { SlackClient } from "@/src/lib/slack";
+import { SlackHeader } from "./slack-header";
 
 export const runtime = "nodejs";
 
@@ -28,29 +30,29 @@ export default async function SlackPage() {
   } else {
     try {
       const slackClient = new SlackClient(botToken);
-      
-      // Get channel info for all channels
-      const channelMap = await slackClient.getChannelsInfo(allChannelIds);
-      channels = Array.from(channelMap.values());
-      
+      channels = await slackClient.getChannels();
+
+      // Get channel names for all monitored channels
+      const channelMap = new Map(channels.map((c) => [c.id, c.name]));
+      const monitoredChannels = allChannelIds.map((id) => ({
+        id,
+        name: channelMap.get(id) || id,
+      }));
+
       // Fetch messages from default channel
       const defaultChannelId = env.slackDefaultChannelId || allChannelIds[0];
-      messages = await slackClient.getChannelMessages(defaultChannelId, { limit: 100 });
-      
-      // Fetch user names for all users in messages
-      const userIds = new Set<string>();
-      messages.forEach((msg) => {
-        if (msg.user) userIds.add(msg.user);
-        if (msg.replyUsers) {
-          msg.replyUsers.forEach((u) => userIds.add(u));
+      const channelName = channelMap.get(defaultChannelId) || defaultChannelId;
+      messages = await slackClient.getChannelMessages(defaultChannelId);
+
+      // Build user names map
+      const userIds = [...new Set(messages.map((m) => m.user).filter(Boolean))];
+      for (const userId of userIds) {
+        if (userId) {
+          const userInfo = await slackClient.getUserInfo(userId);
+          if (userInfo) {
+            initialUserNames[userId] = userInfo;
+          }
         }
-      });
-      
-      if (userIds.size > 0) {
-        const userMap = await slackClient.getUsers(Array.from(userIds));
-        userMap.forEach((name, id) => {
-          initialUserNames[id] = name;
-        });
       }
     } catch (err) {
       error = err instanceof Error ? err.message : "Failed to fetch Slack messages";
@@ -61,24 +63,17 @@ export default async function SlackPage() {
 
   return (
     <main className="dashboard">
-      <header className="card hero">
-        <div className="hero-top">
-          <div>
-            <p className="kicker">Slack</p>
-            <h1>Slack Messages</h1>
-            <p className="muted">
-              {channels.length > 0 
-                ? `${channels.length} channel${channels.length !== 1 ? "s" : ""} monitored` 
-                : error 
-                  ? "Configuration Required" 
-                  : "Loading..."}
-            </p>
-          </div>
-          <div className="hero-actions">
-            <Link href="/" className="primary-link">Back to Dashboard</Link>
-          </div>
-        </div>
-      </header>
+      <SlackHeader
+        channelCount={channels.length}
+        messageCount={messages.length}
+        onRefresh={async () => {
+          // This will be handled by the client component
+          // Server-side refresh is not needed since the page is already server-rendered
+        }}
+        onTestNotification={async () => {
+          // Test notification handled client-side
+        }}
+      />
 
       {error ? (
         <section className="card">

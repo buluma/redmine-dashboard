@@ -881,47 +881,10 @@ export function SlackMessagesClient({
             </select>
           </div>
 
-          <button
-            className={`refresh-button ${isRefreshing ? "loading" : ""}`}
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 8C2 4.68629 4.68629 2 8 2C10.2208 2 12.1599 3.20608 13.1973 5M14 8C14 11.3137 11.3137 14 8 14C5.77915 14 3.84008 12.7939 2.80273 11" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M13 2V6H9M3 14V10H7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            {isRefreshing ? "Refreshing..." : "Refresh"}
-          </button>
-
-          <button
-            className={`auto-refresh-toggle ${isAutoRefreshEnabled ? "active" : ""}`}
-            onClick={() => setIsAutoRefreshEnabled(!isAutoRefreshEnabled)}
-          >
-            <span className="toggle-indicator"></span>
-            Auto-refresh
-          </button>
-
-          <button
-            className="test-button"
-            onClick={handleTestNotification}
-            disabled={isSendingTest}
-          >
-            {isSendingTest ? "Sending..." : "Test Notification"}
-          </button>
-
-          {testResult && (
-            <span className={`test-result ${testResult.success ? "success" : "error"}`}>
-              {testResult.message}
-            </span>
-          )}
-
           <div className="refresh-info">
             <span suppressHydrationWarning>
               {isClient ? `Last: ${lastUpdated.toLocaleTimeString("en-US", { hour12: false })}` : "Last: --:--:--"}
             </span>
-            {isAutoRefreshEnabled && (
-              <span className="countdown">Next: {nextRefreshIn}s</span>
-            )}
           </div>
         </div>
 
