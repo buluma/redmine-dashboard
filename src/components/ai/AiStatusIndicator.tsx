@@ -132,7 +132,7 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
               <div className="ai-status-section">
                 <h5>Available Models ({status.models.length})</h5>
                 <div className="ai-model-list">
-                  {status.models.slice(0, 5).map((model) => (
+                  {status.models.map((model) => (
                     <div key={model.id} className="ai-model-item">
                       <span className="ai-model-name">{model.name}</span>
                       {model.description && (
@@ -140,11 +140,6 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
                       )}
                     </div>
                   ))}
-                  {status.models.length > 5 && (
-                    <div className="ai-model-more">
-                      +{status.models.length - 5} more models
-                    </div>
-                  )}
                 </div>
               </div>
             )}
