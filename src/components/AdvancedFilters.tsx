@@ -186,7 +186,7 @@ export function applyFilters<T extends {
   statusId: number;
   statusName: string;
   priorityId?: number | null;
-  priorityName?: string;
+  priorityName?: string | null;
   assignedToId?: number;
   githubLinks?: unknown[];
   attachments?: unknown[];
