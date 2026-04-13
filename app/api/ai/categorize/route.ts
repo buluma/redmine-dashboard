@@ -1,4 +1,4 @@
-import { getOllamaClient } from "@/src/lib/ollama";
+import { getLLMProviderManager, type LLMResponse } from "@/src/lib/llm-provider";
 import { createCategorizeMessages, parseJsonResponse, type CategorizeResponse } from "@/src/lib/ai-prompt";
 import { env } from "@/src/lib/env";
 import { prisma } from "@/src/lib/db";
@@ -53,7 +53,6 @@ export async function POST(request: Request) {
       return jsonError("Issue not found", 404);
     }
 
-    const client = getOllamaClient();
     const messages = createCategorizeMessages({
       id: issue.id,
       redmineIssueId: issue.redmineIssueId,
@@ -71,9 +70,10 @@ export async function POST(request: Request) {
     });
 
     // Try primary model, fallback on error
-    let result;
+    let result: LLMResponse;
     try {
-      result = await client.chatWithFallback(messages, { stream: false });
+      const manager = getLLMProviderManager();
+      result = await manager.chat(messages, { stream: false });
     } catch (error) {
       return jsonError(
         `AI categorization failed: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
         suggestedCategory: { name: "Unknown", confidence: 0 },
         reasoning: result.content,
         modelUsed: result.model,
-        usedFallback: result.usedFallback,
+        provider: result.provider,
         rawResponse: true,
       });
     }
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
     return Response.json({
       ...parsed,
       modelUsed: result.model,
-      usedFallback: result.usedFallback,
+      provider: result.provider,
     });
   } catch (error) {
     console.error("Categorize error:", error);
