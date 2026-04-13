@@ -2,13 +2,14 @@
 
 ## In Progress
 
-- [ ] wakatime api integration for worktime tracking - https://wakatime.com/developers/#authentication
-
 ## Pending
 
 - [ ] wrap ollama around tailscale aperture
 - [ ] ai tool calls
-- [ ] swagger api - add mbu_logs, traces and server_side_logs from prisma db (actually all tables in prisma would be great)
+
+## Stalled
+
+- [ ] wakatime api integration for worktime tracking - https://wakatime.com/developers/#authentication
 
 ## Done
 
