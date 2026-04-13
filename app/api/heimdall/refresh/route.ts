@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/db';
 import { getSessionUserId } from '@/src/lib/session';
-import { importStreamlineLogs } from '@/src/lib/streamline-import';
+import { importStreamlineLogsFromAPI } from '@/src/lib/streamline-import';
 
 export const runtime = 'nodejs';
 
 /**
- * Refresh Streamline logs from debugging/logs/ into Supabase.
- * Guard: Only imports the last 10 records per log file to prevent
- * accidental bulk imports from the refresh button.
+ * Refresh Streamline logs directly from Streamline API into Supabase.
+ * Fetches directly from the Streamline API instead of local files.
  */
 export async function POST() {
   try {
@@ -22,16 +21,16 @@ export async function POST() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const result = await importStreamlineLogs(prisma, {
+    // Fetch directly from Streamline API and import
+    const result = await importStreamlineLogsFromAPI(prisma, {
       environment: process.env.STREAMLINE_ENV || 'staging',
-      host: process.env.STREAMLINE_HOST || 'streamline.staging.vodacomsa-battery.nasctech.com',
-      limit: 10, // Guard: max 10 records per file via refresh
+      limit: 50, // Fetch last 50 records per type
     });
 
     return NextResponse.json({
       success: true,
       user: user.emailOrUsername,
-      guardLimit: 10,
+      limit: 50,
       ...result,
     });
   } catch (err: any) {

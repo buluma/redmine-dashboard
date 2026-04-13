@@ -169,6 +169,80 @@ async function upsertRecords(
 }
 
 /**
+ * Fetch logs directly from Streamline API.
+ * Returns raw records from the API for each log type.
+ */
+export async function fetchStreamlineLogsFromAPI(
+  options: { environment?: string; limit?: number } = {},
+): Promise<{ mbuLogs: Record<string, unknown>[]; serverSideRules: Record<string, unknown>[]; traces: Record<string, unknown>[]; errors: string[] }> {
+  const env = options.environment || 'staging';
+  const limit = options.limit || 100;
+  const host = extractHostFromEnv(env);
+  
+  const result = {
+    mbuLogs: [] as Record<string, unknown>[],
+    serverSideRules: [] as Record<string, unknown>[],
+    traces: [] as Record<string, unknown>[],
+    errors: [] as string[],
+  };
+
+  // Get token from environment
+  const token = process.env.STREAMLINE_TOKEN;
+  if (!token) {
+    result.errors.push('STREAMLINE_TOKEN not configured in environment');
+    return result;
+  }
+
+  const apiBase = `https://${host}`;
+  
+  // Model aliases to fetch
+  const modelAliases = [
+    { alias: 'mbu_logs', key: 'mbuLogs' },
+    { alias: 'server_side_rules_log', key: 'serverSideRules' },
+    { alias: 'traces', key: 'traces' },
+  ];
+
+  for (const model of modelAliases) {
+    try {
+      const url = `${apiBase}/api/v1/custom_objects/rest_test/get_all?token=${token}&model_alias=${model.alias}&order_by=id&order=DESC&limit=${limit}`;
+      const res = await fetch(url, { method: 'GET' });
+      
+      if (!res.ok) {
+        result.errors.push(`HTTP ${res.status} from ${model.alias}`);
+        continue;
+      }
+      
+      const data = await res.json();
+      const records = data?.data?.records || [];
+      
+      if (Array.isArray(records)) {
+        // Parse each record (they come as JSON strings)
+        const parsed = records.map((r: unknown) => {
+          if (typeof r === 'string') {
+            try {
+              return JSON.parse(r);
+            } catch {
+              return { raw: r };
+            }
+          }
+          return r;
+        });
+        result[model.key as keyof typeof result] = parsed;
+      }
+    } catch (err: any) {
+      result.errors.push(`Failed to fetch ${model.alias}: ${err.message}`);
+    }
+  }
+
+  // If API didn't work, fall back to local files
+  if (result.mbuLogs.length === 0 && result.traces.length === 0) {
+    result.errors.push('API fetch failed, no records returned');
+  }
+
+  return result;
+}
+
+/**
  * Import all available log files from debugging/logs/ into Supabase.
  * Uses upsert so existing records (by id + environment + host) are skipped.
  */
@@ -235,6 +309,59 @@ export async function importStreamlineLogs(
     } catch (err: any) {
       result.errors.push(`Failed to process ${path.basename(file)}: ${err.message}`);
     }
+  }
+
+  return result;
+}
+
+/**
+ * Import logs fetched directly from Streamline API into Supabase.
+ * Uses the fetchStreamlineLogsFromAPI function first, then imports results.
+ */
+export async function importStreamlineLogsFromAPI(
+  prisma: PrismaClient,
+  options: { environment?: string; limit?: number } = {},
+): Promise<ImportResult> {
+  const env = options.environment || 'staging';
+  const limit = options.limit || 100;
+  const host = extractHostFromEnv(env);
+
+  const result: ImportResult = {
+    mbuLogs: { created: 0, skipped: 0 },
+    serverSideRules: { created: 0, skipped: 0 },
+    traces: { created: 0, skipped: 0 },
+    filesProcessed: 0,
+    totalRecords: 0,
+    errors: [],
+  };
+
+  // Fetch from API
+  const apiResult = await fetchStreamlineLogsFromAPI({ environment: env, limit });
+  result.errors = apiResult.errors;
+
+  // Import each record type
+  if (apiResult.mbuLogs.length > 0) {
+    const r = await upsertRecords(prisma.mbuLog, apiResult.mbuLogs, transformMbuLog, env, host);
+    result.mbuLogs.created = r.created;
+    result.mbuLogs.skipped = r.skipped;
+    result.filesProcessed++;
+    result.totalRecords += apiResult.mbuLogs.length;
+  }
+
+  if (apiResult.serverSideRules.length > 0) {
+    const r = await upsertRecords(prisma.serverSideRulesLog, apiResult.serverSideRules, transformServerSideRulesLog, env, host);
+    result.serverSideRules.created = r.created;
+    result.serverSideRules.skipped = r.skipped;
+    result.filesProcessed++;
+    result.totalRecords += apiResult.serverSideRules.length;
+  }
+
+  if (apiResult.traces.length > 0) {
+    const r = await upsertRecords(prisma.trace, apiResult.traces, transformTraceLog, env, host);
+    result.traces.created = r.created;
+    result.traces.skipped = r.skipped;
+    result.filesProcessed++;
+    result.totalRecords += apiResult.traces.length;
   }
 
   return result;
