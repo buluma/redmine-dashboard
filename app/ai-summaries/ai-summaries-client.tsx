@@ -499,7 +499,7 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
                     <div className="summary-footer-right">
                       {summary.totalDuration && (
                         <span className="summary-metric">
-                          Total: {formatDuration(summary.totalDuration)}
+                          Total Time: {formatDuration(summary.totalDuration)}
                         </span>
                       )}
                       {summary.loadDuration && (
