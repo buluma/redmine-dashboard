@@ -5,6 +5,7 @@ import { prisma } from "@/src/lib/db";
 import { getSessionUserId } from "@/src/lib/session";
 import { HeimdallLogsClient } from "./heimdall-logs-client";
 import { HeimdallHeader } from "./heimdall-header";
+import { StatCard, DonutChart, BarChartEnhanced } from "@/src/components/reports/charts";
 
 export const runtime = "nodejs";
 
@@ -118,7 +119,7 @@ export default async function HeimdallPage() {
   ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
   return (
-    <main className="dashboard">
+    <main className="dashboard reports-v2">
       <HeimdallHeader
         totalLogs={totalLogs}
         errorCount={allErrors.length}
@@ -140,124 +141,118 @@ export default async function HeimdallPage() {
         </section>
       ) : (
         <>
-          {/* Overview Cards */}
-          <section className="card reports-shell">
-            <div className="reports-head">
-              <div>
-                <h2>Overview</h2>
-                <p className="muted">Distribution of imported Streamline logs</p>
+          {/* Stats Grid */}
+          <div className="reports-stats-grid">
+            <StatCard
+              label="MBU Logs"
+              value={mbuLogs.length}
+              foot={`${mbuErrors.length} errors/warnings · ${allHosts.length} hosts`}
+              icon="📋"
+              tone="info"
+            />
+            <StatCard
+              label="Server Side Rules"
+              value={serverSideRulesLogs.length}
+              foot={`${ssrErrors.length} failed jobs`}
+              icon="⚙️"
+              tone="success"
+            />
+            <StatCard
+              label="Traces"
+              value={traces.length}
+              foot={`${traceErrors.length} errors/warnings`}
+              icon="📡"
+              tone="default"
+            />
+            <StatCard
+              label="Errors & Warnings"
+              value={allErrors.length}
+              foot={`${mbuErrors.length} MBU · ${ssrErrors.length} SSR · ${traceErrors.length} Trace`}
+              icon="⚠️"
+              tone="danger"
+            />
+          </div>
+
+          {/* Overview Charts */}
+          <section className="ai-overview">
+            {/* Two Column Layout */}
+            <div className="ai-overview-grid">
+              {/* MBU Log Levels */}
+              <div className="ai-overview-card">
+                <h4>MBU Log Levels</h4>
+                {mbuByLevel.size === 0 ? (
+                  <p className="muted">No MBU logs yet.</p>
+                ) : (
+                  <div className="ai-list">
+                    {Array.from(mbuByLevel.entries())
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([name, count]) => (
+                        <div key={name} className="ai-list-row">
+                          <span className="ai-list-name">{name}</span>
+                          <span className="ai-list-count">{count}</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
-            </div>
 
-            <div className="reports-grid">
-              <article className="report-card">
-                <p className="report-label">MBU Logs</p>
-                <p className="report-value">{mbuLogs.length}</p>
-                <p className="report-foot">
-                  {mbuErrors.length} errors/warnings
-                </p>
-              </article>
+              {/* SSR Status */}
+              <div className="ai-overview-card">
+                <h4>SSR Status</h4>
+                {ssrByStatus.size === 0 ? (
+                  <p className="muted">No SSR logs yet.</p>
+                ) : (
+                  <div className="ai-list">
+                    {Array.from(ssrByStatus.entries())
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([name, count]) => (
+                        <div key={name} className="ai-list-row">
+                          <span className="ai-list-name">{name}</span>
+                          <span className="ai-list-count">{count}</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
 
-              <article className="report-card">
-                <p className="report-label">Server Side Rules</p>
-                <p className="report-value">{serverSideRulesLogs.length}</p>
-                <p className="report-foot">
-                  {ssrErrors.length} failed jobs
-                </p>
-              </article>
+              {/* Trace Levels */}
+              <div className="ai-overview-card">
+                <h4>Trace Levels</h4>
+                {traceByLevel.size === 0 ? (
+                  <p className="muted">No traces yet.</p>
+                ) : (
+                  <div className="ai-list">
+                    {Array.from(traceByLevel.entries())
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([name, count]) => (
+                        <div key={name} className="ai-list-row">
+                          <span className="ai-list-name">{name}</span>
+                          <span className="ai-list-count">{count}</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
 
-              <article className="report-card">
-                <p className="report-label">Traces</p>
-                <p className="report-value">{traces.length}</p>
-                <p className="report-foot">
-                  {traceErrors.length} errors/warnings
-                </p>
-              </article>
-            </div>
-
-            <div className="reports-grid">
-              <article className="report-card">
-                <p className="report-label">MBU Log Levels</p>
-                {mbuByLevel.size === 0 && <p className="muted">No MBU logs yet.</p>}
-                <div className="reports-list">
-                  {Array.from(mbuByLevel.entries())
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([name, count]) => (
-                      <div key={name} className="report-list-row">
-                        <span>{name}</span>
-                        <strong>{count}</strong>
-                      </div>
-                    ))}
-                </div>
-              </article>
-
-              <article className="report-card">
-                <p className="report-label">Server Side Rules — Status</p>
-                <div className="reports-list">
-                  {Array.from(ssrByStatus.entries())
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([name, count]) => (
-                      <div key={name} className="report-list-row">
-                        <span>{name}</span>
-                        <strong>{count}</strong>
-                      </div>
-                    ))}
-                </div>
-              </article>
-
-              <article className="report-card">
-                <p className="report-label">Trace Log Levels</p>
-                {traceByLevel.size === 0 && <p className="muted">No traces yet.</p>}
-                <div className="reports-list">
-                  {Array.from(traceByLevel.entries())
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([name, count]) => (
-                      <div key={name} className="report-list-row">
-                        <span>{name}</span>
-                        <strong>{count}</strong>
-                      </div>
-                    ))}
-                </div>
-              </article>
-            </div>
-
-            {topScripts.length > 0 && (
-              <div className="reports-grid">
-                <article className="report-card">
-                  <p className="report-label">Top Scripts (by execution count)</p>
-                  <div className="reports-list">
+              {/* Top Scripts */}
+              <div className="ai-overview-card">
+                <h4>Top Scripts</h4>
+                {topScripts.length === 0 ? (
+                  <p className="muted">No scripts yet.</p>
+                ) : (
+                  <div className="ai-list">
                     {topScripts.map(([name, count]) => (
-                      <div key={name} className="report-list-row">
-                        <span title={name}>{name.length > 40 ? name.slice(0, 40) + "…" : name}</span>
-                        <strong>{count}</strong>
+                      <div key={name} className="ai-list-row">
+                        <span className="ai-list-name" title={name}>
+                          {name.length > 40 ? name.slice(0, 40) + "…" : name}
+                        </span>
+                        <span className="ai-list-count">{count}</span>
                       </div>
                     ))}
                   </div>
-                </article>
-
-                {topResources.length > 0 && (
-                  <article className="report-card">
-                    <p className="report-label">Top Resource Types</p>
-                    <div className="reports-list">
-                      {topResources.map(([name, count]) => (
-                        <div key={name} className="report-list-row">
-                          <span title={name}>{name.length > 40 ? name.slice(0, 40) + "…" : name}</span>
-                          <strong>{count}</strong>
-                        </div>
-                      ))}
-                    </div>
-                  </article>
                 )}
-
-                <article className="report-card">
-                  <p className="report-label">Error Summary</p>
-                  <p className="report-value">{allErrors.length}</p>
-                  <p className="report-foot">
-                    {mbuErrors.length} MBU · {ssrErrors.length} SSR · {traceErrors.length} Trace
-                  </p>
-                </article>
               </div>
-            )}
+            </div>
           </section>
 
           {/* Errors & Warnings */}
