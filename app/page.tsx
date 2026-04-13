@@ -1644,6 +1644,7 @@ export default function Home() {
             API Docs
           </Link>
           <AiStatusIndicator />
+          <span style={{ flex: "1" }} />
           <button className="secondary-button" type="button" onClick={resetFilters}>
             Reset Filters
           </button>
