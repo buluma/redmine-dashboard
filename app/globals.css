@@ -6685,3 +6685,13 @@ textarea {
 .filters-bar .filters-right {
   margin-left: auto;
 }
+
+.status-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-cell .status-select {
+  flex-shrink: 0;
+}
