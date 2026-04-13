@@ -6533,3 +6533,133 @@ textarea {
   background: #e5e7eb;
   color: #6b7280;
 }
+
+/* Quick Status Filters */
+.quick-filters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 0.5rem;
+}
+
+.quick-filter-btn {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  background: white;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: #374151;
+}
+
+.quick-filter-btn:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.quick-filter-btn.active {
+  background: #374151;
+  border-color: #374151;
+  color: white;
+}
+
+.quick-filter-btn.quick-open.active {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.quick-filter-btn.quick-progress.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.quick-filter-btn.quick-blocked.active {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+.quick-filter-btn.quick-overdue {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
+/* Status Dot */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 0.5rem;
+  background: #9ca3af;
+}
+
+.status-dot.dot-open {
+  background: #10b981;
+}
+
+.status-dot.dot-done {
+  background: #6366f1;
+}
+
+.status-dot.dot-blocked {
+  background: #ef4444;
+}
+
+.status-dot.dot-progress {
+  background: #3b82f6;
+}
+
+/* Priority Badge */
+.priority-badge {
+  display: inline-block;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.priority-badge.priority-urgent,
+.priority-badge.priority-high {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.priority-badge.priority-medium {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.priority-badge.priority-low {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+/* Due Date Urgency */
+.due-overdue {
+  color: #ef4444;
+}
+
+.due-soon {
+  color: #f59e0b;
+}
+
+.due-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.due-badge.overdue {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.due-badge.soon {
+  color: #f59e0b;
+}
