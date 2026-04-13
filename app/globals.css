@@ -6674,3 +6674,14 @@ textarea {
 .filters-bar-compact > * {
   margin: 0;
 }
+
+.filters-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.filters-bar .filters-right {
+  margin-left: auto;
+}
