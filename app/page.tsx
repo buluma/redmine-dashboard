@@ -1591,7 +1591,7 @@ export default function Home() {
         <div className="hero-top">
           <div className="hero-heading">
             <p className="kicker">Redmine Control Room</p>
-            <h1 className="hero-title">Nasc Redmine Command Center (NRCC)</h1>
+            <h1 className="hero-title">Converge</h1>
             <p className="muted">
               Signed in as <strong>{user.displayName}</strong> ({user.username})
             </p>

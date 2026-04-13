@@ -1,6 +1,6 @@
 # Android Integration Guide
 
-This guide provides information for developers working with the native Android client for NRCC.
+This guide provides information for developers working with the native Android client for Converge.
 
 ## Base URL Configuration
 

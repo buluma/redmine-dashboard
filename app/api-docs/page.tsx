@@ -37,7 +37,7 @@ export default function ApiDocsPage() {
           <div>
             <h1>API Documentation</h1>
             <p className="muted">
-              NRCC REST API Reference
+              Converge REST API Reference
             </p>
           </div>
           <div className="hero-actions">

@@ -4,11 +4,11 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: "3.0.3",
     info: {
-      title: "NRCC API",
-      description: "Nasc Redmine Command Center API - REST API for Redmine issue management with local caching, Slack integration, and mobile support.",
+      title: "Converge API",
+      description: "Converge API - Unified operations dashboard API with Redmine, Slack, AI, and mobile support.",
       version: "1.0.0",
       contact: {
-        name: "NRCC Support",
+        name: "Converge Support",
       },
     },
     servers: [

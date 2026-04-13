@@ -246,7 +246,7 @@ export default function OpsPage() {
       <header className="card hero">
         <div className="hero-top">
           <div>
-            <p className="kicker">NRCC Operations</p>
+            <p className="kicker">Converge Operations</p>
             <h1>Sync Ops Console</h1>
             <p className="muted">
               {user ? `Operator: ${user.displayName} (${user.username})` : "Not signed in"}

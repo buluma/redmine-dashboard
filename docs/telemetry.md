@@ -1,6 +1,6 @@
 # Telemetry Conventions
 
-This document defines the standard for operational telemetry in NRCC.
+This document defines the standard for operational telemetry in Converge.
 
 Telemetry in this codebase is emitted through [`src/lib/telemetry.ts`](../src/lib/telemetry.ts), which wraps:
 

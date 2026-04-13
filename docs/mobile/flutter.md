@@ -1,6 +1,6 @@
 # Flutter Integration Guide
 
-This guide provides information on the NRCC Flutter application.
+This guide provides information on the Converge Flutter application.
 
 ## Ready-to-build App
 
@@ -13,7 +13,7 @@ To run the app, navigate to the directory and execute the following commands:
 ```bash
 cd mobile/flutter_nrcc
 flutter pub get
-flutter run --dart-define=NRCC_BASE_URL=http://100.100.245.3:3000
+flutter run --dart-define=Converge_BASE_URL=http://100.100.245.3:3000
 ```
 
 ### Base URL Configuration
@@ -63,7 +63,7 @@ The Flutter app can use the following mobile routes:
 ## Notes
 
 - Attachment uploads are multipart (`file`, optional `description`) and currently capped at 10MB.
-- Attachment downloads are proxied by NRCC so the Redmine API key is never exposed to mobile clients.
+- Attachment downloads are proxied by Converge so the Redmine API key is never exposed to mobile clients.
 
 ## Session Management
 

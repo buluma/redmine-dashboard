@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## 2026-04-13
 
+### Rebrand
+
+- **Project renamed from NRCC (Nasc Redmine Command Center) to Converge**
+  - Reflects evolution from Redmine-only tool to unified operations dashboard
+  - Updated all documentation, page titles, and API references
+  - Branding changes across README.md, docs/, app/, and mobile/
+
 ### Added
 
 - **Streamline Logs Integration** — Import and query Streamline application logs in Supabase for troubleshooting.
@@ -83,7 +90,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
-- Branding and page titles updated to `Nasc Redmine Command Center (NRCC)`.
+- Branding and page titles updated to `Converge`.
 - Polling cadence standardized at 90 seconds.
 - Dashboard details now open in a modal popup.
 - Main dashboard project filter removed from API/query model.

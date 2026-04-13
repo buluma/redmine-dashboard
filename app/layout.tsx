@@ -19,8 +19,8 @@ const display = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Nasc Redmine Command Center (NRCC)",
-  description: "Dashboard for assigned Redmine issues with status, comments, timelog, and sync.",
+  title: "Converge",
+  description: "Unified operations dashboard: Redmine issues, Slack messages, AI insights, and more.",
 };
 
 export default function RootLayout({
