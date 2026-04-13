@@ -26,6 +26,7 @@ const options: swaggerJsdoc.Options = {
       { name: "Slack", description: "Slack integration endpoints" },
       { name: "AI", description: "AI/LLM integration endpoints" },
       { name: "Mobile", description: "Mobile API endpoints" },
+      { name: "Heimdall", description: "Streamline/Heimdall log endpoints" },
     ],
     paths: {
       "/issues": {
@@ -745,6 +746,30 @@ const options: swaggerJsdoc.Options = {
           security: [{ BearerAuth: [] }],
           responses: {
             "200": { description: "Token rotated" },
+          },
+        },
+      },
+      "/heimdall/data": {
+        get: {
+          tags: ["Heimdall"],
+          summary: "Get all Streamline logs",
+          description: "Returns MBU logs, server-side rules logs, and traces from the database",
+          security: [{ BearerAuth: [] }],
+          responses: {
+            "200": { description: "Logs data with stats" },
+            "401": { description: "Unauthorized" },
+          },
+        },
+      },
+      "/heimdall/refresh": {
+        post: {
+          tags: ["Heimdall"],
+          summary: "Refresh Streamline logs from API",
+          description: "Fetches latest logs directly from Streamline API and imports to database",
+          security: [{ BearerAuth: [] }],
+          responses: {
+            "200": { description: "Logs refreshed" },
+            "401": { description: "Unauthorized" },
           },
         },
       },
