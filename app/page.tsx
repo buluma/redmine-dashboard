@@ -2168,21 +2168,23 @@ export default function Home() {
                           </div>
                         </td>
                         <td onClick={(e) => e.stopPropagation()}>
-                          <select
-                            className="status-select"
-                            value={issue.statusId}
-                            onChange={(e) => updateStatus(issue, Number(e.target.value))}
-                            onFocus={() => {
-                              void loadAllowedStatuses(issue.redmineIssueId);
-                            }}
-                          >
-                            {selectableStatuses.map((status) => (
-                              <option key={status.id} value={status.id}>
-                                {status.name}
-                              </option>
-                            ))}
-                          </select>
-                          <span className={`status-dot ${isOpenStatus(issue.statusName) ? "dot-open" : ""} ${isDoneStatus(issue.statusName) ? "dot-done" : ""} ${isBlockedStatus(issue.statusName) ? "dot-blocked" : ""} ${isInProgressStatus(issue.statusName) ? "dot-progress" : ""}`} />
+                          <div className="status-cell">
+                            <select
+                              className="status-select"
+                              value={issue.statusId}
+                              onChange={(e) => updateStatus(issue, Number(e.target.value))}
+                              onFocus={() => {
+                                void loadAllowedStatuses(issue.redmineIssueId);
+                              }}
+                            >
+                              {selectableStatuses.map((status) => (
+                                <option key={status.id} value={status.id}>
+                                  {status.name}
+                                </option>
+                              ))}
+                            </select>
+                            <span className={`status-dot ${isOpenStatus(issue.statusName) ? "dot-open" : ""} ${isDoneStatus(issue.statusName) ? "dot-done" : ""} ${isBlockedStatus(issue.statusName) ? "dot-blocked" : ""} ${isInProgressStatus(issue.statusName) ? "dot-progress" : ""}`} />
+                          </div>
                         </td>
                         <td>
                           <span className={`priority-badge priority-${(issue.priority ?? "").toLowerCase().replace(/\s+/g, "-")}`}>
