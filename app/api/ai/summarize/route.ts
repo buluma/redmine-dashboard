@@ -86,7 +86,6 @@ export async function POST(request: Request) {
       return jsonError("Issue not found", 404);
     }
 
-    const client = getOllamaClient();
     let attachmentSnippets = new Map<number, string>();
     try {
       const { client: redmineClient } = await requireRedmineClientForUser(actorUserId);
@@ -145,6 +144,7 @@ export async function POST(request: Request) {
     let result: {
       content: string;
       model: string;
+      provider: string;
       usedFallback: boolean;
       total_duration?: number;
       load_duration?: number;
@@ -159,6 +159,7 @@ export async function POST(request: Request) {
       result = {
         content: response.content,
         model: response.model,
+        provider: response.provider,
         usedFallback: false,
         total_duration: response.metrics?.totalDuration,
         load_duration: response.metrics?.loadDuration,
@@ -176,6 +177,7 @@ export async function POST(request: Request) {
           return Response.json({
             ...cachedData,
             modelUsed: cached.model,
+            provider: cached.model?.includes("ollama") ? "ollama" : "unknown",
             usedFallback: true,
             cached: true,
             warning: `AI service unavailable. Showing cached summary from ${cached.updatedAt.toISOString()}.`,
@@ -248,7 +250,7 @@ export async function POST(request: Request) {
     return Response.json({
       ...structured,
       modelUsed: result.model,
-      usedFallback: result.usedFallback,
+      provider: result.provider,
       rawResponse: !parsed,
       metrics: {
         totalDuration: result.total_duration != null ? String(result.total_duration) : null,
