@@ -170,6 +170,8 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
         .ai-status-wrapper {
           position: relative;
           display: inline-flex;
+          overflow: visible;
+          z-index: 1001;
         }
 
         .ai-status-indicator {

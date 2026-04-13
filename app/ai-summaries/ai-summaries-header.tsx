@@ -66,7 +66,7 @@ export function AiSummariesHeader({
             {totalSummaries} summary{totalSummaries !== 1 ? "ies" : "y"} · {userMessages} chat messages across {issueCount} issue{issueCount !== 1 ? "s" : ""}
           </p>
         </div>
-        <div className="hero-actions">
+        <div className="hero-actions" style={{ overflow: "visible" }}>
           <AiStatusIndicator />
 
           <button
