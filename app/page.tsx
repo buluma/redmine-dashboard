@@ -2045,28 +2045,16 @@ export default function Home() {
                   )}
                 </div>
 
-                <ProjectFilter
-                  issues={issues}
-                  selectedProject={selectedProject}
-                  onChange={(project) => {
-                    setSelectedProject(project);
-                    resetPage();
-                  }}
-                />
-                <AdvancedFilters
-                  filters={advancedFilters}
-                  onChange={(nextFilters) => {
-                    setAdvancedFilters(nextFilters);
-                    resetPage();
-                  }}
-                  statuses={statuses.map((s) => ({ id: s.id, name: s.name }))}
-                  priorities={priorityOptions}
-                  onClear={() => {
-                    setAdvancedFilters(DEFAULT_ADVANCED_FILTERS);
-                    resetPage();
-                  }}
-                />
-                <button
+                <div className="filters-bar filters-bar-compact">
+                  <ProjectFilter
+                    issues={issues}
+                    selectedProject={selectedProject}
+                    onChange={(project) => {
+                      setSelectedProject(project);
+                      resetPage();
+                    }}
+                  />
+                  <button
                   type="button"
                   className={`favorite-filter ${showFavoritesOnly ? "active" : ""}`}
                   onClick={() => {
