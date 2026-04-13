@@ -2261,10 +2261,12 @@ export default function Home() {
               })()}
             </>
           ) : (
-            <p className="muted collapsible-meta">
-              Queue hidden. {visibleIssues.length} issue(s) loaded, {selectedIssueIds.length} selected.
-            </p>
-          )}
+            <>
+              <p className="muted collapsible-meta">
+                Queue hidden. {visibleIssues.length} issue(s) loaded, {selectedIssueIds.length} selected.
+              </p>
+            </>
+          )}}
         </article>
       </section>
 
