@@ -4,6 +4,7 @@ import { prisma } from "@/src/lib/db";
 import { AiSummariesClient } from "./ai-summaries-client";
 import { AiChatHistoryClient } from "./ai-chat-history-client";
 import { AiSummariesHeader } from "./ai-summaries-header";
+import { StatCard } from "@/src/components/reports/charts";
 
 export const runtime = "nodejs";
 
@@ -174,58 +175,42 @@ export default async function AiSummariesPage() {
         </section>
       ) : (
         <>
-          {/* Redesigned Overview */}
+          {/* Stats Grid */}
+          <div className="reports-stats-grid">
+            <StatCard
+              label="Summaries"
+              value={totalSummaries}
+              foot={`${uniqueIssueIds.size} issues · ${topModels[0]?.[1] ?? 0} with ${topModels[0]?.[0] ?? 'N/A'}`}
+              icon="📝"
+              tone="info"
+            />
+            <StatCard
+              label="Chat Messages"
+              value={totalChatMessages}
+              foot={`${userMessages} you · ${aiMessages} AI`}
+              icon="💬"
+              tone="success"
+            />
+            <StatCard
+              label="Issues"
+              value={totalIssueCount}
+              foot={`${uniqueProjects.length} projects · ${uniqueStatuses.length} statuses`}
+              icon="📊"
+              tone="default"
+            />
+            <StatCard
+              label="Avg Response"
+              value={avgSummaryDuration > 1000 
+                ? `${(avgSummaryDuration / 1000).toFixed(1)}s` 
+                : `${Math.round(avgSummaryDuration)}ms`}
+              foot={topModels[0]?.[0] ?? "—"}
+              icon="⚡"
+              tone="warning"
+            />
+          </div>
+
+          {/* Overview Section */}
           <section className="ai-overview">
-            {/* Top Stats Row */}
-            <div className="ai-stats-grid">
-              <div className="ai-stat-card ai-stat-primary">
-                <div className="ai-stat-icon">📝</div>
-                <div className="ai-stat-content">
-                  <span className="ai-stat-value">{totalSummaries}</span>
-                  <span className="ai-stat-label">Summaries</span>
-                </div>
-                <div className="ai-stat-meta">
-                  {uniqueIssueIds.size} issues · {topModels[0]?.[1] ?? 0} with top model
-                </div>
-              </div>
-
-              <div className="ai-stat-card">
-                <div className="ai-stat-icon">💬</div>
-                <div className="ai-stat-content">
-                  <span className="ai-stat-value">{totalChatMessages}</span>
-                  <span className="ai-stat-label">Chat Messages</span>
-                </div>
-                <div className="ai-stat-meta">
-                  {userMessages} you · {aiMessages} AI
-                </div>
-              </div>
-
-              <div className="ai-stat-card">
-                <div className="ai-stat-icon">📊</div>
-                <div className="ai-stat-content">
-                  <span className="ai-stat-value">{totalIssueCount}</span>
-                  <span className="ai-stat-label">Issues</span>
-                </div>
-                <div className="ai-stat-meta">
-                  {uniqueProjects.length} projects · {uniqueStatuses.length} statuses
-                </div>
-              </div>
-
-              <div className="ai-stat-card">
-                <div className="ai-stat-icon">⚡</div>
-                <div className="ai-stat-content">
-                  <span className="ai-stat-value">
-                    {avgSummaryDuration > 1000 
-                      ? `${(avgSummaryDuration / 1000).toFixed(1)}s` 
-                      : `${Math.round(avgSummaryDuration)}ms`}
-                  </span>
-                  <span className="ai-stat-label">Avg Response</span>
-                </div>
-                <div className="ai-stat-meta">
-                  {topModels[0]?.[0] ?? "—"}
-                </div>
-              </div>
-            </div>
 
             {/* Model Usage */}
             <div className="ai-section">
