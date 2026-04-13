@@ -88,12 +88,6 @@ export default async function AiSummariesPage() {
     }
     chatIssues.set(m.issue.redmineIssueId, (chatIssues.get(m.issue.redmineIssueId) ?? 0) + 1);
   }
-  const topChatModels = Array.from(chatModelsUsed.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
-  const topChatIssues = Array.from(chatIssues.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
 
   const topModels = Array.from(modelsUsed.entries())
     .sort((a, b) => b[1] - a[1])
@@ -106,6 +100,51 @@ export default async function AiSummariesPage() {
   const topProjects = Array.from(projectsMap.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6);
+
+  const allModels = new Map<string, { summaries: number; chat: number }>();
+  
+  // Aggregate model usage
+  for (const [model, count] of modelsUsed) {
+    allModels.set(model, { summaries: count, chat: (allModels.get(model)?.chat ?? 0) });
+  }
+  for (const [model, count] of chatModelsUsed) {
+    const existing = allModels.get(model) ?? { summaries: 0, chat: 0 };
+    allModels.set(model, { summaries: existing.summaries, chat: count });
+  }
+
+  const topChatModels = Array.from(chatModelsUsed.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  const topChatIssues = Array.from(chatIssues.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  // Calculate averages
+  let avgSummaryDuration = 0;
+  let summaryCount = 0;
+  for (const s of summaries) {
+    if (s.totalDuration) {
+      const ms = Number(s.totalDuration) / 1_000_000;
+      avgSummaryDuration += ms;
+      summaryCount++;
+    }
+  }
+  avgSummaryDuration = summaryCount > 0 ? avgSummaryDuration / summaryCount : 0;
+
+  let avgChatDuration = 0;
+  let chatCount = 0;
+  for (const m of chatMessages) {
+    if (m.totalDuration) {
+      const ms = Number(m.totalDuration) / 1_000_000;
+      avgChatDuration += ms;
+      chatCount++;
+    }
+  }
+  avgChatDuration = chatCount > 0 ? avgChatDuration / chatCount : 0;
+
+  // Get all unique projects from summaries
+  const uniqueProjects = [...new Set(summaries.map((s) => s.issue.projectName).filter(Boolean))];
+  const uniqueStatuses = [...new Set(summaries.map((s) => s.issue.statusName))];
 
   return (
     <main className="dashboard">
@@ -127,123 +166,150 @@ export default async function AiSummariesPage() {
         </section>
       ) : (
         <>
-          {/* Overview Cards */}
-          <section className="card reports-shell">
-            <div className="reports-head">
-              <div>
-                <h2>Overview</h2>
-                <p className="muted">Distribution of AI summaries and chat activity</p>
+          {/* Redesigned Overview */}
+          <section className="ai-overview">
+            {/* Top Stats Row */}
+            <div className="ai-stats-grid">
+              <div className="ai-stat-card ai-stat-primary">
+                <div className="ai-stat-icon">📝</div>
+                <div className="ai-stat-content">
+                  <span className="ai-stat-value">{totalSummaries}</span>
+                  <span className="ai-stat-label">Summaries</span>
+                </div>
+                <div className="ai-stat-meta">
+                  {uniqueIssueIds.size} issues · {topModels[0]?.[1] ?? 0} with top model
+                </div>
+              </div>
+
+              <div className="ai-stat-card">
+                <div className="ai-stat-icon">💬</div>
+                <div className="ai-stat-content">
+                  <span className="ai-stat-value">{totalChatMessages}</span>
+                  <span className="ai-stat-label">Chat Messages</span>
+                </div>
+                <div className="ai-stat-meta">
+                  {userMessages} you · {aiMessages} AI
+                </div>
+              </div>
+
+              <div className="ai-stat-card">
+                <div className="ai-stat-icon">📊</div>
+                <div className="ai-stat-content">
+                  <span className="ai-stat-value">{totalIssueCount}</span>
+                  <span className="ai-stat-label">Issues</span>
+                </div>
+                <div className="ai-stat-meta">
+                  {uniqueProjects.length} projects · {uniqueStatuses.length} statuses
+                </div>
+              </div>
+
+              <div className="ai-stat-card">
+                <div className="ai-stat-icon">⚡</div>
+                <div className="ai-stat-content">
+                  <span className="ai-stat-value">
+                    {avgSummaryDuration > 1000 
+                      ? `${(avgSummaryDuration / 1000).toFixed(1)}s` 
+                      : `${Math.round(avgSummaryDuration)}ms`}
+                  </span>
+                  <span className="ai-stat-label">Avg Response</span>
+                </div>
+                <div className="ai-stat-meta">
+                  {topModels[0]?.[0] ?? "—"}
+                </div>
               </div>
             </div>
 
-            <div className="reports-grid">
-              <article className="report-card">
-                <p className="report-label">Total Summaries</p>
-                <p className="report-value">{totalSummaries}</p>
-                <p className="report-foot">
-                  Across {uniqueIssueIds.size} issue{uniqueIssueIds.size !== 1 ? "s" : ""}
-                </p>
-              </article>
-
-              <article className="report-card">
-                <p className="report-label">Chat Messages</p>
-                <p className="report-value">{totalChatMessages}</p>
-                <p className="report-foot">
-                  {userMessages} user · {aiMessages} AI · {chatIssues.size} issue{chatIssues.size !== 1 ? "s" : ""}
-                </p>
-              </article>
-
-              <article className="report-card">
-                <p className="report-label">Top Model</p>
-                <p className="report-value" style={{ fontSize: "1.1rem" }}>
-                  {topModels[0]?.[0] ?? "—"}
-                </p>
-                <p className="report-foot">
-                  {topModels[0]?.[1] ?? 0} summaries generated
-                </p>
-              </article>
+            {/* Model Usage */}
+            <div className="ai-section">
+              <h3 className="ai-section-title">Model Usage</h3>
+              <div className="ai-model-bars">
+                {allModels.size === 0 ? (
+                  <p className="muted">No model data yet</p>
+                ) : (
+                  Array.from(allModels.entries())
+                    .sort((a, b) => (b[1].summaries + b[1].chat) - (a[1].summaries + a[1].chat))
+                    .map(([model, data]) => {
+                      const total = data.summaries + data.chat;
+                      const maxTotal = Math.max(...Array.from(allModels.values()).map(d => d.summaries + d.chat));
+                      const pct = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
+                      return (
+                        <div key={model} className="ai-model-row">
+                          <div className="ai-model-name">
+                            {model.includes("claude") ? "🧠" : model.includes("gpt") ? "💬" : "🦙"} {model}
+                          </div>
+                          <div className="ai-model-bar-wrap">
+                            <div 
+                              className="ai-model-bar" 
+                              style={{ width: `${pct}%` }}
+                            />
+                            <div className="ai-model-stats">
+                              {data.summaries > 0 && <span>{data.summaries} sum</span>}
+                              {data.chat > 0 && <span>{data.chat} chat</span>}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
             </div>
 
-            <div className="reports-grid">
-              <article className="report-card">
-                <p className="report-label">AI Models Used</p>
-                {topModels.length === 0 && <p className="muted">No models yet.</p>}
-                <div className="reports-list">
-                  {topModels.map(([name, count]) => (
-                    <div key={name} className="report-list-row">
-                      <span>{name}</span>
-                      <strong>{count}</strong>
-                    </div>
-                  ))}
-                </div>
-              </article>
-
-              <article className="report-card">
-                <p className="report-label">Status Distribution</p>
-                <div className="reports-list">
-                  {topStatuses.map(([name, count]) => (
-                    <div key={name} className="report-list-row">
-                      <span>{name}</span>
-                      <strong>{count}</strong>
-                    </div>
-                  ))}
-                </div>
-              </article>
-
-              <article className="report-card">
-                <p className="report-label">Top Projects</p>
-                {topProjects.length === 0 && <p className="muted">No projects yet.</p>}
-                <div className="reports-list">
-                  {topProjects.map(([name, count]) => (
-                    <div key={name} className="report-list-row">
-                      <span>{name}</span>
-                      <strong>{count}</strong>
-                    </div>
-                  ))}
-                </div>
-              </article>
-            </div>
-
-            {topChatModels.length > 0 && (
-              <div className="reports-grid">
-                <article className="report-card">
-                  <p className="report-label">Chat Models</p>
-                  <div className="reports-list">
-                    {topChatModels.map(([name, count]) => (
-                      <div key={name} className="report-list-row">
-                        <span>{name}</span>
-                        <strong>{count}</strong>
+            {/* Two Column Layout */}
+            <div className="ai-overview-grid">
+              {/* Projects */}
+              <div className="ai-overview-card">
+                <h4>By Project</h4>
+                {topProjects.length === 0 ? (
+                  <p className="muted">No project data</p>
+                ) : (
+                  <div className="ai-list">
+                    {topProjects.map(([name, count]) => (
+                      <div key={name} className="ai-list-row">
+                        <span className="ai-list-name">{name}</span>
+                        <span className="ai-list-count">{count}</span>
                       </div>
                     ))}
                   </div>
-                </article>
+                )}
+              </div>
 
-                <article className="report-card">
-                  <p className="report-label">Most Chatted Issues</p>
-                  <div className="reports-list">
+              {/* Statuses */}
+              <div className="ai-overview-card">
+                <h4>By Status</h4>
+                {topStatuses.length === 0 ? (
+                  <p className="muted">No status data</p>
+                ) : (
+                  <div className="ai-list">
+                    {topStatuses.map(([name, count]) => (
+                      <div key={name} className="ai-list-row">
+                        <span className="ai-list-name">{name}</span>
+                        <span className="ai-list-count">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Top Chatted Issues */}
+              {topChatIssues.length > 0 && (
+                <div className="ai-overview-card">
+                  <h4>Most Chatted</h4>
+                  <div className="ai-list">
                     {topChatIssues.map(([issueId, count]) => {
                       const issueMsg = chatMessages.find((m) => m.issue.redmineIssueId === issueId);
                       return (
-                        <div key={issueId} className="report-list-row">
-                          <Link href={`/issues/${issueId}`} className="report-list-link">
-                            #{issueId} - {issueMsg?.issue.subject}
+                        <div key={issueId} className="ai-list-row">
+                          <Link href={`/issues/${issueId}`} className="ai-list-link">
+                            #{issueId}
                           </Link>
-                          <strong>{count}</strong>
+                          <span className="ai-list-count">{count}</span>
                         </div>
                       );
                     })}
                   </div>
-                </article>
-
-                <article className="report-card">
-                  <p className="report-label">Chat Activity</p>
-                  <p className="report-value">{totalChatMessages}</p>
-                  <p className="report-foot">
-                    {userMessages} user · {aiMessages} AI
-                  </p>
-                </article>
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </section>
 
           {/* Chat History */}
@@ -284,5 +350,198 @@ export default async function AiSummariesPage() {
         </>
       )}
     </main>
+
+    <style jsx>{`
+      .ai-overview {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        padding: 1.5rem;
+        background: #fafafa;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+      }
+
+      .ai-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+      }
+
+      .ai-stat-card {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        transition: all 0.2s;
+      }
+
+      .ai-stat-card:hover {
+        border-color: #d1d5db;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      }
+
+      .ai-stat-primary {
+        background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+        border-color: #8b5cf6;
+        color: white;
+      }
+
+      .ai-stat-primary .ai-stat-meta {
+        color: rgba(255,255,255,0.8);
+      }
+
+      .ai-stat-icon {
+        font-size: 1.5rem;
+      }
+
+      .ai-stat-content {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .ai-stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        line-height: 1.1;
+      }
+
+      .ai-stat-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+      }
+
+      .ai-stat-primary .ai-stat-label {
+        color: rgba(255,255,255,0.8);
+      }
+
+      .ai-stat-meta {
+        margin-left: auto;
+        font-size: 0.65rem;
+        color: #9ca3af;
+        text-align: right;
+      }
+
+      .ai-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .ai-section-title {
+        margin: 0;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .ai-model-bars {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .ai-model-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .ai-model-name {
+        min-width: 140px;
+        font-size: 0.75rem;
+        font-family: monospace;
+        color: #374151;
+      }
+
+      .ai-model-bar-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        height: 24px;
+      }
+
+      .ai-model-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #8b5cf6 0%, #a78bfa 100%);
+        border-radius: 4px;
+        min-width: 2px;
+      }
+
+      .ai-model-stats {
+        display: flex;
+        gap: 0.5rem;
+        font-size: 0.65rem;
+        color: #6b7280;
+      }
+
+      .ai-overview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+      }
+
+      .ai-overview-card {
+        padding: 1rem;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+      }
+
+      .ai-overview-card h4 {
+        margin: 0 0 0.75rem 0;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .ai-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+
+      .ai-list-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.35rem 0;
+        border-bottom: 1px solid #f3f4f6;
+      }
+
+      .ai-list-row:last-child {
+        border-bottom: none;
+      }
+
+      .ai-list-name {
+        font-size: 0.75rem;
+        color: #374151;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 180px;
+      }
+
+      .ai-list-count {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #8b5cf6;
+        font-family: monospace;
+      }
+
+      .ai-list-link {
+        font-size: 0.75rem;
+        color: #8b5cf6;
+        font-family: monospace;
+      }
+
+      .ai-list-link:hover {
+        text-decoration: underline;
+      }
+    `}</style>
   );
 }
