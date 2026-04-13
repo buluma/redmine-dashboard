@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireCurrentUser } from "@/src/lib/auth";
 import { env } from "@/src/lib/env";
 import { SlackMessagesClient } from "./slack-client";
 import { SlackClient } from "@/src/lib/slack";
-import { SlackHeader } from "./slack-header";
 
 export const runtime = "nodejs";
 
@@ -34,14 +32,9 @@ export default async function SlackPage() {
 
       // Get channel names for all monitored channels
       const channelMap = new Map(channels.map((c) => [c.id, c.name]));
-      const monitoredChannels = allChannelIds.map((id) => ({
-        id,
-        name: channelMap.get(id) || id,
-      }));
 
       // Fetch messages from default channel
       const defaultChannelId = env.slackDefaultChannelId || allChannelIds[0];
-      const channelName = channelMap.get(defaultChannelId) || defaultChannelId;
       messages = await slackClient.getChannelMessages(defaultChannelId);
 
       // Build user names map
@@ -63,19 +56,19 @@ export default async function SlackPage() {
 
   return (
     <main className="dashboard">
-      <SlackHeader
-        channelCount={channels.length}
-        messageCount={messages.length}
-        onRefresh={async () => {
-          // This will be handled by the client component
-          // Server-side refresh is not needed since the page is already server-rendered
-        }}
-        onTestNotification={async () => {
-          // Test notification handled client-side
-        }}
-      />
-
       {error ? (
+        <header className="card hero">
+          <div className="hero-top">
+            <div>
+              <p className="kicker">Slack</p>
+              <h1>Slack Messages</h1>
+              <p className="muted">Configuration Required</p>
+            </div>
+          </div>
+        </header>
+      ) : null}
+
+      {error && (
         <section className="card">
           <div className="reports-head">
             <div>
@@ -84,28 +77,16 @@ export default async function SlackPage() {
             </div>
           </div>
         </section>
-      ) : (
-        <>
-          <section className="card reports-shell">
-            <div className="reports-head">
-              <div>
-                <h2>Channel Overview</h2>
-                <p className="muted">
-                  {messages.length} message{messages.length !== 1 ? "s" : ""} loaded
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <SlackMessagesClient 
-            initialMessages={messages} 
-            initialUserNames={initialUserNames}
-            channelId={defaultChannelId}
-            channels={channels}
-            refreshIntervalMs={env.slackRefreshIntervalMs}
-          />
-        </>
       )}
+
+      <SlackMessagesClient 
+        initialMessages={messages} 
+        initialUserNames={initialUserNames}
+        channelId={defaultChannelId}
+        channels={channels}
+        refreshIntervalMs={env.slackRefreshIntervalMs}
+        channelCount={channels.length}
+      />
     </main>
   );
 }
