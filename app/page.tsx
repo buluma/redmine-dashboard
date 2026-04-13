@@ -1972,7 +1972,7 @@ export default function Home() {
           </div>
 
           {issueQueueOpen ? (
-            <>
+            <div className="issue-queue-content">
               <div className="bulk-toolbar">
                 <p className="muted">
                   Selected: <strong>{selectedIssueIds.length}</strong>
@@ -2257,16 +2257,16 @@ export default function Home() {
                     »»
                   </button>
                 </div>
-                );
-              })()}
-            </>
+              );
+            })()}
+            </div>
           ) : (
             <>
               <p className="muted collapsible-meta">
                 Queue hidden. {visibleIssues.length} issue(s) loaded, {selectedIssueIds.length} selected.
               </p>
             </>
-          )}}
+          )}
         </article>
       </section>
 
