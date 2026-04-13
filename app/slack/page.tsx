@@ -80,6 +80,7 @@ export default async function SlackPage() {
             initialMessages={messages} 
             channelId={channelId ?? ""}
             channelName={channelInfo?.name ?? ""}
+            refreshIntervalMs={env.slackRefreshIntervalMs}
           />
         </>
       )}

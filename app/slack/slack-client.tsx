@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { SlackMessage } from "@/src/lib/slack";
 
 interface SlackMessagesClientProps {
   initialMessages: SlackMessage[];
   channelId: string;
   channelName: string;
+  refreshIntervalMs?: number;
 }
 
 interface UserCache {
@@ -125,7 +126,8 @@ function MessageItem({
 export function SlackMessagesClient({ 
   initialMessages, 
   channelId,
-  channelName 
+  channelName,
+  refreshIntervalMs = 30000
 }: SlackMessagesClientProps) {
   const [messages, setMessages] = useState<SlackMessage[]>(initialMessages);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -134,6 +136,13 @@ export function SlackMessagesClient({
   const [activeThread, setActiveThread] = useState<string | null>(null);
   const [threadMessages, setThreadMessages] = useState<SlackMessage[]>([]);
   const [isLoadingThread, setIsLoadingThread] = useState(false);
+  const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(true);
+  const [isSendingTest, setIsSendingTest] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [nextRefreshIn, setNextRefreshIn] = useState<number>(refreshIntervalMs / 1000);
+  const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
   // Build user cache from messages
   const buildUserCache = useCallback((msgs: SlackMessage[]) => {
@@ -177,6 +186,8 @@ export function SlackMessagesClient({
 
       const data = await response.json();
       setMessages(data.messages || []);
+      setLastUpdated(new Date());
+      setNextRefreshIn(refreshIntervalMs / 1000);
       
       // Update user names if provided
       if (data.users) {
@@ -187,7 +198,49 @@ export function SlackMessagesClient({
     } finally {
       setIsRefreshing(false);
     }
-  }, [channelId]);
+  }, [channelId, refreshIntervalMs]);
+
+  const handleTestNotification = useCallback(async () => {
+    setIsSendingTest(true);
+    setTestResult(null);
+
+    try {
+      const response = await fetch("/api/slack/test", { method: "POST" });
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setTestResult({ success: true, message: "Test notification sent!" });
+      } else {
+        setTestResult({ success: false, message: data.error || "Failed to send" });
+      }
+    } catch {
+      setTestResult({ success: false, message: "Network error" });
+    } finally {
+      setIsSendingTest(false);
+      // Clear result after 5 seconds
+      setTimeout(() => setTestResult(null), 5000);
+    }
+  }, []);
+
+  // Auto-refresh setup
+  useEffect(() => {
+    if (isAutoRefreshEnabled && refreshIntervalMs > 0) {
+      // Countdown timer
+      countdownRef.current = setInterval(() => {
+        setNextRefreshIn(prev => Math.max(0, prev - 1));
+      }, 1000);
+
+      // Auto-refresh timer
+      autoRefreshRef.current = setInterval(() => {
+        handleRefresh();
+      }, refreshIntervalMs);
+
+      return () => {
+        if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
+        if (countdownRef.current) clearInterval(countdownRef.current);
+      };
+    }
+  }, [isAutoRefreshEnabled, refreshIntervalMs, handleRefresh]);
 
   const handleThreadClick = useCallback(async (threadTs: string) => {
     if (activeThread === threadTs) {
@@ -475,6 +528,97 @@ export function SlackMessagesClient({
         .empty-state p {
           margin: 0;
         }
+
+        .auto-refresh-toggle {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 0.75rem;
+          background: transparent;
+          border: 1px solid var(--border-color, #e5e7eb);
+          border-radius: 0.375rem;
+          font-size: 0.75rem;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .auto-refresh-toggle:hover {
+          background: var(--bg-secondary, #f3f4f6);
+        }
+
+        .auto-refresh-toggle.active {
+          background: var(--color-primary, #2563eb);
+          color: white;
+          border-color: var(--color-primary, #2563eb);
+        }
+
+        .toggle-indicator {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: var(--text-muted, #6b7280);
+        }
+
+        .auto-refresh-toggle.active .toggle-indicator {
+          background: #4ade80;
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+
+        .test-button {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 0.75rem;
+          background: transparent;
+          border: 1px solid var(--border-color, #e5e7eb);
+          border-radius: 0.375rem;
+          font-size: 0.75rem;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .test-button:hover:not(:disabled) {
+          background: var(--bg-secondary, #f3f4f6);
+        }
+
+        .test-button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .test-result {
+          padding: 0.5rem 0.75rem;
+          border-radius: 0.375rem;
+          font-size: 0.75rem;
+          font-weight: 500;
+        }
+
+        .test-result.success {
+          background: #dcfce7;
+          color: #166534;
+        }
+
+        .test-result.error {
+          background: #fef2f2;
+          color: #991b1b;
+        }
+
+        .refresh-info {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+          font-size: 0.75rem;
+          color: var(--text-muted, #6b7280);
+        }
+
+        .countdown {
+          font-variant-numeric: tabular-nums;
+        }
       `}</style>
 
       <section className="card">
@@ -490,9 +634,35 @@ export function SlackMessagesClient({
             </svg>
             {isRefreshing ? "Refreshing..." : "Refresh"}
           </button>
-          <span style={{ fontSize: "0.875rem", color: "var(--text-muted, #6b7280)" }}>
-            Last updated: {new Date().toLocaleTimeString()}
-          </span>
+          
+          <button
+            className={`auto-refresh-toggle ${isAutoRefreshEnabled ? "active" : ""}`}
+            onClick={() => setIsAutoRefreshEnabled(!isAutoRefreshEnabled)}
+          >
+            <span className="toggle-indicator"></span>
+            Auto-refresh
+          </button>
+
+          <button
+            className="test-button"
+            onClick={handleTestNotification}
+            disabled={isSendingTest}
+          >
+            {isSendingTest ? "Sending..." : "Test Notification"}
+          </button>
+
+          {testResult && (
+            <span className={`test-result ${testResult.success ? "success" : "error"}`}>
+              {testResult.message}
+            </span>
+          )}
+
+          <div className="refresh-info">
+            <span>Last: {lastUpdated.toLocaleTimeString()}</span>
+            {isAutoRefreshEnabled && (
+              <span className="countdown">Next: {nextRefreshIn}s</span>
+            )}
+          </div>
         </div>
 
         {error && (

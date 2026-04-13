@@ -78,4 +78,13 @@ export const env = {
   // Slack Configuration
   slackBotToken: process.env.SLACK_BOT_TOKEN,
   slackDefaultChannelId: process.env.SLACK_DEFAULT_CHANNEL_ID,
+  // Slack Notifier Configuration
+  slackNotifyEnabled: boolFromEnv("SLACK_NOTIFY_ENABLED", false),
+  slackNotifyChannelId: process.env.SLACK_NOTIFY_CHANNEL_ID,
+  slackNotifyOnCreate: boolFromEnv("SLACK_NOTIFY_ON_CREATE", true),
+  slackNotifyOnUpdate: boolFromEnv("SLACK_NOTIFY_ON_UPDATE", true),
+  slackNotifyOnStatusChange: boolFromEnv("SLACK_NOTIFY_ON_STATUS_CHANGE", true),
+  slackNotifyOnAssignment: boolFromEnv("SLACK_NOTIFY_ON_ASSIGNMENT", true),
+  slackNotifyFormat: (process.env.SLACK_NOTIFY_FORMAT as "compact" | "detailed") || "compact",
+  slackRefreshIntervalMs: numberFromEnv("SLACK_REFRESH_INTERVAL_MS", 30000),
 };
