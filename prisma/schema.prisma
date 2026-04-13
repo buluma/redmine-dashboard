@@ -391,12 +391,14 @@ model MbuLog {
   traceType   String   @map("trace_type") @db.VarChar(20) // "log", "exception"
   traceId     String   @map("trace_id") @db.VarChar(50)
   code        String   @db.VarChar(100) // Error code if any
+  host        String   @default("streamline.staging.vodacomsa-battery.nasctech.com") @db.VarChar(255) // Source host
   createdBy   Int?
   updatedBy   Int?
   ingestedAt  DateTime @default(now())
   environment String   @default("staging") @db.VarChar(20)
 
-  @@unique([id, environment])
+  @@unique([id, environment, host])
+  @@index([host])
   @@index([createdAt(sort: Desc)])
   @@index([logLevel])
   @@index([traceType])
@@ -415,6 +417,7 @@ model ServerSideRulesLog {
   duration        Decimal  @db.Decimal(10, 3) // Duration in seconds
   ramUsage        Int      @map("ram_usage") // Memory usage in bytes
   cpuUsage        Int      @map("cpu_usage") // CPU percentage
+  host              String   @default("streamline.staging.vodacomsa-battery.nasctech.com") @db.VarChar(255)
   isError         Boolean  @map("is_error") @default(false)
   errorDescr      String?  @map("error_descr") @db.Text // Error description if failed
   processId       Int?     @map("process_id")
@@ -427,7 +430,8 @@ model ServerSideRulesLog {
   ingestedAt      DateTime @default(now())
   environment     String   @default("staging") @db.VarChar(20)
 
-  @@unique([id, environment])
+  @@unique([id, environment, host])
+  @@index([host])
   @@index([createdAt(sort: Desc)])
   @@index([status])
   @@index([isError])
@@ -447,6 +451,7 @@ model Trace {
   backtrace    String   @db.Text // Trace message
   code         String?  @db.VarChar(100)
   context      String?  @db.Text
+  host         String   @default("streamline.staging.vodacomsa-battery.nasctech.com") @db.VarChar(255) // Source host
   resourceId   Int?     @map("resource_id")
   resourceType String?  @map("resource_type") @db.VarChar(200)
   resourcePath String?  @map("resource_path") @db.VarChar(500)
@@ -455,7 +460,8 @@ model Trace {
   ingestedAt   DateTime @default(now())
   environment  String   @default("staging") @db.VarChar(20)
 
-  @@unique([id, environment])
+  @@unique([id, environment, host])
+  @@index([host])
   @@index([createdAt(sort: Desc)])
   @@index([logLevel])
   @@index([traceType])

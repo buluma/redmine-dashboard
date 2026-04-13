@@ -41,6 +41,13 @@ export default async function HeimdallPage() {
   // Compute stats
   const totalLogs = mbuLogs.length + serverSideRulesLogs.length + traces.length;
 
+  // Extract unique hosts
+  const allHosts = Array.from(new Set([
+    ...mbuLogs.map((l) => l.host),
+    ...serverSideRulesLogs.map((l) => l.host),
+    ...traces.map((l) => l.host),
+  ])).sort();
+
   // MBU log stats
   const mbuByLevel = new Map<string, number>();
   const mbuByType = new Map<string, number>();
@@ -117,7 +124,7 @@ export default async function HeimdallPage() {
           <div>
             <h1>Heimdall</h1>
             <p className="muted">
-              Streamline Application Logs — {totalLogs} records · {allErrors.length} errors/warnings
+              Streamline Application Logs — {totalLogs} records · {allErrors.length} errors/warnings · {allHosts.length} host{allHosts.length !== 1 ? "s" : ""}
             </p>
           </div>
           <div className="hero-actions">
@@ -328,6 +335,7 @@ export default async function HeimdallPage() {
                   traceType: l.traceType,
                   traceId: l.traceId,
                   environment: l.environment,
+                  host: l.host,
                 }))}
               />
             </details>
@@ -355,6 +363,7 @@ export default async function HeimdallPage() {
                   traceType: l.status,
                   traceId: l.requestId || "",
                   environment: l.environment,
+                  host: l.host,
                   extra: {
                     duration: l.duration.toString(),
                     cpuUsage: l.cpuUsage,
@@ -389,6 +398,7 @@ export default async function HeimdallPage() {
                   traceType: l.traceType,
                   traceId: l.traceId.toString(),
                   environment: l.environment,
+                  host: l.host,
                   extra: {
                     resourceType: l.resourceType,
                     resourceId: l.resourceId,

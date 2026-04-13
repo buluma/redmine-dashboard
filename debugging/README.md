@@ -34,7 +34,20 @@ Three tables are available in Supabase:
 | `server_side_rules_log` | Scheduled job execution | id, script_name, status, duration, is_error, error_descr, cpu_usage, ram_usage |
 | `traces` | General application traces | id, backtrace, log_level, trace_type, resource_type, resource_id |
 
-All tables include `environment` (staging/production) and `ingested_at` for tracking.
+All tables include `environment` (staging/production), `host` (source server hostname), and `ingested_at` for tracking.
+
+### Multi-Project Support
+
+The `host` column enables multiple projects to share the same tables while keeping data separate.
+Each project's logs are identified by their Streamline server hostname:
+
+| Environment | Default Host |
+|-------------|-------------|
+| staging | `streamline.staging.vodacomsa-battery.nasctech.com` |
+| production | `streamline.vodacomsa-battery.nasctech.com` |
+
+Override via `STREAMLINE_HOST` env var or pass `host` option to the import function.
+Deduplication uses the composite key `(id, environment, host)`.
 
 ### Import Logs into Supabase
 
@@ -61,15 +74,20 @@ Use Supabase Studio (SQL Editor) or Prisma Client to query:
 
 ```sql
 -- Find recent errors across all tables
-SELECT 'mbu_logs' as source, id, backtrace, created_at FROM mbu_logs WHERE log_level = 'ERROR' ORDER BY created_at DESC LIMIT 10
+SELECT 'mbu_logs' as source, id, backtrace, host, created_at FROM mbu_logs WHERE log_level = 'ERROR' ORDER BY created_at DESC LIMIT 10
 UNION ALL
-SELECT 'traces', id, backtrace, created_at FROM traces WHERE log_level = 'ERROR' ORDER BY created_at DESC LIMIT 10;
+SELECT 'traces', id, backtrace, host, created_at FROM traces WHERE log_level = 'ERROR' ORDER BY created_at DESC LIMIT 10;
 
 -- Find failed scheduled jobs
-SELECT script_name, status, duration, error_descr, created_at
+SELECT script_name, status, duration, error_descr, host, created_at
 FROM server_side_rules_log
 WHERE is_error = true
 ORDER BY created_at DESC;
+
+-- Logs by host (multi-project view)
+SELECT host, log_level, COUNT(*) FROM mbu_logs
+WHERE created_at > NOW() - INTERVAL '24 hours'
+GROUP BY host, log_level;
 
 -- Count logs by level (last 24h)
 SELECT log_level, COUNT(*) FROM mbu_logs

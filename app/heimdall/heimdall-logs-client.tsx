@@ -10,6 +10,7 @@ type LogEntry = {
   traceType: string;
   traceId: string;
   environment: string;
+  host?: string;
   extra?: Record<string, string | number | boolean | null>;
 };
 
@@ -32,6 +33,7 @@ export function HeimdallLogsClient({ type, logs }: HeimdallLogsClientProps) {
         log.backtrace.toLowerCase().includes(q) ||
         log.traceId.toLowerCase().includes(q) ||
         log.traceType.toLowerCase().includes(q) ||
+        (log.host && log.host.toLowerCase().includes(q)) ||
         (log.extra &&
           Object.values(log.extra).some((v) =>
             String(v ?? "").toLowerCase().includes(q)
@@ -241,12 +243,15 @@ export function HeimdallLogsClient({ type, logs }: HeimdallLogsClientProps) {
                     fontSize: "0.72rem",
                     color: "var(--muted, #888)",
                     marginTop: "0.5rem",
+                    gap: "0.5rem",
                   }}
                 >
                   <span>
                     ID: {log.id} · Trace: {log.traceId}
                   </span>
-                  <span>{log.environment}</span>
+                  <span>
+                    {log.host ? truncateHost(log.host) : log.environment}
+                  </span>
                 </div>
               </article>
             );
@@ -276,4 +281,11 @@ function formatDate(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function truncateHost(host: string): string {
+  // Show just the subdomain part: streamline.staging.vodacomsa-battery.nasctech.com -> staging.vodacomsa-battery
+  const parts = host.split(".");
+  if (parts.length <= 2) return host;
+  return parts.slice(1, 3).join(".");
 }
