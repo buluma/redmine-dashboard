@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import SwaggerUI from "swagger-ui-react";
 import "swagger-ui-react/swagger-ui.css";
 
 // Suppress React 19 deprecation warnings from swagger-ui-react
