@@ -177,6 +177,18 @@ export class SlackClient {
     return userMap;
   }
 
+  async getUserInfo(userId: string): Promise<string | null> {
+    try {
+      const result = await this.client.users.info({ user: userId });
+      if (result.user) {
+        return result.user.real_name || result.user.name || null;
+      }
+    } catch {
+      // User not found
+    }
+    return null;
+  }
+
   async getThreadReplies(channelId: string, threadTs: string): Promise<SlackMessage[]> {
     try {
       const result = await this.client.conversations.replies({
