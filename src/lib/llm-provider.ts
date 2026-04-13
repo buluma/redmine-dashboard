@@ -419,6 +419,28 @@ export class LLMProviderManager {
     const apiKey = env.openrouterApiKey;
     if (!apiKey) throw new Error("OpenRouter API key not configured");
 
+    // Try primary model first
+    try {
+      return await this.openrouterChatWithModel(messages, env.openrouterChatModel, options);
+    } catch (primaryError) {
+      // If primary fails and we have a fallback, try it
+      if (env.openrouterChatModelFallback && env.openrouterChatModelFallback !== env.openrouterChatModel) {
+        console.warn(`OpenRouter primary model failed, trying fallback: ${env.openrouterChatModelFallback}`);
+        try {
+          return await this.openrouterChatWithModel(messages, env.openrouterChatModelFallback, options);
+        } catch (fallbackError) {
+          // If fallback also fails, throw the primary error
+          throw primaryError;
+        }
+      }
+      throw primaryError;
+    }
+  }
+
+  private async openrouterChatWithModel(messages: LLMChatMessage[], model: string, options: { temperature?: number; maxTokens?: number }): Promise<LLMResponse> {
+    const apiKey = env.openrouterApiKey;
+    if (!apiKey) throw new Error("OpenRouter API key not configured");
+
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -428,7 +450,7 @@ export class LLMProviderManager {
         "X-Title": "Converge"
       },
       body: JSON.stringify({
-        model: env.openrouterChatModel,
+        model,
         messages,
         temperature: options.temperature ?? 0.7,
         max_tokens: options.maxTokens ?? 4096

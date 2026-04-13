@@ -209,11 +209,38 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
         <div className="ai-result">
           <div className="ai-result-header">
             <h5>AI Summary</h5>
-            {parsedSummary.confidence > 0 && (
-              <span className="ai-confidence">
-                {Math.round(parsedSummary.confidence * 100)}% confident
-              </span>
-            )}
+            <div className="ai-result-actions">
+              {parsedSummary.confidence > 0 && (
+                <span className="ai-confidence">
+                  {Math.round(parsedSummary.confidence * 100)}% confident
+                </span>
+              )}
+              <button
+                onClick={async (e: React.MouseEvent<HTMLButtonElement>) => {
+                  e.preventDefault();
+                  try {
+                    await navigator.clipboard.writeText(parsedSummary.summary);
+                    // Show temporary feedback
+                    const button = e.currentTarget;
+                    if (button) {
+                      const originalText = button.textContent || "Copy";
+                      button.setAttribute("data-original-text", originalText);
+                      button.textContent = "Copied!";
+                      setTimeout(() => {
+                        button.textContent = button.getAttribute("data-original-text") || "Copy";
+                      }, 2000);
+                    }
+                  } catch (err) {
+                    console.error("Failed to copy text:", err);
+                    alert("Failed to copy to clipboard");
+                  }
+                }}
+                className="ai-copy-button"
+                title="Copy summary to clipboard"
+              >
+                📋 Copy
+              </button>
+            </div>
           </div>
 
           {parsedSummary.summary && (
@@ -488,6 +515,26 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
           font-weight: 500;
           color: #6b7280;
           font-family: monospace;
+        }
+
+        .ai-copy-button {
+          margin-left: 0.5rem;
+          padding: 0.25rem 0.5rem;
+          background: #10b981;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          font-size: 0.75rem;
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+        }
+
+        .ai-copy-button:hover {
+          background: #059669;
+        }
+
+        .ai-copy-button:active {
+          background: #047857;
         }
       `}</style>
     </div>

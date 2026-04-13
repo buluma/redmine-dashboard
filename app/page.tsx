@@ -505,7 +505,7 @@ export default function Home() {
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [filterPresets, setFilterPresets] = useState<FilterPreset[]>([]);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
-  const [hoveredIssue, setHoveredIssue] = useState<RedmineIssue | null>(null);
+  const [hoveredIssue, setHoveredIssue] = useState<Issue | null>(null);
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   const [draggedIssueId, setDraggedIssueId] = useState<number | null>(null);
   const [opsAlertsOpen, setOpsAlertsOpen] = useState(false);

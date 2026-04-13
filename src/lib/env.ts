@@ -86,6 +86,7 @@ export const env = {
   // OpenRouter Configuration (alternative to Ollama) - https://openrouter.ai/docs/quickstart
   openrouterApiKey: process.env.OPENROUTER_API_KEY,
   openrouterChatModel: process.env.OPENROUTER_CHAT_MODEL || "anthropic/claude-3.5-haiku",
+  openrouterChatModelFallback: process.env.OPENROUTER_CHAT_MODEL_FALLBACK || "openrouter/free",
   // Slack Configuration
   slackBotToken: process.env.SLACK_BOT_TOKEN,
   slackDefaultChannelId: process.env.SLACK_DEFAULT_CHANNEL_ID,
