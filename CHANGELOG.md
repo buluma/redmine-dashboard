@@ -91,7 +91,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 
 - Branding and page titles updated to `Converge`.
-- Polling cadence standardized at 90 seconds.
+- Polling cadence standardized at 5 minutes.
 - Dashboard details now open in a modal popup.
 - Main dashboard project filter removed from API/query model.
 - Sync header now shows clearer error details and latest sync timestamp.

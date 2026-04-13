@@ -78,7 +78,7 @@ This document provides a high-level overview of the system architecture for Conv
 ### 5. Synchronization Service
 
 - **Implementation:** An in-process poller that runs within the Next.js server.
-- **Polling:** Periodically fetches data from the Redmine API to keep the local cache up to date. The default polling interval is 90 seconds.
+- **Polling:** Periodically fetches data from the Redmine API to keep the local cache up to date. The default polling interval is 5 minutes.
 - **Synced Redmine surfaces:** `issues`, `issue_statuses`, enumerations (time entry activities + issue priorities), issue `attachments`, issue `relations`, `allowed_statuses`, and `children`.
 - **Leader Lock:** A leader lock mechanism is used to ensure that only one instance of the poller is active at a time in a multi-instance environment.
 
