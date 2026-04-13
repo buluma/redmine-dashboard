@@ -20,6 +20,63 @@ debugging/
     └── (generated files)
 ```
 
+## 📊 Supabase Integration
+
+Fetched logs can be imported into Supabase for persistent storage, querying, and troubleshooting.
+
+### Schema
+
+Three tables are available in Supabase:
+
+| Table | Purpose | Key Fields |
+|-------|---------|------------|
+| `mbu_logs` | Main application logs | id, backtrace, log_level, trace_type, trace_id, created_at |
+| `server_side_rules_log` | Scheduled job execution | id, script_name, status, duration, is_error, error_descr, cpu_usage, ram_usage |
+| `traces` | General application traces | id, backtrace, log_level, trace_type, resource_type, resource_id |
+
+All tables include `environment` (staging/production) and `ingested_at` for tracking.
+
+### Import Logs into Supabase
+
+```bash
+# Import all fetched logs from debugging/logs/
+node scripts/import-streamline-logs.js
+
+# Preview without writing
+node scripts/import-streamline-logs.js --dry-run
+
+# Import from specific environment
+node scripts/import-streamline-logs.js --env production
+
+# Limit records per file
+node scripts/import-streamline-logs.js --limit 50
+
+# Import a single file
+node scripts/import-streamline-logs.js --file debugging/logs/mbu_logs_20260413_085359.json
+```
+
+### Querying Imported Logs
+
+Use Supabase Studio (SQL Editor) or Prisma Client to query:
+
+```sql
+-- Find recent errors across all tables
+SELECT 'mbu_logs' as source, id, backtrace, created_at FROM mbu_logs WHERE log_level = 'ERROR' ORDER BY created_at DESC LIMIT 10
+UNION ALL
+SELECT 'traces', id, backtrace, created_at FROM traces WHERE log_level = 'ERROR' ORDER BY created_at DESC LIMIT 10;
+
+-- Find failed scheduled jobs
+SELECT script_name, status, duration, error_descr, created_at
+FROM server_side_rules_log
+WHERE is_error = true
+ORDER BY created_at DESC;
+
+-- Count logs by level (last 24h)
+SELECT log_level, COUNT(*) FROM mbu_logs
+WHERE created_at > NOW() - INTERVAL '24 hours'
+GROUP BY log_level;
+```
+
 ## 🚀 Quick Start
 
 ### Prerequisites

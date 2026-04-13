@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-04-13
+
+### Added
+
+- **Streamline Logs Integration** — Import and query Streamline application logs in Supabase for troubleshooting.
+  - New Prisma models: `MbuLog`, `ServerSideRulesLog`, `Trace` with optimized indexes for time-range and error-level queries.
+  - Import script (`scripts/import-streamline-logs.js`) to parse Ansible-fetched JSON logs and upsert into Supabase.
+  - Supports staging/production environments with deduplication via `(id, environment)` composite keys.
+  - Documentation: `debugging/README.md` for fetching logs, `scripts/import-streamline-logs.js --help` for import usage.
+
 ## 2026-02-26
 
 ### Added
