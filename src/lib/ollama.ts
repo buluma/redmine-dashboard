@@ -159,7 +159,6 @@ export class OllamaClient {
       temperature?: number;
       maxTokens?: number;
       useFallback?: boolean;
-      model?: string; // Override model selection
     } = {}
   ): Promise<{
     content: string;
@@ -172,17 +171,8 @@ export class OllamaClient {
     eval_count?: number;
     eval_duration?: number;
   }> {
-    const { stream = this.streamEnabled, temperature = 0.7, maxTokens = 4096, useFallback = false, model: modelOverride } = options;
-    
-    // Priority: override > fallback > primary
-    let model: string;
-    if (modelOverride) {
-      model = modelOverride;
-    } else if (useFallback) {
-      model = this.fallbackChatModel;
-    } else {
-      model = this.primaryChatModel;
-    }
+    const { stream = this.streamEnabled, temperature = 0.7, maxTokens = 4096, useFallback = false } = options;
+    const model = useFallback ? this.fallbackChatModel : this.primaryChatModel;
 
     const response = await this.fetchWithTimeout(`${this.baseUrl}/api/chat`, {
       method: "POST",

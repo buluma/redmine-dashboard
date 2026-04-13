@@ -196,16 +196,16 @@ export class LLMProviderManager {
     return status.models;
   }
 
-  async chat(messages: LLMChatMessage[], options: { stream?: boolean; temperature?: number; maxTokens?: number; model?: string } = {}): Promise<LLMResponse> {
-    const { stream = false, temperature = 0.7, maxTokens = 4096, model: modelOverride } = options;
+  async chat(messages: LLMChatMessage[], options: { stream?: boolean; temperature?: number; maxTokens?: number } = {}): Promise<LLMResponse> {
+    const { stream = false, temperature = 0.7, maxTokens = 4096 } = options;
 
     try {
       if (this.provider === "ollama") {
-        return this.ollamaChat(messages, { stream, temperature, maxTokens, model: modelOverride });
+        return this.ollamaChat(messages, { stream, temperature, maxTokens });
       } else if (this.provider === "openai") {
-        return this.openaiChat(messages, { stream, temperature, maxTokens, model: modelOverride });
+        return this.openaiChat(messages, { stream, temperature, maxTokens });
       } else if (this.provider === "anthropic") {
-        return this.anthropicChat(messages, { maxTokens, model: modelOverride });
+        return this.anthropicChat(messages, { maxTokens });
       }
       throw new Error(`Unsupported provider: ${this.provider}`);
     } catch (error) {
@@ -213,7 +213,7 @@ export class LLMProviderManager {
       if (this.provider !== "ollama") {
         console.warn(`Primary provider ${this.provider} failed, trying Ollama fallback...`);
         try {
-          return await this.ollamaChat(messages, { stream, temperature, maxTokens, model: modelOverride });
+          return await this.ollamaChat(messages, { stream, temperature, maxTokens });
         } catch {
           // Ollama fallback also failed
         }
@@ -222,7 +222,7 @@ export class LLMProviderManager {
     }
   }
 
-  private async ollamaChat(messages: LLMChatMessage[], options: { stream?: boolean; temperature?: number; maxTokens?: number; model?: string }): Promise<LLMResponse> {
+  private async ollamaChat(messages: LLMChatMessage[], options: { stream?: boolean; temperature?: number; maxTokens?: number }): Promise<LLMResponse> {
     const result = await this.ollama.chat(messages, options);
     return {
       content: result.content,

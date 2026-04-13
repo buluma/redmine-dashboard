@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireCurrentUser } from "@/src/lib/auth";
 import { getLLMProviderManager, type LLMModel } from "@/src/lib/llm-provider";
 import { getOllamaClient, type OllamaModel } from "@/src/lib/ollama";
 import { env } from "@/src/lib/env";
 
 export const runtime = "nodejs";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const overrideModel = searchParams.get("model");
-
     const manager = getLLMProviderManager();
     const status = await manager.checkHealth();
 
@@ -35,24 +31,12 @@ export async function GET(request: Request) {
       }
     }
 
-    // If a model override is provided, test if it's available and works
-    let effectiveModel = overrideModel || status.primaryModel;
-    let modelAvailable = !overrideModel; // If no override, assume primary is available
-
-    if (overrideModel && status.provider === "ollama") {
-      // Check if the requested model is in the available list
-      modelAvailable = models.some(m => m.name === overrideModel);
-    }
-
     return NextResponse.json({
       ...status,
       models,
-      primaryModel: effectiveModel,
-      modelAvailable,
-      overrideModel: overrideModel || null,
       config: {
         provider: status.provider,
-        primaryModel: effectiveModel,
+        primaryModel: status.primaryModel,
         embeddingModel: env.ollamaEmbedModel,
         features: {
           summarize: env.aiSummarizeEnabled,
