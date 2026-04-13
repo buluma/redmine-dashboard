@@ -2206,7 +2206,6 @@ export default function Home() {
                 })()}
                   </tbody>
                 </table>
-              </div>
 
               {/* Pagination Controls */}
               {(() => {
