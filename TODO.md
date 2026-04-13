@@ -1,3 +1,4 @@
+- slack integration - read group messages - https://wakatime.com/developers#introduction
 - swagger api documentation
 - wakatime api integration for worktime tracking
 - wrap ollama around tailscale aperture
