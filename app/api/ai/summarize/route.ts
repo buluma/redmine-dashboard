@@ -1,10 +1,10 @@
-import { getOllamaClient } from "@/src/lib/ollama";
 import { extractAttachmentSnippetsForAi } from "@/src/lib/attachment-ai";
 import { createSummarizeMessages, normalizeSummarizeResponse, parseJsonResponse } from "@/src/lib/ai-prompt";
 import { env } from "@/src/lib/env";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { requireCurrentUser, requireMobileUser, requireRedmineClientForUser } from "@/src/lib/auth";
+import { getLLMProviderManager } from "@/src/lib/llm-provider";
 
 export const runtime = "nodejs";
 
@@ -141,13 +141,59 @@ export async function POST(request: Request) {
     };
     const messages = createSummarizeMessages(issueContext);
 
-    // Try primary model, fallback on error
-    let result;
+    // Try AI service, but if it fails and we have a cached summary, return it
+    let result: {
+      content: string;
+      model: string;
+      usedFallback: boolean;
+      total_duration?: number;
+      load_duration?: number;
+      prompt_eval_count?: number;
+      prompt_eval_duration?: number;
+      eval_count?: number;
+      eval_duration?: number;
+    };
     try {
-      result = await client.chatWithFallback(messages, { stream: false });
-    } catch (error) {
+      const manager = getLLMProviderManager();
+      const response = await manager.chat(messages, { stream: false });
+      result = {
+        content: response.content,
+        model: response.model,
+        usedFallback: false,
+        total_duration: response.metrics?.totalDuration,
+        load_duration: response.metrics?.loadDuration,
+        prompt_eval_count: response.metrics?.promptEvalCount,
+        prompt_eval_duration: response.metrics?.promptEvalDuration,
+        eval_count: response.metrics?.evalCount,
+        eval_duration: response.metrics?.evalDuration,
+      };
+    } catch (primaryError) {
+      // Try to get cached summary as fallback
+      const cached = await prisma.aiSummary.findFirst({ where: { issueId } });
+      if (cached) {
+        try {
+          const cachedData = JSON.parse(cached.summary);
+          return Response.json({
+            ...cachedData,
+            modelUsed: cached.model,
+            usedFallback: true,
+            cached: true,
+            warning: `AI service unavailable. Showing cached summary from ${cached.updatedAt.toISOString()}.`,
+            metrics: {
+              totalDuration: cached.totalDuration?.toString() ?? null,
+              loadDuration: cached.loadDuration?.toString() ?? null,
+              promptEvalCount: cached.promptEvalCount,
+              promptEvalDuration: cached.promptEvalDuration?.toString() ?? null,
+              evalCount: cached.evalCount,
+              evalDuration: cached.evalDuration?.toString() ?? null,
+            },
+          });
+        } catch {
+          // Cache parse failed, continue to error
+        }
+      }
       return jsonError(
-        `AI summarization failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `AI summarization failed: ${primaryError instanceof Error ? primaryError.message : "Unknown error"}`,
         503
       );
     }

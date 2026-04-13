@@ -1,30 +1,56 @@
-import { getOllamaClient } from "@/src/lib/ollama";
+import { NextResponse } from "next/server";
+import { requireCurrentUser } from "@/src/lib/auth";
+import { getLLMProviderManager, type LLMStatus, type LLMModel } from "@/src/lib/llm-provider";
+import { getOllamaClient, type OllamaModel } from "@/src/lib/ollama";
 import { env } from "@/src/lib/env";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  if (!env.enableAiFeatures) {
-    return Response.json({
-      available: false,
-      featuresEnabled: false,
-      message: "AI features are disabled",
-    });
-  }
-
   try {
-    const client = getOllamaClient();
-    const status = await client.getStatus();
+    const manager = getLLMProviderManager();
+    const status = await manager.checkHealth();
 
-    return Response.json(status);
+    // If using Ollama, also fetch the actual model list
+    let models: LLMModel[] = status.models;
+    if (status.provider === "ollama") {
+      try {
+        const ollama = getOllamaClient();
+        const response = await fetch(`${env.ollamaBaseUrl}/api/tags`);
+        if (response.ok) {
+          const data = await response.json();
+          const ollamaModels: OllamaModel[] = data.models || [];
+          models = ollamaModels.map(m => ({
+            id: m.name,
+            name: m.name,
+            provider: "ollama" as const,
+            description: m.size ? `Size: ${(m.size / 1e9).toFixed(1)}GB` : undefined
+          }));
+        }
+      } catch {
+        // Ignore model list errors
+      }
+    }
+
+    return NextResponse.json({
+      ...status,
+      models,
+      config: {
+        provider: status.provider,
+        primaryModel: status.primaryModel,
+        embeddingModel: env.ollamaEmbedModel,
+        features: {
+          summarize: env.aiSummarizeEnabled,
+          search: env.aiSearchEnabled,
+          categorize: env.aiCategorizeEnabled,
+          chat: true
+        }
+      }
+    });
   } catch (error) {
-    return Response.json(
-      {
-        available: false,
-        featuresEnabled: env.enableAiFeatures,
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 503 }
+    return NextResponse.json(
+      { available: false, error: error instanceof Error ? error.message : "Failed to check status" },
+      { status: 500 }
     );
   }
 }

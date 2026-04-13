@@ -10,6 +10,7 @@ import remarkGfm from "remark-gfm";
 import { normalizeRedmineText, splitRedmineCollapseSegments } from "@/src/lib/redmine-text-format";
 import { AiIssueActions } from "@/src/components/ai/AiIssueActions";
 import { AiSearchBar } from "@/src/components/ai/AiSearchBar";
+import { AiStatusIndicator } from "@/src/components/ai/AiStatusIndicator";
 import { DashboardWidgets, calculateStats } from "@/src/components/DashboardWidgets";
 import { AdvancedFilters, applyFilters, type FilterState } from "@/src/components/AdvancedFilters";
 import { ProjectFilter } from "@/src/components/ProjectFilter";
@@ -1643,6 +1644,7 @@ export default function Home() {
           <Link href="/api-docs" className="primary-link nav-link">
             API Docs
           </Link>
+          <AiStatusIndicator />
           <button className="secondary-button" type="button" onClick={resetFilters}>
             Reset Filters
           </button>

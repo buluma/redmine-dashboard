@@ -24,6 +24,7 @@ const options: swaggerJsdoc.Options = {
       { name: "Reports", description: "Reporting endpoints" },
       { name: "Internal", description: "Internal/Catalog endpoints" },
       { name: "Slack", description: "Slack integration endpoints" },
+      { name: "AI", description: "AI/LLM integration endpoints" },
       { name: "Mobile", description: "Mobile API endpoints" },
     ],
     paths: {
@@ -528,6 +529,143 @@ const options: swaggerJsdoc.Options = {
           },
           responses: {
             "200": { description: "Notification sent" },
+          },
+        },
+      },
+      "/ai/status": {
+        get: {
+          tags: ["AI"],
+          summary: "Get AI/LLM service status",
+          description: "Returns the health status, available models, and configuration of the AI provider",
+          responses: {
+            "200": { description: "AI status including available models and features" },
+            "500": { description: "Failed to check AI status" },
+          },
+        },
+      },
+      "/ai/summarize": {
+        get: {
+          tags: ["AI"],
+          summary: "Get cached summary for an issue",
+          parameters: [
+            { name: "issueId", in: "query", required: true, schema: { type: "string" }, description: "Issue ID or Redmine issue number" },
+          ],
+          responses: {
+            "200": { description: "Cached summary if available" },
+            "404": { description: "No cached summary found" },
+          },
+        },
+        post: {
+          tags: ["AI"],
+          summary: "Generate AI summary for an issue",
+          description: "Uses AI to generate a structured summary with key points, action items, risks, and timeline",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    issueId: { type: "string", description: "Issue ID or Redmine issue number" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": { description: "Structured AI summary" },
+            "503": { description: "AI service unavailable (returns cached summary if available)" },
+          },
+        },
+      },
+      "/ai/chat": {
+        get: {
+          tags: ["AI"],
+          summary: "Get chat history for an issue",
+          parameters: [
+            { name: "redmineIssueId", in: "query", required: true, schema: { type: "integer" } },
+          ],
+          responses: {
+            "200": { description: "Chat history messages" },
+          },
+        },
+        post: {
+          tags: ["AI"],
+          summary: "Send chat message",
+          description: "Send a message to the AI chat for a specific issue",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    redmineIssueId: { type: "integer" },
+                    messages: { type: "array", items: { type: "object" } },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": { description: "AI response" },
+          },
+        },
+        delete: {
+          tags: ["AI"],
+          summary: "Clear chat history",
+          parameters: [
+            { name: "redmineIssueId", in: "query", required: true, schema: { type: "integer" } },
+          ],
+          responses: {
+            "200": { description: "Chat cleared" },
+          },
+        },
+      },
+      "/ai/search": {
+        post: {
+          tags: ["AI"],
+          summary: "Semantic search for issues",
+          description: "Uses AI embeddings to find semantically similar issues",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    query: { type: "string", description: "Search query" },
+                    limit: { type: "integer", default: 10 },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": { description: "Search results with relevance scores" },
+          },
+        },
+      },
+      "/ai/categorize": {
+        post: {
+          tags: ["AI"],
+          summary: "Categorize an issue",
+          description: "Uses AI to suggest priority, tags, and category for an issue",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    issueId: { type: "string", description: "Issue ID or Redmine issue number" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": { description: "Suggested categories and tags" },
           },
         },
       },

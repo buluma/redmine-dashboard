@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "@scalar/swagger-editor": "^1.0.2",
     "@sentry/nextjs": "^10.40.0",
     "@sentry/profiling-node": "^10.40.0",
     "@slack/web-api": "^7.15.0",

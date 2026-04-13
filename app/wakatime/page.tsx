@@ -20,7 +20,7 @@ export default async function WakatimePage() {
   }
 
   const apiKey = process.env.WAKATIME_API_KEY;
-  if (!apiKey || apiKey.startsWith("wakatime_")) {
+  if (!apiKey) {
     return (
       <main className="dashboard">
         <header className="card hero">
@@ -91,8 +91,44 @@ export default async function WakatimePage() {
         <section className="card">
           <div className="reports-head">
             <div>
-              <h2>⚠️ Error Loading Data</h2>
-              <p className="muted">{error}</p>
+              <h2>⚠️ Error Loading WakaTime Data</h2>
+              <p className="muted" style={{ maxWidth: "600px" }}>
+                {error.includes("401") || error.includes("invalid") || error.includes("Unauthorized")
+                  ? (<>
+                      Your WakaTime credential is invalid or expired.
+                      {apiKey?.startsWith("waka_") ? (
+                        <>
+                          {" "}Your OAuth access token may have expired or is missing required scopes.
+                          Regenerate it from your{" "}
+                          <a href="https://wakatime.com/settings/applications" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent, #e63946)" }}>
+                            OAuth Applications
+                          </a>
+                          {" "}page, or use your secret API key instead from{" "}
+                          <a href="https://wakatime.com/api-key" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent, #e63946)" }}>
+                            wakatime.com/api-key
+                          </a>.
+                        </>
+                      ) : (
+                        <>
+                          {" "}Generate a new key at{" "}
+                          <a href="https://wakatime.com/api-key" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent, #e63946)" }}>
+                            wakatime.com/api-key
+                          </a>
+                          {" "}and update <code>WAKATIME_API_KEY</code> in your <code>.env</code> file.
+                        </>
+                      )}
+                    </>)
+                  : error.includes("rate limit")
+                    ? "WakaTime rate limit exceeded. Please wait a few minutes and try again."
+                    : error.includes("calculating")
+                      ? "WakaTime is still processing your stats. Try again in a moment."
+                      : `Failed to connect to WakaTime API: ${error}`}
+              </p>
+              {process.env.NODE_ENV === "development" && (
+                <p className="muted" style={{ fontSize: "0.75rem", marginTop: "0.5rem" }}>
+                  Debug: Key present: {!!apiKey} · Type: {apiKey?.startsWith("waka_") ? "OAuth token" : "API key"} · Prefix: {apiKey ? apiKey.slice(0, 10) + "…" : "none"}
+                </p>
+              )}
             </div>
           </div>
         </section>
