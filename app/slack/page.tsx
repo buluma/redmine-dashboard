@@ -57,36 +57,35 @@ export default async function SlackPage() {
   return (
     <main className="dashboard">
       {error ? (
-        <header className="card hero">
-          <div className="hero-top">
-            <div>
-              <p className="kicker">Slack</p>
-              <h1>Slack Messages</h1>
-              <p className="muted">Configuration Required</p>
+        <>
+          <header className="card hero">
+            <div className="hero-top">
+              <div>
+                <p className="kicker">Slack</p>
+                <h1>Slack Messages</h1>
+                <p className="muted">Configuration Required</p>
+              </div>
             </div>
-          </div>
-        </header>
-      ) : null}
-
-      {error && (
-        <section className="card">
-          <div className="reports-head">
-            <div>
-              <h2>Configuration Error</h2>
-              <p className="muted">{error}</p>
+          </header>
+          <section className="card">
+            <div className="reports-head">
+              <div>
+                <h2>Configuration Error</h2>
+                <p className="muted">{error}</p>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </>
+      ) : (
+        <SlackMessagesClient 
+          initialMessages={messages} 
+          initialUserNames={initialUserNames}
+          channelId={defaultChannelId}
+          channels={channels}
+          refreshIntervalMs={env.slackRefreshIntervalMs}
+          channelCount={channels.length}
+        />
       )}
-
-      <SlackMessagesClient 
-        initialMessages={messages} 
-        initialUserNames={initialUserNames}
-        channelId={defaultChannelId}
-        channels={channels}
-        refreshIntervalMs={env.slackRefreshIntervalMs}
-        channelCount={channels.length}
-      />
     </main>
   );
 }

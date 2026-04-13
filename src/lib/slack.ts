@@ -251,4 +251,37 @@ export class SlackClient {
 
     return channelMap;
   }
+
+  async getChannels(): Promise<Array<{ id: string; name: string }>> {
+    const channels: Array<{ id: string; name: string }> = [];
+    
+    try {
+      // Get all public channels
+      let cursor: string | undefined;
+      do {
+        const result = await this.client.conversations.list({
+          types: "public_channel,private_channel",
+          limit: 200,
+          cursor,
+        });
+        
+        if (result.channels) {
+          for (const channel of result.channels) {
+            if (channel.id && channel.name) {
+              channels.push({
+                id: channel.id,
+                name: channel.name,
+              });
+            }
+          }
+        }
+        
+        cursor = result.response_metadata?.next_cursor;
+      } while (cursor);
+    } catch {
+      // If listing fails, return empty array
+    }
+
+    return channels;
+  }
 }
