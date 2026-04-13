@@ -256,8 +256,8 @@ export default function OpsPage() {
             <button type="button" onClick={() => void loadData()} disabled={loading}>
               {loading ? "Refreshing..." : "Refresh"}
             </button>
-            <button type="button" onClick={retryFullSync} disabled={retrying || !user}>
-              {retrying ? "Enqueueing..." : "Retry Full Sync"}
+            <button type="button" onClick={retryFullSync} disabled={retrying || !user} title="Syncs issues updated in the last 24 hours">
+              {retrying ? "Enqueueing..." : "Sync Last 24h"}
             </button>
             <Link href="/" className="primary-link nav-link">
               Back to Dashboard
