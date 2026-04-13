@@ -251,13 +251,34 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
           top: 100%;
           right: 0;
           margin-top: 0.5rem;
-          min-width: 280px;
+          min-width: 300px;
+          max-height: 400px;
+          overflow-y: auto;
           background: white;
           border: 1px solid #e5e7eb;
           border-radius: 8px;
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
           z-index: 1000;
           padding: 1rem;
+          scrollbar-width: thin;
+          scrollbar-color: #d1d5db transparent;
+        }
+
+        .ai-status-dropdown::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .ai-status-dropdown::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .ai-status-dropdown::-webkit-scrollbar-thumb {
+          background-color: #d1d5db;
+          border-radius: 3px;
+        }
+
+        .ai-status-dropdown::-webkit-scrollbar-thumb:hover {
+          background-color: #9ca3af;
         }
 
         .ai-status-header {
@@ -343,8 +364,27 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
         }
 
         .ai-model-list {
-          max-height: 120px;
+          max-height: 180px;
           overflow-y: auto;
+          scrollbar-width: thin;
+          scrollbar-color: #d1d5db transparent;
+        }
+
+        .ai-model-list::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .ai-model-list::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .ai-model-list::-webkit-scrollbar-thumb {
+          background-color: #d1d5db;
+          border-radius: 3px;
+        }
+
+        .ai-model-list::-webkit-scrollbar-thumb:hover {
+          background-color: #9ca3af;
         }
 
         .ai-model-item {
