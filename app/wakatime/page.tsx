@@ -26,6 +26,7 @@ export default async function WakatimePage() {
         <header className="card hero">
           <div className="hero-top">
             <div>
+              <p className="kicker">WakaTime</p>
               <h1>Coding Stats</h1>
               <p className="muted">Powered by WakaTime</p>
             </div>
@@ -76,6 +77,7 @@ export default async function WakatimePage() {
       <header className="card hero">
         <div className="hero-top">
           <div>
+            <p className="kicker">WakaTime</p>
             <h1>Coding Stats</h1>
             <p className="muted">
               Powered by WakaTime · {allTime?.data.text ?? "—"} total coding time
