@@ -507,6 +507,7 @@ export default function Home() {
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [hoveredIssue, setHoveredIssue] = useState<RedmineIssue | null>(null);
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
+  const [draggedIssueId, setDraggedIssueId] = useState<number | null>(null);
   const [opsAlertsOpen, setOpsAlertsOpen] = useState(false);
   const [activityFeedOpen, setActivityFeedOpen] = useState(false);
   const [issueQueueOpen, setIssueQueueOpen] = useState(true);
@@ -2139,6 +2140,7 @@ export default function Home() {
                         aria-label="Select all visible issues"
                       />
                     </th>
+                    <th className="drag-col"></th>
                     <th>ID</th>
                     <th>Subject</th>
                     <th>Status</th>
@@ -2198,6 +2200,20 @@ export default function Home() {
                             onChange={() => toggleIssueSelection(issue.redmineIssueId)}
                             aria-label={`Select issue ${issue.redmineIssueId}`}
                           />
+                        </td>
+                        <td
+                          className="drag-handle"
+                          draggable
+                          onDragStart={() => setDraggedIssueId(issue.redmineIssueId)}
+                          onDragEnd={() => setDraggedIssueId(null)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            // Reorder logic would go here
+                          }}
+                          title="Drag to reorder"
+                        >
+                          ⋮⋮
                         </td>
                         <td onClick={(e) => e.stopPropagation()}>
                           {redmineIssueUrl(issue) ? (

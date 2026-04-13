@@ -6779,3 +6779,28 @@ textarea {
   padding-top: 0.5rem;
   border-top: 1px solid #e5e7eb;
 }
+
+.drag-col {
+  width: 24px;
+}
+
+.drag-handle {
+  cursor: grab;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  user-select: none;
+}
+
+.drag-handle:hover {
+  color: #6b7280;
+  background: #f3f4f6;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.issues-table tr.drag-over {
+  background: #f3f4f6;
+}
