@@ -35,6 +35,7 @@ export default function ApiDocsPage() {
       <header className="card hero">
         <div className="hero-top">
           <div>
+            <p className="kicker">Developer</p>
             <h1>API Documentation</h1>
             <p className="muted">
               Converge REST API Reference

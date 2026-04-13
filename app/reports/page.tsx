@@ -282,17 +282,17 @@ export default function ReportsPage() {
   return (
     <main className="dashboard reports-v2">
       {/* Hero */}
-      <header className="card hero reports-hero">
-        <div className="hero-top reports-hero-content">
-          <div className="hero-heading">
-            <p className="kicker">Reports</p>
-            <h1 className="hero-title">Redmine Reports</h1>
-            <p className="reports-hero-sub">
+      <header className="card hero">
+        <div className="hero-top">
+          <div>
+            <p className="kicker">Analytics</p>
+            <h1>Redmine Reports</h1>
+            <p className="muted">
               Insights across <strong>{stats.totalIssues.toLocaleString()}</strong> issues
               {appliedFilters.days !== 30 && <span> · Last {appliedFilters.days} days</span>}
             </p>
           </div>
-          <div className="hero-actions reports-hero-actions">
+          <div className="hero-actions">
             {loading && <span className="loading-pill" role="status">Refreshing...</span>}
             <Link href="/" className="secondary-button">Back to Dashboard</Link>
           </div>

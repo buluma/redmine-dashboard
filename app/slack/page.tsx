@@ -64,6 +64,7 @@ export default async function SlackPage() {
       <header className="card hero">
         <div className="hero-top">
           <div>
+            <p className="kicker">Slack</p>
             <h1>Slack Messages</h1>
             <p className="muted">
               {channels.length > 0 
