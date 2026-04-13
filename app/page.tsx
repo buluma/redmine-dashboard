@@ -1947,11 +1947,28 @@ export default function Home() {
           <div className="collapsible-head">
             <div>
               <h2>Issue Queue</h2>
-              <p className="muted">{loading ? "Refreshing..." : `${visibleIssues.length} loaded`}</p>
+              <p className="muted">
+                {loading ? "Refreshing..." : `${visibleIssues.length} loaded`}
+                {summary.open > 0 && <span> · Open: {summary.open}</span>}
+                {summary.inProgress > 0 && <span> · In Progress: {summary.inProgress}</span>}
+                {summary.blocked > 0 && <span> · Blocked: {summary.blocked}</span>}
+                {summary.overdue > 0 && <span> · Overdue: {summary.overdue}</span>}
+              </p>
             </div>
-            <button type="button" className="secondary-button" onClick={() => setIssueQueueOpen((current) => !current)}>
-              {issueQueueOpen ? "Collapse" : "Expand"}
-            </button>
+            <div className="queue-actions">
+              <span className={`queue-stat ${summary.overdue > 0 ? "queue-warn" : ""}`} title="Overdue">
+                ⚠️ {summary.overdue}
+              </span>
+              <span className={`queue-stat ${summary.blocked > 0 ? "queue-warn" : ""}`} title="Blocked">
+                🛑 {summary.blocked}
+              </span>
+              <span className={`queue-stat ${summary.stale > 0 ? "queue-stale" : ""}`} title="Stale 3+ days">
+                🕐 {summary.stale}
+              </span>
+              <button type="button" className="secondary-button" onClick={() => setIssueQueueOpen((current) => !current)}>
+                {issueQueueOpen ? "Collapse" : "Expand"}
+              </button>
+            </div>
           </div>
 
           {issueQueueOpen ? (
