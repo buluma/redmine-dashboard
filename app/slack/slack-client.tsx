@@ -44,80 +44,123 @@ function formatReactionEmoji(name: string): string {
 function MessageItem({ 
   message, 
   userNames,
-  channelId,
-  onThreadClick 
+  onThreadClick,
+  showAvatar = true,
 }: { 
   message: SlackMessage;
   userNames: UserCache;
-  channelId: string;
   onThreadClick: (threadTs: string) => void;
+  showAvatar?: boolean;
 }) {
-  const isThreadReply = !!message.threadTs && message.threadTs !== message.ts;
-  const userName = message.user ? (userNames[message.user] || message.user) : "Unknown";
+  const isThreadReply = !!message.threadTs && message.ts !== message.threadTs;
+  const userId = message.user || "unknown";
+  const userName = userNames[userId] || userId;
   const isBot = !!message.botId;
+  const initial = userName.charAt(0).toUpperCase();
+  
+  // Format time like Slack: "11:51 AM"
+  const formatTime = (ts: string) => {
+    const date = new Date(parseFloat(ts) * 1000);
+    return date.toLocaleTimeString("en-US", { 
+      hour: "numeric", 
+      minute: "2-digit",
+      hour12: true 
+    });
+  };
+  
+  // Check if this is a system message
+  const isSystemMessage = ["channel_join", "channel_leave", "pinned_item", "file_comment", "bot_message"].includes(message.subtype || "");
+  
+  // Get display text
+  const getMessageText = () => {
+    if (message.subtype === "channel_join") {
+      return <span className="system-text"><strong>{userName}</strong> joined the channel</span>;
+    }
+    if (message.subtype === "channel_leave") {
+      return <span className="system-text"><strong>{userName}</strong> left the channel</span>;
+    }
+    if (message.subtype === "pinned_item") {
+      return <span className="system-text"><strong>{userName}</strong> pinned a message</span>;
+    }
+    return <span className="message-text">{message.text}</span>;
+  };
+
+  if (isSystemMessage && !message.text) {
+    return (
+      <div className="system-message-row">
+        <span className="system-text">{getMessageText()}</span>
+        <span className="system-time">{formatTime(message.ts)}</span>
+      </div>
+    );
+  }
 
   return (
     <article className={`slack-message ${isThreadReply ? "thread-reply" : ""}`}>
-      <div className="message-header">
-        <span className="message-author">
-          {isBot ? "🤖 Bot" : userName}
-        </span>
-        <span className="message-time">{formatTimestamp(message.ts)}</span>
-      </div>
-      
-      <div className="message-body">
-        {message.subtype === "channel_join" && (
-          <p className="system-message">joined the channel</p>
-        )}
-        {message.subtype === "channel_leave" && (
-          <p className="system-message">left the channel</p>
-        )}
-        {message.subtype === "pinned_item" && (
-          <p className="system-message">pinned an item</p>
-        )}
-        {message.subtype === "file_comment" && (
-          <p className="system-message">commented on a file</p>
-        )}
-        {(message.subtype === undefined || !["channel_join", "channel_leave", "pinned_item", "file_comment"].includes(message.subtype)) && (
-          <p className="message-text">{message.text}</p>
-        )}
-      </div>
-
-      {message.attachments && message.attachments.length > 0 && (
-        <div className="message-attachments">
-          {message.attachments.map((att, idx) => (
-            <div key={idx} className="attachment">
-              {att.title && (
-                <a href={att.title_link || "#"} target="_blank" rel="noopener noreferrer" className="attachment-title">
-                  {att.title}
-                </a>
-              )}
-              {att.text && <p className="attachment-text">{att.text}</p>}
+      {showAvatar ? (
+        <div className="message-layout">
+          <div className="avatar">
+            {isBot ? <span className="bot-badge">🤖</span> : initial}
+          </div>
+          <div className="message-content">
+            <div className="message-header">
+              <span className="message-author">
+                {userName}
+                {isBot && <span className="bot-label">Bot</span>}
+              </span>
+              <span className="message-time">{formatTime(message.ts)}</span>
             </div>
-          ))}
+            <div className="message-body">
+              {getMessageText()}
+            </div>
+            {message.attachments && message.attachments.length > 0 && (
+              <div className="message-attachments">
+                {message.attachments.map((att, idx) => (
+                  <div key={idx} className="attachment-card">
+                    {att.title && (
+                      <a href={att.title_link || "#"} target="_blank" rel="noopener noreferrer" className="attachment-title">
+                        📎 {att.title}
+                      </a>
+                    )}
+                    {att.text && <p className="attachment-text">{att.text}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {message.reactions && message.reactions.length > 0 && (
+              <div className="message-reactions">
+                {message.reactions.map((reaction, idx) => (
+                  <span key={idx} className="reaction" title={`${reaction.users?.length || reaction.count} ${reaction.count === 1 ? "person" : "people"}`}>
+                    {formatReactionEmoji(reaction.name)} {reaction.count}
+                  </span>
+                ))}
+              </div>
+            )}
+            {message.replyCount && message.replyCount > 0 && (
+              <button 
+                className="thread-info"
+                onClick={() => onThreadClick(message.ts)}
+              >
+                💬 {message.replyCount} {message.replyCount === 1 ? "reply" : "replies"}
+                {message.replyUsers && message.replyUsers.length > 0 && 
+                  ` · ${message.replyUsers.slice(0, 2).map(u => userNames[u] || u).join(", ")}`
+                }
+              </button>
+            )}
+          </div>
         </div>
-      )}
-
-      {message.reactions && message.reactions.length > 0 && (
-        <div className="message-reactions">
-          {message.reactions.map((reaction, idx) => (
-            <span key={idx} className="reaction" title={`${reaction.count} ${reaction.count === 1 ? "person" : "people"}`}>
-              {formatReactionEmoji(reaction.name)} {reaction.count}
-            </span>
-          ))}
+      ) : (
+        // Compact view for thread replies
+        <div className="compact-message">
+          <span className="compact-time">{formatTime(message.ts)}</span>
+          <div className="message-body">{getMessageText()}</div>
+          {message.reactions && message.reactions.length > 0 && (
+            <div className="message-reactions compact-reactions">
+              {message.reactions.map((reaction, idx) => (
+                <span key={idx} className="reaction">{formatReactionEmoji(reaction.name)} {reaction.count}</span>
+              ))}
+            </div>
+          )}
         </div>
-      )}
-
-      {message.replyCount && message.replyCount > 0 && (
-        <button 
-          className="thread-info"
-          onClick={() => onThreadClick(message.ts)}
-        >
-          💬 {message.replyCount} {message.replyCount === 1 ? "reply" : "replies"}
-          {message.replyUsers && message.replyUsers.length > 0 && 
-            ` · Last reply from ${message.replyUsers.slice(0, 2).map(u => userNames[u] || u).join(", ")}`
-          }
-        </button>
       )}
     </article>
   );
@@ -323,6 +366,7 @@ export function SlackMessagesClient({
           gap: 0.75rem;
           align-items: center;
           margin-bottom: 1rem;
+          flex-wrap: wrap;
         }
 
         .refresh-button {
@@ -361,7 +405,7 @@ export function SlackMessagesClient({
         .slack-message-list {
           display: flex;
           flex-direction: column;
-          gap: 0.5rem;
+          gap: 0;
         }
 
         .date-separator {
@@ -369,6 +413,7 @@ export function SlackMessagesClient({
           align-items: center;
           gap: 1rem;
           margin: 1.5rem 0 1rem;
+          padding: 0.5rem 0;
         }
 
         .date-separator::before,
@@ -381,35 +426,77 @@ export function SlackMessagesClient({
 
         .date-separator span {
           font-size: 0.75rem;
-          font-weight: 600;
+          font-weight: 500;
           color: var(--text-muted, #6b7280);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
+          background: var(--bg-secondary, #f3f4f6);
+          padding: 0.25rem 0.75rem;
+          border-radius: 1rem;
         }
 
         .slack-message {
-          padding: 0.75rem;
-          background: var(--card-bg, white);
-          border-radius: 0.5rem;
-          border: 1px solid var(--border-color, #e5e7eb);
+          padding: 0.125rem 0;
+          border-radius: 0.375rem;
+          transition: background 0.1s;
+        }
+
+        .slack-message:hover {
+          background: var(--bg-hover, rgba(0,0,0,0.02));
         }
 
         .slack-message.thread-reply {
-          margin-left: 2rem;
-          border-left: 2px solid var(--color-primary, #2563eb);
+          margin-left: 3.5rem;
+        }
+
+        .message-layout {
+          display: flex;
+          gap: 1rem;
+          padding: 0.25rem 0;
+        }
+
+        .avatar {
+          width: 2.25rem;
+          height: 2.25rem;
+          border-radius: 0.375rem;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+          font-size: 0.875rem;
+          flex-shrink: 0;
+        }
+
+        .avatar .bot-badge {
+          font-size: 1rem;
+        }
+
+        .message-content {
+          flex: 1;
+          min-width: 0;
         }
 
         .message-header {
           display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          margin-bottom: 0.25rem;
+          align-items: baseline;
+          gap: 0.5rem;
+          margin-bottom: 0.125rem;
         }
 
         .message-author {
-          font-weight: 600;
-          font-size: 0.875rem;
+          font-weight: 700;
+          font-size: 0.9375rem;
           color: var(--text-primary, #111827);
+        }
+
+        .bot-label {
+          font-size: 0.6875rem;
+          font-weight: 500;
+          background: var(--bg-secondary, #e5e7eb);
+          color: var(--text-muted, #6b7280);
+          padding: 0.0625rem 0.375rem;
+          border-radius: 0.25rem;
+          margin-left: 0.375rem;
         }
 
         .message-time {
@@ -418,11 +505,10 @@ export function SlackMessagesClient({
         }
 
         .message-body {
-          margin-left: 0;
+          margin: 0;
         }
 
         .message-text {
-          margin: 0;
           font-size: 0.9375rem;
           line-height: 1.5;
           color: var(--text-primary, #111827);
@@ -430,27 +516,60 @@ export function SlackMessagesClient({
           word-break: break-word;
         }
 
-        .system-message {
-          margin: 0;
-          font-size: 0.875rem;
-          font-style: italic;
+        .system-message-row {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.75rem;
+          padding: 0.5rem 0;
           color: var(--text-muted, #6b7280);
+        }
+
+        .system-text {
+          font-size: 0.8125rem;
+          font-style: italic;
+        }
+
+        .system-time {
+          font-size: 0.6875rem;
+          color: var(--text-muted, #9ca3af);
+        }
+
+        .compact-message {
+          display: flex;
+          align-items: baseline;
+          gap: 0.5rem;
+          padding: 0.125rem 0;
+        }
+
+        .compact-time {
+          font-size: 0.6875rem;
+          color: var(--text-muted, #9ca3af);
+          width: 3.5rem;
+          flex-shrink: 0;
+        }
+
+        .compact-reactions {
+          margin-left: 0;
         }
 
         .message-attachments {
           margin-top: 0.5rem;
-          padding-left: 0.5rem;
-          border-left: 2px solid var(--border-color, #e5e7eb);
         }
 
-        .attachment {
-          margin-bottom: 0.5rem;
+        .attachment-card {
+          background: var(--bg-secondary, #f3f4f6);
+          border-radius: 0.5rem;
+          padding: 0.5rem 0.75rem;
+          margin-top: 0.25rem;
         }
 
         .attachment-title {
           font-weight: 500;
+          font-size: 0.875rem;
           color: var(--color-primary, #2563eb);
           text-decoration: none;
+          display: block;
         }
 
         .attachment-title:hover {
@@ -459,15 +578,15 @@ export function SlackMessagesClient({
 
         .attachment-text {
           margin: 0.25rem 0 0;
-          font-size: 0.875rem;
+          font-size: 0.8125rem;
           color: var(--text-secondary, #4b5563);
         }
 
         .message-reactions {
           display: flex;
           flex-wrap: wrap;
-          gap: 0.5rem;
-          margin-top: 0.5rem;
+          gap: 0.375rem;
+          margin-top: 0.375rem;
         }
 
         .reaction {
@@ -476,25 +595,32 @@ export function SlackMessagesClient({
           gap: 0.25rem;
           padding: 0.125rem 0.5rem;
           background: var(--bg-secondary, #f3f4f6);
-          border-radius: 9999px;
+          border: 1px solid var(--border-color, #e5e7eb);
+          border-radius: 1rem;
           font-size: 0.75rem;
           font-weight: 500;
           cursor: default;
+          transition: background 0.1s;
+        }
+
+        .reaction:hover {
+          background: var(--bg-hover, #e5e7eb);
         }
 
         .thread-info {
           display: inline-flex;
           align-items: center;
           gap: 0.25rem;
-          margin-top: 0.5rem;
-          padding: 0.25rem 0.5rem;
+          margin-top: 0.375rem;
+          padding: 0.125rem 0.5rem;
           background: transparent;
           border: none;
           border-radius: 0.25rem;
           font-size: 0.75rem;
+          font-weight: 500;
           color: var(--color-primary, #2563eb);
           cursor: pointer;
-          transition: background 0.2s;
+          transition: background 0.1s;
         }
 
         .thread-info:hover {
@@ -502,10 +628,10 @@ export function SlackMessagesClient({
         }
 
         .thread-messages {
-          margin-left: 2rem;
-          margin-top: 0.5rem;
+          margin-left: 3.5rem;
+          margin-top: 0.25rem;
           padding-left: 0.75rem;
-          border-left: 2px solid var(--color-primary, #2563eb);
+          border-left: 2px solid var(--border-color, #e5e7eb);
         }
 
         .loading-indicator {
@@ -618,9 +744,10 @@ export function SlackMessagesClient({
         .refresh-info {
           display: flex;
           flex-direction: column;
-          gap: 0.25rem;
-          font-size: 0.75rem;
-          color: var(--text-muted, #6b7280);
+          gap: 0.125rem;
+          font-size: 0.6875rem;
+          color: var(--text-muted, #9ca3af);
+          margin-left: auto;
         }
 
         .countdown {
@@ -705,8 +832,8 @@ export function SlackMessagesClient({
                     <MessageItem 
                       message={message}
                       userNames={userNames}
-                      channelId={channelId}
                       onThreadClick={handleThreadClick}
+                      showAvatar={true}
                     />
                     {activeThread === message.ts && threadMessages.length > 0 && (
                       <div className="thread-messages">
@@ -717,8 +844,8 @@ export function SlackMessagesClient({
                               key={reply.ts}
                               message={reply}
                               userNames={userNames}
-                              channelId={channelId}
                               onThreadClick={handleThreadClick}
+                              showAvatar={false}
                             />
                           ))}
                       </div>
