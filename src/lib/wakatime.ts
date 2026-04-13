@@ -111,7 +111,7 @@ export class WakaTimeClient {
   private apiKey: string;
 
   constructor(apiKey: string) {
-    if (!apiKey || apiKey.startsWith("wakatime_")) {
+    if (!apiKey) {
       throw new Error("WakaTime API key not configured. Set WAKATIME_API_KEY in your environment.");
     }
     this.apiKey = apiKey;
@@ -119,12 +119,24 @@ export class WakaTimeClient {
 
   private async get<T>(path: string): Promise<T> {
     const url = `${BASE}${path}`;
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      // Cache for 5 minutes — balances freshness vs API rate limits
+
+    // WakaTime supports multiple auth methods. We use Bearer for OAuth tokens
+    // and API keys. The key format determines how it's sent:
+    // - OAuth tokens: waka_* → Authorization: Bearer waka_*
+    // - Secret API key: UUID format → passed as ?api_key=XXXX (server-safe)
+    const isOAuthToken = this.apiKey.startsWith("waka_");
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (isOAuthToken) {
+      headers["Authorization"] = `Bearer ${this.apiKey}`;
+    }
+
+    const fetchUrl = isOAuthToken ? url : `${url}?api_key=${this.apiKey}`;
+
+    const res = await fetch(fetchUrl, {
+      headers,
       next: { revalidate: 300 },
     });
 

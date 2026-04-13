@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   }
 
   const apiKey = process.env.WAKATIME_API_KEY;
-  if (!apiKey || apiKey.startsWith('wakatime_')) {
+  if (!apiKey) {
     return NextResponse.json({ error: 'WakaTime not configured' }, { status: 503 });
   }
 
