@@ -9,27 +9,33 @@ export const runtime = "nodejs";
 export default async function SlackPage() {
   const user = await requireCurrentUser();
 
-  const channelId = env.slackDefaultChannelId;
   const botToken = env.slackBotToken;
 
+  // Get all channel IDs to monitor (default + additional)
+  const allChannelIds = env.slackDefaultChannelId 
+    ? [env.slackDefaultChannelId, ...env.slackMonitorChannelIds.filter(id => id !== env.slackDefaultChannelId)]
+    : env.slackMonitorChannelIds;
+
   let messages: Awaited<ReturnType<SlackClient["getChannelMessages"]>> = [];
-  let channelInfo: { id: string; name: string } | null = null;
+  let channels: Array<{ id: string; name: string }> = [];
   let error: string | null = null;
   let initialUserNames: Record<string, string> = {};
 
   if (!botToken) {
     error = "Slack bot token not configured. Please set SLACK_BOT_TOKEN in your environment.";
-  } else if (!channelId) {
-    error = "Slack channel ID not configured. Please set SLACK_DEFAULT_CHANNEL_ID in your environment.";
+  } else if (allChannelIds.length === 0) {
+    error = "No Slack channels configured. Please set SLACK_DEFAULT_CHANNEL_ID or SLACK_MONITOR_CHANNEL_IDS in your environment.";
   } else {
     try {
       const slackClient = new SlackClient(botToken);
-      const [fetchedMessages, fetchedChannel] = await Promise.all([
-        slackClient.getChannelMessages(channelId, { limit: 100 }),
-        slackClient.getChannelInfo(channelId),
-      ]);
-      messages = fetchedMessages;
-      channelInfo = fetchedChannel;
+      
+      // Get channel info for all channels
+      const channelMap = await slackClient.getChannelsInfo(allChannelIds);
+      channels = Array.from(channelMap.values());
+      
+      // Fetch messages from default channel
+      const defaultChannelId = env.slackDefaultChannelId || allChannelIds[0];
+      messages = await slackClient.getChannelMessages(defaultChannelId, { limit: 100 });
       
       // Fetch user names for all users in messages
       const userIds = new Set<string>();
@@ -51,6 +57,8 @@ export default async function SlackPage() {
     }
   }
 
+  const defaultChannelId = env.slackDefaultChannelId || (channels[0]?.id ?? "");
+
   return (
     <main className="dashboard">
       <header className="card hero">
@@ -58,8 +66,8 @@ export default async function SlackPage() {
           <div>
             <h1>Slack Messages</h1>
             <p className="muted">
-              {channelInfo 
-                ? `#${channelInfo.name}` 
+              {channels.length > 0 
+                ? `${channels.length} channel${channels.length !== 1 ? "s" : ""} monitored` 
                 : error 
                   ? "Configuration Required" 
                   : "Loading..."}
@@ -96,8 +104,8 @@ export default async function SlackPage() {
           <SlackMessagesClient 
             initialMessages={messages} 
             initialUserNames={initialUserNames}
-            channelId={channelId ?? ""}
-            channelName={channelInfo?.name ?? ""}
+            channelId={defaultChannelId}
+            channels={channels}
             refreshIntervalMs={env.slackRefreshIntervalMs}
           />
         </>

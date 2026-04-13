@@ -78,6 +78,7 @@ export const env = {
   // Slack Configuration
   slackBotToken: process.env.SLACK_BOT_TOKEN,
   slackDefaultChannelId: process.env.SLACK_DEFAULT_CHANNEL_ID,
+  slackMonitorChannelIds: csvFromEnv("SLACK_MONITOR_CHANNEL_IDS"),
   // Slack Notifier Configuration
   slackNotifyEnabled: boolFromEnv("SLACK_NOTIFY_ENABLED", false),
   slackNotifyChannelId: process.env.SLACK_NOTIFY_CHANNEL_ID,

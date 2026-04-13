@@ -221,4 +221,34 @@ export class SlackClient {
       throw new Error("Failed to fetch thread replies");
     }
   }
+
+  async getChannelsInfo(channelIds: string[]): Promise<Map<string, { id: string; name: string }>> {
+    const channelMap = new Map<string, { id: string; name: string }>();
+    
+    try {
+      for (const channelId of channelIds) {
+        try {
+          const result = await this.client.conversations.info({
+            channel: channelId,
+          });
+          if (result.channel) {
+            channelMap.set(channelId, {
+              id: result.channel.id ?? channelId,
+              name: result.channel.name ?? "unknown",
+            });
+          }
+        } catch {
+          // Channel not found, skip it
+          channelMap.set(channelId, {
+            id: channelId,
+            name: channelId,
+          });
+        }
+      }
+    } catch {
+      // If bulk lookup fails, return what we have
+    }
+
+    return channelMap;
+  }
 }
