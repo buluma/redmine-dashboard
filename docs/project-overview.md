@@ -19,6 +19,7 @@ The system works by syncing Redmine issues to a local database, providing fast l
 - **GitHub Linking:** Issue detail supports add/remove links to GitHub issues/PRs and keeps link metadata in local cache.
 - **Workflow-Aware Statusing:** Status changes use Redmine `allowed_statuses` data for transition-safe updates.
 - **Expanded Time Entries:** Beyond creation, the backend supports list/update/delete for Redmine time entries.
+- **Slack Integration:** Read messages from monitored Slack channels with auto-refresh, multi-channel support, and thread navigation. Send Redmine issue updates to Slack channels automatically via sync workflow or webhook.
 
 ## Local Data Model
 
