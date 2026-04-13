@@ -2044,8 +2044,9 @@ export default function Home() {
                   )}
                 </div>
 
-                <ProjectFilter
-                  issues={issues}
+                <div className="filters-right">
+                  <ProjectFilter
+                    issues={issues}
                     selectedProject={selectedProject}
                     onChange={(project) => {
                       setSelectedProject(project);
@@ -2065,8 +2066,7 @@ export default function Home() {
                   <ExportButton issues={visibleIssues} format="csv" />
                   <ExportButton issues={visibleIssues} format="print" />
                 </div>
-
-              <div className="issues-table-wrap">
+              </div>
                 <table className="issues-table">
                   <thead>
                   <tr>
