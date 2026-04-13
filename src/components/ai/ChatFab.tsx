@@ -84,10 +84,11 @@ export function ChatFab({ issueId }: { issueId: number }) {
     setError(null);
 
     try {
+      const messagesToSend = newMessages.slice(-30); // Send only the last 30 messages for context
       const res = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ redmineIssueId: issueId, messages: newMessages }),
+        body: JSON.stringify({ redmineIssueId: issueId, messages: messagesToSend }),
       });
       const data = await res.json();
       if (!res.ok) {
