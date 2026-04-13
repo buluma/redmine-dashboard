@@ -272,25 +272,6 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
                               <div className="ai-result">
                                 <div className="ai-result-header">
                                   <h5>{msg.role === "user" ? "Your Question" : "AI Response"}</h5>
-                                  {msg.role === "assistant" && (msg.totalDuration || msg.evalCount) && (
-                                    <div className="ai-perf-grid">
-                                      {msg.totalDuration && (
-                                        <span className="ai-perf-badge">
-                                          Total: {formatDuration(msg.totalDuration)}
-                                        </span>
-                                      )}
-                                      {msg.promptEvalCount != null && (
-                                        <span className="ai-perf-badge">
-                                          Prompt: {msg.promptEvalCount}
-                                        </span>
-                                      )}
-                                      {msg.evalCount != null && (
-                                        <span className="ai-perf-badge">
-                                          Tokens: {msg.evalCount}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
                                 </div>
 
                                 <div className="ai-section">
@@ -298,6 +279,29 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
                                     {msg.content}
                                   </p>
                                 </div>
+
+                                {msg.role === "assistant" && (msg.totalDuration || msg.evalCount || msg.loadDuration) && (
+                                  <div className="ai-footer">
+                                    {msg.loadDuration && (
+                                      <span className="ai-perf-badge">Load: {formatDuration(msg.loadDuration)}</span>
+                                    )}
+                                    {msg.totalDuration && (
+                                      <span className="ai-perf-badge">Total: {formatDuration(msg.totalDuration)}</span>
+                                    )}
+                                    {msg.promptEvalCount != null && (
+                                      <span className="ai-perf-badge">Prompt: {msg.promptEvalCount}</span>
+                                    )}
+                                    {msg.promptEvalDuration && (
+                                      <span className="ai-perf-badge">Prompt time: {formatDuration(msg.promptEvalDuration)}</span>
+                                    )}
+                                    {msg.evalCount != null && (
+                                      <span className="ai-perf-badge">Tokens: {msg.evalCount}</span>
+                                    )}
+                                    {msg.evalDuration && (
+                                      <span className="ai-perf-badge">Gen: {formatDuration(msg.evalDuration)}</span>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             </article>
                           ))}
@@ -347,30 +351,34 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
                   <div className="ai-result">
                     <div className="ai-result-header">
                       <h5>{msg.role === "user" ? "Your Question" : "AI Response"}</h5>
-                      {msg.role === "assistant" && (msg.totalDuration || msg.evalCount) && (
-                        <div className="ai-perf-grid">
-                          {msg.totalDuration && (
-                            <span className="ai-perf-badge">
-                              Total: {formatDuration(msg.totalDuration)}
-                            </span>
-                          )}
-                          {msg.promptEvalCount != null && (
-                            <span className="ai-perf-badge">
-                              Prompt: {msg.promptEvalCount}
-                            </span>
-                          )}
-                          {msg.evalCount != null && (
-                            <span className="ai-perf-badge">
-                              Tokens: {msg.evalCount}
-                            </span>
-                          )}
-                        </div>
-                      )}
                     </div>
 
                     <div className="ai-section">
                       <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{msg.content}</p>
                     </div>
+
+                    {msg.role === "assistant" && (msg.totalDuration || msg.evalCount || msg.loadDuration) && (
+                      <div className="ai-footer">
+                        {msg.loadDuration && (
+                          <span className="ai-perf-badge">Load: {formatDuration(msg.loadDuration)}</span>
+                        )}
+                        {msg.totalDuration && (
+                          <span className="ai-perf-badge">Total: {formatDuration(msg.totalDuration)}</span>
+                        )}
+                        {msg.promptEvalCount != null && (
+                          <span className="ai-perf-badge">Prompt: {msg.promptEvalCount}</span>
+                        )}
+                        {msg.promptEvalDuration && (
+                          <span className="ai-perf-badge">Prompt time: {formatDuration(msg.promptEvalDuration)}</span>
+                        )}
+                        {msg.evalCount != null && (
+                          <span className="ai-perf-badge">Tokens: {msg.evalCount}</span>
+                        )}
+                        {msg.evalDuration && (
+                          <span className="ai-perf-badge">Gen: {formatDuration(msg.evalDuration)}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </article>
               ))
@@ -645,6 +653,24 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
           font-size: 0.8rem;
           font-family: monospace;
           padding: 0 0.5rem;
+        }
+
+        .ai-footer {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+          padding-top: 0.75rem;
+          margin-top: 0.75rem;
+          border-top: 1px solid #f3f4f6;
+        }
+
+        .ai-perf-badge {
+          font-size: 0.7rem;
+          padding: 0.2rem 0.5rem;
+          background: #f3f4f6;
+          border-radius: 4px;
+          color: #6b7280;
+          font-family: monospace;
         }
       `}</style>
     </div>
