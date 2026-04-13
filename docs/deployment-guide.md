@@ -48,7 +48,7 @@ Open the `.env` file and set the following variables:
 **Recommended (runtime memory controls):**
 
 - `ENABLE_SYNC_POLLER`: Controls background sync poller startup. Recommended defaults: `false` in local dev, `true` in production.
-- `POLL_INTERVAL_MS`: Sync poller interval in milliseconds. Recommended default: `90000`.
+- `POLL_INTERVAL_MS`: Sync poller interval in milliseconds. Recommended default: `300000`.
 - `MEMORY_LOGGING`: Enables periodic `process.memoryUsage()` logging (`false` by default).
 - `MEMORY_LOG_INTERVAL_MS`: Interval for memory logs in milliseconds (default: `60000`).
 
@@ -123,8 +123,8 @@ A full list of helper targets is available in the [Makefile](/Users/shadowwalker
 - `NEXT_PUBLIC_SENTRY_*`: Browser-side equivalents for trace/profile/log/PII controls.
 - `ENABLE_SENTRY_TEST_ROUTES` / `NEXT_PUBLIC_ENABLE_SENTRY_TEST_ROUTES`: Optional Sentry smoke-test surface; leave disabled outside intentional telemetry checks.
 - `ENABLE_SYNC_POLLER`: Enables background sync polling. Defaults to `false` in development and `true` in production.
-- `POLL_INTERVAL_MS`: The interval for the sync poller in milliseconds (default: `90000`).
-- `LEADER_LOCK_TTL_MS`: The time-to-live for the leader lock in milliseconds (default: `90000`).
+- `POLL_INTERVAL_MS`: The interval for the sync poller in milliseconds (default: `300000`).
+- `LEADER_LOCK_TTL_MS`: The time-to-live for the leader lock in milliseconds (default: `300000`).
 - `SYNC_JOB_STALE_MS`: Timeout in milliseconds for resetting stale running or pending sync jobs (default: `600000`).
 - `MOBILE_API_ENABLED`: Enables the mobile API surface (`true` by default; set to `false` to disable `/api/mobile/v1/*`).
 - `MEMORY_LOGGING`: Enables structured memory usage logging (`false` by default).
