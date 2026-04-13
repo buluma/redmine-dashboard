@@ -1,3 +1,5 @@
+- swagger api documentation
 - wakatime api integration for worktime tracking
 - wrap ollama around tailscale aperture
+- ai tool calls
 - ~~integrate to streamline REST API + logs~~ ✅ **DONE** — Prisma models + import script complete (2026-04-13)

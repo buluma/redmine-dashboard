@@ -1631,6 +1631,9 @@ export default function Home() {
           <Link href="/ops" className="primary-link nav-link">
             Sync Ops
           </Link>
+          <Link href="/heimdall" className="primary-link nav-link">
+            Heimdall
+          </Link>
           <button className="secondary-button" type="button" onClick={resetFilters}>
             Reset Filters
           </button>
