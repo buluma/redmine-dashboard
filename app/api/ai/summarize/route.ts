@@ -36,6 +36,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     let issueId = body.issueId as string | undefined;
+    const modelOverride = body.model as string | undefined;
 
     // If issueId looks like a number, treat it as redmineIssueId
     const numericId = parseInt(issueId ?? "", 10);
@@ -155,7 +156,7 @@ export async function POST(request: Request) {
     };
     try {
       const manager = getLLMProviderManager();
-      const response = await manager.chat(messages, { stream: false });
+      const response = await manager.chat(messages, { stream: false, model: modelOverride });
       result = {
         content: response.content,
         model: response.model,
