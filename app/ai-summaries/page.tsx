@@ -106,6 +106,7 @@ export default async function AiSummariesPage() {
       <header className="card hero">
         <div className="hero-top">
           <div>
+            <p className="kicker">AI Insights</p>
             <h1>AI Summaries</h1>
             <p className="muted">
               {totalSummaries} summary{totalSummaries !== 1 ? "ies" : "y"} · {userMessages} chat messages across {chatIssues.size} issue(s)

@@ -122,6 +122,7 @@ export default async function HeimdallPage() {
       <header className="card hero">
         <div className="hero-top">
           <div>
+            <p className="kicker">Streamline</p>
             <h1>Heimdall</h1>
             <p className="muted">
               Streamline Application Logs — {totalLogs} records · {allErrors.length} errors/warnings · {allHosts.length} host{allHosts.length !== 1 ? "s" : ""}
