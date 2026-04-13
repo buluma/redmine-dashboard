@@ -6663,3 +6663,14 @@ textarea {
 .due-badge.soon {
   color: #f59e0b;
 }
+
+.filters-bar-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filters-bar-compact > * {
+  margin: 0;
+}
