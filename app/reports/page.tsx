@@ -293,8 +293,7 @@ export default function ReportsPage() {
             </p>
           </div>
           <div className="hero-actions">
-            {loading && <span className="loading-pill" role="status">Refreshing...</span>}
-            <Link href="/" className="secondary-button">Back to Dashboard</Link>
+            <Link href="/" className="primary-link">Back to Dashboard</Link>
           </div>
         </div>
       </header>
