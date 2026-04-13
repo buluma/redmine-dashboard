@@ -1,12 +1,24 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
+import { getSessionUserId } from "@/src/lib/session";
 import { HeimdallLogsClient } from "./heimdall-logs-client";
+import { RefreshButton } from "./refresh-button";
 
 export const runtime = "nodejs";
 
 export default async function HeimdallPage() {
-  const user = await requireCurrentUser();
+  // Graceful auth: redirect to login if no session
+  const userId = await getSessionUserId();
+  if (!userId) {
+    redirect("/");
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    redirect("/");
+  }
 
   // Fetch MBU logs
   const mbuLogs = await prisma.mbuLog.findMany({
@@ -109,6 +121,7 @@ export default async function HeimdallPage() {
             </p>
           </div>
           <div className="hero-actions">
+            <RefreshButton />
             <Link href="/" className="primary-link">Back to Dashboard</Link>
           </div>
         </div>
