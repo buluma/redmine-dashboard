@@ -26,9 +26,15 @@ export async function POST(request: Request) {
     return jsonError("AI summarization is disabled", 403);
   }
 
+  let actorUserId: string;
+  try {
+    actorUserId = await resolveActorUserId(request);
+  } catch {
+    return jsonError("Unauthorized", 401);
+  }
+
   try {
     const body = await request.json();
-    const actorUserId = await resolveActorUserId(request);
     let issueId = body.issueId as string | undefined;
 
     // If issueId looks like a number, treat it as redmineIssueId
@@ -44,6 +50,18 @@ export async function POST(request: Request) {
     if (!issueId) {
       return jsonError("issueId is required", 400);
     }
+
+    // Log start
+    await prisma.webLog.create({
+      data: {
+        userId: actorUserId,
+        message: `Summarize started for issue ${issueId}`,
+        level: "info",
+        source: "api",
+        url: "/api/ai/summarize",
+        meta: { type: "summarize_start", issueId },
+      },
+    });
 
     // Fetch the issue from database
     const issue = await prisma.issue.findFirst({
@@ -169,6 +187,18 @@ export async function POST(request: Request) {
       },
     });
 
+    // Log success
+    await prisma.webLog.create({
+      data: {
+        userId: actorUserId,
+        message: `Summarize completed for issue ${issueId} — ${result.model}, ${result.eval_count ?? 0} tokens, ${result.total_duration ? Math.round(Number(result.total_duration) / 1e6) : 0}ms`,
+        level: "info",
+        source: "api",
+        url: "/api/ai/summarize",
+        meta: { type: "summarize_complete", issueId, model: result.model, tokens: result.eval_count, duration: result.total_duration?.toString() },
+      },
+    });
+
     return Response.json({
       ...structured,
       modelUsed: result.model,
@@ -184,6 +214,21 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    // Log failure
+    try {
+      await prisma.webLog.create({
+        data: {
+          userId: actorUserId,
+          message: `Summarize failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+          level: "error",
+          source: "api",
+          url: "/api/ai/summarize",
+          meta: { type: "summarize_error" },
+        },
+      });
+    } catch {
+      // Ignore logging errors
+    }
     console.error("Summarize error:", error);
     return jsonError(
       `Failed to summarize issue: ${error instanceof Error ? error.message : "Unknown error"}`,

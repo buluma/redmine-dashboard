@@ -9,6 +9,7 @@ import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import { normalizeRedmineText, splitRedmineCollapseSegments } from "@/src/lib/redmine-text-format";
 import { AiIssueActions } from "@/src/components/ai/AiIssueActions";
+import { ChatFab } from "@/src/components/ai/ChatFab";
 import { TimeTrackingPanel } from "@/src/components/TimeTrackingPanel";
 import { QuickActionsPanel } from "@/src/components/QuickActionsPanel";
 
@@ -1853,6 +1854,7 @@ export default function IssueDetailPage() {
           </div>
         </div>
       )}
+      <ChatFab issueId={issue.redmineIssueId} />
     </main>
   );
 }
