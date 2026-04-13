@@ -20,6 +20,11 @@ The system works by syncing Redmine issues to a local database, providing fast l
 - **Workflow-Aware Statusing:** Status changes use Redmine `allowed_statuses` data for transition-safe updates.
 - **Expanded Time Entries:** Beyond creation, the backend supports list/update/delete for Redmine time entries.
 - **Slack Integration:** Read messages from monitored Slack channels with auto-refresh, multi-channel support, and thread navigation. Send Redmine issue updates to Slack channels automatically via sync workflow or webhook.
+- **AI Summaries:** Generate AI-powered summaries of issues using LLM providers (Ollama, OpenAI, Anthropic). Grouped by project, priority, and confidence scoring.
+- **AI Chat:** Per-issue AI chat history with token usage tracking and copy-to-clipboard.
+- **Heimdall (Streamline Logs):** Fetch and display Streamline application logs directly from the Streamline API. MBU logs, server-side rules, and traces with error filtering.
+- **Wakatime Integration:** Track coding time with Wakatime API for work-life balance monitoring.
+- **Reports V2:** Enhanced reporting with StatCard components, donut charts, and bar charts.
 
 ## Local Data Model
 
@@ -35,6 +40,9 @@ Converge syncs and caches the following Redmine entities in Supabase (via Prisma
 | `RedmineEnumeration` | `/enumerations/...` | Issue priorities, time entry activities |
 | `UserRedmineCredential` | user setup | Encrypted API key for Redmine access |
 | `IssueJournal`, `IssueGithubLink` | issue detail / local | Notes and GitHub cross-references |
+| `AiSummary` | AI generation | Generated issue summaries with confidence scores |
+| `AiChatMessage` | AI chat | Chat history with token usage tracking |
+| `MbuLog`, `ServerSideRulesLog`, `Trace` | Streamline API | Application logs from Streamline |
 
 ## Mobile Support
 

@@ -14,6 +14,7 @@
 
 | Feature | Status | Notes | Date |
 |---------|--------|-------|------|
+| swagger api documentation | ✅ DONE | Added /heimdall/data and /heimdall/refresh to Swagger UI | 2026-04-13 |
 | integrate to streamline REST API + logs | ✅ DONE | Prisma models + import script complete | 2026-04-13 |
 | slack integration - read group messages | ✅ DONE | Slack page with multi-channel monitoring, auto-refresh, and message display | 2026-04-13 |
 | slack integration - send Redmine updates to channel | ✅ DONE | SlackNotifier service integrated into sync workflow | 2026-04-13 |
