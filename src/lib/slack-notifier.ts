@@ -302,7 +302,7 @@ export class SlackNotifier {
     try {
       await this.client.chat.postMessage({
         channel: this.config.channelId,
-        text: "✅ Redmine Dashboard Slack integration is working!",
+        text: "✅ Converge Slack integration is working!",
         blocks: [
           {
             type: "header",
@@ -316,7 +316,7 @@ export class SlackNotifier {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: "Redmine Dashboard Slack integration is working correctly!",
+              text: "Converge Slack integration is working correctly!",
             },
           },
           {

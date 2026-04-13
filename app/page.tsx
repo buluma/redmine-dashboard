@@ -1528,11 +1528,10 @@ export default function Home() {
         <section className="card auth-panel">
           <div className="auth-grid">
             <div>
-              <p className="kicker">Redmine Operations</p>
+              <p className="kicker">Operations</p>
               <h1>Mission Control Dashboard</h1>
               <p className="muted">
-                Connect your Redmine account and run issue triage, status transitions, comments, and
-                time logging from one place.
+                Connect your Redmine account and manage issues from one unified dashboard.
               </p>
             </div>
             <form className="form" onSubmit={connectRedmine}>
@@ -1590,7 +1589,7 @@ export default function Home() {
       <header className="card hero">
         <div className="hero-top">
           <div className="hero-heading">
-            <p className="kicker">Redmine Control Room</p>
+            <p className="kicker">Operations Hub</p>
             <h1 className="hero-title">Converge</h1>
             <p className="muted">
               Signed in as <strong>{user.displayName}</strong> ({user.username})

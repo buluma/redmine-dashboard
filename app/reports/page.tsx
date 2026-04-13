@@ -286,7 +286,7 @@ export default function ReportsPage() {
         <div className="hero-top reports-hero-content">
           <div className="hero-heading">
             <p className="kicker">Reports</p>
-            <h1 className="hero-title">Redmine Reports</h1>
+            <h1 className="hero-title">Reports</h1>
             <p className="reports-hero-sub">
               Insights across <strong>{stats.totalIssues.toLocaleString()}</strong> issues
               {appliedFilters.days !== 30 && <span> · Last {appliedFilters.days} days</span>}
