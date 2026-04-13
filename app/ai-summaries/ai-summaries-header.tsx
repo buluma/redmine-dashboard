@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { AiStatusIndicator } from "@/src/components/ai/AiStatusIndicator";
 
 interface AiSummariesHeaderProps {
   totalSummaries: number;
@@ -67,8 +66,6 @@ export function AiSummariesHeader({
           </p>
         </div>
         <div className="hero-actions" style={{ overflow: "visible" }}>
-          <AiStatusIndicator />
-
           <button
             className={`refresh-button ${isRefreshing ? "loading" : ""}`}
             onClick={() => void handleRefresh()}
