@@ -6,6 +6,7 @@
 
 - [ ] wrap ollama around tailscale aperture
 - [ ] ai tool calls
+- [ ] add a timeline reports to heimdall
 
 ## Stalled
 

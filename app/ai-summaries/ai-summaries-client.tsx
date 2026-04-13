@@ -12,7 +12,7 @@ interface AiSummaryData {
   loadDuration: bigint | string | null;
   promptEvalCount: number | null;
   promptEvalDuration: bigint | string | null;
-  evalCount: bigint | string | null;
+  evalCount: number | null;
   evalDuration: bigint | string | null;
   issue: {
     redmineIssueId: number;
