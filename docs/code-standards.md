@@ -1,6 +1,6 @@
 # Code Standards
 
-This document outlines the coding standards and conventions used in the NRCC project. Adhering to these standards ensures consistency and maintainability across the codebase.
+This document outlines the coding standards and conventions used in the Converge project. Adhering to these standards ensures consistency and maintainability across the codebase.
 
 ## General Principles
 

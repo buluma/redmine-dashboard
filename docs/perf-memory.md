@@ -1,6 +1,6 @@
 # Memory Profiling Guide
 
-This guide defines a repeatable process to measure and compare NRCC runtime memory before and after optimization changes.
+This guide defines a repeatable process to measure and compare Converge runtime memory before and after optimization changes.
 
 ## Goals
 

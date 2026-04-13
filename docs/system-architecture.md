@@ -1,10 +1,10 @@
 # System Architecture
 
-This document provides a high-level overview of the system architecture for the Nasc Redmine Command Center (NRCC).
+This document provides a high-level overview of the system architecture for Converge.
 
 ## Architectural Principles
 
-- **Client-Server Model:** NRCC is a web-based client-server application.
+- **Client-Server Model:** Converge is a web-based client-server application.
 - **Source of Truth:** Redmine is the single source of truth for all issue data. The local database is considered an operational cache.
 - **Security:** Security is a key consideration. API keys are encrypted at rest and are never exposed to the client.
 

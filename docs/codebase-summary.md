@@ -1,6 +1,6 @@
 # Codebase Summary
 
-This document provides a summary of the NRCC codebase structure.
+This document provides a summary of the Converge codebase structure.
 
 ## High-Level Overview
 

@@ -1,6 +1,6 @@
 # Slack Integration
 
-NRCC supports bidirectional Slack integration: reading messages from Slack channels and sending Redmine issue updates to Slack.
+Converge supports bidirectional Slack integration: reading messages from Slack channels and sending Redmine issue updates to Slack.
 
 ## Configuration
 

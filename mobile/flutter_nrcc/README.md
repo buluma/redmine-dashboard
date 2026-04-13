@@ -1,13 +1,13 @@
-# NRCC Flutter App
+# Converge Flutter App
 
-Build-ready Flutter Android client for NRCC mobile APIs.
+Build-ready Flutter Android client for Converge mobile APIs.
 
 ## Prerequisites
 
 - Flutter SDK
 - Android SDK / emulator
 
-## Configure NRCC Base URL
+## Configure Converge Base URL
 
 Use local environment configuration:
 
@@ -15,7 +15,7 @@ Use local environment configuration:
 cp .env.example .env
 ```
 
-Set `NRCC_BASE_URL` in `.env`.
+Set `Converge_BASE_URL` in `.env`.
 
 Default value in this project (Tailscale / physical phone):
 

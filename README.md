@@ -1,7 +1,15 @@
-# Nasc Redmine Command Center (NRCC)
+# Converge
 
-NRCC is a Next.js + Prisma dashboard for Redmine issues assigned to the signed-in user.
+Converge is a unified operations dashboard connecting Redmine, Slack, AI, and more.
 It provides fast local reads from a synced cache, with all final state owned by Redmine.
+
+Originally built as a Redmine command center, Converge has evolved into a powerful ops platform with:
+
+- **Redmine Integration** — Sync and manage issues with AI-powered summaries
+- **Slack Integration** — Monitor channels and send notifications
+- **AI Insights** — Issue summarization, semantic search, and chat
+- **Mobile Support** — Token-authenticated mobile API
+- **WakaTime Integration** — Coding time tracking
 
 ## Documentation
 

@@ -1,6 +1,6 @@
 # Design Guidelines
 
-This document outlines the design guidelines, UI/UX specifications, and visual standards for the NRCC application.
+This document outlines the design guidelines, UI/UX specifications, and visual standards for the Converge application.
 
 ## Color Palette
 

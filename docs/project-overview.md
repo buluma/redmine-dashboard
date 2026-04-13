@@ -1,6 +1,6 @@
 # Project Overview
 
-NRCC (Nasc Redmine Command Center) is a Next.js + Prisma dashboard designed to provide a fast and efficient interface for managing Redmine issues. It is aimed at users who are assigned issues in Redmine and need a streamlined way to interact with them.
+Converge is a unified operations dashboard designed to connect your tools and workflows into one cohesive platform. Originally built as a Redmine command center, it has evolved to support Slack integration, AI insights, mobile access, and more.
 
 The system works by syncing Redmine issues to a local database, providing fast local reads from this cache. All state changes are ultimately persisted back to Redmine, which remains the single source of truth.
 
@@ -23,7 +23,7 @@ The system works by syncing Redmine issues to a local database, providing fast l
 
 ## Local Data Model
 
-NRCC syncs and caches the following Redmine entities in Supabase (via Prisma):
+Converge syncs and caches the following Redmine entities in Supabase (via Prisma):
 
 | Table | Source | Notes |
 |---|---|---|
@@ -38,7 +38,7 @@ NRCC syncs and caches the following Redmine entities in Supabase (via Prisma):
 
 ## Mobile Support
 
-NRCC provides support for mobile clients, allowing users to manage their Redmine issues on the go.
+Converge provides support for mobile clients, allowing users to manage their Redmine issues on the go.
 
 - **Clients:** The project includes a ready-to-build [Flutter application](../mobile/flutter_nrcc) and provides guidance for creating a [native Android client](./mobile/android.md).
 - **Secure Pairing:** Mobile clients can be paired securely using a token-based authentication system, avoiding the need for browser cookies.

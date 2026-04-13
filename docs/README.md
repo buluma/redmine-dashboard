@@ -1,6 +1,6 @@
-# NRCC Documentation
+# Converge Documentation
 
-Welcome to the documentation for the Nasc Redmine Command Center (NRCC). This documentation is intended to help developers and users understand the project, its architecture, and how to use it.
+Welcome to the documentation for Converge. This documentation is intended to help developers and users understand the project, its architecture, and how to use it.
 
 ## Table of Contents
 

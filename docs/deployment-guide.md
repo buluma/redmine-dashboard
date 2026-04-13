@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide provides instructions for setting up the NRCC application for local development and for deployment using Docker.
+This guide provides instructions for setting up the Converge application for local development and for deployment using Docker.
 
 ## Local Development Setup
 

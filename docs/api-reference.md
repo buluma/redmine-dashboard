@@ -1,6 +1,6 @@
 # API Reference
 
-This document describes the NRCC backend API, including web and mobile routes.
+This document describes the Converge backend API, including web and mobile routes.
 
 ## Auth and Redmine Connection
 
@@ -22,7 +22,7 @@ Request body:
 ```
 
 Notes:
-- Returns `502` when NRCC cannot reach Redmine due to upstream network/TLS issues.
+- Returns `502` when Converge cannot reach Redmine due to upstream network/TLS issues.
 
 ### GET /api/redmine/bootstrap
 Returns bootstrap capability and current credential state.
@@ -135,7 +135,7 @@ Multipart fields:
 Current limit: `10MB`.
 
 ### GET /api/issues/[id]/attachments/[attachmentId]
-Proxies attachment download through NRCC backend (API key never exposed to clients).
+Proxies attachment download through Converge backend (API key never exposed to clients).
 
 ## Relations (Web)
 
@@ -227,7 +227,7 @@ All `/api/mobile/v1/*` routes require `Authorization: Bearer <token>` except pai
 Pairs mobile device and returns token.
 
 Notes:
-- Returns `502` when NRCC cannot reach Redmine due to upstream network/TLS issues.
+- Returns `502` when Converge cannot reach Redmine due to upstream network/TLS issues.
 
 ### GET /api/mobile/v1/me
 Returns authenticated mobile user + token metadata.
