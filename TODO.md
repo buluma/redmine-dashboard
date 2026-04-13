@@ -3,10 +3,10 @@
 ## In Progress
 
 - [ ] wakatime api integration for worktime tracking - https://wakatime.com/developers#introduction
+- [ ] swagger api documentation
 
 ## Pending
 
-- [ ] swagger api documentation
 - [ ] wrap ollama around tailscale aperture
 - [ ] ai tool calls
 
