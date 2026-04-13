@@ -1637,6 +1637,12 @@ export default function Home() {
           <Link href="/slack" className="primary-link nav-link">
             Slack
           </Link>
+          <Link href="/wakatime" className="primary-link nav-link">
+            Coding Stats
+          </Link>
+          <Link href="/api-docs" className="primary-link nav-link">
+            API Docs
+          </Link>
           <button className="secondary-button" type="button" onClick={resetFilters}>
             Reset Filters
           </button>
