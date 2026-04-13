@@ -48,15 +48,13 @@ export default function ApiDocsPage() {
       </header>
 
       <section className="card">
-        <SwaggerUI 
+        <SwaggerUI
           url="/api/openapi"
-          options={{
-            docExpansion: "list",
-            defaultModelsExpandDepth: 0,
-            filter: true,
-            showExtensions: true,
-            showCommonExtensions: true,
-          }}
+          docExpansion="list"
+          defaultModelsExpandDepth={0}
+          filter
+          showExtensions
+          showCommonExtensions
         />
       </section>
     </main>
