@@ -2004,6 +2004,47 @@ export default function Home() {
 
               {/* Filters Bar */}
               <div className="filters-bar">
+                {/* Quick Status Filters */}
+                <div className="quick-filters">
+                  <button
+                    type="button"
+                    className={`quick-filter-btn ${statusFilter === "" ? "active" : ""}`}
+                    onClick={() => { setStatusFilter(""); resetPage(); }}
+                  >
+                    All ({summary.totalVisible})
+                  </button>
+                  <button
+                    type="button"
+                    className={`quick-filter-btn quick-open ${statusFilter === "Open" ? "active" : ""}`}
+                    onClick={() => { setStatusFilter("Open"); resetPage(); }}
+                  >
+                    🟢 Open ({summary.open})
+                  </button>
+                  <button
+                    type="button"
+                    className={`quick-filter-btn quick-progress ${statusFilter.includes("progress") || statusFilter.includes("dev") ? "active" : ""}`}
+                    onClick={() => { setStatusFilter("In Progress"); resetPage(); }}
+                  >
+                    🔵 In Progress ({summary.inProgress})
+                  </button>
+                  <button
+                    type="button"
+                    className={`quick-filter-btn quick-blocked ${statusFilter.toLowerCase().includes("blocked") ? "active" : ""}`}
+                    onClick={() => { setStatusFilter("Blocked"); resetPage(); }}
+                  >
+                    🛑 Blocked ({summary.blocked})
+                  </button>
+                  {summary.overdue > 0 && (
+                    <button
+                      type="button"
+                      className={`quick-filter-btn quick-overdue`}
+                      onClick={() => { setStatusFilter("Overdue"); resetPage(); }}
+                    >
+                      ⚠️ Overdue ({summary.overdue})
+                    </button>
+                  )}
+                </div>
+
                 <ProjectFilter
                   issues={issues}
                   selectedProject={selectedProject}
@@ -2155,9 +2196,22 @@ export default function Home() {
                               </option>
                             ))}
                           </select>
+                          <span className={`status-dot ${isOpenStatus(issue.statusName) ? "dot-open" : ""} ${isDoneStatus(issue.statusName) ? "dot-done" : ""} ${isBlockedStatus(issue.statusName) ? "dot-blocked" : ""} ${isInProgressStatus(issue.statusName) ? "dot-progress" : ""}`} />
                         </td>
-                        <td>{issue.priority ?? "-"}</td>
-                        <td>{issue.dueDate ? new Date(issue.dueDate).toLocaleDateString() : "-"}</td>
+                        <td>
+                          <span className={`priority-badge priority-${(issue.priority ?? "").toLowerCase().replace(/\s+/g, "-")}`}>
+                            {issue.priority ?? "-"}
+                          </span>
+                        </td>
+                        <td className={urgency === "overdue" ? "due-overdue" : urgency === "soon" ? "due-soon" : ""}>
+                          {issue.dueDate ? (
+                            <span className={`due-badge ${urgency}`}>
+                              {new Date(issue.dueDate).toLocaleDateString()}
+                              {urgency === "overdue" && " ⚠️"}
+                              {urgency === "soon" && " ⏰"}
+                            </span>
+                          ) : "-"}
+                        </td>
                         <td>{issue.doneRatio ?? 0}%</td>
                         <td>{new Date(latestIssueActivityTimestamp(issue)).toLocaleString()}</td>
                       </tr>
