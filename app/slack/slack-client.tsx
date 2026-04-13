@@ -68,8 +68,10 @@ function MessageItem({
     });
   };
   
-  // Check if this is a system message
-  const isSystemMessage = ["channel_join", "channel_leave", "pinned_item", "file_comment", "bot_message"].includes(message.subtype || "");
+  // Check if this is a system message (join/leave with no meaningful content)
+  const isJoinLeave = ["channel_join", "channel_leave"].includes(message.subtype || "");
+  const hasBotContent = message.subtype === "bot_message" && message.text?.startsWith("joined");
+  const isPureSystemMessage = isJoinLeave && !message.text;
   
   // Get display text
   const getMessageText = () => {
@@ -85,10 +87,11 @@ function MessageItem({
     return <span className="message-text">{message.text}</span>;
   };
 
-  if (isSystemMessage && !message.text) {
+  // Show join/leave messages in system row format
+  if (isJoinLeave) {
     return (
       <div className="system-message-row">
-        <span className="system-text">{getMessageText()}</span>
+        <span className="system-text"><strong>{userName}</strong> {message.subtype === "channel_join" ? "joined" : "left"} the channel</span>
         <span className="system-time">{formatTime(message.ts)}</span>
       </div>
     );
@@ -454,7 +457,8 @@ export function SlackMessagesClient({
         }
 
         .avatar {
-          width: 2.25rem;
+          width: 2.5rem;
+          min-width: 2.5rem;
           height: 2.25rem;
           border-radius: 0.375rem;
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -464,7 +468,6 @@ export function SlackMessagesClient({
           justify-content: center;
           font-weight: 600;
           font-size: 0.875rem;
-          flex-shrink: 0;
         }
 
         .avatar .bot-badge {
@@ -483,10 +486,19 @@ export function SlackMessagesClient({
           margin-bottom: 0.125rem;
         }
 
+        .message-header > * {
+          flex-shrink: 0;
+        }
+
+        .message-header .message-content-text {
+          flex-shrink: 0;
+        }
+
         .message-author {
           font-weight: 700;
           font-size: 0.9375rem;
           color: var(--text-primary, #111827);
+          margin-right: 0.25rem;
         }
 
         .bot-label {
@@ -496,12 +508,13 @@ export function SlackMessagesClient({
           color: var(--text-muted, #6b7280);
           padding: 0.0625rem 0.375rem;
           border-radius: 0.25rem;
-          margin-left: 0.375rem;
+          margin-left: 0.25rem;
         }
 
         .message-time {
           font-size: 0.75rem;
           color: var(--text-muted, #6b7280);
+          margin-left: 0.5rem;
         }
 
         .message-body {
@@ -538,19 +551,23 @@ export function SlackMessagesClient({
         .compact-message {
           display: flex;
           align-items: baseline;
-          gap: 0.5rem;
+          gap: 0.75rem;
           padding: 0.125rem 0;
+          margin-left: 3.5rem;
         }
 
         .compact-time {
           font-size: 0.6875rem;
           color: var(--text-muted, #9ca3af);
-          width: 3.5rem;
-          flex-shrink: 0;
+          min-width: 3rem;
         }
 
         .compact-reactions {
           margin-left: 0;
+        }
+
+        .compact-message .message-body {
+          flex: 1;
         }
 
         .message-attachments {
