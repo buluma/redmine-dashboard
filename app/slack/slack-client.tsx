@@ -5,6 +5,7 @@ import type { SlackMessage } from "@/src/lib/slack";
 
 interface SlackMessagesClientProps {
   initialMessages: SlackMessage[];
+  initialUserNames?: Record<string, string>;
   channelId: string;
   channelName: string;
   refreshIntervalMs?: number;
@@ -68,30 +69,36 @@ function MessageItem({
     });
   };
   
-  // Check if this is a system message (join/leave with no meaningful content)
-  const isJoinLeave = ["channel_join", "channel_leave"].includes(message.subtype || "");
-  const hasBotContent = message.subtype === "bot_message" && message.text?.startsWith("joined");
-  const isPureSystemMessage = isJoinLeave && !message.text;
+  // Check if this is a system message subtype
+  const subtype = message.subtype || "";
+  const isSystemSubtype = ["channel_join", "channel_leave", "pinned_item", "file_comment"].includes(subtype);
   
-  // Get display text
-  const getMessageText = () => {
-    if (message.subtype === "channel_join") {
-      return <span className="system-text"><strong>{userName}</strong> joined the channel</span>;
+  // Also check if the text content indicates a system message
+  const text = message.text || "";
+  const isJoinLeaveText = text.includes("joined the channel") || text.includes("left the channel") || text.includes("joined");
+  
+  // Show as system message if it's a system subtype OR if it's a join/leave notification
+  const isSystemMessage = isSystemSubtype || (isBot && isJoinLeaveText && !message.attachments?.length);
+  
+  // Format system message text
+  const getSystemMessageText = () => {
+    if (text.includes("joined") || subtype === "channel_join") {
+      return `${userName} joined the channel`;
     }
-    if (message.subtype === "channel_leave") {
-      return <span className="system-text"><strong>{userName}</strong> left the channel</span>;
+    if (text.includes("left") || subtype === "channel_leave") {
+      return `${userName} left the channel`;
     }
-    if (message.subtype === "pinned_item") {
-      return <span className="system-text"><strong>{userName}</strong> pinned a message</span>;
+    if (subtype === "pinned_item") {
+      return `${userName} pinned a message`;
     }
-    return <span className="message-text">{message.text}</span>;
+    return text;
   };
-
-  // Show join/leave messages in system row format
-  if (isJoinLeave) {
+  
+  // Show system messages in centered format
+  if (isSystemMessage && text) {
     return (
       <div className="system-message-row">
-        <span className="system-text"><strong>{userName}</strong> {message.subtype === "channel_join" ? "joined" : "left"} the channel</span>
+        <span className="system-text">{getSystemMessageText()}</span>
         <span className="system-time">{formatTime(message.ts)}</span>
       </div>
     );
@@ -113,7 +120,7 @@ function MessageItem({
               <span className="message-time">{formatTime(message.ts)}</span>
             </div>
             <div className="message-body">
-              {getMessageText()}
+              <span className="message-text">{message.text}</span>
             </div>
             {message.attachments && message.attachments.length > 0 && (
               <div className="message-attachments">
@@ -139,12 +146,12 @@ function MessageItem({
               </div>
             )}
             {message.replyCount && message.replyCount > 0 && (
-              <button 
+              <button
                 className="thread-info"
                 onClick={() => onThreadClick(message.ts)}
               >
                 💬 {message.replyCount} {message.replyCount === 1 ? "reply" : "replies"}
-                {message.replyUsers && message.replyUsers.length > 0 && 
+                {message.replyUsers && message.replyUsers.length > 0 &&
                   ` · ${message.replyUsers.slice(0, 2).map(u => userNames[u] || u).join(", ")}`
                 }
               </button>
@@ -169,8 +176,9 @@ function MessageItem({
   );
 }
 
-export function SlackMessagesClient({ 
-  initialMessages, 
+export function SlackMessagesClient({
+  initialMessages,
+  initialUserNames = {},
   channelId,
   channelName,
   refreshIntervalMs = 30000
@@ -178,7 +186,7 @@ export function SlackMessagesClient({
   const [messages, setMessages] = useState<SlackMessage[]>(initialMessages);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [userNames, setUserNames] = useState<UserCache>({});
+  const [userNames, setUserNames] = useState<UserCache>(initialUserNames);
   const [activeThread, setActiveThread] = useState<string | null>(null);
   const [threadMessages, setThreadMessages] = useState<SlackMessage[]>([]);
   const [isLoadingThread, setIsLoadingThread] = useState(false);
@@ -214,7 +222,7 @@ export function SlackMessagesClient({
         newCache[id] = id;
       }
     });
-    
+
     if (Object.keys(newCache).length > 0) {
       setUserNames(prev => ({ ...prev, ...newCache }));
     }
@@ -231,7 +239,7 @@ export function SlackMessagesClient({
 
     try {
       const response = await fetch(`/api/slack/messages?channelId=${encodeURIComponent(channelId)}`);
-      
+
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error || `Failed to fetch messages (${response.status})`);
@@ -241,7 +249,7 @@ export function SlackMessagesClient({
       setMessages(data.messages || []);
       setLastUpdated(new Date());
       setNextRefreshIn(refreshIntervalMs / 1000);
-      
+
       // Update user names if provided
       if (data.users) {
         setUserNames(prev => ({ ...prev, ...data.users }));
@@ -774,7 +782,7 @@ export function SlackMessagesClient({
 
       <section className="card">
         <div className="slack-actions">
-          <button 
+          <button
             className={`refresh-button ${isRefreshing ? "loading" : ""}`}
             onClick={handleRefresh}
             disabled={isRefreshing}
@@ -785,7 +793,7 @@ export function SlackMessagesClient({
             </svg>
             {isRefreshing ? "Refreshing..." : "Refresh"}
           </button>
-          
+
           <button
             className={`auto-refresh-toggle ${isAutoRefreshEnabled ? "active" : ""}`}
             onClick={() => setIsAutoRefreshEnabled(!isAutoRefreshEnabled)}
@@ -846,7 +854,7 @@ export function SlackMessagesClient({
                 </div>
                 {msgs.map((message) => (
                   <div key={message.ts}>
-                    <MessageItem 
+                    <MessageItem
                       message={message}
                       userNames={userNames}
                       onThreadClick={handleThreadClick}
@@ -857,7 +865,7 @@ export function SlackMessagesClient({
                         {threadMessages
                           .filter(m => m.ts !== message.ts)
                           .map((reply) => (
-                            <MessageItem 
+                            <MessageItem
                               key={reply.ts}
                               message={reply}
                               userNames={userNames}
