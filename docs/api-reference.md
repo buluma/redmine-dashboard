@@ -260,3 +260,47 @@ Rotates current mobile token.
 
 ### DELETE /api/mobile/v1/tokens/current
 Revokes current mobile token (logout).
+
+## Slack Integration
+
+### GET /api/slack/messages
+Fetches messages from a Slack channel.
+
+Query params:
+- `channelId` (optional, defaults to `SLACK_DEFAULT_CHANNEL_ID`)
+
+### GET /api/slack/thread
+Fetches thread replies from a Slack message.
+
+Query params:
+- `channelId` (required)
+- `threadTs` (required) - message timestamp
+
+### POST /api/slack/test
+Sends a test notification to verify Slack integration.
+
+### POST /api/slack/notify
+Webhook endpoint for external systems to send Slack notifications.
+
+Request body:
+```json
+{
+  "action": "create|update|close|assign|test",
+  "issue": {
+    "id": "...",
+    "redmineIssueId": 123,
+    "subject": "Issue subject",
+    "projectName": "My Project",
+    "statusName": "In Progress",
+    "priorityName": "High",
+    "assignedToName": "John Doe",
+    "updatedAt": "2026-04-13T12:00:00Z"
+  },
+  "changes": [
+    {"field": "status", "oldValue": "Open", "newValue": "In Progress"}
+  ]
+}
+```
+
+### GET /api/slack/notify
+Returns Slack notifier configuration status.
