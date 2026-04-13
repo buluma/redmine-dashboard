@@ -7,7 +7,7 @@ interface SlackMessagesClientProps {
   initialMessages: SlackMessage[];
   initialUserNames?: Record<string, string>;
   channelId: string;
-  channelName: string;
+  channels: Array<{ id: string; name: string }>;
   refreshIntervalMs?: number;
 }
 
@@ -42,12 +42,12 @@ function formatReactionEmoji(name: string): string {
   return emojiMap[name] || `:${name}:`;
 }
 
-function MessageItem({ 
-  message, 
+function MessageItem({
+  message,
   userNames,
   onThreadClick,
   showAvatar = true,
-}: { 
+}: {
   message: SlackMessage;
   userNames: UserCache;
   onThreadClick: (threadTs: string) => void;
@@ -58,28 +58,28 @@ function MessageItem({
   const userName = userNames[userId] || userId;
   const isBot = !!message.botId;
   const initial = userName.charAt(0).toUpperCase();
-  
+
   // Format time like Slack: "11:51 AM"
   const formatTime = (ts: string) => {
     const date = new Date(parseFloat(ts) * 1000);
-    return date.toLocaleTimeString("en-US", { 
-      hour: "numeric", 
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
       minute: "2-digit",
-      hour12: true 
+      hour12: true
     });
   };
-  
+
   // Check if this is a system message subtype
   const subtype = message.subtype || "";
   const isSystemSubtype = ["channel_join", "channel_leave", "pinned_item", "file_comment"].includes(subtype);
-  
+
   // Also check if the text content indicates a system message
   const text = message.text || "";
   const isJoinLeaveText = text.includes("joined the channel") || text.includes("left the channel") || text.includes("joined");
-  
+
   // Show as system message if it's a system subtype OR if it's a join/leave notification
   const isSystemMessage = isSystemSubtype || (isBot && isJoinLeaveText && !message.attachments?.length);
-  
+
   // Format system message text
   const getSystemMessageText = () => {
     if (text.includes("joined") || subtype === "channel_join") {
@@ -93,7 +93,7 @@ function MessageItem({
     }
     return text;
   };
-  
+
   // Show system messages in centered format
   if (isSystemMessage && text) {
     return (
@@ -162,7 +162,7 @@ function MessageItem({
         // Compact view for thread replies
         <div className="compact-message">
           <span className="compact-time">{formatTime(message.ts)}</span>
-          <div className="message-body">{getMessageText()}</div>
+          <div className="message-body"><span className="message-text">{message.text}</span></div>
           {message.reactions && message.reactions.length > 0 && (
             <div className="message-reactions compact-reactions">
               {message.reactions.map((reaction, idx) => (
@@ -176,11 +176,11 @@ function MessageItem({
   );
 }
 
-export function SlackMessagesClient({
-  initialMessages,
+export function SlackMessagesClient({ 
+  initialMessages, 
   initialUserNames = {},
-  channelId,
-  channelName,
+  channelId: initialChannelId,
+  channels,
   refreshIntervalMs = 30000
 }: SlackMessagesClientProps) {
   const [messages, setMessages] = useState<SlackMessage[]>(initialMessages);
@@ -196,8 +196,13 @@ export function SlackMessagesClient({
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date(0)); // Initialize to epoch to avoid hydration mismatch
   const [nextRefreshIn, setNextRefreshIn] = useState<number>(refreshIntervalMs / 1000);
   const [isClient, setIsClient] = useState(false);
+  const [currentChannelId, setCurrentChannelId] = useState(initialChannelId);
+  const [isLoadingChannel, setIsLoadingChannel] = useState(false);
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Get current channel name
+  const currentChannel = channels.find(c => c.id === currentChannelId);
 
   // Set client-side state after hydration
   useEffect(() => {
@@ -238,7 +243,7 @@ export function SlackMessagesClient({
     setError(null);
 
     try {
-      const response = await fetch(`/api/slack/messages?channelId=${encodeURIComponent(channelId)}`);
+      const response = await fetch(`/api/slack/messages?channelId=${encodeURIComponent(currentChannelId)}`);
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
@@ -259,7 +264,40 @@ export function SlackMessagesClient({
     } finally {
       setIsRefreshing(false);
     }
-  }, [channelId, refreshIntervalMs]);
+  }, [currentChannelId, refreshIntervalMs]);
+
+  const handleChannelChange = useCallback(async (newChannelId: string) => {
+    if (newChannelId === currentChannelId) return;
+    
+    setIsLoadingChannel(true);
+    setError(null);
+    setCurrentChannelId(newChannelId);
+    
+    try {
+      const response = await fetch(`/api/slack/messages?channelId=${encodeURIComponent(newChannelId)}`);
+      
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `Failed to fetch messages (${response.status})`);
+      }
+      
+      const data = await response.json();
+      setMessages(data.messages || []);
+      setLastUpdated(new Date());
+      setNextRefreshIn(refreshIntervalMs / 1000);
+      setActiveThread(null);
+      setThreadMessages([]);
+      
+      // Update user names if provided
+      if (data.users) {
+        setUserNames(prev => ({ ...prev, ...data.users }));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch messages");
+    } finally {
+      setIsLoadingChannel(false);
+    }
+  }, [currentChannelId, refreshIntervalMs]);
 
   const handleTestNotification = useCallback(async () => {
     setIsSendingTest(true);
@@ -315,7 +353,7 @@ export function SlackMessagesClient({
 
     try {
       const response = await fetch(
-        `/api/slack/thread?channelId=${encodeURIComponent(channelId)}&threadTs=${encodeURIComponent(threadTs)}`
+        `/api/slack/thread?channelId=${encodeURIComponent(currentChannelId)}&threadTs=${encodeURIComponent(threadTs)}`
       );
 
       if (!response.ok) {
@@ -336,7 +374,7 @@ export function SlackMessagesClient({
     } finally {
       setIsLoadingThread(false);
     }
-  }, [channelId, activeThread]);
+  }, [currentChannelId, activeThread]);
 
   // Group messages by date
   const messagesByDate = messages.reduce((acc, msg) => {
@@ -778,10 +816,71 @@ export function SlackMessagesClient({
         .countdown {
           font-variant-numeric: tabular-nums;
         }
+
+        .channel-selector {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-right: auto;
+        }
+
+        .channel-selector label {
+          font-size: 0.75rem;
+          color: var(--text-muted, #6b7280);
+          font-weight: 500;
+        }
+
+        .channel-select {
+          padding: 0.375rem 2rem 0.375rem 0.75rem;
+          border: 1px solid var(--border-color, #e5e7eb);
+          border-radius: 0.375rem;
+          background: white;
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: var(--text-primary, #111827);
+          cursor: pointer;
+          appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 0.5rem center;
+          min-width: 120px;
+        }
+
+        .channel-select:hover {
+          border-color: var(--color-primary, #2563eb);
+        }
+
+        .channel-select:focus {
+          outline: none;
+          border-color: var(--color-primary, #2563eb);
+          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        }
+
+        .channel-select:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
       `}</style>
 
       <section className="card">
         <div className="slack-actions">
+          <div className="channel-selector">
+            <label htmlFor="channel-select">Channel:</label>
+            <select
+              id="channel-select"
+              className="channel-select"
+              value={currentChannelId}
+              onChange={(e) => handleChannelChange(e.target.value)}
+              disabled={isLoadingChannel}
+            >
+              {channels.map((channel) => (
+                <option key={channel.id} value={channel.id}>
+                  #{channel.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <button
             className={`refresh-button ${isRefreshing ? "loading" : ""}`}
             onClick={handleRefresh}
@@ -843,7 +942,7 @@ export function SlackMessagesClient({
 
         {mainMessages.length === 0 ? (
           <div className="empty-state">
-            <p>No messages found in #{channelName}</p>
+            <p>No messages found in #{currentChannel?.name || "unknown"}</p>
           </div>
         ) : (
           <div className="slack-message-list">
