@@ -156,7 +156,7 @@ export default async function AiSummariesPage() {
   const uniqueStatuses = [...new Set(summaries.map((s) => s.issue.statusName))];
 
   return (
-    <main className="dashboard">
+    <main className="dashboard reports-v2">
       <AiSummariesHeader
         totalSummaries={totalSummaries}
         totalChatMessages={totalChatMessages}
