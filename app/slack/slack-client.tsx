@@ -139,10 +139,17 @@ export function SlackMessagesClient({
   const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(true);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date(0)); // Initialize to epoch to avoid hydration mismatch
   const [nextRefreshIn, setNextRefreshIn] = useState<number>(refreshIntervalMs / 1000);
+  const [isClient, setIsClient] = useState(false);
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Set client-side state after hydration
+  useEffect(() => {
+    setLastUpdated(new Date());
+    setIsClient(true);
+  }, []);
 
   // Build user cache from messages
   const buildUserCache = useCallback((msgs: SlackMessage[]) => {
@@ -658,7 +665,9 @@ export function SlackMessagesClient({
           )}
 
           <div className="refresh-info">
-            <span>Last: {lastUpdated.toLocaleTimeString()}</span>
+            <span suppressHydrationWarning>
+              {isClient ? `Last: ${lastUpdated.toLocaleTimeString("en-US", { hour12: false })}` : "Last: --:--:--"}
+            </span>
             {isAutoRefreshEnabled && (
               <span className="countdown">Next: {nextRefreshIn}s</span>
             )}
