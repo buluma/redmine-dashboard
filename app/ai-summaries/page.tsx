@@ -3,6 +3,7 @@ import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { AiSummariesClient } from "./ai-summaries-client";
 import { AiChatHistoryClient } from "./ai-chat-history-client";
+import { AiSummariesHeader } from "./ai-summaries-header";
 
 export const runtime = "nodejs";
 
@@ -65,6 +66,11 @@ export default async function AiSummariesPage() {
   const userMessages = chatMessages.filter((m) => m.role === "user").length;
   const aiMessages = chatMessages.filter((m) => m.role === "assistant").length;
 
+  // Unique issues count
+  const uniqueIssueIds = new Set(summaries.map((s) => s.issue.id));
+  const chatUniqueIssueIds = new Set(chatMessages.map((m) => m.issue.redmineIssueId));
+  const totalIssueCount = new Set([...uniqueIssueIds, ...chatUniqueIssueIds]).size;
+
   for (const s of summaries) {
     modelsUsed.set(s.model, (modelsUsed.get(s.model) ?? 0) + 1);
     statusesMap.set(s.issue.statusName, (statusesMap.get(s.issue.statusName) ?? 0) + 1);
@@ -103,20 +109,12 @@ export default async function AiSummariesPage() {
 
   return (
     <main className="dashboard">
-      <header className="card hero">
-        <div className="hero-top">
-          <div>
-            <p className="kicker">AI Insights</p>
-            <h1>AI Summaries</h1>
-            <p className="muted">
-              {totalSummaries} summary{totalSummaries !== 1 ? "ies" : "y"} · {userMessages} chat messages across {chatIssues.size} issue(s)
-            </p>
-          </div>
-          <div className="hero-actions">
-            <Link href="/" className="primary-link">Back to Dashboard</Link>
-          </div>
-        </div>
-      </header>
+      <AiSummariesHeader
+        totalSummaries={totalSummaries}
+        totalChatMessages={totalChatMessages}
+        issueCount={totalIssueCount}
+        userMessages={userMessages}
+      />
 
       {summaries.length === 0 && chatMessages.length === 0 ? (
         <section className="card">
@@ -143,7 +141,7 @@ export default async function AiSummariesPage() {
                 <p className="report-label">Total Summaries</p>
                 <p className="report-value">{totalSummaries}</p>
                 <p className="report-foot">
-                  Across {summaries.length > 0 ? "1" : "0"} issue(s)
+                  Across {uniqueIssueIds.size} issue{uniqueIssueIds.size !== 1 ? "s" : ""}
                 </p>
               </article>
 
@@ -151,7 +149,7 @@ export default async function AiSummariesPage() {
                 <p className="report-label">Chat Messages</p>
                 <p className="report-value">{totalChatMessages}</p>
                 <p className="report-foot">
-                  {userMessages} user · {aiMessages} AI · {chatIssues.size} issue(s)
+                  {userMessages} user · {aiMessages} AI · {chatIssues.size} issue{chatIssues.size !== 1 ? "s" : ""}
                 </p>
               </article>
 
@@ -255,7 +253,7 @@ export default async function AiSummariesPage() {
                 <div className="collapsible-head">
                   <h2>Chat History</h2>
                   <p className="muted">
-                    {totalChatMessages} messages across {chatIssues.size} issue(s)
+                    {totalChatMessages} messages across {chatIssues.size} issue{chatIssues.size !== 1 ? "s" : ""}
                   </p>
                 </div>
               </summary>
