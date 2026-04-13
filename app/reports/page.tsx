@@ -369,7 +369,7 @@ export default function ReportsPage() {
           value={journalTotal.toLocaleString()}
           foot={`Peak ${peakJournals.value} on ${formatDayLabel(peakJournals.key)}`}
           icon="💬"
-          tone="default"
+          tone="success"
         />
         <StatCard
           label="Open Rate"

@@ -162,7 +162,7 @@ export default async function HeimdallPage() {
               value={traces.length}
               foot={`${traceErrors.length} errors/warnings`}
               icon="📡"
-              tone="default"
+              tone="success"
             />
             <StatCard
               label="Errors & Warnings"
