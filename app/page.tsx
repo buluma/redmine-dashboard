@@ -122,6 +122,15 @@ type BootstrapInfo = {
   activeCredentials: number;
 } | null;
 
+type FilterPreset = {
+  id: string;
+  name: string;
+  statusFilter: string;
+  priorityFilter: string;
+  search: string;
+  showFavoritesOnly: boolean;
+};
+
 type SavedView = {
   id: string;
   name: string;
@@ -494,7 +503,10 @@ export default function Home() {
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [viewDraftName, setViewDraftName] = useState("");
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
+  const [filterPresets, setFilterPresets] = useState<FilterPreset[]>([]);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [hoveredIssue, setHoveredIssue] = useState<RedmineIssue | null>(null);
+  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   const [opsAlertsOpen, setOpsAlertsOpen] = useState(false);
   const [activityFeedOpen, setActivityFeedOpen] = useState(false);
   const [issueQueueOpen, setIssueQueueOpen] = useState(true);
@@ -2045,6 +2057,55 @@ export default function Home() {
                 </div>
 
                 <div className="filters-right">
+                  {/* Filter Presets */}
+                  <div className="filter-presets">
+                    <select
+                      className="preset-select"
+                      value=""
+                      onChange={(e) => {
+                        const preset = filterPresets.find((p) => p.id === e.target.value);
+                        if (preset) {
+                          setStatusFilter(preset.statusFilter);
+                          setPriorityFilter(preset.priorityFilter);
+                          setSearch(preset.search);
+                          setShowFavoritesOnly(preset.showFavoritesOnly);
+                          resetPage();
+                        }
+                      }}
+                    >
+                      <option value="">Presets</option>
+                      {filterPresets.map((preset) => (
+                        <option key={preset.id} value={preset.id}>
+                          {preset.name}
+                        </option>
+                      ))}
+                    </select>
+                    {filterPresets.length > 0 && (
+                      <button
+                        type="button"
+                        className="preset-save-btn"
+                        onClick={() => {
+                          const name = prompt("Preset name:");
+                          if (name) {
+                            setFilterPresets([
+                              ...filterPresets,
+                              {
+                                id: Date.now().toString(),
+                                name,
+                                statusFilter,
+                                priorityFilter,
+                                search,
+                                showFavoritesOnly,
+                              },
+                            ]);
+                          }
+                        }}
+                        title="Save current filters"
+                      >
+                        💾
+                      </button>
+                    )}
+                  </div>
                   <ProjectFilter
                     issues={issues}
                     selectedProject={selectedProject}
@@ -2152,7 +2213,14 @@ export default function Home() {
                             <span>#{issue.redmineIssueId}</span>
                           )}
                         </td>
-                        <td>
+                        <td
+                          onMouseEnter={(e) => {
+                            setHoveredIssue(issue);
+                            setPreviewPosition({ x: e.clientX, y: e.clientY });
+                          }}
+                          onMouseLeave={() => setHoveredIssue(null)}
+                          onMouseMove={(e) => setPreviewPosition({ x: e.clientX, y: e.clientY })}
+                        >
                           <div className="subject-cell">
                             <p>{issue.subject}</p>
                             {issue.githubLinks.length > 0 && (
@@ -2267,6 +2335,40 @@ export default function Home() {
             </>
           )}
         </article>
+
+        {/* Issue Preview Tooltip */}
+        {hoveredIssue && (
+          <div
+            className="issue-preview-tooltip"
+            style={{
+              left: previewPosition.x + 15,
+              top: previewPosition.y + 15,
+            }}
+          >
+            <div className="preview-header">
+              <span className="preview-id">#{hoveredIssue.redmineIssueId}</span>
+              <span className={`priority-badge priority-${(hoveredIssue.priority ?? "").toLowerCase().replace(/\s+/g, "-")}`}>
+                {hoveredIssue.priority}
+              </span>
+            </div>
+            <p className="preview-subject">{hoveredIssue.subject}</p>
+            <div className="preview-meta">
+              <span>Status: {hoveredIssue.statusName}</span>
+              <span>Progress: {hoveredIssue.doneRatio ?? 0}%</span>
+            </div>
+            {hoveredIssue.dueDate && (
+              <div className="preview-due">
+                Due: {new Date(hoveredIssue.dueDate).toLocaleDateString()}
+              </div>
+            )}
+            {hoveredIssue.description && (
+              <p className="preview-desc">
+                {hoveredIssue.description.slice(0, 200)}
+                {hoveredIssue.description.length > 200 && "..."}
+              </p>
+            )}
+          </div>
+        )}
       </section>
 
       {selectedIssue && (
