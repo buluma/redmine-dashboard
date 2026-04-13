@@ -2055,18 +2055,18 @@ export default function Home() {
                     }}
                   />
                   <button
-                  type="button"
-                  className={`favorite-filter ${showFavoritesOnly ? "active" : ""}`}
-                  onClick={() => {
-                    setShowFavoritesOnly(!showFavoritesOnly);
-                    resetPage();
-                  }}
-                >
-                  {showFavoritesOnly ? "★ Favorites" : "☆ Favorites"}
-                </button>
-                <ExportButton issues={visibleIssues} format="csv" />
-                <ExportButton issues={visibleIssues} format="print" />
-              </div>
+                    type="button"
+                    className={`favorite-filter ${showFavoritesOnly ? "active" : ""}`}
+                    onClick={() => {
+                      setShowFavoritesOnly(!showFavoritesOnly);
+                      resetPage();
+                    }}
+                  >
+                    {showFavoritesOnly ? "★ Favorites" : "☆ Favorites"}
+                  </button>
+                  <ExportButton issues={visibleIssues} format="csv" />
+                  <ExportButton issues={visibleIssues} format="print" />
+                </div>
 
               <div className="issues-table-wrap">
                 <table className="issues-table">
