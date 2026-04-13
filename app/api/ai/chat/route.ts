@@ -1,4 +1,4 @@
-import { getOllamaClient } from "@/src/lib/ollama";
+import { getLLMProviderManager, type LLMResponse } from "@/src/lib/llm-provider";
 import { requireCurrentUser, requireRedmineClientForUser } from "@/src/lib/auth";
 import { formatIssueForPrompt, type IssueContext } from "@/src/lib/ai-prompt";
 import { env } from "@/src/lib/env";
@@ -165,10 +165,10 @@ export async function POST(request: Request) {
       ...messages,
     ];
 
-    const client = getOllamaClient();
-    let result;
+    const manager = getLLMProviderManager();
+    let result: LLMResponse;
     try {
-      result = await client.chatWithFallback(fullMessages, { stream: false });
+      result = await manager.chat(fullMessages, { stream: false });
     } catch (error) {
       // Log failure
       await prisma.webLog.create({
@@ -191,6 +191,10 @@ export async function POST(request: Request) {
     const toBigInt = (val: number | undefined | null): bigint | null =>
       val != null ? BigInt(val) : null;
 
+    // Extract metrics from unified LLMResponse
+    const metrics = result.metrics;
+    const usage = result.usage;
+
     // Save the assistant response with performance metrics
     await prisma.aiChatMessage.create({
       data: {
@@ -198,20 +202,22 @@ export async function POST(request: Request) {
         role: "assistant",
         content: result.content,
         model: result.model,
-        totalDuration: toBigInt(result.total_duration),
-        loadDuration: toBigInt(result.load_duration),
-        promptEvalCount: result.prompt_eval_count ?? null,
-        promptEvalDuration: toBigInt(result.prompt_eval_duration),
-        evalCount: result.eval_count ?? null,
-        evalDuration: toBigInt(result.eval_duration),
+        totalDuration: toBigInt(metrics?.totalDuration ?? null),
+        loadDuration: toBigInt(metrics?.loadDuration ?? null),
+        promptEvalCount: metrics?.promptEvalCount ?? null,
+        promptEvalDuration: toBigInt(metrics?.promptEvalDuration ?? null),
+        evalCount: metrics?.evalCount ?? usage?.totalTokens ?? null,
+        evalDuration: toBigInt(metrics?.evalDuration ?? null),
       },
     });
 
     // Log success
+    const tokenCount = metrics?.evalCount ?? usage?.totalTokens ?? 0;
+    const durationMs = metrics?.totalDuration != null ? Math.round(Number(metrics.totalDuration) / 1e6) : 0;
     await prisma.webLog.create({
       data: {
         userId,
-        message: `Chat completed for issue #${redmineIssueId} — ${result.model}, ${result.eval_count ?? 0} tokens, ${result.total_duration ? Math.round(Number(result.total_duration) / 1e6) : 0}ms`,
+        message: `Chat completed for issue #${redmineIssueId} — ${result.model} (${result.provider}), ${tokenCount} tokens, ${durationMs}ms`,
         level: "info",
         source: "api",
         url: "/api/ai/chat",
@@ -219,8 +225,9 @@ export async function POST(request: Request) {
           type: "chat_complete",
           redmineIssueId,
           model: result.model,
-          tokens: result.eval_count,
-          duration: result.total_duration?.toString(),
+          provider: result.provider,
+          tokens: tokenCount,
+          duration: metrics?.totalDuration?.toString(),
         },
       },
     });
@@ -228,7 +235,7 @@ export async function POST(request: Request) {
     return Response.json({
       content: result.content,
       model: result.model,
-      usedFallback: result.usedFallback,
+      provider: result.provider,
     });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
