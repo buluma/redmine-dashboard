@@ -299,6 +299,7 @@ class IssueListScreen extends StatefulWidget {
 
 class _IssueListScreenState extends State<IssueListScreen> {
   final _search = TextEditingController();
+  final _scrollController = ScrollController();
   String _searchMode = "local";
   String _sort = "updated_desc";
   int _page = 1;
@@ -306,11 +307,17 @@ class _IssueListScreenState extends State<IssueListScreen> {
   bool _showFavoritesOnly = false;
   List<Issue> _issues = <Issue>[];
   bool _loading = false;
+  bool _loadingMore = false;
   bool _hasMore = false;
   String? _error;
 
   Future<void> _load({bool reset = false}) async {
-    if (reset) setState(() => _page = 1);
+    if (reset) {
+      setState(() {
+        _page = 1;
+        _issues = <Issue>[];
+      });
+    }
     final currentPage = reset ? 1 : _page;
 
     setState(() {
@@ -326,39 +333,52 @@ class _IssueListScreenState extends State<IssueListScreen> {
         pageSize: _pageSize,
       );
       setState(() {
-        _issues = issues;
+        if (reset) {
+          _issues = issues;
+        } else {
+          _issues.addAll(issues);
+        }
         _hasMore = issues.length >= _pageSize;
       });
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
       if (mounted) {
-        setState(() => _loading = false);
+        setState(() {
+          _loading = false;
+          _loadingMore = false;
+        });
       }
     }
   }
 
-  void _nextPage() {
-    if (!_hasMore || _loading) return;
-    setState(() => _page++);
+  void _loadMore() {
+    if (!_hasMore || _loading || _loadingMore) return;
+    setState(() {
+      _page++;
+      _loadingMore = true;
+    });
     _load();
   }
 
-  void _prevPage() {
-    if (_page <= 1 || _loading) return;
-    setState(() => _page--);
-    _load();
+  void _onScroll() {
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 300) {
+      _loadMore();
+    }
   }
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _load();
   }
 
   @override
   void dispose() {
     _search.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -501,34 +521,16 @@ class _IssueListScreenState extends State<IssueListScreen> {
               if (_loading && _issues.isEmpty) const LinearProgressIndicator(),
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    Text(
-                      "Page $_page · ${visibleIssues.length} issues",
-                      style: theme.textTheme.bodySmall,
-                    ),
-                    Row(
-                      children: <Widget>[
-                        TextButton.icon(
-                          onPressed: _page > 1 && !_loading ? _prevPage : null,
-                          icon: const Icon(Icons.chevron_left, size: 18),
-                          label: const Text("Prev"),
-                        ),
-                        TextButton.icon(
-                          onPressed: _hasMore && !_loading ? _nextPage : null,
-                          label: const Text("Next"),
-                          icon: const Icon(Icons.chevron_right, size: 18),
-                        ),
-                      ],
-                    ),
-                  ],
+                child: Text(
+                  "${visibleIssues.length} issues${_hasMore ? " · loading more..." : ""}",
+                  style: theme.textTheme.bodySmall,
                 ),
               ),
               Expanded(
                 child: visibleIssues.isEmpty
                     ? ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
+                        controller: _scrollController,
                         children: <Widget>[
                           const SizedBox(height: 56),
                           Icon(

@@ -332,8 +332,11 @@ export class SlackNotificationService {
     noteContent: string,
     authorName: string
   ): Promise<NotificationResult> {
+    logEvent("slack.internal_note.starting", { issueId, authorName });
+    
     if (!this.initialize()) {
-      return { success: true };
+      logEvent("slack.internal_note.skipped", { reason: "not_initialized" });
+      return { success: false, error: "Slack notifier not initialized" };
     }
 
     try {
@@ -342,8 +345,15 @@ export class SlackNotificationService {
       });
 
       if (!issue) {
+        logEvent("slack.internal_note.failed", { reason: "issue_not_found", issueId });
         return { success: false, error: "Issue not found" };
       }
+
+      logEvent("slack.internal_note.sending", { 
+        issueId, 
+        redmineIssueId: issue.redmineIssueId,
+        subject: issue.subject 
+      });
 
       const issueUpdate = this.toIssueUpdate(this.toIssueState(issue));
       await this.notifier!.notifyInternalNoteAdded(issueUpdate, noteContent, authorName);
