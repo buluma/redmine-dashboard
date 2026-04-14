@@ -1,7 +1,6 @@
 # TODO
 
 ## In Progress
-- [ ] add a timeline reports to heimdall
 
 ## Pending
 
@@ -11,7 +10,7 @@
 
 ## Stalled
 
-- [ ] wakatime api integration for worktime tracking - https://wakatime.com/developers/#authentication
+- [ ] wakatime api integration for worktime tracking - https://wakatime.com/developers, https://wakatime.com/developers/#authentication
 
 ## Done
 
