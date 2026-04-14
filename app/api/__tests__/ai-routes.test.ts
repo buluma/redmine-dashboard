@@ -3,10 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockRequireCurrentUser = vi.fn();
 const mockRequireMobileUser = vi.fn();
 const mockRequireRedmineClientForUser = vi.fn();
-const mockPrisma = {
+const mockPrisma: Record<string, Record<string, ReturnType<typeof vi.fn>>> = {
   issue: { findFirst: vi.fn() },
   webLog: { create: vi.fn() },
   aiSummary: { findFirst: vi.fn(), upsert: vi.fn() },
+  aiChatMessage: { deleteMany: vi.fn() },
 };
 const mockGetLLMProviderManager = vi.fn();
 const mockEnv = {
@@ -322,7 +323,7 @@ describe("AI chat route", () => {
     it("clears chat history successfully", async () => {
       mockRequireCurrentUser.mockResolvedValue({ id: "user_1" });
       mockPrisma.issue.findFirst.mockResolvedValue({ id: "issue_1" });
-      mockPrisma.aiChatMessage = { deleteMany: vi.fn().mockResolvedValue({ count: 5 }) };
+      mockPrisma.aiChatMessage.deleteMany.mockResolvedValue({ count: 5 });
 
       const { DELETE } = await import("@/app/api/ai/chat/route");
       const request = new Request("http://localhost/api/ai/chat?redmineIssueId=123", {
