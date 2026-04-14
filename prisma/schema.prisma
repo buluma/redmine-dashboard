@@ -473,3 +473,39 @@ model Trace {
   @@index([logLevel, createdAt(sort: Desc)])
   @@map("traces")
 }
+
+// Audit Log - Tracks all mutations for compliance
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?  // null for system actions
+  userEmail   String?  // cached for display
+  action      String   // CREATE, READ, UPDATE, DELETE
+  entityType  String   // e.g., "Issue", "InternalNote", "TimeEntry"
+  entityId    String?  // ID of affected entity
+  changes     Json?   // { field: { old: x, new: y } }
+  ipAddress   String?  // Client IP
+  userAgent   String?  // Client user agent
+  metadata    Json?    // Additional context (e.g., redmineIssueId)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+// API Rate Limit - Track requests per user/IP for rate limiting
+model ApiRateLimit {
+  id        String   @id @default(cuid())
+  key       String   // userId or IP address
+  keyType   String   // "user" or "ip"
+  endpoint  String   // API endpoint pattern
+  count     Int      @default(1)
+  windowStart DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([key, keyType, endpoint])
+  @@index([key, windowStart])
+}

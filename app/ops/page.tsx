@@ -49,9 +49,22 @@ type WebLog = {
   createdAt: string;
 };
 
+type Metrics = {
+  issues: number;
+  users: number;
+  syncJobs: number;
+  auditLogs24h: number;
+  webLogs24h: number;
+  internalNotes: number;
+  activeUsers: number;
+};
+
 type HealthPayload = {
   status: "ok" | "degraded";
   timestamp: string;
+  uptime: number;
+  version: string;
+  environment: string;
   checks: {
     database: {
       ok: boolean;
@@ -80,6 +93,7 @@ type HealthPayload = {
       heartbeatAt?: string;
       expiresAt?: string;
     };
+    metrics: Metrics;
   };
 };
 
@@ -363,6 +377,36 @@ export default function OpsPage() {
                 <p><strong>Owner:</strong> {health?.checks?.logPoller?.leaderLockOwnerId ?? "-"}</p>
                 <p><strong>Heartbeat:</strong> {formatDateTime(health?.checks?.logPoller?.heartbeatAt ?? null)}</p>
                 <p><strong>Expires:</strong> {formatDateTime(health?.checks?.logPoller?.expiresAt ?? null)}</p>
+              </div>
+            </article>
+          </section>
+
+          <section className="ops-grid">
+            <article className="card">
+              <h2>System Metrics</h2>
+              <div className="ops-kv">
+                <p><strong>Version:</strong> {health?.version ?? "-"}</p>
+                <p><strong>Environment:</strong> {health?.environment ?? "-"}</p>
+                <p><strong>Uptime:</strong> {health?.uptime ? `${Math.floor(health.uptime / 86400)}d ${Math.floor((health.uptime % 86400) / 3600)}h ${Math.floor((health.uptime % 3600) / 60)}m` : "-"}</p>
+              </div>
+            </article>
+
+            <article className="card">
+              <h2>Data Metrics</h2>
+              <div className="ops-kv">
+                <p><strong>Issues:</strong> {health?.checks?.metrics?.issues?.toLocaleString() ?? "-"}</p>
+                <p><strong>Users:</strong> {health?.checks?.metrics?.users ?? "-"}</p>
+                <p><strong>Active Users (24h):</strong> {health?.checks?.metrics?.activeUsers ?? "-"}</p>
+                <p><strong>Internal Notes:</strong> {health?.checks?.metrics?.internalNotes?.toLocaleString() ?? "-"}</p>
+              </div>
+            </article>
+
+            <article className="card">
+              <h2>Activity Metrics (24h)</h2>
+              <div className="ops-kv">
+                <p><strong>Sync Jobs:</strong> {health?.checks?.metrics?.syncJobs ?? "-"}</p>
+                <p><strong>Audit Logs:</strong> {health?.checks?.metrics?.auditLogs24h?.toLocaleString() ?? "-"}</p>
+                <p><strong>Web Logs:</strong> {health?.checks?.metrics?.webLogs24h?.toLocaleString() ?? "-"}</p>
               </div>
             </article>
           </section>
