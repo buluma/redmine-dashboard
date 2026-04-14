@@ -408,99 +408,77 @@ class _IssueListScreenState extends State<IssueListScreen> {
           child: Column(
             children: <Widget>[
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Column(
-                      children: <Widget>[
-                        Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: TextField(
-                                controller: _search,
-                                decoration: const InputDecoration(
-                                  labelText: "Search issues",
-                                  prefixIcon: Icon(Icons.search),
-                                ),
-                                textInputAction: TextInputAction.search,
-                                onSubmitted: (_) => _load(reset: true),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton.icon(
-                              onPressed: _loading
-                                  ? null
-                                  : () => _load(reset: true),
-                              icon: const Icon(Icons.sync),
-                              label: const Text("Load"),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                key: ValueKey<String>("sort-$_sort"),
-                                initialValue: _sort,
-                                decoration: const InputDecoration(
-                                  labelText: "Sort",
-                                ),
-                                items: const <DropdownMenuItem<String>>[
-                                  DropdownMenuItem(
-                                    value: "updated_desc",
-                                    child: Text("Updated ↓"),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: "updated_asc",
-                                    child: Text("Updated ↑"),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: "priority",
-                                    child: Text("Priority"),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: "due_date",
-                                    child: Text("Due Date"),
-                                  ),
-                                ],
-                                onChanged: (value) {
-                                  if (value == null) return;
-                                  setState(() => _sort = value);
-                                  _load(reset: true);
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                key: ValueKey<String>("mode-$_searchMode"),
-                                initialValue: _searchMode,
-                                decoration: const InputDecoration(
-                                  labelText: "Mode",
-                                ),
-                                items: const <DropdownMenuItem<String>>[
-                                  DropdownMenuItem(
-                                    value: "local",
-                                    child: Text("Local"),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: "hybrid",
-                                    child: Text("Hybrid"),
-                                  ),
-                                ],
-                                onChanged: (value) {
-                                  if (value == null) return;
-                                  setState(() => _searchMode = value);
-                                  _load(reset: true);
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                child: SearchBar(
+                  controller: _search,
+                  hintText: "Search issues",
+                  leading: const Icon(Icons.search),
+                  trailing: <Widget>[
+                    IconButton(
+                      icon: Icon(
+                        _loading ? Icons.hourglass_bottom : Icons.sync,
+                      ),
+                      onPressed: _loading ? null : () => _load(reset: true),
+                      tooltip: "Refresh",
                     ),
+                  ],
+                  onSubmitted: (_) => _load(reset: true),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: <Widget>[
+                      FilterChip(
+                        label: const Text("Updated ↓"),
+                        selected: _sort == "updated_desc",
+                        onSelected: (_) {
+                          setState(() => _sort = "updated_desc");
+                          _load(reset: true);
+                        },
+                      ),
+                      const SizedBox(width: 6),
+                      FilterChip(
+                        label: const Text("Updated ↑"),
+                        selected: _sort == "updated_asc",
+                        onSelected: (_) {
+                          setState(() => _sort = "updated_asc");
+                          _load(reset: true);
+                        },
+                      ),
+                      const SizedBox(width: 6),
+                      FilterChip(
+                        label: const Text("Priority"),
+                        selected: _sort == "priority",
+                        onSelected: (_) {
+                          setState(() => _sort = "priority");
+                          _load(reset: true);
+                        },
+                      ),
+                      const SizedBox(width: 6),
+                      FilterChip(
+                        label: const Text("Due Date"),
+                        selected: _sort == "due_date",
+                        onSelected: (_) {
+                          setState(() => _sort = "due_date");
+                          _load(reset: true);
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      FilterChip(
+                        avatar: const Icon(Icons.cloud, size: 16),
+                        label: const Text("Hybrid"),
+                        selected: _searchMode == "hybrid",
+                        onSelected: (_) {
+                          setState(() {
+                            _searchMode = _searchMode == "hybrid" ? "local" : "hybrid";
+                          });
+                          _load(reset: true);
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -578,127 +556,166 @@ class _IssueListScreenState extends State<IssueListScreen> {
                         itemBuilder: (context, index) {
                           final issue = visibleIssues[index];
                           final isDone = _isDoneStatus(issue.statusName);
-                          final statusBg = isDone
-                              ? scheme.tertiaryContainer
-                              : scheme.primaryContainer;
-                          final statusFg = isDone
-                              ? scheme.onTertiaryContainer
-                              : scheme.onPrimaryContainer;
-                          final priorityBg = _isHighPriority(issue.priority)
-                              ? scheme.secondaryContainer
-                              : scheme.surfaceContainerHighest;
-                          final priorityFg = _isHighPriority(issue.priority)
-                              ? scheme.onSecondaryContainer
+                          final priorityColor = _isHighPriority(issue.priority)
+                              ? scheme.error
                               : scheme.onSurfaceVariant;
+
+                          final isLocal = issue.source == "local";
 
                           return Card(
                             margin: const EdgeInsets.symmetric(
                               horizontal: 12,
-                              vertical: 6,
+                              vertical: 4,
                             ),
+                            clipBehavior: Clip.antiAlias,
+                            shape: isLocal
+                                ? RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: BorderSide(
+                                      color: scheme.tertiary.withValues(alpha: 0.3),
+                                      width: 1,
+                                    ),
+                                  )
+                                : null,
                             child: ListTile(
                               contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
+                                horizontal: 14,
+                                vertical: 8,
                               ),
-                              leading: Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: scheme.primaryContainer,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                alignment: Alignment.center,
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    issue.source == "local"
-                                        ? "L${issue.localIssueNumber ?? "?"}"
-                                        : "#${issue.redmineIssueId ?? "?"}",
-                                    style: theme.textTheme.labelMedium
-                                        ?.copyWith(
-                                          color: scheme.onPrimaryContainer,
-                                          fontWeight: FontWeight.w700,
-                                        ),
+                              leading: Stack(
+                                clipBehavior: Clip.none,
+                                children: <Widget>[
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: isDone
+                                          ? scheme.tertiaryContainer
+                                          : _isHighPriority(issue.priority)
+                                              ? scheme.errorContainer
+                                              : scheme.primaryContainer,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        isLocal
+                                            ? "L${issue.localIssueNumber ?? "?"}"
+                                            : "#${issue.redmineIssueId ?? "?"}",
+                                        style: theme.textTheme.labelMedium
+                                            ?.copyWith(
+                                              color: isDone
+                                                  ? scheme.onTertiaryContainer
+                                                  : _isHighPriority(issue.priority)
+                                                      ? scheme.onErrorContainer
+                                                      : scheme.onPrimaryContainer,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  if (isLocal)
+                                    Positioned(
+                                      right: -4,
+                                      top: -4,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: BoxDecoration(
+                                          color: scheme.tertiary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.person,
+                                          size: 8,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                               title: Text(
                                 issue.subject,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                              ),
-                              subtitle: Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    if (issue.projectName != null &&
-                                        issue.projectName!.trim().isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 6,
-                                        ),
-                                        child: Text(
-                                          issue.projectName!,
-                                          style: theme.textTheme.bodySmall
-                                              ?.copyWith(
-                                                color: scheme.onSurfaceVariant,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                        ),
-                                      ),
-                                    Wrap(
-                                      spacing: 6,
-                                      runSpacing: 6,
-                                      children: <Widget>[
-                                        Chip(
-                                          label: Text(issue.statusName),
-                                          backgroundColor: statusBg,
-                                          labelStyle: TextStyle(
-                                            color: statusFg,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                          visualDensity: VisualDensity.compact,
-                                        ),
-                                        Chip(
-                                          label: Text(
-                                            issue.priority ?? "No priority",
-                                          ),
-                                          backgroundColor: priorityBg,
-                                          labelStyle: TextStyle(
-                                            color: priorityFg,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                          visualDensity: VisualDensity.compact,
-                                        ),
-                                        if (issue.assignedToName != null)
-                                          Chip(
-                                            label: Text(
-                                              "Assigned: ${issue.assignedToName!}",
-                                            ),
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                          ),
-                                      ],
-                                    ),
-                                  ],
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              trailing: Row(
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  if (issue.projectName != null &&
+                                      issue.projectName!.trim().isNotEmpty)
+                                    Text(
+                                      issue.projectName!,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: scheme.onSurfaceVariant,
+                                          ),
+                                    ),
+                                  if (issue.assignedToName != null)
+                                    Text(
+                                      issue.assignedToName!,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: scheme.onSurfaceVariant,
+                                          ),
+                                    ),
+                                ],
+                              ),
+                              trailing: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 mainAxisSize: MainAxisSize.min,
                                 children: <Widget>[
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isDone
+                                          ? scheme.tertiaryContainer
+                                          : scheme.primaryContainer,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      issue.statusName,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDone
+                                            ? scheme.onTertiaryContainer
+                                            : scheme.onPrimaryContainer,
+                                      ),
+                                    ),
+                                  ),
+                                  if (issue.priority != null) ...<Widget>[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      issue.priority!,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: priorityColor,
+                                          ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 2),
                                   Icon(
                                     issue.isFavorited
                                         ? Icons.star
-                                        : Icons.star_border,
+                                        : Icons.chevron_right,
                                     color: issue.isFavorited
                                         ? scheme.secondary
                                         : scheme.outline,
-                                    size: 20,
+                                    size: 18,
                                   ),
-                                  const SizedBox(width: 4),
-                                  const Icon(Icons.chevron_right),
                                 ],
                               ),
                               onTap: () async {
@@ -788,12 +805,67 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   int? _timeActivityId;
   bool _timeLoading = false;
 
-  String _normalizeIssueDescription(String? input) {
-    if (input == null || input.trim().isEmpty) {
-      return "(No description)";
-    }
+  bool _isHighPriority(String? value) {
+    final normalized = (value ?? "").toLowerCase();
+    return normalized.contains("urgent") ||
+        normalized.contains("high") ||
+        normalized.contains("critical") ||
+        normalized.contains("immediate");
+  }
 
-    var out = input;
+  bool _isDoneStatus(String value) {
+    final normalized = value.toLowerCase();
+    return normalized.contains("closed") ||
+        normalized.contains("resolved") ||
+        normalized.contains("done");
+  }
+
+  String _formatDateShort(String dateStr) {
+    try {
+      final d = DateTime.parse(dateStr);
+      return "${d.day}/${d.month}";
+    } catch (_) {
+      return dateStr.substring(0, 10);
+    }
+  }
+
+  Widget _buildSkeleton(ThemeData theme) {
+    final scheme = theme.colorScheme;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+      children: <Widget>[
+        // Hero skeleton
+        Container(
+          height: 120,
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Section skeletons
+        for (int i = 0; i < 4; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _normalizeIssueDescription(String? input) {
+    if (input == null || input.trim().isEmpty) return "";
+    String out = input;
+    // Textile → Markdown approximations
 
     // Strip Redmine TOC/notextile macros that do not map to flutter_markdown.
     out = out
@@ -899,40 +971,41 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
       }
     }
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      clipBehavior: Clip.antiAlias,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 0),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+            width: 0.5,
+          ),
+        ),
+      ),
       child: Theme(
         data: theme.copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           key: ValueKey<String>("$sectionId:$expanded"),
-          tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
           initiallyExpanded: expanded,
           onExpansionChanged: onExpandedChanged,
           iconColor: scheme.primary,
           collapsedIconColor: scheme.onSurfaceVariant,
           title: Row(
             children: <Widget>[
-              Container(
-                width: 26,
-                height: 26,
-                decoration: BoxDecoration(
-                  color: scheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  sectionIcon(sectionId),
-                  size: 14,
-                  color: scheme.onPrimaryContainer,
-                ),
+              Icon(
+                sectionIcon(sectionId),
+                size: 18,
+                color: expanded ? scheme.primary : scheme.onSurfaceVariant,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: expanded ? scheme.onSurface : scheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -1597,7 +1670,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? _buildSkeleton(theme)
           : _error != null
           ? Center(
               child: Text(
@@ -1615,7 +1688,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                   Container(
                     width: double.infinity,
                     margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: <Color>[
@@ -1625,46 +1698,216 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: theme.colorScheme.outlineVariant.withValues(
-                          alpha: 0.7,
+                          alpha: 0.5,
                         ),
                       ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text(
-                          _issue!.source == "local"
-                              ? "L${_issue!.localIssueNumber ?? "?"}"
-                              : "#${_issue!.redmineIssueId ?? "?"}",
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            color: theme.colorScheme.onPrimaryContainer,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _issue!.subject,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        if (_issue!.projectName != null &&
-                            _issue!.projectName!.trim().isNotEmpty) ...<Widget>[
-                          const SizedBox(height: 6),
-                          Text(
-                            _issue!.projectName!,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w600,
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text(
+                                    _issue!.source == "local"
+                                        ? "L${_issue!.localIssueNumber ?? "?"}"
+                                        : "#${_issue!.redmineIssueId ?? "?"}",
+                                    style: theme.textTheme.labelMedium?.copyWith(
+                                      color: theme.colorScheme.onPrimaryContainer
+                                          .withValues(alpha: 0.7),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _issue!.subject,
+                                    style: theme.textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  if (_issue!.projectName != null &&
+                                      _issue!.projectName!.trim().isNotEmpty)
+                                    Text(
+                                      _issue!.projectName!,
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant
+                                            .withValues(alpha: 0.8),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _isDoneStatus(_issue!.statusName)
+                                    ? theme.colorScheme.tertiaryContainer
+                                    : theme.colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                _issue!.statusName,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: _isDoneStatus(_issue!.statusName)
+                                      ? theme.colorScheme.onTertiaryContainer
+                                      : theme.colorScheme.onPrimaryContainer,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: <Widget>[
+                            if (_issue!.priority != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _isHighPriority(_issue!.priority)
+                                      ? theme.colorScheme.errorContainer
+                                      : theme.colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  _issue!.priority!,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: _isHighPriority(_issue!.priority)
+                                        ? theme.colorScheme.onErrorContainer
+                                        : theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            if (_issue!.assignedToName != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.secondaryContainer,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Icon(
+                                      Icons.person_outline,
+                                      size: 12,
+                                      color: theme.colorScheme.onSecondaryContainer,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      _issue!.assignedToName!,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: theme.colorScheme.onSecondaryContainer,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (_issue!.dueDate != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Icon(
+                                      Icons.calendar_today,
+                                      size: 10,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      _formatDateShort(_issue!.dueDate!),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
+                  // Parent breadcrumbs inline
+                  if (_issue!.parentIssueLabel != null &&
+                      _issue!.parentIssueId != null)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: theme.colorScheme.outlineVariant.withValues(
+                            alpha: 0.3,
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          Icon(
+                            Icons.arrow_upward,
+                            size: 14,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Parent: ",
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              _issue!.parentIssueLabel!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -1712,6 +1955,12 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
+                  Card(
+                    clipBehavior: Clip.antiAlias,
+                    margin: EdgeInsets.zero,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
                   _sectionCard(
                     context: context,
                     sectionId: "overview",
@@ -2613,6 +2862,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                       ],
                     ),
                   ),
+                  ],
+                ),
+              ),
                 ],
               ),
             ),
