@@ -1743,23 +1743,23 @@ export default function IssueDetailPage() {
         </article>
 
         <div className="issue-tabs" ref={tabsRef}>
-          <Link href={`/issues/${issue.redmineIssueId}?tab=history`} scroll={false} className={activeTab === "history" ? "active" : ""}>
+          <Link href={`/issues/${issue.id}?tab=history`} scroll={false} className={activeTab === "history" ? "active" : ""}>
             History
             <span className="tab-count">{historyJournals.length}</span>
           </Link>
-          <Link href={`/issues/${issue.redmineIssueId}?tab=notes`} scroll={false} className={activeTab === "notes" ? "active" : ""}>
+          <Link href={`/issues/${issue.id}?tab=notes`} scroll={false} className={activeTab === "notes" ? "active" : ""}>
             Notes
             <span className="tab-count">{noteJournals.length}</span>
           </Link>
-          <Link href={`/issues/${issue.redmineIssueId}?tab=internal-notes`} scroll={false} className={activeTab === "internal-notes" ? "active" : ""}>
+          <Link href={`/issues/${issue.id}?tab=internal-notes`} scroll={false} className={activeTab === "internal-notes" ? "active" : ""}>
             Internal Notes
             <span className="tab-count">{internalNotes.length}</span>
           </Link>
-          <Link href={`/issues/${issue.redmineIssueId}?tab=properties`} scroll={false} className={activeTab === "properties" ? "active" : ""}>
+          <Link href={`/issues/${issue.id}?tab=properties`} scroll={false} className={activeTab === "properties" ? "active" : ""}>
             Property changes
             <span className="tab-count">{propertyJournals.length}</span>
           </Link>
-          <Link href={`/issues/${issue.redmineIssueId}?tab=time_entries`} scroll={false} className={activeTab === "time_entries" ? "active" : ""}>
+          <Link href={`/issues/${issue.id}?tab=time_entries`} scroll={false} className={activeTab === "time_entries" ? "active" : ""}>
             Spent time
             <span className="tab-count">{issue.timeEntries.length}</span>
           </Link>
