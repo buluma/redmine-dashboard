@@ -1,7 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Sora, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ErrorLoggerProvider } from "@/src/components/ErrorLoggerProvider";
+import { OfflineBanner } from "@/src/components/OfflineBanner";
+import { SyncQueueInitializer } from "@/src/components/SyncQueueInitializer";
 
 const sora = Sora({
   variable: "--font-geist-sans",
@@ -21,6 +23,20 @@ const display = Space_Grotesk({
 export const metadata: Metadata = {
   title: "Converge",
   description: "Unified operations dashboard: Redmine issues, Slack messages, AI insights, and more.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Converge",
+  },
+  icons: {
+    icon: "/icons/icon-512x512.png",
+    apple: "/icons/icon-512x512.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#6366f1",
 };
 
 export default function RootLayout({
@@ -32,6 +48,8 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${sora.variable} ${mono.variable} ${display.variable}`}>
         <ErrorLoggerProvider>
+          <OfflineBanner />
+          <SyncQueueInitializer />
           {children}
         </ErrorLoggerProvider>
       </body>

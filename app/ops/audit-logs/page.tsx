@@ -22,7 +22,7 @@ export default async function AuditLogsPage() {
         <section className="card">
           <h1>Access Denied</h1>
           <p className="muted">You don't have permission to view audit logs.</p>
-          <a href="/" className="secondary-button">Back to Dashboard</a>
+          <a href="/" className="primary-link nav-link">Back to Dashboard</a>
         </section>
       </main>
     );
@@ -65,9 +65,9 @@ export default async function AuditLogsPage() {
             </p>
           </div>
           <div className="hero-actions">
-            <a href="/ops" className="secondary-button">
+            <Link href="/ops" className="primary-link nav-link">
               ← Back to Ops
-            </a>
+            </Link>
           </div>
         </div>
       </header>
