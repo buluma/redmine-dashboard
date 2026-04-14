@@ -647,9 +647,9 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
         }
 
         .filter-toggle.active {
-          background: #8b5cf6;
+          background: var(--accent);
           color: white;
-          border-color: #8b5cf6;
+          border-color: var(--accent);
         }
 
         .export-btn {
@@ -676,13 +676,13 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
           border: none;
           background: none;
           font-size: 0.8rem;
-          color: #8b5cf6;
+          color: var(--accent);
           cursor: pointer;
           text-decoration: underline;
         }
 
         .clear-filters-btn:hover {
-          color: #7c3aed;
+          color: var(--accent-strong);
         }
 
         .filters-panel {

@@ -141,8 +141,8 @@ export function WakatimeChartsClient({ stats, summaries, allTime, today }: Props
           </div>
           <AreaChart
             points={dailyTrend}
-            stroke="#6366f1"
-            fill="#8b5cf6"
+            stroke="#006d77"
+            fill="#00515a"
             height={120}
             tooltipLabel={(k, v) => `${k.slice(0, 10)}: ${v}h`}
           />

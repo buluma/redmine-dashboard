@@ -228,7 +228,7 @@ export default async function HeimdallPage() {
                       value: traceTrendMap.get(date) ?? 0,
                     })) }
                   ]}
-                  colors={['#6366f1', '#10b981', '#f59e0b']}
+                  colors={['#006d77', '#10b981', '#f59e0b']}
                 />
               </div>
             </details>

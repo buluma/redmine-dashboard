@@ -95,7 +95,7 @@ const DEFAULT_FILTERS: ReportsFilters = {
   assignees: "",
 };
 
-const DONUT_COLORS = ["#6366f1", "#8b5cf6", "#34d399", "#fbbf24", "#f87171", "#38bdf8", "#fb923c", "#a3e635", "#e879f9", "#2dd4bf"];
+const DONUT_COLORS = ["#006d77", "#00515a", "#34d399", "#fbbf24", "#f87171", "#38bdf8", "#fb923c", "#a3e635", "#e879f9", "#2dd4bf"];
 
 function formatDayLabel(key: string): string {
   const d = new Date(`${key}T00:00:00`);

@@ -198,7 +198,7 @@ export function formatSeconds(totalSeconds: number): string {
 
 /** Chart color palette */
 export const CHART_COLORS = [
-  "#6366f1", "#8b5cf6", "#a78bfa", "#34d399", "#fbbf24",
-  "#f87171", "#38bdf8", "#fb923c", "#a3e635", "#e879f9",
-  "#06b6d4", "#84cc16", "#f43f5e", "#14b8a6", "#eab308",
+  "#006d77", "#00515a", "#34d399", "#fbbf24", "#f87171",
+  "#38bdf8", "#fb923c", "#a3e635", "#e879f9", "#06b6d4",
+  "#84cc16", "#f43f5e", "#14b8a6", "#eab308", "#10b981",
 ];

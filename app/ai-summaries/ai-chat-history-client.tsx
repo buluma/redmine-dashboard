@@ -557,9 +557,9 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
         }
 
         .view-toggle-btn.active {
-          background: #8b5cf6;
+          background: var(--accent);
           color: white;
-          border-color: #8b5cf6;
+          border-color: var(--accent);
         }
 
         .chat-results {
@@ -599,7 +599,7 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
 
         .chat-issue-link {
           font-weight: 600;
-          color: #8b5cf6;
+          color: var(--accent);
           text-decoration: none;
           font-family: monospace;
         }
