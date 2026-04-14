@@ -119,9 +119,6 @@ export default async function AiSummariesPage() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6);
 
-  const topProjects = Array.from(projectsMap.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6);
 
   const allModels = new Map<string, { summaries: number; chat: number; inputTokens: number; outputTokens: number }>();
   
@@ -145,10 +142,6 @@ export default async function AiSummariesPage() {
     });
   }
 
-  const topChatModels = Array.from(chatModelsUsed.entries())
-    .map(([model, data]) => ({ model, ...data }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
   const topChatIssues = Array.from(chatIssues.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
@@ -168,17 +161,6 @@ export default async function AiSummariesPage() {
     }
   }
   avgSummaryDuration = summaryCount > 0 ? avgSummaryDuration / summaryCount : 0;
-
-  let avgChatDuration = 0;
-  let chatCount = 0;
-  for (const m of chatMessages) {
-    if (m.totalDuration) {
-      const ms = Number(m.totalDuration) / 1_000_000;
-      avgChatDuration += ms;
-      chatCount++;
-    }
-  }
-  avgChatDuration = chatCount > 0 ? avgChatDuration / chatCount : 0;
 
   // Calculate total tokens
   let totalInputTokens = 0;

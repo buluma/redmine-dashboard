@@ -121,7 +121,7 @@ function ReportsLoadingShell() {
         <div className="skeleton-line skeleton-title" />
         <div className="skeleton-line skeleton-subtitle" />
       </header>
-      <div className="reports-stats-grid">
+      <div className="reports-stats-grid reports-stats-grid--four">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="stat-card stat-skeleton">
             <div className="skeleton-line skeleton-label" />
@@ -349,7 +349,7 @@ export default function ReportsPage() {
       </section>
 
       {/* Stats Grid */}
-      <div className="reports-stats-grid">
+      <div className="reports-stats-grid reports-stats-grid--four">
         <StatCard
           label="Total Issues"
           value={stats.totalIssues.toLocaleString()}

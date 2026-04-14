@@ -170,7 +170,7 @@ export default async function HeimdallPage() {
       ) : (
         <>
           {/* Stats Grid */}
-          <div className="reports-stats-grid">
+          <div className="reports-stats-grid reports-stats-grid--four">
             <StatCard
               label="MBU Logs"
               value={mbuLogs.length}
@@ -213,7 +213,7 @@ export default async function HeimdallPage() {
 
               <div className="ai-overview">
                 <StackedBarChart
-                  showValue={false}
+                  showValue
                   series={[
                     { name: "MBU Logs", data: trendDates.map(date => ({
                       label: date,
@@ -296,16 +296,16 @@ export default async function HeimdallPage() {
               </div>
 
               {/* Top Scripts */}
-              <div className="ai-overview-card">
+              <div className="ai-overview-card heimdall-top-scripts-card">
                 <h4>Top Scripts</h4>
                 {topScripts.length === 0 ? (
                   <p className="muted">No scripts yet.</p>
                 ) : (
-                  <div className="ai-list">
+                  <div className="ai-list heimdall-top-scripts-list">
                     {topScripts.map(([name, count]) => (
                       <div key={name} className="ai-list-row">
                         <span className="ai-list-name" title={name}>
-                          {name.length > 40 ? name.slice(0, 40) + "…" : name}
+                          {name}
                         </span>
                         <span className="ai-list-count">{count}</span>
                       </div>
