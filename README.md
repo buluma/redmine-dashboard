@@ -1,5 +1,7 @@
 # Converge
 
+[![wakatime](https://wakatime.com/badge/user/e8f29333-72db-4baf-8f93-841fc817ac0f/project/222a29fc-a242-4b02-9674-a1b9c640d766.svg)](https://wakatime.com/badge/user/e8f29333-72db-4baf-8f93-841fc817ac0f/project/222a29fc-a242-4b02-9674-a1b9c640d766)
+
 Converge is a unified operations dashboard connecting Redmine, Slack, AI, and more.
 It provides fast local reads from a synced cache, with all final state owned by Redmine.
 
