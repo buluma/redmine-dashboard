@@ -107,34 +107,49 @@ export class SlackNotifier {
 
     const link = this.buildIssueLink(issue.redmineIssueId);
     const projectInfo = issue.projectName ? `[${issue.projectName}]` : "";
-    const assigneeInfo = issue.assignedToName ? ` → ${issue.assignedToName}` : "";
 
-    const blocks = [
+    const blocks: (Block | KnownBlock)[] = [
       {
         type: "header",
         text: {
           type: "plain_text",
-          text: `📋 New Issue #${issue.redmineIssueId}`,
+          text: issue.redmineIssueId 
+            ? `✨ New Issue #${issue.redmineIssueId}: ${issue.subject}` 
+            : `✨ New Issue: ${issue.subject}`,
           emoji: true,
         },
       },
-      {
+    ];
+
+    if (issue.assignedToName) {
+      blocks.push({
         type: "section",
         text: {
           type: "mrkdwn",
-          text: `*${issue.subject}*${assigneeInfo}`,
+          text: `👤 *Assigned to:* ${issue.assignedToName}`,
         },
-      },
+      });
+    }
+
+    blocks.push(
+      { type: "divider" } as Block,
       {
         type: "context",
         elements: [
           {
             type: "mrkdwn",
-            text: `${projectInfo} ${issue.statusName} · ${issue.priorityName || "No priority"} · ${this.formatTimestamp(issue.updatedAt)}${link ? ` · <${link}|View in Redmine>` : ""}`,
+            text: [
+              projectInfo,
+              issue.statusName ? `📋 ${issue.statusName}` : null,
+              issue.priorityName ? `🔺 ${issue.priorityName}` : null,
+              issue.assignedToName ? `👤 ${issue.assignedToName}` : null,
+              this.formatTimestamp(issue.updatedAt),
+              link ? `<${link}|View in Redmine>` : null,
+            ].filter(Boolean).join(" · "),
           },
         ],
       },
-    ];
+    );
 
     await this.sendMessage(blocks);
   }
@@ -159,20 +174,15 @@ export class SlackNotifier {
       .map((c) => this.formatFieldChange(c))
       .join("\n");
 
-    const blocks = [
+    const blocks: (Block | KnownBlock)[] = [
       {
         type: "header",
         text: {
           type: "plain_text",
-          text: `✏️ Issue #${issue.redmineIssueId} Updated`,
+          text: issue.redmineIssueId 
+            ? `✏️ Issue #${issue.redmineIssueId}: ${issue.subject}` 
+            : `✏️ Issue: ${issue.subject}`,
           emoji: true,
-        },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*${issue.subject}*`,
         },
       },
       {
@@ -182,12 +192,19 @@ export class SlackNotifier {
           text: changesText,
         },
       },
+      { type: "divider" },
       {
         type: "context",
         elements: [
           {
             type: "mrkdwn",
-            text: `${projectInfo} ${issue.statusName}${link ? ` · <${link}|View in Redmine>` : ""}`,
+            text: [
+              projectInfo,
+              issue.statusName ? `📋 ${issue.statusName}` : null,
+              issue.priorityName ? `🔺 ${issue.priorityName}` : null,
+              issue.assignedToName ? `👤 ${issue.assignedToName}` : null,
+              link ? `<${link}|View in Redmine>` : null,
+            ].filter(Boolean).join(" · "),
           },
         ],
       },
@@ -200,28 +217,30 @@ export class SlackNotifier {
     const link = this.buildIssueLink(issue.redmineIssueId);
     const projectInfo = issue.projectName ? `[${issue.projectName}]` : "";
 
-    const blocks = [
+    const blocks: (Block | KnownBlock)[] = [
       {
         type: "header",
         text: {
           type: "plain_text",
-          text: `✅ Issue #${issue.redmineIssueId} Closed`,
+          text: issue.redmineIssueId 
+            ? `✅ Issue #${issue.redmineIssueId}: ${issue.subject}` 
+            : `✅ Issue: ${issue.subject}`,
           emoji: true,
         },
       },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*${issue.subject}*`,
-        },
-      },
+      { type: "divider" },
       {
         type: "context",
         elements: [
           {
             type: "mrkdwn",
-            text: `${projectInfo} Completed by ${issue.assignedToName || "Unknown"}${link ? ` · <${link}|View in Redmine>` : ""}`,
+            text: [
+              projectInfo,
+              `🏁 Closed`,
+              issue.assignedToName ? `👤 Was: ${issue.assignedToName}` : null,
+              this.formatTimestamp(issue.updatedAt),
+              link ? `<${link}|View in Redmine>` : null,
+            ].filter(Boolean).join(" · "),
           },
         ],
       },
@@ -236,32 +255,47 @@ export class SlackNotifier {
     const link = this.buildIssueLink(issue.redmineIssueId);
     const projectInfo = issue.projectName ? `[${issue.projectName}]` : "";
 
-    const blocks = [
+    const blocks: (Block | KnownBlock)[] = [
       {
         type: "header",
         text: {
           type: "plain_text",
-          text: `👤 Issue #${issue.redmineIssueId} Assigned`,
+          text: issue.redmineIssueId 
+            ? `👤 Issue #${issue.redmineIssueId}: ${issue.subject}` 
+            : `👤 Issue: ${issue.subject}`,
           emoji: true,
         },
       },
-      {
+    ];
+
+    // Show assignment change
+    if (previousAssignee || issue.assignedToName) {
+      blocks.push({
         type: "section",
         text: {
           type: "mrkdwn",
-          text: `*${issue.subject}*`,
+          text: `${previousAssignee || "Nobody"} → *${issue.assignedToName || "Unassigned"}*`,
         },
-      },
+      });
+    }
+
+    blocks.push(
+      { type: "divider" },
       {
         type: "context",
         elements: [
           {
-            type: "mrkdown",
-            text: `${projectInfo} ${previousAssignee ? `${previousAssignee} → ` : ""}${issue.assignedToName || "Unassigned"}${link ? ` · <${link}|View in Redmine>` : ""}`,
+            type: "mrkdwn",
+            text: [
+              projectInfo,
+              issue.statusName ? `📋 ${issue.statusName}` : null,
+              issue.priorityName ? `🔺 ${issue.priorityName}` : null,
+              link ? `<${link}|View in Redmine>` : null,
+            ].filter(Boolean).join(" · "),
           },
         ],
       },
-    ];
+    );
 
     await this.sendMessage(blocks);
   }
