@@ -32,7 +32,7 @@ Converge syncs and caches the following Redmine entities in Supabase (via Prisma
 
 | Table | Source | Notes |
 |---|---|---|
-| `Issue` | `/issues.json?status_id=*` | ~109K issues with `parentIssueId`, `childrenJson`, custom fields |
+| `Issue` | `/issues.json?status_id=*` | ~109K issues. `redmineIssueId` nullable for local-only issues. New `source` field (`"redmine"` | `"local"`) and `localIssueNumber` for auto-incremented local issues. |
 | `IssueRelation` | `/issues/.../relations` | Redmine relations (blocks, relates, etc.) |
 | `IssueAttachment` | issue detail | File metadata and download URLs |
 | `TimeEntry` | `/time_entries.json` | Time entries synced with issue detail |
