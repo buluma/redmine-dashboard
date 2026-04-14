@@ -61,16 +61,26 @@ export async function GET() {
         updatedOnRemote: { gte: since },
       },
       orderBy: [{ updatedOnRemote: "desc" }],
-      take: 5,
-      select: { id: true },
+      take: 10,
+      select: { 
+        id: true,
+        redmineIssueId: true,
+        subject: true,
+        statusName: true,
+      },
     });
 
     if (recentIssues.length > 0) {
+      // Build issue list string
+      const issueList = recentIssues
+        .map(i => i.redmineIssueId ? `#${i.redmineIssueId}` : i.id.substring(0, 8))
+        .join(", ");
+      
       notifications.push({
         id: "recent-updates",
         type: "info",
         title: "Recent Activity",
-        message: `${recentIssues.length} issue(s) had activity in the last 24 hours`,
+        message: `${recentIssues.length} issue(s) updated: ${issueList}`,
         timestamp: now.toISOString(),
         read: false,
         link: "/",
