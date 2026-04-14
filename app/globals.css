@@ -3562,7 +3562,7 @@ textarea {
 }
 
 .metric-ai-insights .metric-value {
-  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -5734,9 +5734,9 @@ textarea {
   height: 56px;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   color: white;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 109, 119, 0.35);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -5784,7 +5784,7 @@ textarea {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   color: white;
   flex-shrink: 0;
 }
@@ -5909,7 +5909,7 @@ textarea {
 }
 
 .chat-msg-user .chat-msg-content {
-  background: #6366f1;
+  background: var(--accent);
   color: white;
   border-bottom-right-radius: 4px;
 }
@@ -5976,7 +5976,7 @@ textarea {
 }
 
 .chat-input-bar input:focus {
-  border-color: #6366f1;
+  border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
 }
 
@@ -5990,7 +5990,7 @@ textarea {
   height: 40px;
   border-radius: 8px;
   border: none;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   color: white;
   cursor: pointer;
   display: flex;
@@ -6038,7 +6038,7 @@ textarea {
   background: rgba(99, 102, 241, 0.1);
   border-radius: 4px;
   font-size: 0.65rem;
-  color: #6366f1;
+  color: var(--accent);
   font-family: monospace;
   font-weight: 500;
 }
@@ -6154,7 +6154,7 @@ textarea {
 
 .log-url {
   font-size: 0.72rem;
-  color: #6366f1;
+  color: var(--accent);
   margin-top: 0.25rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -6220,7 +6220,7 @@ textarea {
   content: "▶";
   display: inline-block;
   margin-right: 0.5rem;
-  color: #6366f1;
+  color: var(--accent);
   font-size: 0.8rem;
   transition: transform 0.2s ease;
 }
@@ -6273,12 +6273,12 @@ textarea {
 }
 
 .chat-log-entry.chat-log-user {
-  border-left: 3px solid #6366f1;
+  border-left: 3px solid var(--accent);
   background: #eef2ff;
 }
 
 .chat-log-entry.chat-log-assistant {
-  border-left: 3px solid #8b5cf6;
+  border-left: 3px solid var(--accent-strong);
   background: #f5f3ff;
 }
 
@@ -6298,7 +6298,7 @@ textarea {
 }
 
 .chat-log-issue-link {
-  color: #6366f1;
+  color: var(--accent);
   text-decoration: none;
   font-weight: 700;
   font-size: 0.82rem;
@@ -6363,7 +6363,7 @@ textarea {
 }
 
 .report-list-link {
-  color: #6366f1;
+  color: var(--accent);
   text-decoration: none;
   font-size: 0.8rem;
 }
@@ -6378,11 +6378,11 @@ textarea {
 }
 
 .chat-card.chat-user {
-  border-left-color: #6366f1;
+  border-left-color: var(--accent);
 }
 
 .chat-card.chat-assistant {
-  border-left-color: #8b5cf6;
+  border-left-color: var(--accent-strong);
 }
 
 .chat-role-badge {
@@ -6399,8 +6399,8 @@ textarea {
 }
 
 .chat-role-badge.chat-role-assistant {
-  background: #f3e8ff;
-  color: #7c3aed;
+  background: #f0fdfa;
+  color: var(--accent-strong);
 }
 
 .ai-overview {
@@ -6436,8 +6436,8 @@ textarea {
 }
 
 .ai-stat-primary {
-  background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
-  border-color: #8b5cf6;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+  border-color: var(--accent);
   color: white;
 }
 
@@ -6505,7 +6505,7 @@ textarea {
 
 .ai-model-bar {
   height: 100%;
-  background: linear-gradient(90deg, #8b5cf6 0%, #a78bfa 100%);
+  background: linear-gradient(90deg, var(--accent-strong) 0%, var(--accent-soft) 100%);
   border-radius: 4px;
   min-width: 2px;
 }
@@ -6567,13 +6567,13 @@ textarea {
 .ai-list-count {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #8b5cf6;
+  color: var(--accent-strong);
   font-family: monospace;
 }
 
 .ai-list-link {
   font-size: 0.75rem;
-  color: #8b5cf6;
+  color: var(--accent-strong);
   font-family: monospace;
 }
 
@@ -6618,7 +6618,7 @@ textarea {
 .stat-card.tone-info::before,
 .ai-overview + .stat-card.tone-info::before,
 .ai-overview ~ .stat-card.tone-info::before {
-  background: #6366f1;
+  background: var(--accent);
 }
 
 .stat-card.tone-success::before,
@@ -6642,7 +6642,7 @@ textarea {
 .stat-card.tone-default::before,
 .ai-overview + .stat-card.tone-default::before,
 .ai-overview ~ .stat-card.tone-default::before {
-  background: #8b5cf6;
+  background: var(--accent-strong);
 }
 
 .ai-overview + .stat-card .stat-head,
@@ -6778,7 +6778,7 @@ textarea {
 }
 
 .status-dot.dot-done {
-  background: #6366f1;
+  background: var(--accent);
 }
 
 .status-dot.dot-blocked {
