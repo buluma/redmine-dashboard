@@ -124,36 +124,24 @@ export class WakaTimeClient {
     console.log('[WakaTime] Fetching:', url.replace(this.apiKey, '***'));
 
     try {
-      // Use native fetch with explicit settings for server-side
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
+      // Force IPv4 by using Node's https module directly with family=4
+      const result = await this.httpsGet(url);
+      console.log('[WakaTime] Response status:', result.status);
 
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: {
-          "Content-Type": "application/json",
-        },
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-      console.log('[WakaTime] Response status:', res.status);
-
-      if (res.status === 401) {
+      if (result.status === 401) {
         throw new Error("WakaTime API key is invalid. Check your WAKATIME_API_KEY.");
       }
-      if (res.status === 429) {
+      if (result.status === 429) {
         throw new Error("WakaTime rate limit exceeded. Try again in a few minutes.");
       }
-      if (res.status === 202) {
+      if (result.status === 202) {
         throw new Error("WakaTime stats are still calculating. Try again shortly.");
       }
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`WakaTime API error (${res.status}): ${errorText.substring(0, 100)}`);
+      if (result.status < 200 || result.status >= 300) {
+        throw new Error(`WakaTime API error (${result.status}): ${result.body.substring(0, 100)}`);
       }
 
-      return res.json() as Promise<T>;
+      return JSON.parse(result.body) as T;
     } catch (err: any) {
       // Determine if it's a network/connection error
       const isNetworkError = err.cause?.code === 'ETIMEDOUT' || 
@@ -169,6 +157,44 @@ export class WakaTimeClient {
       console.error('[WakaTime] Fetch error:', err.message);
       throw new Error(`fetch failed: ${err.message}`);
     }
+  }
+
+  /**
+   * Helper method to make HTTP requests using Node.js https with IPv4 forcing
+   */
+  private httpsGet(url: string): Promise<{ status: number; body: string }> {
+    return new Promise((resolve, reject) => {
+      // Create a custom agent with IPv4 only and proper TLS settings
+      const agent = new require('https').Agent({
+        family: 4,  // Force IPv4 only
+        keepAlive: true,
+        keepAliveMsecs: 30000,
+        timeout: 15000,
+        // Allow older TLS versions that some servers might need
+        secureProtocol: 'TLSv1_2_method',
+      });
+
+      const req = require('https').get(url, {
+        agent,
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'redmine-dashboard/1.0',
+          'Accept': 'application/json',
+        },
+        timeout: 15000,
+      }, (res) => {
+        let body = '';
+        res.on('data', (chunk) => { body += chunk; });
+        res.on('end', () => {
+          agent.destroy();  // Close the agent when done
+          resolve({ status: res.statusCode || 0, body });
+        });
+      });
+      
+      req.on('error', (e) => { agent.destroy(); reject(e); });
+      req.on('timeout', () => { req.destroy(); agent.destroy(); reject(new Error('Request timeout')); });
+      req.end();
+    });
   }
 
   /**
