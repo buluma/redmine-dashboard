@@ -118,35 +118,57 @@ export class WakaTimeClient {
   }
 
   private async get<T>(path: string): Promise<T> {
-    const url = `${BASE}${path}`;
+    // Build URL - if path already has query params, use &, otherwise use ?
+    const separator = path.includes('?') ? '&' : '?';
+    const url = `${BASE}${path}${separator}api_key=${this.apiKey}`;
+    console.log('[WakaTime] Fetching:', url.replace(this.apiKey, '***'));
 
-    // WakaTime supports two auth methods:
-    // 1. API keys (any format) - use query parameter
-    // 2. OAuth tokens (starts with waka_) - use Bearer header
-    // We'll always use query parameter for API keys since it works for both
-    const fetchUrl = `${url}?api_key=${this.apiKey}`;
+    try {
+      // Use native fetch with explicit settings for server-side
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
 
-    const res = await fetch(fetchUrl, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      next: { revalidate: 300 },
-    });
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+      });
 
-    if (res.status === 401) {
-      throw new Error("WakaTime API key is invalid. Check your WAKATIME_API_KEY.");
-    }
-    if (res.status === 429) {
-      throw new Error("WakaTime rate limit exceeded. Try again in a few minutes.");
-    }
-    if (res.status === 202) {
-      throw new Error("WakaTime stats are still calculating. Try again shortly.");
-    }
-    if (!res.ok) {
-      throw new Error(`WakaTime API error (${res.status}): ${res.statusText}`);
-    }
+      clearTimeout(timeout);
+      console.log('[WakaTime] Response status:', res.status);
 
-    return res.json() as Promise<T>;
+      if (res.status === 401) {
+        throw new Error("WakaTime API key is invalid. Check your WAKATIME_API_KEY.");
+      }
+      if (res.status === 429) {
+        throw new Error("WakaTime rate limit exceeded. Try again in a few minutes.");
+      }
+      if (res.status === 202) {
+        throw new Error("WakaTime stats are still calculating. Try again shortly.");
+      }
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`WakaTime API error (${res.status}): ${errorText.substring(0, 100)}`);
+      }
+
+      return res.json() as Promise<T>;
+    } catch (err: any) {
+      // Determine if it's a network/connection error
+      const isNetworkError = err.cause?.code === 'ETIMEDOUT' || 
+                             err.cause?.code === 'EHOSTUNREACH' || 
+                             err.cause?.code === 'ECONNREFUSED' ||
+                             err.message?.includes('fetch failed');
+      
+      if (isNetworkError) {
+        console.error('[WakaTime] Network connectivity issue:', err.cause?.code || err.message);
+        throw new Error(`Network error: Cannot reach WakaTime API. Check firewall/VPN settings.`);
+      }
+      
+      console.error('[WakaTime] Fetch error:', err.message);
+      throw new Error(`fetch failed: ${err.message}`);
+    }
   }
 
   /**
