@@ -43,22 +43,55 @@ dependencies:
 
 ## Screen Flow
 
-The starter application includes the following screens:
+The application includes the following screens:
 
 - **PairScreen:** Handles the initial pairing with a Redmine instance.
-- **IssueListScreen:** Displays the list of issues assigned to the user.
-- **IssueDetailScreen:** Shows a selected issue and supports comments, GitHub links, relations, attachment viewing, and allowed-status visibility.
+- **IssueListScreen:** Displays issues with Material 3 SearchBar, filter chip sorting, favorite toggle, and status-colored leading icons.
+- **IssueDetailScreen:** Shows a selected issue with hero header, flattened collapsible sections, skeleton loading, AI insights, time tracking, comments, GitHub links, relations, and attachment viewing.
+
+## Issue Model
+
+The `Issue` model returned by mobile endpoints has the following key fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `String` | Prisma cuid (unique identifier) |
+| `redmineIssueId` | `int?` | Redmine issue number (nullable for local-only issues) |
+| `redmineBaseUrl` | `String?` | Redmine instance URL (nullable for local-only issues) |
+| `source` | `String` | `"redmine"` or `"local"` |
+| `localIssueNumber` | `int?` | Auto-incremented per-user number for local issues |
+| `subject` | `String` | Issue title |
+| `statusName` | `String` | Current status name |
+| `priority` | `String?` | Priority name |
+| `assignedToName` | `String?` | Assigned user name |
+| `projectName` | `String?` | Project name |
+| `isFavorited` | `bool` | Whether the issue is favorited by the user |
+
+**Important:** `redmineIssueId` is nullable. Local-only issues have `source: "local"`, `redmineIssueId: null`, and `localIssueNumber` set. In the UI, local issues display as `L5` while Redmine issues show `#123`.
 
 ## Mobile Endpoint Coverage
 
 The Flutter app can use the following mobile routes:
 
 - `GET /api/mobile/v1/issues` with `searchMode=local|hybrid` for cache-first or hybrid search.
-- `GET /api/mobile/v1/issues/[id]` for enriched issue details (`attachments`, `relations`, `allowedStatuses`, `children`).
+- `GET /api/mobile/v1/issues/[id]` for enriched issue details (`attachments`, `relations`, `allowedStatuses`, `children`). **`[id]` accepts both integer Redmine IDs and string cuids** for local-only issues.
 - `POST /api/mobile/v1/issues/[id]/comment` for issue notes.
 - `GET|POST|DELETE /api/mobile/v1/issues/[id]/github-links...` for GitHub references.
 - `GET|POST /api/mobile/v1/issues/[id]/attachments` and `GET /api/mobile/v1/issues/[id]/attachments/[attachmentId]` for attachment flows.
 - `POST /api/mobile/v1/issues/[id]/relations` and `DELETE /api/mobile/v1/issues/[id]/relations/[relationId]` for relation flows.
+
+**Note:** Local-only issues (`source: "local"`) cannot be synced to Redmine. Time entry updates, status changes, and comments on local issues are blocked at the route level.
+
+## API Client
+
+The `NrccApiClient` class in `lib/src/nrcc_api_client.dart` provides typed methods for all mobile endpoints. All issue-related methods accept a `String issueId` parameter (not `int`) to support both Redmine numeric IDs and local issue cuids:
+
+```dart
+Future<Issue> getIssue(String issueId) async { ... }
+Future<void> postComment({required String issueId, required String comment}) async { ... }
+Future<List<TimeEntry>> listTimeEntries({required String issueId}) async { ... }
+// ... and more
+```
 
 ## Notes
 

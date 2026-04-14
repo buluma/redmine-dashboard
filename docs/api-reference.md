@@ -237,6 +237,7 @@ Same filtering and search options as `/api/issues`.
 
 ### GET /api/mobile/v1/issues/[id]
 Returns enriched issue detail including attachments, relations, allowed statuses, and children.
+**Note:** `[id]` accepts both **integer Redmine IDs** (e.g., `123`) and **string cuids** for local-only issues (e.g., `clx...`). The route resolves the correct lookup based on whether the ID is numeric.
 
 ### POST /api/mobile/v1/issues/[id]/comment
 Posts comment and refreshes local cache for that issue.
@@ -254,6 +255,8 @@ Attachment list/upload/download proxy for mobile.
 ### POST /api/mobile/v1/issues/[id]/relations
 ### DELETE /api/mobile/v1/issues/[id]/relations/[relationId]
 Relation management for mobile.
+
+**Note:** For all mobile endpoints above, `[id]` accepts integer Redmine IDs and string cuids. Local-only issues (`source: "local"`) cannot be synced to Redmine — time entry updates, status changes, and comments on local issues are blocked at the route level.
 
 ### POST /api/mobile/v1/tokens/rotate
 Rotates current mobile token.
@@ -301,6 +304,8 @@ Request body:
   ]
 }
 ```
+
+**Note:** `redmineIssueId` is nullable (`number | null`) for local-only issues. When `null`, the issue has no Redmine counterpart.
 
 ### GET /api/slack/notify
 Returns Slack notifier configuration status.

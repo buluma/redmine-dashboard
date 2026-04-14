@@ -14,6 +14,37 @@ All notable changes to this project are documented in this file.
   - Test setup file: `src/test-setup.ts` for global test utilities
   - Vitest configuration updated to support both `.test.ts` and `.test.tsx` files
 
+### Changed
+
+- **Issue model now supports local (non-Redmine) issues**
+  - `redmineIssueId` and `redmineBaseUrl` are now nullable (`Int?`, `String?`)
+  - New `source` field: `"redmine"` or `"local"` (defaults to `"redmine"`)
+  - New `localIssueNumber` field: auto-incremented per-user for local issues
+  - Unique constraint `@@unique([userId, source, localIssueNumber])` for local issues
+  - Sync guards prevent local issues from being overwritten by Redmine sync
+  - Migration: `20260414000000_add_local_issue_support`
+
+- **Personal Tickets feature** — create, view, and manage local-only issues that never sync to Redmine
+  - New page: `/personal-tickets` with create form and ticket list
+  - Local issue CRUD routes: `GET/POST /api/issues/local`, `PATCH/DELETE /api/issues/local/[id]`
+  - Issue detail page shows source badge, delete button for local issues
+
+- **Mobile API now accepts string cuids** — `GET /api/mobile/v1/issues/[id]` resolves both numeric Redmine IDs and string cuids for local issues
+
+- **Database connection resilience** — Prisma URL builder adds `pool_timeout=30` and optional `connection_limit` from env; reports route disabled in dev for Sentry
+
+- **API timeout handling** — DB statement timeouts return graceful degraded responses (503) instead of 500 errors across reports, issues list, session, bootstrap, and AI summary count routes
+
+- **Sync job staleness fix** — only `pending` jobs get stale-reset; `running` jobs are reused regardless of duration, eliminating log spam from long-running incremental syncs
+
+- **Flutter mobile UI overhaul** — Material 3 SearchBar, filter chip sorting, hero header with inline badges, flattened section cards, skeleton loading states, improved AI and time tracking sections
+
+### Fixed
+
+- **Mobile `Null is not a subtype of int` crash** — Issue model and all Flutter code updated for nullable `redmineIssueId`; local issues display as `L{number}` vs `#N` for Redmine
+- **Local issue edit routing** — `saveEdit()` in detail page now calls `PATCH /api/issues/local/[id]` for local issues instead of Redmine-only PUT route
+- **Duplicate favorites filter** — removed redundant FilterChip below sort/mode on mobile; kept AppBar star icon
+
 ## 2026-04-13
 
 ### Rebrand
