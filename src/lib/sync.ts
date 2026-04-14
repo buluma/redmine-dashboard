@@ -646,6 +646,95 @@ export async function syncSingleIssue(
         error: notifyError instanceof Error ? notifyError.message : "Unknown error",
       }, "error");
     }
+
+    // Send webhook notifications to external subscribers
+    try {
+      const { dispatchWebhook } = await import("@/src/lib/webhook-subscription");
+
+      // Build ticket payload
+      const ticketPayload = {
+        id: issue.id,
+        redmineIssueId: issue.redmineIssueId,
+        subject: issue.subject,
+        description: issue.description,
+        projectId: issue.projectId,
+        projectName: issue.projectName,
+        trackerName: issue.trackerName,
+        statusName: issue.statusName,
+        priorityName: issue.priorityName,
+        assignedToId: issue.assignedToId,
+        assignedToName: issue.assignedToName,
+        authorId: issue.authorId,
+        authorName: issue.authorName,
+        dueDate: issue.dueDate?.toISOString() || null,
+        doneRatio: issue.doneRatio,
+        createdAt: issue.createdAt?.toISOString() || new Date().toISOString(),
+        updatedAt: issue.updatedAt?.toISOString() || new Date().toISOString(),
+      };
+
+      if (upsertResult.wasCreated) {
+        // New ticket created
+        await dispatchWebhook("ticket.created", ticketPayload, undefined, userId);
+      } else if (upsertResult.oldState) {
+        // Detect what changed
+        const changes: Array<{ field: string; oldValue: string | null; newValue: string | null }> = [];
+
+        if (upsertResult.oldState.statusName !== issue.statusName) {
+          changes.push({
+            field: "status",
+            oldValue: upsertResult.oldState.statusName,
+            newValue: issue.statusName,
+          });
+        }
+        if (upsertResult.oldState.assignedToName !== issue.assignedToName) {
+          changes.push({
+            field: "assigned_to",
+            oldValue: upsertResult.oldState.assignedToName,
+            newValue: issue.assignedToName,
+          });
+        }
+        if (upsertResult.oldState.priorityName !== issue.priorityName) {
+          changes.push({
+            field: "priority",
+            oldValue: upsertResult.oldState.priorityName,
+            newValue: issue.priorityName,
+          });
+        }
+        if (upsertResult.oldState.dueDate?.toISOString() !== issue.dueDate?.toISOString()) {
+          changes.push({
+            field: "due_date",
+            oldValue: upsertResult.oldState.dueDate?.toISOString() || null,
+            newValue: issue.dueDate?.toISOString() || null,
+          });
+        }
+        if (upsertResult.oldState.subject !== issue.subject) {
+          changes.push({
+            field: "subject",
+            oldValue: upsertResult.oldState.subject,
+            newValue: issue.subject,
+          });
+        }
+
+        // Determine event type based on changes
+        const statusChanged = changes.some(c => c.field === "status");
+        const assignedChanged = changes.some(c => c.field === "assigned_to");
+
+        if (statusChanged && issue.statusName === "Completed") {
+          await dispatchWebhook("ticket.completed", ticketPayload, changes, userId);
+        } else if (statusChanged) {
+          await dispatchWebhook("ticket.status_changed", ticketPayload, changes, userId);
+        } else if (assignedChanged) {
+          await dispatchWebhook("ticket.assigned", ticketPayload, changes, userId);
+        } else if (changes.length > 0) {
+          await dispatchWebhook("ticket.updated", ticketPayload, changes, userId);
+        }
+      }
+    } catch (webhookError) {
+      logEvent("sync.webhook.error", {
+        issueId: issue.redmineIssueId,
+        error: webhookError instanceof Error ? webhookError.message : "Unknown error",
+      }, "warn");
+    }
   }
 
   return { 
