@@ -65,9 +65,9 @@ export default async function AuditLogsPage() {
             </p>
           </div>
           <div className="hero-actions">
-            <Link href="/" className="primary-link nav-link">
-              Back to Dashboard
-            </Link>
+            <a href="/ops" className="secondary-button">
+              ← Back to Ops
+            </a>
           </div>
         </div>
       </header>
