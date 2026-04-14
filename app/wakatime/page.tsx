@@ -128,7 +128,7 @@ export default async function WakatimePage() {
               </p>
               {process.env.NODE_ENV === "development" && (
                 <p className="muted" style={{ fontSize: "0.75rem", marginTop: "0.5rem" }}>
-                  Debug: Key present: {!!apiKey} · Type: {apiKey?.startsWith("waka_") ? "OAuth token" : "API key"} · Prefix: {apiKey ? apiKey.slice(0, 10) + "…" : "none"}
+                  Debug: Key present: {!!apiKey} · Key: {apiKey ? apiKey.substring(0, 15) + '...' : 'none'} · Error: {error.substring(0, 100)}
                 </p>
               )}
             </div>
