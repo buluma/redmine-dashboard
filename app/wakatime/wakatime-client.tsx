@@ -36,8 +36,8 @@ export function WakatimeChartsClient({ stats, summaries, allTime, today }: Props
   const d = stats.data;
 
   // Transform WakaTime breakdown → DonutChart segments
-  const toSegments = (items: { name: string; total_seconds: number }[]) =>
-    items
+  const toSegments = (items: { name: string; total_seconds: number }[] | undefined) =>
+    (items ?? [])
       .filter((x) => x.total_seconds > 0)
       .slice(0, 8)
       .map((x, i) => ({
@@ -47,8 +47,8 @@ export function WakatimeChartsClient({ stats, summaries, allTime, today }: Props
       }));
 
   // Transform → BarChartEnhanced items
-  const toBarItems = (items: { name: string; total_seconds: number }[]) =>
-    items
+  const toBarItems = (items: { name: string; total_seconds: number }[] | undefined) =>
+    (items ?? [])
       .filter((x) => x.total_seconds > 0)
       .slice(0, 8)
       .map((x) => ({
@@ -154,7 +154,7 @@ export function WakatimeChartsClient({ stats, summaries, allTime, today }: Props
         <div className="card report-panel">
           <div className="report-panel-head">
             <h3>Languages</h3>
-            <span className="report-panel-badge">{d.languages.filter((l) => l.total_seconds > 0).length} languages</span>
+            <span className="report-panel-badge">{(d.languages ?? []).filter((l) => l.total_seconds > 0).length} languages</span>
           </div>
           <DonutChart
             segments={toSegments(d.languages)}
@@ -166,12 +166,12 @@ export function WakatimeChartsClient({ stats, summaries, allTime, today }: Props
         <div className="card report-panel">
           <div className="report-panel-head">
             <h3>Editors</h3>
-            <span className="report-panel-badge">{d.editors.filter((e) => e.total_seconds > 0).length} editors</span>
+            <span className="report-panel-badge">{(d.editors ?? []).filter((e) => e.total_seconds > 0).length} editors</span>
           </div>
           <DonutChart
             segments={toSegments(d.editors)}
             centerLabel="Top"
-            centerValue={d.editors[0]?.name ?? "—"}
+            centerValue={d.editors?.[0]?.name ?? "—"}
           />
         </div>
 
