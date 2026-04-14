@@ -389,6 +389,11 @@ export default function OpsPage() {
                 <p><strong>Environment:</strong> {health?.environment ?? "-"}</p>
                 <p><strong>Uptime:</strong> {health?.uptime ? `${Math.floor(health.uptime / 86400)}d ${Math.floor((health.uptime % 86400) / 3600)}h ${Math.floor((health.uptime % 3600) / 60)}m` : "-"}</p>
               </div>
+              <div style={{ marginTop: '1rem' }}>
+                <Link href="/ops/audit-logs" className="secondary-button">
+                  📋 View Audit Logs
+                </Link>
+              </div>
             </article>
 
             <article className="card">

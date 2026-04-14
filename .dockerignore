@@ -1,0 +1,44 @@
+# Dependencies
+node_modules
+
+# Build outputs
+.next
+dist
+build
+
+# Database
+*.db
+*.db-journal
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Environment
+.env.local
+.env.*.local
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage
+.nyc_output
+
+# Debugging
+debugging/logs/*.json
+
+# Mobile
+mobile
+
+# Misc
+*.tgz
+.cache

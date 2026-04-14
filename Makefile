@@ -1,4 +1,4 @@
-.PHONY: help up down logs restart shell reset-db
+.PHONY: help up down logs restart shell reset-db health status backup clean
 
 help:
 	@echo "NRCC Docker targets:"
@@ -8,6 +8,10 @@ help:
 	@echo "  make restart   - Restart dashboard service"
 	@echo "  make shell     - Open shell in dashboard container"
 	@echo "  make reset-db  - Remove SQLite db and restart service"
+	@echo "  make health    - Check container health status"
+	@echo "  make status    - Show container status and health"
+	@echo "  make backup    - Backup the database"
+	@echo "  make clean     - Remove build artifacts and caches"
 
 up:
 	docker compose up --build -d
@@ -27,3 +31,37 @@ shell:
 reset-db:
 	rm -f prisma/dev.db
 	docker compose up -d
+
+health:
+	@echo "Container health check:"
+	@docker compose ps --format "{{.Name}}: {{.Health}}"
+	@echo ""
+	@echo "API health endpoint:"
+	@curl -sf http://localhost:3000/api/health || echo "API not responding"
+
+status:
+	@echo "=== Container Status ==="
+	@docker compose ps
+	@echo ""
+	@echo "=== Health Status ==="
+	@docker inspect --format='{{.State.Health.Status}}' redmine-dashboard-dashboard-1 2>/dev/null || echo "Container not running"
+	@echo ""
+	@echo "=== Recent Health Checks ==="
+	@docker inspect --format='{{range .State.Health.Log}}Message: {{.Output}}\n{{end}}' redmine-dashboard-dashboard-1 2>/dev/null | head -20 || echo "No health data"
+
+backup:
+	@mkdir -p backups
+	@TIMESTAMP=$$(date +%Y%m%d_%H%M%S)
+	@echo "Creating backup..."
+	@docker compose exec dashboard sh -c 'test -f prisma/dev.db && cp prisma/dev.db /app/backups/dev.db.$$TIMESTAMP || echo "No database file found"'
+	@if [ -f prisma/dev.db ]; then cp prisma/dev.db backups/dev.db.$(date +%Y%m%d_%H%M%S); fi
+	@echo "Backup complete. Files:"
+	@ls -la backups/
+
+clean:
+	echo "Cleaning build artifacts..."
+	rm -rf .next
+	rm -rf node_modules/.cache
+	find . -type d -name "dist" -exec rm -rf {} + 2>/dev/null || true
+	find . -type f -name "*.log" -delete 2>/dev/null || true
+	@echo "Clean complete."
