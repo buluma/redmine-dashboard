@@ -1,5 +1,6 @@
 import { env } from "@/src/lib/env";
 import { logEvent } from "@/src/lib/log";
+import { prisma } from "@/src/lib/db";
 import { SlackNotifier, IssueUpdate, IssueChange, SlackNotifierConfig } from "@/src/lib/slack-notifier";
 import type { Issue } from "@prisma/client";
 
@@ -67,6 +68,7 @@ export class SlackNotificationService {
       notifyOnUpdate: env.slackNotifyOnUpdate,
       notifyOnStatusChange: env.slackNotifyOnStatusChange,
       notifyOnAssignment: env.slackNotifyOnAssignment,
+      notifyOnInternalNote: env.slackNotifyOnInternalNote,
       format: env.slackNotifyFormat,
       includeLink: true,
     });
@@ -318,6 +320,46 @@ export class SlackNotificationService {
       return { success: true };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
+      return { success: false, error: message };
+    }
+  }
+
+  /**
+   * Send notification when an internal note is added
+   */
+  async notifyInternalNoteAdded(
+    issueId: string,
+    noteContent: string,
+    authorName: string
+  ): Promise<NotificationResult> {
+    if (!this.initialize()) {
+      return { success: true };
+    }
+
+    try {
+      const issue = await prisma.issue.findUnique({
+        where: { id: issueId },
+      });
+
+      if (!issue) {
+        return { success: false, error: "Issue not found" };
+      }
+
+      const issueUpdate = this.toIssueUpdate(this.toIssueState(issue));
+      await this.notifier!.notifyInternalNoteAdded(issueUpdate, noteContent, authorName);
+      
+      logEvent("slack.notification.sent", {
+        type: "internal_note",
+        issueId: issue.redmineIssueId,
+      });
+      
+      return { success: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      logEvent("slack.notification.failed", {
+        error: message,
+        issueId,
+      }, "error");
       return { success: false, error: message };
     }
   }

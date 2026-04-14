@@ -7,6 +7,7 @@ export interface SlackNotifierConfig {
   notifyOnUpdate: boolean;
   notifyOnStatusChange: boolean;
   notifyOnAssignment: boolean;
+  notifyOnInternalNote: boolean;
   format: "compact" | "detailed";
   includeLink: boolean;
   redmineBaseUrl: string;
@@ -50,6 +51,7 @@ export class SlackNotifier {
       notifyOnUpdate: true,
       notifyOnStatusChange: true,
       notifyOnAssignment: true,
+      notifyOnInternalNote: true,
       format: "compact",
       includeLink: true,
       redmineBaseUrl,
@@ -253,8 +255,58 @@ export class SlackNotifier {
         type: "context",
         elements: [
           {
-            type: "mrkdwn",
+            type: "mrkdown",
             text: `${projectInfo} ${previousAssignee ? `${previousAssignee} → ` : ""}${issue.assignedToName || "Unassigned"}${link ? ` · <${link}|View in Redmine>` : ""}`,
+          },
+        ],
+      },
+    ];
+
+    await this.sendMessage(blocks);
+  }
+
+  async notifyInternalNoteAdded(
+    issue: IssueUpdate,
+    noteContent: string,
+    authorName: string
+  ): Promise<void> {
+    if (!this.config.notifyOnInternalNote) return;
+
+    const link = this.buildIssueLink(issue.redmineIssueId);
+    const projectInfo = issue.projectName ? `[${issue.projectName}]` : "";
+    const truncatedNote = noteContent.length > 300 
+      ? noteContent.slice(0, 300) + "…"
+      : noteContent;
+
+    const blocks = [
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: `💬 Internal Note #${issue.redmineIssueId}`,
+          emoji: true,
+        },
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdown",
+          text: `*${issue.subject}*`,
+        },
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdown",
+          text: `> ${truncatedNote.replace(/\n/g, "\n> ")}`,
+        },
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdown",
+            text: `${projectInfo} by *${authorName}*${link ? ` · <${link}|View in Redmine>` : ""}`,
           },
         ],
       },

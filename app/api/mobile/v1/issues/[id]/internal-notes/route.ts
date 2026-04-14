@@ -3,6 +3,7 @@ import { recomputeIssueActivityIndex, recordIssueActivityEvent } from "@/src/lib
 import { prisma } from "@/src/lib/db";
 import { jsonError, parseJson } from "@/src/lib/http";
 import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
+import { getSlackNotificationService } from "@/src/lib/slack-notification-service";
 import { z } from "zod";
 
 function parseIssueId(id: string): number {
@@ -78,6 +79,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       summary: note.content,
     });
     await recomputeIssueActivityIndex(issue.id);
+
+    // Send Slack notification for internal note
+    void getSlackNotificationService().notifyInternalNoteAdded(
+      issue.id,
+      note.content,
+      user.displayName
+    );
 
     return Response.json({
       note: {
