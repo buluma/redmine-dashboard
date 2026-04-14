@@ -4,12 +4,10 @@ import { jsonError } from "@/src/lib/http";
 import { toIssueView } from "@/src/lib/issue-shape";
 import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
 
-function parseIssueId(id: string): number {
+function parseIssueId(id: string): number | null {
   const n = Number(id);
-  if (!Number.isInteger(n) || n <= 0) {
-    throw new Error("Invalid issue id");
-  }
-  return n;
+  if (Number.isInteger(n) && n > 0) return n;
+  return null; // string cuid for local issues
 }
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -20,10 +18,9 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const { user } = await requireMobileUser(request);
 
     const issue = await prisma.issue.findFirst({
-      where: {
-        userId: user.id,
-        redmineIssueId,
-      },
+      where: redmineIssueId
+        ? { userId: user.id, redmineIssueId }
+        : { userId: user.id, id },
       include: {
         journals: {
           orderBy: { createdOnRemote: "desc" },
@@ -52,20 +49,24 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       return jsonError("Issue not found", 404);
     }
 
-    const favorite = await prisma.favorite.findUnique({
-      where: {
-        userId_issueId: {
-          userId: user.id,
-          issueId: redmineIssueId,
+    let isFavorited = false;
+    if (issue.redmineIssueId) {
+      const favorite = await prisma.favorite.findUnique({
+        where: {
+          userId_issueId: {
+            userId: user.id,
+            issueId: issue.redmineIssueId,
+          },
         },
-      },
-      select: { id: true },
-    });
+        select: { id: true },
+      });
+      isFavorited = Boolean(favorite);
+    }
 
     return Response.json({
       issue: {
         ...toIssueView(issue),
-        isFavorited: Boolean(favorite),
+        isFavorited,
       },
     });
   } catch (error) {

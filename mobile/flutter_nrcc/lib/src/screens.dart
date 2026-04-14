@@ -629,7 +629,9 @@ class _IssueListScreenState extends State<IssueListScreen> {
                                 child: FittedBox(
                                   fit: BoxFit.scaleDown,
                                   child: Text(
-                                    "#${issue.redmineIssueId}",
+                                    issue.source == "local"
+                                        ? "L${issue.localIssueNumber ?? "?"}"
+                                        : "#${issue.redmineIssueId ?? "?"}",
                                     style: theme.textTheme.labelMedium
                                         ?.copyWith(
                                           color: scheme.onPrimaryContainer,
@@ -720,7 +722,8 @@ class _IssueListScreenState extends State<IssueListScreen> {
                                 await Navigator.of(context).push(
                                   MaterialPageRoute<void>(
                                     builder: (_) => IssueDetailScreen(
-                                      issueId: issue.redmineIssueId,
+                                      issueId: issue.id,
+                                      redmineIssueId: issue.redmineIssueId,
                                       issuesRepository: widget.issuesRepository,
                                       actionsRepository:
                                           widget.actionsRepository,
@@ -745,13 +748,15 @@ class _IssueListScreenState extends State<IssueListScreen> {
 }
 
 class IssueDetailScreen extends StatefulWidget {
-  final int issueId;
+  final String issueId;
+  final int? redmineIssueId;
   final IssuesRepository issuesRepository;
   final IssueActionsRepository actionsRepository;
 
   const IssueDetailScreen({
     super.key,
     required this.issueId,
+    this.redmineIssueId,
     required this.issuesRepository,
     required this.actionsRepository,
   });
@@ -992,7 +997,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
 
   String _attachmentUrl(IssueAttachment attachment) {
     return widget.actionsRepository.attachmentPreviewUrl(
-      redmineIssueId: widget.issueId,
+      issueId: widget.issueId,
       redmineAttachmentId: attachment.redmineAttachmentId,
     );
   }
@@ -1142,7 +1147,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   Future<void> _loadTimeEntries() async {
     try {
       final entries = await widget.actionsRepository.listTimeEntries(
-        redmineIssueId: widget.issueId,
+        issueId: widget.issueId,
       );
       final activities = await widget.actionsRepository.listActivities();
       if (mounted) {
@@ -1173,7 +1178,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   Future<void> _loadBreadcrumbs() async {
     try {
       final breadcrumbs = await widget.actionsRepository.getBreadcrumbs(
-        redmineIssueId: widget.issueId,
+        issueId: widget.issueId,
       );
       if (mounted) {
         setState(() => _breadcrumbs = breadcrumbs);
@@ -1186,7 +1191,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   Future<void> _loadFavoriteStatus() async {
     try {
       final favorited = await widget.actionsRepository.isFavorited(
-        redmineIssueId: widget.issueId,
+        issueId: widget.issueId,
       );
       if (mounted) setState(() => _isFavorited = favorited);
     } catch (_) {}
@@ -1195,7 +1200,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   Future<void> _toggleFavorite() async {
     try {
       final favorited = await widget.actionsRepository.toggleFavorite(
-        redmineIssueId: widget.issueId,
+        issueId: widget.issueId,
       );
       if (mounted) setState(() => _isFavorited = favorited);
     } catch (e) {
@@ -1210,7 +1215,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   Future<void> _loadInternalNotes() async {
     try {
       final notes = await widget.actionsRepository.listInternalNotes(
-        redmineIssueId: widget.issueId,
+        issueId: widget.issueId,
       );
       if (mounted) setState(() => _internalNotes = notes);
     } catch (_) {}
@@ -1219,7 +1224,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   Future<void> _addInternalNote(String content) async {
     try {
       await widget.actionsRepository.createInternalNote(
-        redmineIssueId: widget.issueId,
+        issueId: widget.issueId,
         content: content,
       );
       await _loadInternalNotes();
@@ -1241,7 +1246,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     double? estimatedHours,
   }) async {
     await widget.actionsRepository.editIssue(
-      redmineIssueId: widget.issueId,
+      issueId: widget.issueId,
       subject: subject,
       description: description,
       priority: priority,
@@ -1435,7 +1440,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     });
     try {
       final summary = await widget.actionsRepository.summarizeIssue(
-        redmineIssueId: widget.issueId,
+        issueId: widget.issueId,
       );
       if (mounted) setState(() => _aiSummary = summary);
     } catch (e) {
@@ -1452,7 +1457,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     });
     try {
       final category = await widget.actionsRepository.categorizeIssue(
-        redmineIssueId: widget.issueId,
+        issueId: widget.issueId,
       );
       if (mounted) setState(() => _aiCategory = category);
     } catch (e) {
@@ -1465,7 +1470,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   Future<void> _postComment() async {
     if (_comment.text.trim().isEmpty) return;
     await widget.actionsRepository.postComment(
-      redmineIssueId: widget.issueId,
+      issueId: widget.issueId,
       comment: _comment.text.trim(),
     );
     _comment.clear();
@@ -1476,7 +1481,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     setState(() => _statusError = null);
     try {
       await widget.actionsRepository.updateStatus(
-        redmineIssueId: widget.issueId,
+        issueId: widget.issueId,
         statusId: statusId,
       );
       await _load();
@@ -1489,7 +1494,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     setState(() => _assignError = null);
     try {
       await widget.actionsRepository.assignIssue(
-        redmineIssueId: widget.issueId,
+        issueId: widget.issueId,
         userId: userId,
       );
       await _load();
@@ -1504,7 +1509,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     setState(() => _timeLoading = true);
     try {
       await widget.actionsRepository.createTimeEntry(
-        redmineIssueId: widget.issueId,
+        issueId: widget.issueId,
         hours: hours,
         activityId: _timeActivityId!,
         comment: _timeComment.text.trim().isEmpty
@@ -1544,7 +1549,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   Future<void> _addGithubLink() async {
     if (_repo.text.trim().isEmpty) return;
     await widget.actionsRepository.addGithubLink(
-      redmineIssueId: widget.issueId,
+      issueId: widget.issueId,
       repositoryFullName: _repo.text.trim(),
       githubIssueNumber: int.tryParse(_ghIssue.text.trim()),
     );
@@ -1557,7 +1562,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     final target = int.tryParse(_relationIssue.text.trim());
     if (target == null || target <= 0) return;
     await widget.actionsRepository.addRelation(
-      redmineIssueId: widget.issueId,
+      issueId: widget.issueId,
       issueToId: target,
       relationType: _relationType,
     );
@@ -1585,9 +1590,14 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final displayId = _issue != null
+        ? (_issue!.source == "local"
+            ? "L${_issue!.localIssueNumber ?? "?"}"
+            : "#${_issue!.redmineIssueId ?? widget.issueId}")
+        : "#${widget.issueId}";
     return Scaffold(
       appBar: AppBar(
-        title: Text("Issue #${widget.issueId}"),
+        title: Text("Issue $displayId"),
         actions: <Widget>[
           IconButton(
             onPressed: () => _showEditDialog(context, theme),
@@ -1643,7 +1653,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          "#${_issue!.redmineIssueId}",
+                          _issue!.source == "local"
+                              ? "L${_issue!.localIssueNumber ?? "?"}"
+                              : "#${_issue!.redmineIssueId ?? "?"}",
                           style: theme.textTheme.labelLarge?.copyWith(
                             color: theme.colorScheme.onPrimaryContainer,
                             fontWeight: FontWeight.w700,
@@ -1798,7 +1810,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                     Navigator.of(context).push(
                                       MaterialPageRoute<void>(
                                         builder: (_) => IssueDetailScreen(
-                                          issueId: id,
+                                          issueId: "$id",
                                           issuesRepository:
                                               widget.issuesRepository,
                                           actionsRepository:
@@ -2321,7 +2333,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                 onPressed: () async {
                                   await widget.actionsRepository
                                       .removeGithubLink(
-                                        redmineIssueId: widget.issueId,
+                                        issueId: widget.issueId,
                                         linkId: link.id,
                                       );
                                   await _load();
@@ -2445,7 +2457,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                           FutureBuilder<String?>(
                                             future: widget.actionsRepository
                                                 .attachmentTextPreview(
-                                                  redmineIssueId:
+                                                  issueId:
                                                       widget.issueId,
                                                   redmineAttachmentId:
                                                       attachment
@@ -2607,7 +2619,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                 icon: const Icon(Icons.delete_outline),
                                 onPressed: () async {
                                   await widget.actionsRepository.removeRelation(
-                                    redmineIssueId: widget.issueId,
+                                    issueId: widget.issueId,
                                     relationId: relation.redmineRelationId,
                                   );
                                   await _load();

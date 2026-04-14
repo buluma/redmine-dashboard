@@ -59,8 +59,8 @@ class IssuesRepository {
     );
   }
 
-  Future<Issue> getIssue(int redmineIssueId) {
-    return _api.getIssue(redmineIssueId);
+  Future<Issue> getIssue(String issueId) {
+    return _api.getIssue(issueId);
   }
 }
 
@@ -70,36 +70,36 @@ class IssueActionsRepository {
   IssueActionsRepository(this._api);
 
   Future<void> updateStatus({
-    required int redmineIssueId,
+    required String issueId,
     required int statusId,
   }) {
-    return _api.updateStatus(redmineIssueId: redmineIssueId, statusId: statusId);
+    return _api.updateStatus(issueId: issueId, statusId: statusId);
   }
 
   Future<void> assignIssue({
-    required int redmineIssueId,
+    required String issueId,
     required int userId,
   }) {
-    return _api.assignIssue(redmineIssueId: redmineIssueId, userId: userId);
+    return _api.assignIssue(issueId: issueId, userId: userId);
   }
 
   Future<List<AssignableUser>> listAssignableUsers() {
     return _api.listAssignableUsers();
   }
 
-  Future<List<TimeEntry>> listTimeEntries({required int redmineIssueId}) {
-    return _api.listTimeEntries(redmineIssueId: redmineIssueId);
+  Future<List<TimeEntry>> listTimeEntries({required String issueId}) {
+    return _api.listTimeEntries(issueId: issueId);
   }
 
   Future<void> createTimeEntry({
-    required int redmineIssueId,
+    required String issueId,
     required double hours,
     required int activityId,
     String? comment,
     String? spentOn,
   }) {
     return _api.createTimeEntry(
-      redmineIssueId: redmineIssueId,
+      issueId: issueId,
       hours: hours,
       activityId: activityId,
       comment: comment,
@@ -111,17 +111,17 @@ class IssueActionsRepository {
     return _api.listActivities();
   }
 
-  Future<List<Map<String, dynamic>>> getBreadcrumbs({required int redmineIssueId}) {
-    return _api.getBreadcrumbs(redmineIssueId: redmineIssueId);
+  Future<List<Map<String, dynamic>>> getBreadcrumbs({required String issueId}) {
+    return _api.getBreadcrumbs(issueId: issueId);
   }
 
-  Future<AiSummaryResponse> summarizeIssue({required int redmineIssueId}) async {
-    final json = await _api.summarizeIssue(redmineIssueId: redmineIssueId);
+  Future<AiSummaryResponse> summarizeIssue({required String issueId}) async {
+    final json = await _api.summarizeIssue(issueId: issueId);
     return AiSummaryResponse.fromJson(json);
   }
 
-  Future<AiCategorizeResponse> categorizeIssue({required int redmineIssueId}) async {
-    final json = await _api.categorizeIssue(redmineIssueId: redmineIssueId);
+  Future<AiCategorizeResponse> categorizeIssue({required String issueId}) async {
+    final json = await _api.categorizeIssue(issueId: issueId);
     return AiCategorizeResponse.fromJson(json);
   }
 
@@ -130,7 +130,7 @@ class IssueActionsRepository {
   }
 
   Future<void> editIssue({
-    required int redmineIssueId,
+    required String issueId,
     String? subject,
     String? description,
     String? priority,
@@ -139,7 +139,7 @@ class IssueActionsRepository {
     double? estimatedHours,
   }) async {
     await _api.editIssue(
-      redmineIssueId: redmineIssueId,
+      issueId: issueId,
       subject: subject,
       description: description,
       priority: priority,
@@ -149,34 +149,34 @@ class IssueActionsRepository {
     );
   }
 
-  Future<List<InternalNote>> listInternalNotes({required int redmineIssueId}) {
-    return _api.listInternalNotes(redmineIssueId: redmineIssueId);
+  Future<List<InternalNote>> listInternalNotes({required String issueId}) {
+    return _api.listInternalNotes(issueId: issueId);
   }
 
-  Future<InternalNote> createInternalNote({required int redmineIssueId, required String content}) {
-    return _api.createInternalNote(redmineIssueId: redmineIssueId, content: content);
+  Future<InternalNote> createInternalNote({required String issueId, required String content}) {
+    return _api.createInternalNote(issueId: issueId, content: content);
   }
 
-  Future<bool> toggleFavorite({required int redmineIssueId}) {
-    return _api.toggleFavorite(redmineIssueId: redmineIssueId);
+  Future<bool> toggleFavorite({required String issueId}) {
+    return _api.toggleFavorite(issueId: issueId);
   }
 
-  Future<bool> isFavorited({required int redmineIssueId}) {
-    return _api.isFavorited(redmineIssueId: redmineIssueId);
+  Future<bool> isFavorited({required String issueId}) {
+    return _api.isFavorited(issueId: issueId);
   }
 
   Future<void> postComment({
-    required int redmineIssueId,
+    required String issueId,
     required String comment,
   }) {
     return _api.postComment(
-      redmineIssueId: redmineIssueId,
+      issueId: issueId,
       comment: comment,
     );
   }
 
   Future<void> addGithubLink({
-    required int redmineIssueId,
+    required String issueId,
     required String repositoryFullName,
     int? githubIssueNumber,
     int? githubPrNumber,
@@ -184,7 +184,7 @@ class IssueActionsRepository {
     String? title,
   }) {
     return _api.addGithubLink(
-      redmineIssueId: redmineIssueId,
+      issueId: issueId,
       repositoryFullName: repositoryFullName,
       githubIssueNumber: githubIssueNumber,
       githubPrNumber: githubPrNumber,
@@ -194,41 +194,41 @@ class IssueActionsRepository {
   }
 
   Future<void> removeGithubLink({
-    required int redmineIssueId,
+    required String issueId,
     required String linkId,
   }) {
     return _api.removeGithubLink(
-      redmineIssueId: redmineIssueId,
+      issueId: issueId,
       linkId: linkId,
     );
   }
 
   Future<List<IssueAttachment>> listAttachments({
-    required int redmineIssueId,
+    required String issueId,
   }) {
-    return _api.listAttachments(redmineIssueId: redmineIssueId);
+    return _api.listAttachments(issueId: issueId);
   }
 
   Future<void> uploadAttachment({
-    required int redmineIssueId,
+    required String issueId,
     required String filePath,
     String? description,
   }) {
     return _api.uploadAttachment(
-      redmineIssueId: redmineIssueId,
+      issueId: issueId,
       filePath: filePath,
       description: description,
     );
   }
 
   Future<void> addRelation({
-    required int redmineIssueId,
+    required String issueId,
     required int issueToId,
     required String relationType,
     int? delay,
   }) {
     return _api.addRelation(
-      redmineIssueId: redmineIssueId,
+      issueId: issueId,
       issueToId: issueToId,
       relationType: relationType,
       delay: delay,
@@ -236,11 +236,11 @@ class IssueActionsRepository {
   }
 
   Future<void> removeRelation({
-    required int redmineIssueId,
+    required String issueId,
     required int relationId,
   }) {
     return _api.removeRelation(
-      redmineIssueId: redmineIssueId,
+      issueId: issueId,
       relationId: relationId,
     );
   }
@@ -270,11 +270,11 @@ class IssueActionsRepository {
   }
 
   String attachmentPreviewUrl({
-    required int redmineIssueId,
+    required String issueId,
     required int redmineAttachmentId,
   }) {
     return _api.attachmentUrl(
-      redmineIssueId: redmineIssueId,
+      issueId: issueId,
       redmineAttachmentId: redmineAttachmentId,
     );
   }
@@ -284,12 +284,12 @@ class IssueActionsRepository {
   }
 
   Future<String?> attachmentTextPreview({
-    required int redmineIssueId,
+    required String issueId,
     required int redmineAttachmentId,
     int maxChars = 1200,
   }) {
     return _api.fetchAttachmentTextPreview(
-      redmineIssueId: redmineIssueId,
+      issueId: issueId,
       redmineAttachmentId: redmineAttachmentId,
       maxChars: maxChars,
     );
