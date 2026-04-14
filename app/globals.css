@@ -4935,7 +4935,7 @@ textarea {
 
 .reports-v2 .reports-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(170px, 1fr));
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
   gap: 0.72rem;
 }
 
