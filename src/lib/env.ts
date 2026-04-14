@@ -104,6 +104,7 @@ export const env = {
   slackNotifyOnUpdate: boolFromEnv("SLACK_NOTIFY_ON_UPDATE", true),
   slackNotifyOnStatusChange: boolFromEnv("SLACK_NOTIFY_ON_STATUS_CHANGE", true),
   slackNotifyOnAssignment: boolFromEnv("SLACK_NOTIFY_ON_ASSIGNMENT", true),
+  slackNotifyOnInternalNote: boolFromEnv("SLACK_NOTIFY_ON_INTERNAL_NOTE", true),
   slackNotifyFormat: (process.env.SLACK_NOTIFY_FORMAT as "compact" | "detailed") || "compact",
   slackRefreshIntervalMs: numberFromEnv("SLACK_REFRESH_INTERVAL_MS", 30000),
 };

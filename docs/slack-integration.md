@@ -26,6 +26,7 @@ SLACK_NOTIFY_ON_CREATE=true
 SLACK_NOTIFY_ON_UPDATE=true
 SLACK_NOTIFY_ON_STATUS_CHANGE=true
 SLACK_NOTIFY_ON_ASSIGNMENT=true
+SLACK_NOTIFY_ON_INTERNAL_NOTE=true
 SLACK_NOTIFY_FORMAT=compact
 ```
 
@@ -78,6 +79,7 @@ When `SLACK_NOTIFY_ENABLED=true`, the sync workflow automatically sends notifica
 | Issue updated | ✏️ Issue Updated (with field changes) |
 | Issue closed | ✅ Issue Closed |
 | Issue assigned | 👤 Issue Assigned |
+| Internal note added | 💬 Internal Note |
 | Sync complete | 🔄 Sync Summary |
 
 ### Webhook API
@@ -153,4 +155,5 @@ curl -X POST http://localhost:3000/api/slack/test
 | `SLACK_NOTIFY_ON_UPDATE` | true | Notify on updates |
 | `SLACK_NOTIFY_ON_STATUS_CHANGE` | true | Notify on status changes |
 | `SLACK_NOTIFY_ON_ASSIGNMENT` | true | Notify on assignment changes |
+| `SLACK_NOTIFY_ON_INTERNAL_NOTE` | true | Notify when internal notes are added |
 | `SLACK_NOTIFY_FORMAT` | compact | Message format (compact/detailed) |
