@@ -144,10 +144,10 @@ export function AiSummariesHeader({
           align-items: center;
           gap: 0.4rem;
           padding: 0.45rem 1rem;
-          border: 1px solid var(--accent, #8b5cf6);
+          border: 1px solid var(--accent);
           border-radius: 6px;
           background: transparent;
-          color: var(--accent, #8b5cf6);
+          color: var(--accent);
           cursor: pointer;
           font-size: 0.85rem;
           font-weight: 500;
@@ -155,7 +155,7 @@ export function AiSummariesHeader({
         }
 
         .refresh-button:hover:not(:disabled) {
-          background: var(--accent, #8b5cf6);
+          background: var(--accent);
           color: white;
         }
 
@@ -165,7 +165,7 @@ export function AiSummariesHeader({
         }
 
         .refresh-button.loading {
-          background: var(--accent, #8b5cf6);
+          background: var(--accent);
           color: white;
         }
       `}</style>

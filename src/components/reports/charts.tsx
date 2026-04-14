@@ -269,9 +269,8 @@ export function BarChartEnhanced({
   const max = Math.max(...items.map((i) => i.value), 1);
   const palette =
     colors ?? [
-      "#6366f1",
-      "#8b5cf6",
-      "#a78bfa",
+      "#006d77",
+      "#00515a",
       "#34d399",
       "#fbbf24",
       "#f87171",
@@ -357,7 +356,7 @@ export function ProgressRing({
   value,
   size = 48,
   strokeWidth = 5,
-  color = "#6366f1",
+  color = "#006d77",
 }: {
   value: number; // 0-100
   size?: number;
@@ -425,10 +424,10 @@ export function StackedBarChart({
   const maxTotal = Math.max(...Object.values(totals), 1);
   const palette =
     colors ?? [
-      "#6366f1",
+      "#006d77",
       "#10b981",
       "#f59e0b",
-      "#8b5cf6",
+      "#00515a",
       "#34d399",
       "#f87171",
       "#38bdf8",
