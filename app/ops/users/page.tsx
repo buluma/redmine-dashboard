@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { prisma } from "@/src/lib/db";
 import { getSessionUserId } from "@/src/lib/session";
 import { requireRole, getRoleDisplayName } from "@/src/lib/rbac";
@@ -23,9 +22,7 @@ export default async function UsersPage() {
         <section className="card">
           <h1>Access Denied</h1>
           <p className="muted">Only administrators can manage users.</p>
-          <Link href="/ops" className="primary-link nav-link">
-            Back to Dashboard
-          </Link>
+          <a href="/" className="secondary-button">Back to Dashboard</a>
         </section>
       </main>
     );
