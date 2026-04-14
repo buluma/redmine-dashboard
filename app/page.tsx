@@ -17,6 +17,7 @@ import { ProjectFilter } from "@/src/components/ProjectFilter";
 import { ExportButton } from "@/src/components/ExportButton";
 import { ShortcutHelp } from "@/src/components/ShortcutHelp";
 import { NotificationsPanel } from "@/src/components/NotificationsPanel";
+import { FtsSearch } from "@/src/components/FtsSearch";
 
 type User = {
   id: string;
@@ -488,6 +489,7 @@ export default function Home() {
   const [bootstrapBusy, setBootstrapBusy] = useState(false);
   const [aiStatus, setAiStatus] = useState<{ available: boolean; primaryModel: string; usingFallback: boolean } | null>(null);
   const [aiSearchOpen, setAiSearchOpen] = useState(false);
+  const [ftsSearchOpen, setFtsSearchOpen] = useState(false);
   const [aiSummaryCount, setAiSummaryCount] = useState(0);
 
   const [baseUrl, setBaseUrl] = useState("");
@@ -496,7 +498,7 @@ export default function Home() {
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
   const [search, setSearch] = useState("");
-  const [searchMode, setSearchMode] = useState<"local" | "hybrid">("local");
+  const [searchMode, setSearchMode] = useState<"local" | "hybrid" | "fts">("local");
   const [sort, setSort] = useState("updated_desc");
   const [advancedFilters, setAdvancedFilters] = useState<FilterState>(DEFAULT_ADVANCED_FILTERS);
 
@@ -1782,11 +1784,12 @@ export default function Home() {
 
           <label className="filter-field">
             Search Source
-            <select value={searchMode} onChange={(e) => setSearchMode((e.target.value as "local" | "hybrid"))}>
+            <select value={searchMode} onChange={(e) => setSearchMode((e.target.value as "local" | "hybrid" | "fts"))}>
               <option value="local">Local Cache</option>
               <option value="hybrid">Hybrid (Redmine + Cache)</option>
+              <option value="fts">Full-text Search (DB)</option>
             </select>
-            <span className="muted">Serving from: {searchSource === "local_cache" ? "Local cache" : "Hybrid"}</span>
+            <span className="muted">Mode: {searchSource === "local_cache" ? "Local cache" : searchMode === "fts" ? "Full-text Search" : "Hybrid"}</span>
           </label>
         </div>
 
@@ -1825,6 +1828,13 @@ export default function Home() {
             disabled={!aiStatus?.available}
           >
             🤖 AI Search {aiStatus?.available ? "" : "(offline)"}
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => setFtsSearchOpen(true)}
+          >
+            🔍 Full-text Search
           </button>
         </div>
       </section>
@@ -1874,6 +1884,18 @@ export default function Home() {
         <section className="card filters-panel">
           <h3>🔍 AI-Powered Search</h3>
           <AiSearchBar />
+        </section>
+      )}
+
+      {ftsSearchOpen && (
+        <section className="card filters-panel">
+          <div className="collapsible-head">
+            <h3>🔍 Full-text Database Search</h3>
+            <button type="button" className="secondary-button" onClick={() => setFtsSearchOpen(false)}>
+              Close
+            </button>
+          </div>
+          <FtsSearch onSelect={() => setFtsSearchOpen(false)} />
         </section>
       )}
 
