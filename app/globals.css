@@ -414,7 +414,7 @@ h3 {
 }
 
 .external-issue-row a {
-  color: var(--accent-strong);
+  color: #dc2626;
   font-weight: 700;
   overflow-wrap: anywhere;
 }
