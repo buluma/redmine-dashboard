@@ -12,6 +12,7 @@
 
 | Feature | Status | Notes | Date |
 |---------|--------|-------|------|
+| Webhook subscription system | ✅ DONE | DB-backed webhook endpoints, UI at /webhooks, dispatches on ticket events | 2026-04-14 |
 | WakaTime API integration | ✅ DONE | Full worktime tracking with stats, charts, insights, goals, and heartbeat data | 2026-04-14 |
 | swagger api documentation | ✅ DONE | Added /heimdall/data and /heimdall/refresh to Swagger UI | 2026-04-13 |
 | integrate to streamline REST API + logs | ✅ DONE | Prisma models + import script complete | 2026-04-13 |
