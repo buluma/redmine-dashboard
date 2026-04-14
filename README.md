@@ -6,9 +6,14 @@ It provides fast local reads from a synced cache, with all final state owned by 
 Originally built as a Redmine command center, Converge has evolved into a powerful ops platform with:
 
 - **Redmine Integration** — Sync and manage issues with AI-powered summaries
+- **Full-Text Search** — fast fuzzy search across issues, descriptions, and projects
 - **Slack Integration** — Monitor channels and send notifications
 - **AI Insights** — Issue summarization, semantic search, and chat
-- **Mobile Support** — Token-authenticated mobile API
+- **RBAC** — Role-based access control (Admin, Editor, User, Viewer)
+- **Audit Logging** — Track user actions, role changes, and internal notes
+- **Mobile Support** — Token-authenticated mobile API (v1)
+- **PWA / Offline** — Installable app with IndexedDB cache, offline viewing, and queued sync
+- **Docker Production** — Multi-stage build, healthchecks, backup/restore scripts
 - **WakaTime Integration** — Coding time tracking
 
 ## Documentation
@@ -47,6 +52,44 @@ make up
 ```
 
 For more details, see the [Deployment Guide](./docs/deployment-guide.md).
+
+### Production Docker
+
+For production deployments with healthchecks, backups, and zero-downtime deploys:
+
+```bash
+# Build and start production stack
+docker compose -f docker-compose.yml up -d
+
+# Backup database
+./scripts/backup.sh
+
+# Restore from backup
+./scripts/restore.sh backup-2026-04-14.sql
+```
+
+## RBAC (Role-Based Access Control)
+
+Converge supports four roles with progressively restricted permissions:
+
+| Role | Access |
+|------|--------|
+| **Admin** | Full access: ops pages, user management, role changes, audit logs |
+| **Editor** | View ops pages, audit logs; cannot manage users |
+| **User** | Standard dashboard access |
+| **Viewer** | Read-only dashboard access |
+
+Roles are managed at `/ops/users` (Admin only).
+
+## PWA & Offline
+
+Converge is installable as a Progressive Web App. When offline:
+
+- Previously viewed issues are cached in IndexedDB and viewable
+- Status changes, comments, and time entries are queued and auto-synced on reconnect
+- An offline banner appears at the top when both `navigator.onLine` and server ping fail
+
+Install from Chrome/Edge: click the install icon in the address bar, or "Add to Home Screen" on Android.
 
 ## Testing
 

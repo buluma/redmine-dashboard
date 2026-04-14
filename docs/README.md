@@ -17,6 +17,10 @@ Welcome to the documentation for Converge. This documentation is intended to hel
 - **[Codebase Summary](./codebase-summary.md):** A summary of the codebase structure.
 - **[Design Guidelines](./design-guidelines.md):** The design guidelines and UI/UX specifications.
 
+## Security & Access
+
+- **[RBAC](./rbac.md):** Role-based access control — Admin, Editor, User, Viewer roles, permission matrix, and role management.
+
 ## Mobile Development
 
 - **[Flutter Guide](./mobile/flutter.md):** Guide for the Flutter application.
