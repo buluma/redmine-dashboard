@@ -7,6 +7,50 @@
 
 import https from 'https';
 
+export const WAKATIME_RANGE_OPTIONS = [
+  { label: "Last 7 Days", value: "last_7_days", days: 7 },
+  { label: "Last 30 Days", value: "last_30_days", days: 30 },
+  { label: "Last 6 Months", value: "last_6_months", days: 180 },
+  { label: "Last Year", value: "last_year", days: 365 },
+] as const;
+
+export type WakaTimeRange = (typeof WAKATIME_RANGE_OPTIONS)[number]["value"];
+
+export const DEFAULT_WAKATIME_RANGE: WakaTimeRange = "last_7_days";
+
+const WAKATIME_RANGE_DAYS: Record<WakaTimeRange, number> = WAKATIME_RANGE_OPTIONS.reduce(
+  (acc, item) => {
+    acc[item.value] = item.days;
+    return acc;
+  },
+  {} as Record<WakaTimeRange, number>,
+);
+
+export function isWakaTimeRange(value: string | null | undefined): value is WakaTimeRange {
+  if (!value) return false;
+  return Object.prototype.hasOwnProperty.call(WAKATIME_RANGE_DAYS, value);
+}
+
+function asDateOnlyLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function getSummaryDateWindow(range: WakaTimeRange, now = new Date()): { start: string; end: string; days: number } {
+  const days = WAKATIME_RANGE_DAYS[range] ?? 7;
+  const end = new Date(now);
+  end.setHours(0, 0, 0, 0);
+  const start = new Date(end);
+  start.setDate(end.getDate() - (days - 1));
+  return {
+    start: asDateOnlyLocal(start),
+    end: asDateOnlyLocal(end),
+    days,
+  };
+}
+
 // ─── Types ───────────────────────────────────────────────────────────────
 
 export interface WakaTimeBreakdown {
@@ -105,6 +149,130 @@ export interface WakaTimeTodayResponse {
   };
 }
 
+export interface WakaTimeHeartbeat {
+  entity?: string;
+  type?: string;
+  time: number;
+  project?: string;
+  branch?: string;
+  language?: string;
+  category?: string;
+  is_write?: boolean;
+}
+
+export interface WakaTimeHeartbeatsResponse {
+  data: WakaTimeHeartbeat[];
+  start?: string;
+  end?: string;
+  timezone?: string;
+}
+
+export type WakaTimeInsightType =
+  | "weekdays"
+  | "weekday"
+  | "days"
+  | "best_day"
+  | "daily_average"
+  | "projects"
+  | "languages"
+  | "editors"
+  | "categories"
+  | "machines"
+  | "operating_systems";
+
+export interface WakaTimeInsightsResponse {
+  data: {
+    range?: string;
+    human_readable_range?: string;
+    status?: string;
+    is_including_today?: boolean;
+    is_up_to_date?: boolean;
+    percent_calculated?: number;
+    start?: string;
+    end?: string;
+    timezone?: string;
+    timeout?: number;
+    writes_only?: boolean;
+    user_id?: string;
+    created_at?: string;
+    modified_at?: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface WakaTimeGoalChartPoint {
+  actual_seconds?: number;
+  actual_seconds_text?: string;
+  goal_seconds?: number;
+  goal_seconds_text?: string;
+  range_status?: "success" | "fail" | "pending" | "ignored" | string;
+  range_status_reason?: string;
+  range?: {
+    date?: string;
+    start?: string;
+    end?: string;
+    text?: string;
+    timezone?: string;
+  };
+}
+
+export interface WakaTimeGoal {
+  id: string;
+  title?: string;
+  custom_title?: string;
+  type?: string;
+  delta?: "day" | "week" | string;
+  status?: "success" | "fail" | "pending" | "ignored" | string;
+  average_status?: "success" | "fail" | string;
+  cumulative_status?: "success" | "fail" | "ignored" | string;
+  status_percent_calculated?: number;
+  is_enabled?: boolean;
+  is_inverse?: boolean;
+  created_at?: string;
+  chart_data?: WakaTimeGoalChartPoint[];
+}
+
+export interface WakaTimeGoalsResponse {
+  data: WakaTimeGoal[];
+}
+
+export interface WakaTimeReportPayload {
+  range: WakaTimeRange;
+  generatedAt: string;
+  stats: WakaTimeStatsResponse;
+  summaries: WakaTimeSummariesResponse | null;
+  allTime: WakaTimeAllTimeResponse | null;
+  today: WakaTimeTodayResponse | null;
+  insights: {
+    weekday: WakaTimeInsightsResponse | null;
+  };
+  goals: WakaTimeGoalsResponse | null;
+  heartbeats: {
+    start: string;
+    end: string;
+    days: Array<{
+      date: string;
+      data: WakaTimeHeartbeatsResponse | null;
+    }>;
+  };
+}
+
+export class WakaTimeApiError extends Error {
+  status: number;
+  body: string;
+
+  constructor(status: number, body: string, message?: string) {
+    super(message ?? `WakaTime API error (${status})`);
+    this.name = 'WakaTimeApiError';
+    this.status = status;
+    this.body = body;
+  }
+}
+
+export function isWakaTimeApiError(err: unknown): err is WakaTimeApiError {
+  return err instanceof WakaTimeApiError;
+}
+
 // ─── Client ──────────────────────────────────────────────────────────────
 
 const BASE = "https://api.wakatime.com/api/v1";
@@ -119,45 +287,81 @@ export class WakaTimeClient {
     this.apiKey = apiKey;
   }
 
-  private async get<T>(path: string): Promise<T> {
+  private async get<T>(path: string, options?: { quiet?: boolean }): Promise<T> {
+    const quiet = Boolean(options?.quiet);
     // Build URL - if path already has query params, use &, otherwise use ?
     const separator = path.includes('?') ? '&' : '?';
     const url = `${BASE}${path}${separator}api_key=${this.apiKey}`;
-    console.log('[WakaTime] Fetching:', url.replace(this.apiKey, '***'));
+    if (!quiet) {
+      console.log('[WakaTime] Fetching:', url.replace(this.apiKey, '***'));
+    }
 
     try {
       // Force IPv4 by using Node's https module directly with family=4
       const result = await this.httpsGet(url);
-      console.log('[WakaTime] Response status:', result.status);
+      if (!quiet) {
+        console.log('[WakaTime] Response status:', result.status);
+      }
 
       if (result.status === 401) {
-        throw new Error("WakaTime API key is invalid. Check your WAKATIME_API_KEY.");
+        throw new WakaTimeApiError(
+          401,
+          result.body,
+          "WakaTime API key is invalid. Check your WAKATIME_API_KEY.",
+        );
       }
       if (result.status === 429) {
-        throw new Error("WakaTime rate limit exceeded. Try again in a few minutes.");
+        throw new WakaTimeApiError(
+          429,
+          result.body,
+          "WakaTime rate limit exceeded. Try again in a few minutes.",
+        );
       }
       if (result.status === 202) {
-        throw new Error("WakaTime stats are still calculating. Try again shortly.");
+        throw new WakaTimeApiError(
+          202,
+          result.body,
+          "WakaTime stats are still calculating. Try again shortly.",
+        );
       }
       if (result.status < 200 || result.status >= 300) {
-        throw new Error(`WakaTime API error (${result.status}): ${result.body.substring(0, 100)}`);
+        throw new WakaTimeApiError(
+          result.status,
+          result.body,
+          `WakaTime API error (${result.status}): ${result.body.substring(0, 100)}`,
+        );
       }
 
       return JSON.parse(result.body) as T;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      if (err instanceof WakaTimeApiError) {
+        // Optional endpoints may fail for plan/scope reasons; caller decides handling.
+        if (!quiet && err.status >= 500) {
+          console.error('[WakaTime] API error:', err.status, err.message);
+        }
+        throw err;
+      }
+
+      const message = err instanceof Error ? err.message : String(err);
+      const cause = err instanceof Error ? (err as Error & { cause?: { code?: string } }).cause : undefined;
+      const causeCode = cause?.code;
       // Determine if it's a network/connection error
-      const isNetworkError = err.cause?.code === 'ETIMEDOUT' || 
-                             err.cause?.code === 'EHOSTUNREACH' || 
-                             err.cause?.code === 'ECONNREFUSED' ||
-                             err.message?.includes('fetch failed');
+      const isNetworkError = causeCode === 'ETIMEDOUT' || 
+                             causeCode === 'EHOSTUNREACH' || 
+                             causeCode === 'ECONNREFUSED' ||
+                             message.includes('fetch failed');
       
       if (isNetworkError) {
-        console.error('[WakaTime] Network connectivity issue:', err.cause?.code || err.message);
+        if (!quiet) {
+          console.error('[WakaTime] Network connectivity issue:', causeCode || message);
+        }
         throw new Error(`Network error: Cannot reach WakaTime API. Check firewall/VPN settings.`);
       }
       
-      console.error('[WakaTime] Fetch error:', err.message);
-      throw new Error(`fetch failed: ${err.message}`);
+      if (!quiet) {
+        console.error('[WakaTime] Fetch error:', message);
+      }
+      throw new Error(`fetch failed: ${message}`);
     }
   }
 
@@ -226,6 +430,28 @@ export class WakaTimeClient {
   /** Today's coding time (optimized for status bars). */
   getTodayStatusBar(): Promise<WakaTimeTodayResponse> {
     return this.get("/users/current/status_bar/today");
+  }
+
+  /** Raw heartbeats for a given day (requires read_heartbeats scope). */
+  getHeartbeats(date: string, options?: { quiet?: boolean }): Promise<WakaTimeHeartbeatsResponse> {
+    return this.get(`/users/current/heartbeats?date=${encodeURIComponent(date)}`, options);
+  }
+
+  /** List user goals. */
+  getGoals(options?: { quiet?: boolean }): Promise<WakaTimeGoalsResponse> {
+    return this.get("/users/current/goals", options);
+  }
+
+  /** Fetch a single insight for a given range. */
+  getInsights(
+    insightType: WakaTimeInsightType,
+    range: WakaTimeRange | "all_time" | string,
+    options?: { quiet?: boolean },
+  ): Promise<WakaTimeInsightsResponse> {
+    return this.get(
+      `/users/current/insights/${encodeURIComponent(insightType)}/${encodeURIComponent(range)}`,
+      options,
+    );
   }
 }
 

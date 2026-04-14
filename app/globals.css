@@ -5378,6 +5378,268 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
+.reports-v2 .wakatime-top-days {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.reports-v2 .wakatime-top-day-row {
+  border: 1px solid #d7e4ef;
+  border-radius: 8px;
+  padding: 0.5rem 0.62rem;
+  background: #f8fbfd;
+}
+
+.reports-v2 .wakatime-top-day-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reports-v2 .wakatime-top-day-date {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #214157;
+}
+
+.reports-v2 .wakatime-top-day-total {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #0f6f87;
+}
+
+.reports-v2 .wakatime-top-day-sub {
+  margin-top: 0.2rem;
+  font-size: 0.76rem;
+}
+
+.reports-v2 .wakatime-goals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.54rem;
+}
+
+.reports-v2 .wakatime-goal-row {
+  border: 1px solid #d7e4ef;
+  border-radius: 8px;
+  padding: 0.5rem 0.62rem;
+  background: #f8fbfd;
+}
+
+.reports-v2 .wakatime-goal-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.reports-v2 .wakatime-goal-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #214157;
+}
+
+.reports-v2 .wakatime-goal-status {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.035em;
+  padding: 0.16rem 0.42rem;
+  border-radius: 999px;
+  background: #e4edf5;
+  color: #38536b;
+}
+
+.reports-v2 .wakatime-goal-status.status-success {
+  background: #e0f3e7;
+  color: #226447;
+}
+
+.reports-v2 .wakatime-goal-status.status-fail {
+  background: #fbe5e5;
+  color: #8c2b2b;
+}
+
+.reports-v2 .wakatime-goal-status.status-pending {
+  background: #f6ebdb;
+  color: #8f5d24;
+}
+
+.reports-v2 .wakatime-goal-meta {
+  margin-top: 0.2rem;
+  font-size: 0.74rem;
+}
+
+.reports-v2 .wakatime-goal-track {
+  margin-top: 0.34rem;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: #e6edf3;
+  overflow: hidden;
+}
+
+.reports-v2 .wakatime-goal-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0f6f87, #34d399);
+  transition: width 0.3s ease;
+}
+
+.reports-v2 .wakatime-goal-reason {
+  margin-top: 0.28rem;
+  font-size: 0.72rem;
+}
+
+.reports-v2 .wakatime-gauge-panel {
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+}
+
+.reports-v2 .wakatime-gauge-svg {
+  width: min(100%, 260px);
+  height: auto;
+}
+
+.reports-v2 .wakatime-gauge-copy {
+  text-align: center;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.reports-v2 .wakatime-gauge-today {
+  font-size: 1.06rem;
+  color: #214157;
+}
+
+.reports-v2 .wakatime-gauge-delta {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.reports-v2 .wakatime-gauge-delta.up {
+  color: #226447;
+}
+
+.reports-v2 .wakatime-gauge-delta.down {
+  color: #8c2b2b;
+}
+
+.reports-v2 .wakatime-gauge-meta {
+  font-size: 0.77rem;
+  color: var(--ink-soft);
+}
+
+.reports-v2 .wakatime-scope-note {
+  margin-top: 0.5rem;
+  font-size: 0.74rem;
+}
+
+.reports-v2 .wakatime-weekday-mix {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 340px);
+  gap: 0.72rem;
+  align-items: start;
+}
+
+.reports-v2 .wakatime-weekday-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.reports-v2 .wakatime-weekday-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  padding: 0.08rem 0;
+}
+
+.reports-v2 .wakatime-weekday-label {
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: #29465f;
+}
+
+.reports-v2 .wakatime-weekday-track {
+  display: flex;
+  height: 11px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e7eef4;
+}
+
+.reports-v2 .wakatime-weekday-segment {
+  height: 100%;
+  min-width: 0;
+}
+
+.reports-v2 .wakatime-weekday-tooltip {
+  border: 1px solid #c6d2de;
+  border-radius: 8px;
+  background: #f8fafc;
+  box-shadow: 0 8px 20px rgba(21, 42, 61, 0.12);
+  padding: 0.6rem 0.72rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.reports-v2 .wakatime-weekday-tooltip-head {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #163349;
+}
+
+.reports-v2 .wakatime-weekday-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.reports-v2 .wakatime-weekday-tooltip-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #29465f;
+}
+
+.reports-v2 .wakatime-weekday-tooltip-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.reports-v2 .wakatime-weekday-tooltip-value {
+  font-weight: 700;
+  color: #11293c;
+}
+
+.reports-v2 .wakatime-bottom-grid {
+  align-items: start;
+}
+
+.reports-v2 .wakatime-empty-state {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.reports-v2 .wakatime-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
 @media (max-width: 700px) {
   .reports-v2 .stacked-bar-row {
     grid-template-columns: 94px minmax(0, 1fr) 40px;
@@ -5394,6 +5656,14 @@ textarea {
 
   .reports-v2 .stacked-bar-value {
     font-size: 0.67rem;
+  }
+
+  .reports-v2 .wakatime-weekday-mix {
+    grid-template-columns: 1fr;
+  }
+
+  .reports-v2 .wakatime-weekday-tooltip {
+    order: -1;
   }
 }
 

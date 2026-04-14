@@ -2,10 +2,40 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/src/lib/session";
 import { prisma } from "@/src/lib/db";
-import { WakaTimeClient } from "@/src/lib/wakatime";
+import {
+  DEFAULT_WAKATIME_RANGE,
+  getSummaryDateWindow,
+  isWakaTimeApiError,
+  WakaTimeClient,
+} from "@/src/lib/wakatime";
 import { WakatimeChartsClient } from "./wakatime-client";
 
 export const runtime = "nodejs";
+
+function asDateOnlyLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+async function fetchWeekdayInsight(client: WakaTimeClient, range: string) {
+  const insightTypes: Array<"weekdays" | "weekday" | "days"> = ["weekdays", "weekday", "days"];
+  for (const insightType of insightTypes) {
+    try {
+      return await client.getInsights(insightType, range, { quiet: true });
+    } catch (err: unknown) {
+      if (isWakaTimeApiError(err) && (err.status === 401 || err.status === 402 || err.status === 403)) {
+        return null;
+      }
+      if (isWakaTimeApiError(err) && err.status !== 400) {
+        return null;
+      }
+      // invalid type (400): continue to next possible insight type
+    }
+  }
+  return null;
+}
 
 export default async function WakatimePage() {
   // Graceful auth: redirect to login if no session
@@ -22,7 +52,7 @@ export default async function WakatimePage() {
   const apiKey = process.env.WAKATIME_API_KEY;
   if (!apiKey) {
     return (
-      <main className="dashboard">
+      <main className="dashboard reports-v2">
         <header className="card hero">
           <div className="hero-top">
             <div>
@@ -58,22 +88,43 @@ export default async function WakatimePage() {
   let summaries: Awaited<ReturnType<WakaTimeClient["getSummaries"]>> | null = null;
   let allTime: Awaited<ReturnType<WakaTimeClient["getAllTimeSinceToday"]>> | null = null;
   let today: Awaited<ReturnType<WakaTimeClient["getTodayStatusBar"]>> | null = null;
+  let weekdayInsight: Awaited<ReturnType<WakaTimeClient["getInsights"]>> | null = null;
+  let goals: Awaited<ReturnType<WakaTimeClient["getGoals"]>> | null = null;
+  let heartbeatDays: Array<{ date: string; data: Awaited<ReturnType<WakaTimeClient["getHeartbeats"]>> | null }> = [];
   let error: string | null = null;
 
   try {
     const client = new WakaTimeClient(apiKey);
+    const { start, end } = getSummaryDateWindow(DEFAULT_WAKATIME_RANGE);
     [stats, summaries, allTime, today] = await Promise.all([
-      client.getStats(),
-      client.getSummaries({ range: "Last 7 Days" }),
+      client.getStats(DEFAULT_WAKATIME_RANGE),
+      client.getSummaries({ start, end }),
       client.getAllTimeSinceToday(),
       client.getTodayStatusBar(),
     ]);
-  } catch (err: any) {
-    error = err.message || "Failed to fetch WakaTime data";
+    [weekdayInsight, goals] = await Promise.all([
+      fetchWeekdayInsight(client, DEFAULT_WAKATIME_RANGE),
+      client.getGoals({ quiet: true }).catch(() => null),
+    ]);
+    const heartbeatDates: string[] = [];
+    const cursor = new Date(`${end}T00:00:00`);
+    for (let i = 6; i >= 0; i -= 1) {
+      const d = new Date(cursor);
+      d.setDate(cursor.getDate() - i);
+      heartbeatDates.push(asDateOnlyLocal(d));
+    }
+    heartbeatDays = await Promise.all(
+      heartbeatDates.map(async (date) => ({
+        date,
+        data: await client.getHeartbeats(date, { quiet: true }).catch(() => null),
+      })),
+    );
+  } catch (err: unknown) {
+    error = err instanceof Error ? err.message : "Failed to fetch WakaTime data";
   }
 
   return (
-    <main className="dashboard">
+    <main className="dashboard reports-v2">
       <header className="card hero">
         <div className="hero-top">
           <div>
@@ -128,7 +179,7 @@ export default async function WakatimePage() {
               </p>
               {process.env.NODE_ENV === "development" && (
                 <p className="muted" style={{ fontSize: "0.75rem", marginTop: "0.5rem" }}>
-                  Debug: Key present: {!!apiKey} · Key: {apiKey ? apiKey.substring(0, 15) + '...' : 'none'} · Error: {error.substring(0, 100)}
+                  Debug: Key present: {!!apiKey} · Range: {DEFAULT_WAKATIME_RANGE} · Error: {error.substring(0, 100)}
                 </p>
               )}
             </div>
@@ -140,6 +191,10 @@ export default async function WakatimePage() {
           summaries={summaries}
           allTime={allTime}
           today={today}
+          weekdayInsight={weekdayInsight}
+          goals={goals}
+          heartbeatDays={heartbeatDays}
+          initialRange={DEFAULT_WAKATIME_RANGE}
         />
       ) : null}
     </main>

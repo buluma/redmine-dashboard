@@ -16,7 +16,7 @@ Originally built as a Redmine command center, Converge has evolved into a powerf
 - **Mobile Support** — Token-authenticated mobile API (v1)
 - **PWA / Offline** — Installable app with IndexedDB cache, offline viewing, and queued sync
 - **Docker Production** — Multi-stage build, healthchecks, backup/restore scripts
-- **WakaTime Integration** — Coding time tracking
+- **WakaTime Integration** — Coding time tracking with stats, charts, insights, goals, and daily heartbeat data
 
 ## Documentation
 

@@ -153,6 +153,10 @@ export default async function AiSummariesPage() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
 
+  const maxPriorityCount = topPriorities[0]?.[1] ?? 1;
+  const maxStatusCount = topStatuses[0]?.[1] ?? 1;
+  const maxChatIssueCount = topChatIssues[0]?.[1] ?? 1;
+
   // Calculate averages
   let avgSummaryDuration = 0;
   let summaryCount = 0;
@@ -199,7 +203,6 @@ export default async function AiSummariesPage() {
         totalSummaries={totalSummaries}
         totalChatMessages={totalChatMessages}
         issueCount={totalIssueCount}
-        userMessages={userMessages}
       />
 
       {summaries.length === 0 && chatMessages.length === 0 ? (
@@ -259,14 +262,17 @@ export default async function AiSummariesPage() {
 
             {/* Model Usage */}
             <div className="ai-section">
-              <h3 className="ai-section-title">Model Usage</h3>
+              <div className="ai-section-head">
+                <h3 className="ai-section-title">Model Usage</h3>
+                <span className="ai-section-badge">{allModels.size} models</span>
+              </div>
               <div className="ai-model-bars">
                 {allModels.size === 0 ? (
-                  <p className="muted">No model data yet</p>
+                  <p className="muted ai-empty-copy">No model data yet.</p>
                 ) : (
                   Array.from(allModels.entries())
                     .sort((a, b) => (b[1].summaries + b[1].chat) - (a[1].summaries + a[1].chat))
-                    .map(([model, data]) => {
+                    .map(([model, data], index) => {
                       const total = data.summaries + data.chat;
                       const maxTotal = Math.max(...Array.from(allModels.values()).map(d => d.summaries + d.chat));
                       const pct = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
@@ -274,19 +280,25 @@ export default async function AiSummariesPage() {
                       return (
                         <div key={model} className="ai-model-row">
                           <div className="ai-model-name">
-                            {model.includes("claude") ? "🧠" : model.includes("gpt") ? "💬" : "🦙"} {model}
+                            <span className="ai-model-rank">#{index + 1}</span>
+                            <span className="ai-model-label">
+                              {model.includes("claude") ? "🧠" : model.includes("gpt") ? "💬" : "🦙"} {model}
+                            </span>
                           </div>
                           <div className="ai-model-bar-wrap">
-                            <div 
-                              className="ai-model-bar" 
-                              style={{ width: `${pct}%` }}
-                            />
+                            <div className="ai-model-track">
+                              <div
+                                className="ai-model-bar"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
                             <div className="ai-model-stats">
                               {data.summaries > 0 && <span>{data.summaries} sum</span>}
                               {data.chat > 0 && <span>{data.chat} chat</span>}
                               {totalTokens > 0 && <span className="ai-model-tokens">{totalTokens.toLocaleString()} tokens</span>}
                             </div>
                           </div>
+                          <div className="ai-model-total">{total}</div>
                         </div>
                       );
                     })
@@ -298,14 +310,22 @@ export default async function AiSummariesPage() {
             <div className="ai-overview-grid">
               {/* Priorities */}
               <div className="ai-overview-card">
-                <h4>By Priority</h4>
+                <div className="ai-overview-card-head">
+                  <h4>By Priority</h4>
+                  <span className="ai-overview-card-badge">{topPriorities.length}</span>
+                </div>
                 {topPriorities.length === 0 ? (
-                  <p className="muted">No priority data</p>
+                  <p className="muted ai-empty-copy">No priority data.</p>
                 ) : (
                   <div className="ai-list">
                     {topPriorities.map(([name, count]) => (
                       <div key={name} className="ai-list-row">
-                        <span className="ai-list-name">{name}</span>
+                        <div className="ai-list-main">
+                          <span className="ai-list-name">{name}</span>
+                          <span className="ai-list-meter">
+                            <span className="ai-list-meter-fill" style={{ width: `${(count / maxPriorityCount) * 100}%` }} />
+                          </span>
+                        </div>
                         <span className="ai-list-count">{count}</span>
                       </div>
                     ))}
@@ -315,14 +335,22 @@ export default async function AiSummariesPage() {
 
               {/* Statuses */}
               <div className="ai-overview-card">
-                <h4>By Status</h4>
+                <div className="ai-overview-card-head">
+                  <h4>By Status</h4>
+                  <span className="ai-overview-card-badge">{topStatuses.length}</span>
+                </div>
                 {topStatuses.length === 0 ? (
-                  <p className="muted">No status data</p>
+                  <p className="muted ai-empty-copy">No status data.</p>
                 ) : (
                   <div className="ai-list">
                     {topStatuses.map(([name, count]) => (
                       <div key={name} className="ai-list-row">
-                        <span className="ai-list-name">{name}</span>
+                        <div className="ai-list-main">
+                          <span className="ai-list-name">{name}</span>
+                          <span className="ai-list-meter">
+                            <span className="ai-list-meter-fill" style={{ width: `${(count / maxStatusCount) * 100}%` }} />
+                          </span>
+                        </div>
                         <span className="ai-list-count">{count}</span>
                       </div>
                     ))}
@@ -331,24 +359,33 @@ export default async function AiSummariesPage() {
               </div>
 
               {/* Top Chatted Issues */}
-              {topChatIssues.length > 0 && (
-                <div className="ai-overview-card">
+              <div className="ai-overview-card">
+                <div className="ai-overview-card-head">
                   <h4>Most Chatted</h4>
+                  <span className="ai-overview-card-badge">{topChatIssues.length}</span>
+                </div>
+                {topChatIssues.length === 0 ? (
+                  <p className="muted ai-empty-copy">No chat issue activity yet.</p>
+                ) : (
                   <div className="ai-list">
                     {topChatIssues.map(([issueId, count]) => {
-                      const issueMsg = chatMessages.find((m) => m.issue.redmineIssueId === issueId);
                       return (
                         <div key={issueId} className="ai-list-row">
-                          <Link href={`/issues/${issueId}`} className="ai-list-link">
-                            #{issueId}
-                          </Link>
+                          <div className="ai-list-main">
+                            <Link href={`/issues/${issueId}`} className="ai-list-link">
+                              #{issueId}
+                            </Link>
+                            <span className="ai-list-meter">
+                              <span className="ai-list-meter-fill" style={{ width: `${(count / maxChatIssueCount) * 100}%` }} />
+                            </span>
+                          </div>
                           <span className="ai-list-count">{count}</span>
                         </div>
                       );
                     })}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </section>
 

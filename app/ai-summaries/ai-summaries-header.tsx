@@ -7,7 +7,6 @@ interface AiSummariesHeaderProps {
   totalSummaries: number;
   totalChatMessages: number;
   issueCount: number;
-  userMessages: number;
 }
 
 const AUTO_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -16,7 +15,6 @@ export function AiSummariesHeader({
   totalSummaries,
   totalChatMessages,
   issueCount,
-  userMessages,
 }: AiSummariesHeaderProps) {
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
   const [nextRefreshIn, setNextRefreshIn] = useState(AUTO_REFRESH_INTERVAL_MS / 1000);
@@ -62,7 +60,7 @@ export function AiSummariesHeader({
           <p className="kicker">AI Insights</p>
           <h1>AI Summaries</h1>
           <p className="muted">
-            {totalSummaries} summary{totalSummaries !== 1 ? "ies" : "y"} · {userMessages} chat messages across {issueCount} issue{issueCount !== 1 ? "s" : ""}
+            {totalSummaries} summary{totalSummaries !== 1 ? "ies" : "y"} · {totalChatMessages} chat messages across {issueCount} issue{issueCount !== 1 ? "s" : ""}
           </p>
         </div>
         <div className="hero-actions" style={{ overflow: "visible" }}>
