@@ -99,7 +99,7 @@ type HealthPayload = {
 
 function formatDateTime(value: string | null): string {
   if (!value) return "-";
-  return new Date(value).toLocaleString();
+  return new Date(value).toLocaleString("en-GB");
 }
 
 function formatDuration(ms: number | null): string {
@@ -524,7 +524,7 @@ export default function OpsPage() {
                   <div className="log-head">
                     <span className={`log-level-badge log-${log.level}`}>{log.level}</span>
                     <span className="log-source">{log.source ?? "unknown"}</span>
-                    <span className="log-time">{new Date(log.createdAt).toLocaleString()}</span>
+                    <span className="log-time">{new Date(log.createdAt).toLocaleString("en-GB")}</span>
                   </div>
                   <div className="log-message">{log.message}</div>
                   {log.url && (

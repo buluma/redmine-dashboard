@@ -104,7 +104,7 @@ export function UsersClient({ initialUsers, currentUserId }: { initialUsers: Use
                     {user.redmineBaseUrl ?? "Not connected"}
                   </td>
                   <td className="muted">
-                    {new Date(user.createdAt).toLocaleDateString()}
+                    {new Date(user.createdAt).toLocaleDateString("en-GB")}
                   </td>
                   <td>
                     {user.id !== currentUserId && (
