@@ -356,7 +356,21 @@ export class SlackNotificationService {
       });
 
       const issueUpdate = this.toIssueUpdate(this.toIssueState(issue));
-      await this.notifier!.notifyInternalNoteAdded(issueUpdate, noteContent, authorName);
+      
+      // Build dashboard URL for local issues
+      const dashboardUrl = !issue.redmineIssueId 
+        ? `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/issues/${issue.id}`
+        : undefined;
+      
+      await this.notifier!.notifyInternalNoteAdded(issueUpdate, noteContent, authorName, {
+        priority: issue.priority,
+        status: issue.statusName,
+        assignee: issue.assignedToName,
+        dueDate: issue.dueDate 
+          ? new Date(issue.dueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+          : undefined,
+        dashboardUrl,
+      });
       
       logEvent("slack.notification.sent", {
         type: "internal_note",
