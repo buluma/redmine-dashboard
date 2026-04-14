@@ -760,7 +760,6 @@ class _IssueListScreenState extends State<IssueListScreen> {
                           );
                         },
                       ),
-              ),
                     ),
               ),
             ],
