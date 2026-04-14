@@ -114,9 +114,9 @@ class NrccApiClient {
     }
   }
 
-  Future<Issue> getIssue(int redmineIssueId) async {
+  Future<Issue> getIssue(String issueId) async {
     try {
-      final response = await _dio.get<Map<String, dynamic>>("/api/mobile/v1/issues/$redmineIssueId");
+      final response = await _dio.get<Map<String, dynamic>>("/api/mobile/v1/issues/$issueId");
       final issue = response.data?["issue"] as Map<String, dynamic>? ?? <String, dynamic>{};
       return Issue.fromJson(issue);
     } on DioException catch (e) {
@@ -125,12 +125,12 @@ class NrccApiClient {
   }
 
   Future<void> postComment({
-    required int redmineIssueId,
+    required String issueId,
     required String comment,
   }) async {
     try {
       await _dio.post<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/comment",
+        "/api/mobile/v1/issues/$issueId/comment",
         data: <String, dynamic>{"comment": comment},
       );
     } on DioException catch (e) {
@@ -139,12 +139,12 @@ class NrccApiClient {
   }
 
   Future<void> updateStatus({
-    required int redmineIssueId,
+    required String issueId,
     required int statusId,
   }) async {
     try {
       await _dio.post<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/status",
+        "/api/mobile/v1/issues/$issueId/status",
         data: <String, dynamic>{"statusId": statusId},
       );
     } on DioException catch (e) {
@@ -153,12 +153,12 @@ class NrccApiClient {
   }
 
   Future<void> assignIssue({
-    required int redmineIssueId,
+    required String issueId,
     required int userId,
   }) async {
     try {
       await _dio.post<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/assign",
+        "/api/mobile/v1/issues/$issueId/assign",
         data: <String, dynamic>{"userId": userId},
       );
     } on DioException catch (e) {
@@ -176,10 +176,10 @@ class NrccApiClient {
     }
   }
 
-  Future<List<TimeEntry>> listTimeEntries({required int redmineIssueId}) async {
+  Future<List<TimeEntry>> listTimeEntries({required String issueId}) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/time-entries",
+        "/api/mobile/v1/issues/$issueId/time-entries",
       );
       final items = (response.data?["items"] as List<dynamic>?) ?? const <dynamic>[];
       return items.map((e) => TimeEntry.fromJson(e as Map<String, dynamic>)).toList();
@@ -189,7 +189,7 @@ class NrccApiClient {
   }
 
   Future<void> createTimeEntry({
-    required int redmineIssueId,
+    required String issueId,
     required double hours,
     required int activityId,
     String? comment,
@@ -197,7 +197,7 @@ class NrccApiClient {
   }) async {
     try {
       await _dio.post<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/time-entries",
+        "/api/mobile/v1/issues/$issueId/time-entries",
         data: <String, dynamic>{
           "hours": hours,
           "activityId": activityId,
@@ -220,10 +220,10 @@ class NrccApiClient {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getBreadcrumbs({required int redmineIssueId}) async {
+  Future<List<Map<String, dynamic>>> getBreadcrumbs({required String issueId}) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/breadcrumbs",
+        "/api/mobile/v1/issues/$issueId/breadcrumbs",
       );
       final items = (response.data?["breadcrumbs"] as List<dynamic>?) ?? const <dynamic>[];
       return items.cast<Map<String, dynamic>>();
@@ -232,11 +232,11 @@ class NrccApiClient {
     }
   }
 
-  Future<Map<String, dynamic>> summarizeIssue({required int redmineIssueId}) async {
+  Future<Map<String, dynamic>> summarizeIssue({required String issueId}) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         "/api/ai/summarize",
-        data: <String, dynamic>{"issueId": "$redmineIssueId"},
+        data: <String, dynamic>{"issueId": "$issueId"},
       );
       return response.data ?? <String, dynamic>{};
     } on DioException catch (e) {
@@ -244,11 +244,11 @@ class NrccApiClient {
     }
   }
 
-  Future<Map<String, dynamic>> categorizeIssue({required int redmineIssueId}) async {
+  Future<Map<String, dynamic>> categorizeIssue({required String issueId}) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         "/api/ai/categorize",
-        data: <String, dynamic>{"issueId": "$redmineIssueId"},
+        data: <String, dynamic>{"issueId": "$issueId"},
       );
       return response.data ?? <String, dynamic>{};
     } on DioException catch (e) {
@@ -266,7 +266,7 @@ class NrccApiClient {
   }
 
   Future<Map<String, dynamic>> editIssue({
-    required int redmineIssueId,
+    required String issueId,
     String? subject,
     String? description,
     String? priority,
@@ -284,7 +284,7 @@ class NrccApiClient {
       if (estimatedHours != null) data["estimatedHours"] = estimatedHours;
 
       final response = await _dio.put<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/edit",
+        "/api/mobile/v1/issues/$issueId/edit",
         data: data,
       );
       return response.data ?? <String, dynamic>{};
@@ -293,10 +293,10 @@ class NrccApiClient {
     }
   }
 
-  Future<List<InternalNote>> listInternalNotes({required int redmineIssueId}) async {
+  Future<List<InternalNote>> listInternalNotes({required String issueId}) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/internal-notes",
+        "/api/mobile/v1/issues/$issueId/internal-notes",
       );
       final items = (response.data?["notes"] as List<dynamic>?) ?? const <dynamic>[];
       return items.map((e) => InternalNote.fromJson(e as Map<String, dynamic>)).toList();
@@ -306,12 +306,12 @@ class NrccApiClient {
   }
 
   Future<InternalNote> createInternalNote({
-    required int redmineIssueId,
+    required String issueId,
     required String content,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/internal-notes",
+        "/api/mobile/v1/issues/$issueId/internal-notes",
         data: <String, dynamic>{"content": content},
       );
       return InternalNote.fromJson(response.data?["note"] as Map<String, dynamic>);
@@ -320,10 +320,10 @@ class NrccApiClient {
     }
   }
 
-  Future<bool> toggleFavorite({required int redmineIssueId}) async {
+  Future<bool> toggleFavorite({required String issueId}) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/favorite",
+        "/api/mobile/v1/issues/$issueId/favorite",
       );
       return response.data?["favorited"] as bool? ?? false;
     } on DioException catch (e) {
@@ -331,10 +331,10 @@ class NrccApiClient {
     }
   }
 
-  Future<bool> isFavorited({required int redmineIssueId}) async {
+  Future<bool> isFavorited({required String issueId}) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/favorite",
+        "/api/mobile/v1/issues/$issueId/favorite",
       );
       return response.data?["favorited"] as bool? ?? false;
     } on DioException catch (e) {
@@ -342,10 +342,10 @@ class NrccApiClient {
     }
   }
 
-  Future<String?> getCachedSummary({required int redmineIssueId}) async {
+  Future<String?> getCachedSummary({required String issueId}) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        "/api/ai/summarize?issueId=$redmineIssueId",
+        "/api/ai/summarize?issueId=$issueId",
       );
       final summary = response.data?["summary"];
       if (summary is Map<String, dynamic>) {
@@ -358,7 +358,7 @@ class NrccApiClient {
   }
 
   Future<void> addGithubLink({
-    required int redmineIssueId,
+    required String issueId,
     required String repositoryFullName,
     int? githubIssueNumber,
     int? githubPrNumber,
@@ -367,7 +367,7 @@ class NrccApiClient {
   }) async {
     try {
       await _dio.post<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/github-links",
+        "/api/mobile/v1/issues/$issueId/github-links",
         data: <String, dynamic>{
           "repositoryFullName": repositoryFullName,
           "githubIssueNumber": githubIssueNumber,
@@ -382,12 +382,12 @@ class NrccApiClient {
   }
 
   Future<void> removeGithubLink({
-    required int redmineIssueId,
+    required String issueId,
     required String linkId,
   }) async {
     try {
       await _dio.delete<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/github-links/$linkId",
+        "/api/mobile/v1/issues/$issueId/github-links/$linkId",
       );
     } on DioException catch (e) {
       _throwApiError(e);
@@ -395,11 +395,11 @@ class NrccApiClient {
   }
 
   Future<List<IssueAttachment>> listAttachments({
-    required int redmineIssueId,
+    required String issueId,
   }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/attachments",
+        "/api/mobile/v1/issues/$issueId/attachments",
       );
       final items = (response.data?["items"] as List<dynamic>?) ?? const <dynamic>[];
       return items.map((e) => IssueAttachment.fromJson(e as Map<String, dynamic>)).toList();
@@ -409,7 +409,7 @@ class NrccApiClient {
   }
 
   Future<void> uploadAttachment({
-    required int redmineIssueId,
+    required String issueId,
     required String filePath,
     String? description,
   }) async {
@@ -420,7 +420,7 @@ class NrccApiClient {
         "description": description,
       });
       await _dio.post<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/attachments",
+        "/api/mobile/v1/issues/$issueId/attachments",
         data: form,
       );
     } on DioException catch (e) {
@@ -429,14 +429,14 @@ class NrccApiClient {
   }
 
   Future<void> addRelation({
-    required int redmineIssueId,
+    required String issueId,
     required int issueToId,
     required String relationType,
     int? delay,
   }) async {
     try {
       await _dio.post<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/relations",
+        "/api/mobile/v1/issues/$issueId/relations",
         data: <String, dynamic>{
           "issueToId": issueToId,
           "relationType": relationType,
@@ -449,12 +449,12 @@ class NrccApiClient {
   }
 
   Future<void> removeRelation({
-    required int redmineIssueId,
+    required String issueId,
     required int relationId,
   }) async {
     try {
       await _dio.delete<Map<String, dynamic>>(
-        "/api/mobile/v1/issues/$redmineIssueId/relations/$relationId",
+        "/api/mobile/v1/issues/$issueId/relations/$relationId",
       );
     } on DioException catch (e) {
       _throwApiError(e);
@@ -511,11 +511,11 @@ class NrccApiClient {
   }
 
   String attachmentUrl({
-    required int redmineIssueId,
+    required String issueId,
     required int redmineAttachmentId,
   }) {
     final base = _baseUrl.replaceAll(RegExp(r"/+$"), "");
-    return "$base/api/mobile/v1/issues/$redmineIssueId/attachments/$redmineAttachmentId";
+    return "$base/api/mobile/v1/issues/$issueId/attachments/$redmineAttachmentId";
   }
 
   Future<Map<String, String>> attachmentPreviewHeaders() async {
@@ -527,13 +527,13 @@ class NrccApiClient {
   }
 
   Future<String?> fetchAttachmentTextPreview({
-    required int redmineIssueId,
+    required String issueId,
     required int redmineAttachmentId,
     int maxChars = 1200,
   }) async {
     try {
       final response = await _dio.get<String>(
-        "/api/mobile/v1/issues/$redmineIssueId/attachments/$redmineAttachmentId",
+        "/api/mobile/v1/issues/$issueId/attachments/$redmineAttachmentId",
         options: Options(
           responseType: ResponseType.plain,
           headers: const <String, String>{"Range": "bytes=0-4095"},

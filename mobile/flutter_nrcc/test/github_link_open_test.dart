@@ -106,7 +106,8 @@ Future<void> _pumpIssueDetail(
   await tester.pumpWidget(
     MaterialApp(
       home: IssueDetailScreen(
-        issueId: issue.redmineIssueId,
+        issueId: issue.id,
+        redmineIssueId: issue.redmineIssueId,
         issuesRepository: issuesRepository,
         actionsRepository: actionsRepository,
       ),
@@ -149,7 +150,7 @@ class _FakeIssuesRepository extends IssuesRepository {
   final Issue _issue;
 
   @override
-  Future<Issue> getIssue(int redmineIssueId) async => _issue;
+  Future<Issue> getIssue(String issueId) async => _issue;
 }
 
 class _FakeIssueActionsRepository extends IssueActionsRepository {
@@ -159,7 +160,7 @@ class _FakeIssueActionsRepository extends IssueActionsRepository {
   Future<Map<String, String>> attachmentPreviewHeaders() async => const <String, String>{};
 
   @override
-  Future<List<TimeEntry>> listTimeEntries({required int redmineIssueId}) async => const <TimeEntry>[];
+  Future<List<TimeEntry>> listTimeEntries({required String issueId}) async => const <TimeEntry>[];
 
   @override
   Future<List<Map<String, dynamic>>> listActivities() async => const <Map<String, dynamic>>[];
@@ -168,20 +169,20 @@ class _FakeIssueActionsRepository extends IssueActionsRepository {
   Future<List<AssignableUser>> listAssignableUsers() async => const <AssignableUser>[];
 
   @override
-  Future<List<Map<String, dynamic>>> getBreadcrumbs({required int redmineIssueId}) async => const <Map<String, dynamic>>[];
+  Future<List<Map<String, dynamic>>> getBreadcrumbs({required String issueId}) async => const <Map<String, dynamic>>[];
 
   @override
-  Future<bool> isFavorited({required int redmineIssueId}) async => false;
+  Future<bool> isFavorited({required String issueId}) async => false;
 
   @override
-  Future<List<InternalNote>> listInternalNotes({required int redmineIssueId}) async => const <InternalNote>[];
+  Future<List<InternalNote>> listInternalNotes({required String issueId}) async => const <InternalNote>[];
 
   @override
-  Future<void> postComment({required int redmineIssueId, required String comment}) async {}
+  Future<void> postComment({required String issueId, required String comment}) async {}
 
   @override
   Future<void> addGithubLink({
-    required int redmineIssueId,
+    required String issueId,
     required String repositoryFullName,
     int? githubIssueNumber,
     int? githubPrNumber,
@@ -190,18 +191,18 @@ class _FakeIssueActionsRepository extends IssueActionsRepository {
   }) async {}
 
   @override
-  Future<void> removeGithubLink({required int redmineIssueId, required String linkId}) async {}
+  Future<void> removeGithubLink({required String issueId, required String linkId}) async {}
 
   @override
   Future<void> addRelation({
-    required int redmineIssueId,
+    required String issueId,
     required int issueToId,
     required String relationType,
     int? delay,
   }) async {}
 
   @override
-  Future<void> removeRelation({required int redmineIssueId, required int relationId}) async {}
+  Future<void> removeRelation({required String issueId, required int relationId}) async {}
 }
 
 NrccApiClient _dummyApiClient() {

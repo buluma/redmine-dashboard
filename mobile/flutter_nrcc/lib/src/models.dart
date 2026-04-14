@@ -53,7 +53,10 @@ class GithubLink {
 
 class Issue {
   final String id;
-  final int redmineIssueId;
+  final int? redmineIssueId;
+  final String? redmineBaseUrl;
+  final String source;
+  final int? localIssueNumber;
   final String subject;
   final String? description;
   final String statusName;
@@ -76,6 +79,9 @@ class Issue {
   Issue({
     required this.id,
     required this.redmineIssueId,
+    this.redmineBaseUrl,
+    this.source = "redmine",
+    this.localIssueNumber,
     required this.subject,
     required this.description,
     required this.statusName,
@@ -98,7 +104,10 @@ class Issue {
 
   factory Issue.fromJson(Map<String, dynamic> json) => Issue(
         id: json["id"] as String,
-        redmineIssueId: json["redmineIssueId"] as int,
+        redmineIssueId: json["redmineIssueId"] as int?,
+        redmineBaseUrl: json["redmineBaseUrl"] as String?,
+        source: json["source"] as String? ?? "redmine",
+        localIssueNumber: json["localIssueNumber"] as int?,
         subject: json["subject"] as String,
         description: json["description"] as String?,
         statusName: json["statusName"] as String,
