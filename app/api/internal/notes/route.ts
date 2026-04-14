@@ -3,6 +3,9 @@ import { recomputeIssueActivityIndex, recordIssueActivityEvent } from "@/src/lib
 import { prisma } from "@/src/lib/db";
 import { jsonError, parseJson } from "@/src/lib/http";
 import { getSlackNotificationService } from "@/src/lib/slack-notification-service";
+import { getAuditService, extractClientIp, extractUserAgent } from "@/src/lib/audit";
+import { checkRateLimit, addRateLimitHeaders } from "@/src/lib/rate-limit";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 
 const createNoteSchema = z.object({
@@ -61,7 +64,25 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await requireCurrentUser();
+
+    // Rate limiting
+    const rateLimitResult = await checkRateLimit(request, user.id);
+    if (!rateLimitResult.allowed) {
+      return addRateLimitHeaders(
+        NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 }),
+        rateLimitResult
+      );
+    }
+
     const body = await parseJson(request, createNoteSchema);
+
+    // Audit logging setup
+    const audit = getAuditService({
+      userId: user.id,
+      userEmail: user.emailOrUsername,
+      ipAddress: extractClientIp(request),
+      userAgent: extractUserAgent(request),
+    });
 
     const issue = await prisma.issue.findFirst({
       where: { id: body.issueId, userId: user.id },
@@ -82,6 +103,16 @@ export async function POST(request: Request) {
         user: { select: { id: true, displayName: true } },
       },
     });
+
+    // Audit log
+    await audit.logCreate("InternalNote", {
+      id: note.id,
+      issueId: note.issueId,
+      userId: note.userId,
+      content: note.content,
+      createdAt: note.createdAt,
+    }, { issueId: issue.id });
+
     await recordIssueActivityEvent({
       issueId: issue.id,
       eventType: "internal_note",
@@ -102,17 +133,20 @@ export async function POST(request: Request) {
       console.error("Slack notification failed:", slackResult.error);
     }
 
-    return Response.json({
-      note: {
-        id: note.id,
-        issueId: note.issueId,
-        content: note.content,
-        createdAt: note.createdAt.toISOString(),
-        updatedAt: note.updatedAt.toISOString(),
-        authorId: note.userId,
-        authorName: note.user.displayName,
-      },
-    });
+    return addRateLimitHeaders(
+      NextResponse.json({
+        note: {
+          id: note.id,
+          issueId: note.issueId,
+          content: note.content,
+          createdAt: note.createdAt.toISOString(),
+          updatedAt: note.updatedAt.toISOString(),
+          authorId: note.userId,
+          authorName: note.user.displayName,
+        },
+      }),
+      rateLimitResult
+    );
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return jsonError("Unauthorized", 401);

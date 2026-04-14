@@ -2,6 +2,7 @@ import { requireCurrentUser } from "@/src/lib/auth";
 import { recomputeIssueActivityIndex, recordIssueActivityEvent } from "@/src/lib/activity-index";
 import { prisma } from "@/src/lib/db";
 import { jsonError, parseJson } from "@/src/lib/http";
+import { getAuditService, extractClientIp, extractUserAgent } from "@/src/lib/audit";
 import { z } from "zod";
 
 const updateNoteSchema = z.object({
@@ -17,6 +18,14 @@ export async function PATCH(
     const user = await requireCurrentUser();
     const { id } = await context.params;
     const body = await parseJson(request, updateNoteSchema);
+
+    // Audit logging setup
+    const audit = getAuditService({
+      userId: user.id,
+      userEmail: user.emailOrUsername,
+      ipAddress: extractClientIp(request),
+      userAgent: extractUserAgent(request),
+    });
 
     const note = await prisma.internalNote.findUnique({
       where: { id },
@@ -37,6 +46,15 @@ export async function PATCH(
         user: { select: { id: true, displayName: true } },
       },
     });
+
+    // Audit log
+    await audit.logUpdate(
+      "InternalNote",
+      note.id,
+      { content: note.content },
+      { content: updated.content }
+    );
+
     await recordIssueActivityEvent({
       issueId: updated.issueId,
       eventType: "internal_note",
@@ -75,6 +93,14 @@ export async function DELETE(
     const user = await requireCurrentUser();
     const { id } = await context.params;
 
+    // Audit logging setup
+    const audit = getAuditService({
+      userId: user.id,
+      userEmail: user.emailOrUsername,
+      ipAddress: extractClientIp(request),
+      userAgent: extractUserAgent(request),
+    });
+
     const note = await prisma.internalNote.findUnique({
       where: { id },
     });
@@ -88,6 +114,15 @@ export async function DELETE(
     }
 
     await prisma.internalNote.delete({ where: { id } });
+
+    // Audit log
+    await audit.logDelete(
+      "InternalNote",
+      note.id,
+      { content: note.content, issueId: note.issueId },
+      { issueId: note.issueId }
+    );
+
     await recordIssueActivityEvent({
       issueId: note.issueId,
       eventType: "internal_note",
