@@ -5,6 +5,8 @@
  * Uses Next.js fetch caching with 5-minute revalidation.
  */
 
+import https from 'https';
+
 // ─── Types ───────────────────────────────────────────────────────────────
 
 export interface WakaTimeBreakdown {
@@ -165,7 +167,7 @@ export class WakaTimeClient {
   private httpsGet(url: string): Promise<{ status: number; body: string }> {
     return new Promise((resolve, reject) => {
       // Create a custom agent with IPv4 only and proper TLS settings
-      const agent = new require('https').Agent({
+      const agent = new https.Agent({
         family: 4,  // Force IPv4 only
         keepAlive: true,
         keepAliveMsecs: 30000,
@@ -174,7 +176,7 @@ export class WakaTimeClient {
         secureProtocol: 'TLSv1_2_method',
       });
 
-      const req = require('https').get(url, {
+      const req = https.get(url, {
         agent,
         headers: {
           'Content-Type': 'application/json',
