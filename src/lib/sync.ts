@@ -738,8 +738,45 @@ export async function runSyncJob(
   });
 
   if (existing) {
-    const ageMs = now.getTime() - (existing.startedAt ?? existing.createdAt).getTime();
-    if (ageMs < env.syncJobStaleMs) {
+    // Only stale-reset "pending" jobs — a "running" job is actively executing,
+    // even if it takes longer than the stale threshold.
+    if (existing.status === "pending") {
+      const ageMs = now.getTime() - existing.createdAt.getTime();
+      if (ageMs < env.syncJobStaleMs) {
+        logEvent("sync.job.reuse_existing", {
+          userId,
+          jobType,
+          existingJobId: existing.id,
+          existingStatus: existing.status,
+        });
+        return { jobId: existing.id };
+      }
+
+      const staleMessage = `Sync job was pending for ${Math.round(ageMs / 1000)}s and was reset automatically`;
+      await prisma.syncJob.update({
+        where: { id: existing.id },
+        data: {
+          status: "failed",
+          endedAt: now,
+          error: staleMessage,
+        },
+      });
+
+      await markSyncState(userId, {
+        status: "failed",
+        runningJobId: null,
+        error: staleMessage,
+        full: false,
+        incremental: false,
+      });
+      logEvent("sync.job.stale_reset", {
+        userId,
+        staleJobId: existing.id,
+        staleAgeMs: ageMs,
+        staleMessage,
+      }, "warn");
+    } else {
+      // Job is already running — reuse it regardless of duration.
       logEvent("sync.job.reuse_existing", {
         userId,
         jobType,
@@ -748,30 +785,6 @@ export async function runSyncJob(
       });
       return { jobId: existing.id };
     }
-
-    const staleMessage = `Sync job was stale after ${Math.round(ageMs / 1000)}s and was reset automatically`;
-    await prisma.syncJob.update({
-      where: { id: existing.id },
-      data: {
-        status: "failed",
-        endedAt: now,
-        error: staleMessage,
-      },
-    });
-
-    await markSyncState(userId, {
-      status: "failed",
-      runningJobId: null,
-      error: staleMessage,
-      full: false,
-      incremental: false,
-    });
-    logEvent("sync.job.stale_reset", {
-      userId,
-      staleJobId: existing.id,
-      staleAgeMs: ageMs,
-      staleMessage,
-    }, "warn");
   }
 
   const job = await prisma.syncJob.create({
