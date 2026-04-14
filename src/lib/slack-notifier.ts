@@ -269,30 +269,43 @@ export class SlackNotifier {
   async notifyInternalNoteAdded(
     issue: IssueUpdate,
     noteContent: string,
-    authorName: string
+    authorName: string,
+    extra?: {
+      priority?: string | null;
+      status?: string;
+      assignee?: string | null;
+      dueDate?: string | null;
+      dashboardUrl?: string;
+    }
   ): Promise<void> {
     if (!this.config.notifyOnInternalNote) return;
 
     const link = this.buildIssueLink(issue.redmineIssueId);
     const projectInfo = issue.projectName ? `[${issue.projectName}]` : "";
-    const truncatedNote = noteContent.length > 300 
-      ? noteContent.slice(0, 300) + "…"
+    const truncatedNote = noteContent.length > 500 
+      ? noteContent.slice(0, 500) + "…"
       : noteContent;
 
-    const blocks = [
+    // Build context line
+    const contextParts: string[] = [];
+    if (projectInfo) contextParts.push(projectInfo);
+    if (extra?.status) contextParts.push(`📋 ${extra.status}`);
+    if (extra?.priority) contextParts.push(`🔺 ${extra.priority}`);
+    if (extra?.assignee) contextParts.push(`👤 ${extra.assignee}`);
+    if (extra?.dueDate) contextParts.push(`📅 ${extra.dueDate}`);
+    contextParts.push(`✍️ *${authorName}*`);
+    if (link) contextParts.push(`<${link}|View in Redmine>`);
+    else if (extra?.dashboardUrl) contextParts.push(`<${extra.dashboardUrl}|View in Dashboard>`);
+
+    const blocks: (Block | KnownBlock)[] = [
       {
         type: "header",
         text: {
           type: "plain_text",
-          text: issue.redmineIssueId ? `💬 Internal Note #${issue.redmineIssueId}` : "💬 Internal Note (Local)",
+          text: issue.redmineIssueId 
+            ? `💬 Note on #${issue.redmineIssueId}: ${issue.subject}` 
+            : `💬 Note: ${issue.subject}`,
           emoji: true,
-        },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*${issue.subject}*`,
         },
       },
       {
@@ -303,13 +316,11 @@ export class SlackNotifier {
         },
       },
       {
+        type: "divider",
+      },
+      {
         type: "context",
-        elements: [
-          {
-            type: "mrkdwn",
-            text: `${projectInfo} by *${authorName}*${link ? ` · <${link}|View in Redmine>` : ""}`,
-          },
-        ],
+        elements: contextParts.map((text) => ({ type: "mrkdwn" as const, text })),
       },
     ];
 
