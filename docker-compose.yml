@@ -1,20 +1,56 @@
+version: "3.8"
+
 services:
   dashboard:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${DOCKER_PORT:-3000}:3000"
     env_file:
       - .env
     environment:
-      DATABASE_URL: ${DOCKER_DATABASE_URL:-file:./prisma/dev.db}
-      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:-MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
-      SESSION_SECRET: ${SESSION_SECRET:-change-me-session-secret}
-      POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-60000}
-      LEADER_LOCK_TTL_MS: ${LEADER_LOCK_TTL_MS:-90000}
-      SYNC_JOB_STALE_MS: ${SYNC_JOB_STALE_MS:-600000}
-      MOBILE_API_ENABLED: ${MOBILE_API_ENABLED:-true}
-      REDMINE_BASE_URL: ${REDMINE_BASE_URL:-}
-      REDMINE_API_KEY: ${REDMINE_API_KEY:-}
-      NODE_ENV: production
+      - NODE_ENV=production
+      - DATABASE_URL=${DOCKER_DATABASE_URL:-file:./prisma/dev.db}
+      - DIRECT_URL=${DIRECT_URL:-}
+      # Override these in .env for production
+      - ENABLE_SYNC_POLLER=${ENABLE_SYNC_POLLER:-true}
+      - ENABLE_STREAMLINE_LOG_POLLER=${ENABLE_STREAMLINE_LOG_POLLER:-false}
+      - POLL_INTERVAL_MS=${POLL_INTERVAL_MS:-300000}
+      - LEADER_LOCK_TTL_MS=${LEADER_LOCK_TTL_MS:-90000}
+      - SYNC_JOB_STALE_MS=${SYNC_JOB_STALE_MS:-600000}
+      - MOBILE_API_ENABLED=${MOBILE_API_ENABLED:-true}
     volumes:
       - ./prisma:/app/prisma
+      # Named volume for SQLite database persistence
+      - db-data:/app/prisma
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: Redis for caching (future use)
+  # redis:
+  #   image: redis:7-alpine
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis-data:/data
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3
+
+volumes:
+  db-data:
+  # redis-data:
