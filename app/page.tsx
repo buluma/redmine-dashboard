@@ -1643,9 +1643,6 @@ export default function Home() {
         )}
 
         <div className="hero-actions">
-          <button onClick={handleManualPull} disabled={manualRefreshBusy}>
-            {manualRefreshBusy ? "Refreshing..." : "Force Refresh"}
-          </button>
           <Link href="/personal-tickets" className="primary-link nav-link">
             Personal Tickets
           </Link>
@@ -1672,6 +1669,9 @@ export default function Home() {
           </Link>
           <AiStatusIndicator />
           <span style={{ flex: "1" }} />
+          <button className="secondary-button" type="button" onClick={handleManualPull} disabled={manualRefreshBusy}>
+            {manualRefreshBusy ? "Refreshing..." : "Force Refresh"}
+          </button>
           <button className="secondary-button" type="button" onClick={resetFilters}>
             Reset Filters
           </button>
