@@ -517,3 +517,20 @@ model ApiRateLimit {
   @@unique([key, keyType, endpoint])
   @@index([key, windowStart])
 }
+
+// Webhook Subscription - External systems subscribe to ticket events
+model WebhookSubscription {
+  id              String    @id @default(cuid())
+  name            String
+  url             String
+  secret          String    @default("")
+  events          String    @default("[]") // JSON array of event types
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  createdBy       String
+  lastTriggeredAt DateTime?
+  lastStatus      Int?
+  failureCount    Int       @default(0)
+
+  @@index([active])
+}
