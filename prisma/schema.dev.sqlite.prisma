@@ -11,6 +11,7 @@ model User {
   id                String                  @id @default(cuid())
   emailOrUsername   String                  @unique
   displayName       String
+  role              UserRole               @default(USER)
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
   credential        UserRedmineCredential?
@@ -24,6 +25,13 @@ model User {
   internalNotes     InternalNote[]
 }
 
+enum UserRole {
+  ADMIN    // Full access, can manage users, view all data
+  EDITOR  // Can create/edit issues, view all data
+  USER    // Default, limited to own data
+  VIEWER  // Read-only access
+}
+
 model Favorite {
   id           String   @id @default(cuid())
   userId       String
@@ -32,6 +40,35 @@ model Favorite {
   createdAt    DateTime @default(now())
 
   @@unique([userId, issueId])
+}
+
+model RedmineUser {
+  id           Int      @id
+  name         String
+  login        String?
+  email        String?
+  isActive     Boolean  @default(true)
+  lastSeenAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([name])
+  @@index([isActive])
+}
+
+model RedmineEnumeration {
+  id           Int      @id
+  kind         String   // "issue_priority", "time_entry_activity", "document_category", "issue_category"
+  name         String
+  isDefault    Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  position     Int?
+  lastSeenAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([kind, isActive])
+  @@index([kind, position])
 }
 
 model UserRedmineCredential {
@@ -52,8 +89,8 @@ model Issue {
   redmineBaseUrl   String?
   userId           String
   user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  source           String         @default("redmine")
-  localIssueNumber Int?
+  source           String         @default("redmine") // "redmine" | "local"
+  localIssueNumber Int?           // auto-increment per user for local issues
   subject          String
   description      String?
   projectName      String?
@@ -93,7 +130,10 @@ model Issue {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
+  @@unique([userId, redmineBaseUrl, redmineIssueId])
+  @@unique([userId, source, localIssueNumber])
   @@index([userId, statusId])
+  @@index([userId, updatedOnRemote])
   @@index([userId, lastActivityAt])
   @@index([parentIssueId])
   @@index([userId, source])
@@ -113,7 +153,8 @@ model IssueAttachment {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  @@index([issueId])
+  @@unique([issueId, redmineAttachmentId])
+  @@index([issueId, createdOnRemote])
 }
 
 model IssueRelation {
@@ -127,7 +168,8 @@ model IssueRelation {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  @@index([issueId])
+  @@unique([issueId, redmineRelationId])
+  @@index([issueId, relationType])
 }
 
 model IssueActivityEvent {
@@ -139,10 +181,11 @@ model IssueActivityEvent {
   sourceRemoteId  String?
   eventAt         DateTime
   summary         String?
-  dedupeKey       String
+  dedupeKey       String   @unique
   createdAt       DateTime @default(now())
 
-  @@index([issueId])
+  @@index([issueId, eventAt])
+  @@index([issueId, eventType])
 }
 
 model AiSummary {
@@ -160,6 +203,7 @@ model AiSummary {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  @@unique([issueId])
   @@index([issueId])
 }
 
@@ -167,7 +211,7 @@ model AiChatMessage {
   id                String   @id @default(cuid())
   issueId           String
   issue             Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  role              String
+  role              String   // "user" or "assistant"
   content           String
   model             String?
   totalDuration     BigInt?
@@ -178,6 +222,7 @@ model AiChatMessage {
   evalDuration      BigInt?
   createdAt         DateTime @default(now())
 
+  @@index([issueId, createdAt])
   @@index([issueId])
 }
 
@@ -193,6 +238,7 @@ model InternalNote {
 
   @@index([issueId])
   @@index([userId])
+  @@index([issueId, createdAt(sort: Desc)])
 }
 
 model IssueGithubLink {
@@ -209,8 +255,9 @@ model IssueGithubLink {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  @@index([issueId])
-  @@index([userId])
+  @@index([issueId, createdAt])
+  @@index([userId, createdAt])
+  @@unique([issueId, url])
 }
 
 model IssueJournal {
@@ -223,7 +270,8 @@ model IssueJournal {
   createdOnRemote  DateTime
   createdAt        DateTime @default(now())
 
-  @@index([issueId])
+  @@unique([issueId, redmineJournalId])
+  @@index([issueId, createdOnRemote])
 }
 
 model TimeEntry {
@@ -241,6 +289,8 @@ model TimeEntry {
   spentOn            DateTime
   createdAt          DateTime  @default(now())
 
+  @@unique([issueId, redmineTimeEntryId])
+  @@index([userId, spentOn])
   @@index([issueId])
 }
 
@@ -266,7 +316,7 @@ model SyncJob {
   error      String?
   createdAt  DateTime      @default(now())
 
-  @@index([userId])
+  @@index([userId, createdAt])
 }
 
 model StatusCatalog {
@@ -286,7 +336,15 @@ model EnumerationCatalog {
   position   Int?
   updatedAt  DateTime @updatedAt
 
-  @@index([kind])
+  @@index([kind, remoteId])
+  @@index([kind, isActive])
+}
+
+model LeaderLock {
+  name       String   @id
+  ownerId    String
+  heartbeatAt DateTime
+  expiresAt  DateTime
 }
 
 model MobileApiToken {
@@ -302,72 +360,109 @@ model MobileApiToken {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  @@index([userId])
+  @@index([userId, revokedAt])
 }
 
+model IssueEmbedding {
+  id         String   @id @default(cuid())
+  issueId    String   @unique
+  embedding  String   // Stored as JSON string for SQLite compatibility
+  model      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([issueId])
+}
+
+model WebLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  message   String
+  level     String   // "error", "warn", "info"
+  source    String?  // "client", "server", "api"
+  url       String?
+  stack     String?
+  userAgent String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([level])
+  @@index([userId])
+  @@index([source])
+}
+
+// Streamline MBU Logs - Main application logs
 model MbuLog {
-  id          BigInt   @id
+  id          BigInt   @id // Remote log ID from Streamline
   createdAt   DateTime
   updatedAt   DateTime
-  backtrace   String
-  logLevel    String   @map("log_level")
-  traceType   String   @map("trace_type")
+  backtrace   String   // Log message/content
+  logLevel    String   @map("log_level") // TRACE, DEBUG, INFO, WARN, ERROR
+  traceType   String   @map("trace_type") // "log", "exception"
   traceId     String   @map("trace_id")
-  code        String
-  host        String   @default("localhost")
+  code        String   // Error code if any
+  host        String   @default("streamline.staging.vodacomsa-battery.nasctech.com") // Source host
   createdBy   Int?
   updatedBy   Int?
   ingestedAt  DateTime @default(now())
   environment String   @default("staging")
 
+  @@unique([id, environment, host])
   @@index([host])
-  @@index([createdAt])
+  @@index([createdAt(sort: Desc)])
   @@index([logLevel])
   @@index([traceType])
+  @@index([logLevel, createdAt(sort: Desc)])
   @@map("mbu_logs")
 }
 
+// Streamline Server-Side Rules Logs - Scheduled job execution logs
 model ServerSideRulesLog {
-  id              BigInt   @id
+  id              BigInt   @id // Remote log ID from Streamline
   createdAt       DateTime
   updatedAt       DateTime
-  actionName      String   @map("action_name")
-  status          String
-  scriptName      String   @map("script_name")
-  duration        Decimal  @map("duration")
-  ramUsage        Int      @map("ram_usage")
-  cpuUsage        Int      @map("cpu_usage")
-  host            String   @default("localhost")
+  actionName      String   @map("action_name") // "Scheduled job"
+  status          String   // "completed", "failed", "error"
+  scriptName      String   @map("script_name") // e.g. "205. Vandalism 48hr Calculate SLA v2"
+  duration        Decimal // Duration in seconds
+  ramUsage        Int      @map("ram_usage") // Memory usage in bytes
+  cpuUsage        Int      @map("cpu_usage") // CPU percentage
+  host              String   @default("streamline.staging.vodacomsa-battery.nasctech.com")
   isError         Boolean  @map("is_error") @default(false)
-  errorDescr      String?  @map("error_descr")
+  errorDescr      String?  @map("error_descr") // Error description if failed
   processId       Int?     @map("process_id")
   requestId       String?  @map("request_id")
   threadId        BigInt?  @map("thread_id")
-  dbRequestsTime  Decimal? @map("db_requests_time")
+  dbRequestsTime  Decimal? // Time spent on DB requests
   coModel         String?  @map("co_model")
   coRecordId      Int?     @map("co_record_id")
   resType         String?  @map("res_type")
   ingestedAt      DateTime @default(now())
   environment     String   @default("staging")
 
+  @@unique([id, environment, host])
   @@index([host])
-  @@index([createdAt])
+  @@index([createdAt(sort: Desc)])
   @@index([status])
   @@index([isError])
+  @@index([scriptName])
+  @@index([status, createdAt(sort: Desc)])
   @@map("server_side_rules_log")
 }
 
+// Streamline Traces - General application traces
 model Trace {
-  id           BigInt   @id
+  id           BigInt   @id // Remote trace ID from Streamline
   createdAt    DateTime
   updatedAt    DateTime
   traceId      BigInt   @map("trace_id")
-  traceType    String   @map("trace_type")
-  logLevel     String   @map("log_level")
-  backtrace    String
-  code         String?
-  context      String?
-  host         String   @default("localhost")
+  traceType    String   @map("trace_type") // "log", "exception"
+  logLevel     String   @map("log_level") // TRACE, DEBUG, INFO, WARN, ERROR
+  backtrace    String   // Trace message
+  code         String? 
+  context      String? 
+  host         String   @default("streamline.staging.vodacomsa-battery.nasctech.com") // Source host
   resourceId   Int?     @map("resource_id")
   resourceType String?  @map("resource_type")
   resourcePath String?  @map("resource_path")
@@ -376,73 +471,48 @@ model Trace {
   ingestedAt   DateTime @default(now())
   environment  String   @default("staging")
 
+  @@unique([id, environment, host])
   @@index([host])
-  @@index([createdAt])
+  @@index([createdAt(sort: Desc)])
   @@index([logLevel])
   @@index([traceType])
   @@index([resourceType])
+  @@index([logLevel, createdAt(sort: Desc)])
   @@map("traces")
 }
 
-model WebLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  message   String
-  level     String
-  source    String?
-  url       String?
-  stack     String?
-  userAgent String?
-  meta      Json?
-  createdAt DateTime @default(now())
+// Audit Log - Tracks all mutations for compliance
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?  // null for system actions
+  userEmail   String?  // cached for display
+  action      String   // CREATE, READ, UPDATE, DELETE
+  entityType  String   // e.g., "Issue", "InternalNote", "TimeEntry"
+  entityId    String?  // ID of affected entity
+  changes     Json?   // { field: { old: x, new: y } }
+  ipAddress   String?  // Client IP
+  userAgent   String?  // Client user agent
+  metadata    Json?    // Additional context (e.g., redmineIssueId)
+  createdAt   DateTime @default(now())
 
-  @@index([level])
   @@index([userId])
-  @@index([source])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
 }
 
-model IssueEmbedding {
-  id         String   @id @default(cuid())
-  issueId    String   @unique
-  embedding  String
-  model      String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+// API Rate Limit - Track requests per user/IP for rate limiting
+model ApiRateLimit {
+  id        String   @id @default(cuid())
+  key       String   // userId or IP address
+  keyType   String   // "user" or "ip"
+  endpoint  String   // API endpoint pattern
+  count     Int      @default(1)
+  windowStart DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@index([issueId])
-}
-
-model LeaderLock {
-  name       String   @id
-  ownerId    String
-  heartbeatAt DateTime
-  expiresAt  DateTime
-}
-
-model RedmineUser {
-  id           Int      @id
-  name         String
-  login        String?
-  email        String?
-  isActive     Boolean  @default(true)
-  lastSeenAt   DateTime @default(now())
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([name])
-  @@index([isActive])
-}
-
-model RedmineEnumeration {
-  id           Int      @id
-  kind         String
-  name         String
-  isDefault    Boolean  @default(false)
-  isActive     Boolean  @default(true)
-  position     Int?
-  lastSeenAt   DateTime @default(now())
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([kind])
+  @@unique([key, keyType, endpoint])
+  @@index([key, windowStart])
 }
