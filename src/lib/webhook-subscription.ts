@@ -13,7 +13,7 @@
 
 import https from 'https';
 import { prisma } from './db';
-import { logEvent } from './audit';
+import { getAuditService } from './audit';
 
 // ─── Types ───────────────────────────────────────────────────────────────
 
@@ -48,7 +48,6 @@ export interface WebhookPayload {
     redmineIssueId: number | null;
     subject: string;
     description: string | null;
-    projectId: string | null;
     projectName: string | null;
     trackerName: string | null;
     statusName: string;
@@ -93,11 +92,11 @@ export async function createSubscription(
     },
   });
 
-  logEvent('webhook.subscription.created', {
-    subscriptionId: sub.id,
-    name,
-    url: maskUrl(url),
-    events,
+  await getAuditService().log({
+    action: 'CREATE',
+    entityType: 'WebhookSubscription',
+    entityId: sub.id,
+    metadata: { name, url: maskUrl(url), events },
   });
 
   return toSubscription(sub);
@@ -108,9 +107,11 @@ export async function deleteSubscription(id: string): Promise<void> {
     where: { id },
   });
 
-  logEvent('webhook.subscription.deleted', {
-    subscriptionId: id,
-    name: sub.name,
+  await getAuditService().log({
+    action: 'DELETE',
+    entityType: 'WebhookSubscription',
+    entityId: id,
+    metadata: { name: sub.name },
   });
 }
 
@@ -134,7 +135,12 @@ export async function toggleSubscription(id: string, active: boolean): Promise<v
     data: { active },
   });
 
-  logEvent('webhook.subscription.toggled', { subscriptionId: id, active });
+  await getAuditService().log({
+    action: active ? 'UPDATE' : 'UPDATE',
+    entityType: 'WebhookSubscription',
+    entityId: id,
+    metadata: { enabled: active },
+  });
 }
 
 export async function updateSubscriptionFailure(
@@ -281,13 +287,8 @@ export async function dispatchWebhook(
         const result = await deliverWebhook(sub, payload);
         await updateSubscriptionFailure(sub.id, result.status ?? null, result.success);
 
-        logEvent('webhook.delivery', {
-          subscriptionId: sub.id,
-          event,
-          ticketId: ticket.redmineIssueId ?? ticket.id,
-          success: result.success,
-          status: result.status,
-        });
+        // Log delivery attempt (skip audit for high-frequency deliveries)
+        console.log(`[Webhook] Delivery ${result.success ? '✓' : '✗'} to ${maskUrl(sub.url)}: ${result.status}`);
 
         if (!result.success) {
           console.error(`[Webhook] Delivery failed to ${maskUrl(sub.url)}:`, result.error);
