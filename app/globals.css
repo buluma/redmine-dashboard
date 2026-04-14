@@ -6980,3 +6980,5 @@ textarea {
 .issues-table tr.drag-over {
   background: #f3f4f6;
 }
+.stale-job { background: #fff3cd; }
+.stale-job:hover { background: #ffeeba; }

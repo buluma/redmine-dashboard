@@ -89,7 +89,7 @@ export async function requirePermission(permission: Permission): Promise<void> {
 /**
  * Require minimum role level
  */
-export async function requireRole(minRole: UserRole): Promise<void> {
+export async function requireRole(minRole: UserRole, ...additionalRoles: UserRole[]): Promise<void> {
   const user = await requireCurrentUser();
   const userRole = await getUserRole(user.id);
   
@@ -97,7 +97,9 @@ export async function requireRole(minRole: UserRole): Promise<void> {
   const userLevel = roleHierarchy.indexOf(userRole);
   const requiredLevel = roleHierarchy.indexOf(minRole);
   
-  if (userLevel < requiredLevel) {
+  // Check if user has any of the allowed roles
+  const allowedRoles = [minRole, ...additionalRoles];
+  if (!allowedRoles.includes(userRole)) {
     throw new Error(`Role requirement not met: ${minRole} required, ${userRole} found`);
   }
 }

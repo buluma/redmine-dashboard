@@ -127,6 +127,8 @@ export default function OpsPage() {
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
   const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
+  const [restarting, setRestarting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
@@ -240,6 +242,52 @@ export default function OpsPage() {
       setError(e instanceof Error ? e.message : "Failed to revoke token");
     } finally {
       setRevokingTokenId(null);
+    }
+  }
+
+  async function cancelJob(jobId: string) {
+    setCancelling(jobId);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await fetch(`/api/ops/jobs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, action: "cancel" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Failed to cancel job");
+      }
+      setInfo("Job cancelled.");
+      await loadData();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to cancel job");
+    } finally {
+      setCancelling(null);
+    }
+  }
+
+  async function restartJob(jobId: string) {
+    setRestarting(jobId);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await fetch(`/api/ops/jobs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, action: "restart" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Failed to restart job");
+      }
+      setInfo("New incremental job created.");
+      await loadData();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to restart job");
+    } finally {
+      setRestarting(null);
     }
   }
 
@@ -435,18 +483,45 @@ export default function OpsPage() {
                     <th>Ended</th>
                     <th>Duration</th>
                     <th>Error</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {jobs.map((job) => (
-                    <tr key={job.id}>
+                    <tr key={job.id} className={job.status === 'running' && job.startedAt && Date.now() - new Date(job.startedAt).getTime() > 600000 ? 'stale-job' : ''}>
                       <td>{job.id}</td>
                       <td>{job.jobType}</td>
-                      <td>{job.status}</td>
+                      <td>
+                        <span className={`status-chip ${job.status === 'running' && job.startedAt && Date.now() - new Date(job.startedAt).getTime() > 600000 ? 'sync-failed' : job.status === 'completed' ? 'sync-success' : ''}`}>
+                          {job.status}
+                          {job.status === 'running' && job.startedAt && Date.now() - new Date(job.startedAt).getTime() > 600000 ? ' (STALE)' : ''}
+                        </span>
+                      </td>
                       <td>{formatDateTime(job.startedAt)}</td>
                       <td>{formatDateTime(job.endedAt)}</td>
                       <td>{formatDuration(job.durationMs)}</td>
                       <td>{job.error ? job.error.slice(0, 140) : "-"}</td>
+                      <td>
+                        {job.status === 'running' && job.startedAt && Date.now() - new Date(job.startedAt).getTime() > 600000 ? (
+                          <button
+                            className="secondary-button"
+                            onClick={() => cancelJob(job.id)}
+                            disabled={cancelling === job.id}
+                          >
+                            {cancelling === job.id ? 'Cancelling...' : 'Cancel'}
+                          </button>
+                        ) : job.status === 'failed' ? (
+                          <button
+                            className="secondary-button"
+                            onClick={() => restartJob(job.id)}
+                            disabled={restarting === job.id}
+                          >
+                            {restarting === job.id ? 'Restarting...' : 'Restart'}
+                          </button>
+                        ) : (
+                          <span className="muted">-</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
