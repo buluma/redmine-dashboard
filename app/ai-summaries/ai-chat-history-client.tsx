@@ -16,8 +16,8 @@ type AiChatMessageData = {
   evalDuration: bigint | string | null;
   createdAt: Date;
   issue: {
-    redmineIssueId: number;
-    redmineBaseUrl: string;
+    redmineIssueId: number | null;
+    redmineBaseUrl: string | null;
     subject: string;
     statusName: string;
   };
@@ -27,7 +27,7 @@ interface GroupedChat {
   issueId: number;
   subject: string;
   statusName: string;
-  baseUrl: string;
+  baseUrl: string | null;
   messages: AiChatMessageData[];
   lastMessage: Date;
 }
@@ -72,6 +72,7 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
 
     for (const msg of messages) {
       const issueId = msg.issue.redmineIssueId;
+      if (!issueId) continue;
       const existing = groups.get(issueId);
 
       if (existing) {
@@ -115,7 +116,7 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
     return messages.filter(
       (msg) =>
         msg.issue.subject.toLowerCase().includes(term) ||
-        msg.issue.redmineIssueId.toString().includes(term) ||
+        (msg.issue.redmineIssueId?.toString() ?? "").includes(term) ||
         msg.content.toLowerCase().includes(term)
     );
   }, [messages, searchTerm]);

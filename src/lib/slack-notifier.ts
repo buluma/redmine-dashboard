@@ -14,7 +14,7 @@ export interface SlackNotifierConfig {
 
 export interface IssueUpdate {
   id: string;
-  redmineIssueId: number;
+  redmineIssueId: number | null;
   subject: string;
   projectName: string | null;
   statusName: string;
@@ -72,7 +72,8 @@ export class SlackNotifier {
     }
   }
 
-  private buildIssueLink(redmineIssueId: number): string {
+  private buildIssueLink(redmineIssueId: number | null): string {
+    if (!redmineIssueId) return "#";
     if (!this.config.includeLink || !this.config.redmineBaseUrl) {
       return "";
     }

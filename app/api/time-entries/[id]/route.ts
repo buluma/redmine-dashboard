@@ -47,6 +47,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       ...(body.spentOn !== undefined ? { spentOn: body.spentOn } : {}),
     });
 
+    if (!entry.issue.redmineIssueId) {
+      throw new Error("Cannot update time entry for local-only issue");
+    }
     await syncSingleIssue(user.id, client, entry.issue.redmineIssueId);
 
     trackSuccess({
@@ -98,6 +101,9 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
       },
     });
 
+    if (!entry.issue.redmineIssueId) {
+      throw new Error("Cannot delete time entry for local-only issue");
+    }
     await syncSingleIssue(user.id, client, entry.issue.redmineIssueId);
 
     trackSuccess({

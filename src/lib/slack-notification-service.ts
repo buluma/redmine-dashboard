@@ -5,7 +5,7 @@ import type { Issue } from "@prisma/client";
 
 export interface IssueState {
   id: string;
-  redmineIssueId: number;
+  redmineIssueId: number | null;
   subject: string;
   projectName: string | null;
   statusName: string;

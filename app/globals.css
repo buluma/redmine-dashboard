@@ -5305,6 +5305,84 @@ textarea {
   flex-shrink: 0;
 }
 
+.reports-v2 .stacked-bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.58rem;
+}
+
+.reports-v2 .stacked-bar-row {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) 46px;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reports-v2 .stacked-bar-label {
+  font-size: 0.84rem;
+  color: #2a4b62;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.reports-v2 .stacked-bar-track {
+  display: flex;
+  align-items: stretch;
+  height: 24px;
+  border-radius: 9px;
+  overflow: hidden;
+  background: #e7edf3;
+}
+
+.reports-v2 .stacked-bar-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.reports-v2 .stacked-bar-segment:hover {
+  filter: brightness(0.94);
+}
+
+.reports-v2 .stacked-bar-value {
+  font-size: 0.72rem;
+  color: #ffffff;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0 0.2rem;
+  white-space: nowrap;
+}
+
+.reports-v2 .stacked-bar-total {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 700px) {
+  .reports-v2 .stacked-bar-row {
+    grid-template-columns: 94px minmax(0, 1fr) 40px;
+    gap: 0.4rem;
+  }
+
+  .reports-v2 .stacked-bar-label {
+    font-size: 0.78rem;
+  }
+
+  .reports-v2 .stacked-bar-track {
+    height: 20px;
+  }
+
+  .reports-v2 .stacked-bar-value {
+    font-size: 0.67rem;
+  }
+}
+
 .reports-v2 .progress-ring {
   display: block;
 }
@@ -5424,6 +5502,104 @@ textarea {
 }
 
 .reports-v2 .activity-note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heimdall-tickets-feed.activity-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 0.6rem;
+}
+
+.heimdall-tickets-feed .activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.56rem 0.2rem;
+  text-decoration: none;
+  color: inherit;
+  border-bottom: 1px solid #dde7ef;
+  transition: background-color 0.15s ease;
+}
+
+.heimdall-tickets-feed .activity-item:last-child {
+  border-bottom: none;
+}
+
+.heimdall-tickets-feed .activity-item:hover {
+  background: #edf5fb;
+}
+
+.heimdall-tickets-feed .activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 0.38rem;
+  flex-shrink: 0;
+}
+
+.heimdall-tickets-feed .dot-comment {
+  background: #0f6f87;
+}
+
+.heimdall-tickets-feed .dot-time {
+  background: #2c7b58;
+}
+
+.heimdall-tickets-feed .activity-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.heimdall-tickets-feed .activity-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+
+.heimdall-tickets-feed .activity-issue {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #214157;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heimdall-tickets-feed .activity-time {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  flex-shrink: 0;
+}
+
+.heimdall-tickets-feed .activity-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.46rem;
+  font-size: 0.78rem;
+  color: #4f6479;
+}
+
+.heimdall-tickets-feed .activity-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.14rem 0.38rem;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.heimdall-tickets-feed .type-comment {
+  background: #d8eaf2;
+  color: #0a556a;
+}
+
+.heimdall-tickets-feed .activity-note {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

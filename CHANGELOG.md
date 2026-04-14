@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-04-14
+
+### Added
+
+- **Unit test suite expanded** — 14 new test files with 191+ tests passing
+  - Library utilities: auth, crypto, db, rate-limit (33 tests)
+  - API routes: AI endpoints (summarize/categorize/chat), issue routes (assign/favorite), Slack integration (40 tests)
+  - React components: ChatFab, AiSearchBar, AiButton, ErrorBoundary, ThemeProvider, ThemeToggle (50 tests)
+  - Test infrastructure: Vitest with jsdom environment, @testing-library/react, jest-dom matchers
+  - Test setup file: `src/test-setup.ts` for global test utilities
+  - Vitest configuration updated to support both `.test.ts` and `.test.tsx` files
+
 ## 2026-04-13
 
 ### Rebrand

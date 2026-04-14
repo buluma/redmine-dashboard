@@ -168,203 +168,167 @@ export async function GET(request: Request) {
       });
     }
 
-    // Parallel aggregations
-    const [
-      statusDist,
-      priorityDist,
-      trackerDist,
-      categoryDist,
-      projectDist,
-      assigneeDist,
-      totalIssues,
-      totalWithDueDate,
-      overdueByParent,
-      journalsByDay,
-      timeEntriesByDay,
-      timeEntriesTotal,
-      timeEntriesByActivity,
-      timeEntriesByUser,
-      recentJournals,
-      recentTimeEntries,
-      issueHealthRows,
-    ] = await Promise.all([
-      // Status distribution
-      prisma.issue.groupBy({
-        by: ["statusName"],
-        where: issueWhere,
-        _count: { statusName: true },
-        orderBy: { _count: { statusName: "desc" } },
-      }),
-      // Priority distribution
-      prisma.issue.groupBy({
-        by: ["priority"],
-        where: issueWhere,
-        _count: { priority: true },
-        orderBy: { _count: { priority: "desc" } },
-      }),
-      // Tracker distribution
-      prisma.issue.groupBy({
-        by: ["tracker"],
-        where: issueWhere,
-        _count: { tracker: true },
-        orderBy: { _count: { tracker: "desc" } },
-      }),
-      // Category distribution
-      prisma.issue.groupBy({
-        by: ["categoryName"],
-        where: issueWhere,
-        _count: { categoryName: true },
-        orderBy: { _count: { categoryName: "desc" } },
-      }),
-      // Project distribution
-      prisma.issue.groupBy({
-        by: ["projectName"],
-        where: issueWhere,
-        _count: { projectName: true },
-        orderBy: { _count: { projectName: "desc" } },
-      }),
-      // Assignee distribution
-      prisma.issue.groupBy({
-        by: ["assignedToName"],
-        where: issueWhere,
-        _count: { assignedToName: true },
-        orderBy: { _count: { assignedToName: "desc" } },
-      }),
-      // Total counts
-      prisma.issue.count({ where: issueWhere }),
-      prisma.issue.count({
-        where: {
-          ...issueWhere,
-          dueDate: { not: null },
+    // Run heavy report queries in sequence to avoid connection-pool starvation under load.
+    const statusDist = await prisma.issue.groupBy({
+      by: ["statusName"],
+      where: issueWhere,
+      _count: { statusName: true },
+      orderBy: { _count: { statusName: "desc" } },
+    });
+    const priorityDist = await prisma.issue.groupBy({
+      by: ["priority"],
+      where: issueWhere,
+      _count: { priority: true },
+      orderBy: { _count: { priority: "desc" } },
+    });
+    const trackerDist = await prisma.issue.groupBy({
+      by: ["tracker"],
+      where: issueWhere,
+      _count: { tracker: true },
+      orderBy: { _count: { tracker: "desc" } },
+    });
+    const categoryDist = await prisma.issue.groupBy({
+      by: ["categoryName"],
+      where: issueWhere,
+      _count: { categoryName: true },
+      orderBy: { _count: { categoryName: "desc" } },
+    });
+    const projectDist = await prisma.issue.groupBy({
+      by: ["projectName"],
+      where: issueWhere,
+      _count: { projectName: true },
+      orderBy: { _count: { projectName: "desc" } },
+    });
+    const assigneeDist = await prisma.issue.groupBy({
+      by: ["assignedToName"],
+      where: issueWhere,
+      _count: { assignedToName: true },
+      orderBy: { _count: { assignedToName: "desc" } },
+    });
+    const totalIssues = await prisma.issue.count({ where: issueWhere });
+    const totalWithDueDate = await prisma.issue.count({
+      where: {
+        ...issueWhere,
+        dueDate: { not: null },
+      },
+    });
+    const overdueByParent = await prisma.issue.findMany({
+      where: {
+        ...issueWhere,
+        dueDate: { lte: new Date() },
+        statusName: { notIn: ["Closed", "Resolved", "Success"] },
+      },
+      select: { parentIssueLabel: true },
+    });
+    const journalsByDay = await prisma.issueJournal.groupBy({
+      by: ["createdOnRemote"],
+      where: {
+        issue: issueWhere,
+        createdOnRemote: {
+          gte: windowStart,
+          lte: windowEnd,
         },
-      }),
-      // Overdue issues by parent
-      prisma.issue.findMany({
-        where: {
-          ...issueWhere,
-          dueDate: { lte: new Date() },
-          statusName: { notIn: ["Closed", "Resolved", "Success"] },
+      },
+      _count: { id: true },
+    });
+    const timeEntriesByDay = await prisma.timeEntry.groupBy({
+      by: ["spentOn"],
+      where: {
+        issue: issueWhere,
+        spentOn: {
+          gte: windowStart,
+          lte: windowEnd,
         },
-        select: { parentIssueLabel: true },
-      }),
-      // Journals by day (recent window)
-      prisma.issueJournal.groupBy({
-        by: ["createdOnRemote"],
-        where: {
-          issue: issueWhere,
-          createdOnRemote: {
-            gte: windowStart,
-            lte: windowEnd,
-          },
+      },
+      _sum: { hours: true },
+      _count: { id: true },
+    });
+    const timeEntriesTotal = await prisma.timeEntry.aggregate({
+      where: {
+        issue: issueWhere,
+        spentOn: {
+          gte: windowStart,
+          lte: windowEnd,
         },
-        _count: { id: true },
-      }),
-      // Time entries by day (recent window)
-      prisma.timeEntry.groupBy({
-        by: ["spentOn"],
-        where: {
-          issue: issueWhere,
-          spentOn: {
-            gte: windowStart,
-            lte: windowEnd,
-          },
+      },
+      _sum: { hours: true },
+      _count: { id: true },
+    });
+    const timeEntriesByActivity = await prisma.timeEntry.groupBy({
+      by: ["activityName"],
+      where: {
+        issue: issueWhere,
+        spentOn: {
+          gte: windowStart,
+          lte: windowEnd,
         },
-        _sum: { hours: true },
-        _count: { id: true },
-      }),
-      // Total time entries
-      prisma.timeEntry.aggregate({
-        where: {
-          issue: issueWhere,
-          spentOn: {
-            gte: windowStart,
-            lte: windowEnd,
-          },
+      },
+      _sum: { hours: true },
+      _count: { id: true },
+      orderBy: { _sum: { hours: "desc" } },
+    });
+    const timeEntriesByUser = await prisma.timeEntry.groupBy({
+      by: ["authorName"],
+      where: {
+        issue: issueWhere,
+        spentOn: {
+          gte: windowStart,
+          lte: windowEnd,
         },
-        _sum: { hours: true },
-        _count: { id: true },
-      }),
-      // Time entries by activity
-      prisma.timeEntry.groupBy({
-        by: ["activityName"],
-        where: {
-          issue: issueWhere,
-          spentOn: {
-            gte: windowStart,
-            lte: windowEnd,
-          },
+      },
+      _sum: { hours: true },
+      _count: { id: true },
+      orderBy: { _sum: { hours: "desc" } },
+    });
+    const recentJournals = await prisma.issueJournal.findMany({
+      where: {
+        issue: issueWhere,
+        createdOnRemote: {
+          gte: windowStart,
+          lte: windowEnd,
         },
-        _sum: { hours: true },
-        _count: { id: true },
-        orderBy: { _sum: { hours: "desc" } },
-      }),
-      // Time entries by user
-      prisma.timeEntry.groupBy({
-        by: ["authorName"],
-        where: {
-          issue: issueWhere,
-          spentOn: {
-            gte: windowStart,
-            lte: windowEnd,
-          },
+      },
+      orderBy: { createdOnRemote: "desc" },
+      take: 20,
+      select: {
+        id: true,
+        issue: { select: { redmineIssueId: true, subject: true } },
+        author: true,
+        notes: true,
+        createdOnRemote: true,
+      },
+    });
+    const recentTimeEntries = await prisma.timeEntry.findMany({
+      where: {
+        issue: issueWhere,
+        spentOn: {
+          gte: windowStart,
+          lte: windowEnd,
         },
-        _sum: { hours: true },
-        _count: { id: true },
-        orderBy: { _sum: { hours: "desc" } },
-      }),
-      // Recent journals
-      prisma.issueJournal.findMany({
-        where: {
-          issue: issueWhere,
-          createdOnRemote: {
-            gte: windowStart,
-            lte: windowEnd,
-          },
-        },
-        orderBy: { createdOnRemote: "desc" },
-        take: 20,
-        select: {
-          id: true,
-          issue: { select: { redmineIssueId: true, subject: true } },
-          author: true,
-          notes: true,
-          createdOnRemote: true,
-        },
-      }),
-      // Recent time entries
-      prisma.timeEntry.findMany({
-        where: {
-          issue: issueWhere,
-          spentOn: {
-            gte: windowStart,
-            lte: windowEnd,
-          },
-        },
-        orderBy: { spentOn: "desc" },
-        take: 20,
-        select: {
-          id: true,
-          hours: true,
-          activityName: true,
-          authorName: true,
-          spentOn: true,
-          issue: { select: { redmineIssueId: true, subject: true } },
-        },
-      }),
-      // Health + risk computations
-      prisma.issue.findMany({
-        where: issueWhere,
-        select: {
-          statusName: true,
-          dueDate: true,
-          updatedOnRemote: true,
-          doneRatio: true,
-          assignedToName: true,
-          estimatedHours: true,
-          spentHours: true,
-        },
-      }),
-    ]);
+      },
+      orderBy: { spentOn: "desc" },
+      take: 20,
+      select: {
+        id: true,
+        hours: true,
+        activityName: true,
+        authorName: true,
+        spentOn: true,
+        issue: { select: { redmineIssueId: true, subject: true } },
+      },
+    });
+    const issueHealthRows = await prisma.issue.findMany({
+      where: issueWhere,
+      select: {
+        statusName: true,
+        dueDate: true,
+        updatedOnRemote: true,
+        doneRatio: true,
+        assignedToName: true,
+        estimatedHours: true,
+        spentHours: true,
+      },
+    });
 
     // Build parent label map
     const parentLabels = new Map<number, string>();
@@ -381,7 +345,9 @@ export async function GET(request: Request) {
           select: { redmineIssueId: true, subject: true },
         });
         for (const p of parents) {
-          parentLabels.set(p.redmineIssueId, p.subject);
+          if (p.redmineIssueId) {
+            parentLabels.set(p.redmineIssueId, p.subject);
+          }
         }
       }
     }
@@ -569,7 +535,8 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to fetch report data";
-    const status = message === "Unauthorized" ? 401 : 400;
+    const timeout = message.includes("statement timeout") || message.includes("code: \"57014\"") || message.includes("P2024");
+    const status = message === "Unauthorized" ? 401 : timeout ? 503 : 400;
     return Response.json({ error: message }, { status });
   }
 }

@@ -103,14 +103,20 @@ function parseChildren(issueRaw: Record<string, unknown>): IssueChild[] {
 }
 
 async function upsertIssueFromRemote(
-  userId: string, 
-  redmineBaseUrl: string, 
+  userId: string,
+  redmineBaseUrl: string,
   issueRaw: Record<string, unknown>,
   trackChanges: boolean = false
 ): Promise<{ issue: typeof issue; wasCreated: boolean; oldState: { statusName: string; priorityName: string | null; assignedToName: string | null; subject: string; dueDate: Date | null; doneRatio: number | null; } | null }> {
   const remoteId = asNumber(issueRaw.id);
   if (!remoteId) {
     throw new Error("Missing remote issue id");
+  }
+
+  // Guard: reject local-only issues — they must never sync to Redmine
+  const sourceHint = (issueRaw as Record<string, unknown>).__sourceHint;
+  if (sourceHint === "local") {
+    throw new Error("Refused to upsert local issue into Redmine cache");
   }
 
   // Fetch existing issue to track changes (if requested)
@@ -551,13 +557,30 @@ export async function syncSingleIssue(
   userId: string,
   client: RedmineClient,
   remoteIssueId: number,
-  options?: { 
-    pruneTimeEntries?: boolean; 
-    pruneAttachments?: boolean; 
+  options?: {
+    pruneTimeEntries?: boolean;
+    pruneAttachments?: boolean;
     pruneRelations?: boolean;
     sendNotifications?: boolean;
   },
 ) {
+  // Guard: check if issue is local-only — skip sync entirely
+  const existingLocalCheck = await prisma.issue.findFirst({
+    where: {
+      userId,
+      redmineIssueId: remoteIssueId,
+      source: "local",
+    },
+    select: { id: true, source: true },
+  });
+  if (existingLocalCheck?.source === "local") {
+    logEvent("sync.local_issue_skipped", {
+      redmineIssueId: remoteIssueId,
+      reason: "Issue marked as local-only, skipping sync to prevent Redmine overwrite",
+    }, "warn");
+    return null;
+  }
+
   const detail = await client.getIssue(remoteIssueId, [
     "journals",
     "attachments",

@@ -39,6 +39,7 @@ export const issueQuerySchema = z.object({
   search: z.string().optional(),
   searchMode: z.enum(["local", "remote", "hybrid"]).default("local"),
   scope: z.enum(["issues", "all"]).default("issues"),
+  source: z.enum(["all", "redmine", "local"]).default("all"),
   openOnly: z
     .union([z.boolean(), z.enum(["true", "false"])])
     .optional()

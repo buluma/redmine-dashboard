@@ -2,7 +2,7 @@
 
 import { AllowedStatusView } from "@/src/lib/issue-shape";
 import Link from "next/link";
-import { notFound, useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
@@ -67,8 +67,10 @@ type IssueChild = {
 
 type Issue = {
   id: string;
-  redmineIssueId: number;
-  redmineBaseUrl: string;
+  redmineIssueId: number | null;
+  redmineBaseUrl: string | null;
+  source: string;
+  localIssueNumber: number | null;
   subject: string;
   description: string | null;
   projectName: string | null;
@@ -225,7 +227,8 @@ function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: { c
   );
 }
 
-function attachmentUrl(issueId: number, attachmentId: number): string {
+function attachmentUrl(issueId: number | null, attachmentId: number): string {
+  if (!issueId) return "#";
   return `/api/issues/${issueId}/attachments/${attachmentId}`;
 }
 
@@ -397,7 +400,7 @@ function IssueLoadingShell() {
 export default function IssueDetailPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
-  const issueId = Number(params.id);
+  const issueId = params.id;
   const activeTab = normalizeTab(searchParams.get("tab"));
   const tabFromUrl = searchParams.get("tab");
   const hasScrolledRef = useRef(false);
@@ -555,7 +558,7 @@ export default function IssueDetailPage() {
   }
 
   useEffect(() => {
-    if (!Number.isInteger(issueId) || issueId <= 0) {
+    if (!issueId || issueId.trim().length === 0) {
       setError("Invalid issue id");
       setLoading(false);
       return;
@@ -937,7 +940,7 @@ export default function IssueDetailPage() {
   }, [issue]);
 
   useEffect(() => {
-    if (!issue || !hasUnresolvedAttachmentRefs) {
+    if (!issue || !hasUnresolvedAttachmentRefs || !issue.redmineIssueId) {
       return;
     }
     if (attachmentRefreshAttemptedRef.current.has(issue.redmineIssueId)) {
@@ -985,7 +988,18 @@ export default function IssueDetailPage() {
   }
 
   if (error || !issue) {
-    notFound();
+    return (
+      <main className="dashboard">
+        <section className="card">
+          <h1>Issue could not be loaded</h1>
+          <p className="muted">{error ?? "Issue not found."}</p>
+          <div className="row-actions">
+            <Link href="/heimdall" className="primary-link">Back to Heimdall</Link>
+            <Link href="/" className="secondary-button">Back to Dashboard</Link>
+          </div>
+        </section>
+      </main>
+    );
   }
 
   return (
@@ -1036,12 +1050,16 @@ export default function IssueDetailPage() {
           <div className="issue-heading">
             <p className="kicker">{issue.tracker ?? "Issue"}</p>
             <div className="issue-title-line">
-              {externalIssueUrl ? (
-                <a className="redmine-issue-link" href={externalIssueUrl} target="_blank" rel="noopener noreferrer">
-                  #{issue.redmineIssueId}
-                </a>
+              {issue.source === "local" ? (
+                <span className="source-badge source-local">🟢 Local</span>
               ) : (
-                <span className="redmine-issue-link muted">#{issue.redmineIssueId}</span>
+                externalIssueUrl ? (
+                  <a className="redmine-issue-link" href={externalIssueUrl} target="_blank" rel="noopener noreferrer">
+                    #{issue.redmineIssueId}
+                  </a>
+                ) : (
+                  <span className="redmine-issue-link muted">#{issue.redmineIssueId}</span>
+                )
               )}
               {editMode && editDraft ? (
                 <input
@@ -1091,14 +1109,32 @@ export default function IssueDetailPage() {
             </div>
           </div>
           <div className="hero-actions issue-hero-actions">
-            {!editMode && (
+            {!editMode && issue.source !== "local" && (
               <button type="button" className={`favorite-btn ${isFavorited ? "favorited" : ""}`} onClick={toggleFavorite} title={isFavorited ? "Remove from favorites" : "Add to favorites"}>
                 {isFavorited ? "★ Favorited" : "☆ Favorite"}
               </button>
             )}
-            {!editMode && (
+            {!editMode && issue.source !== "local" && (
               <button type="button" className="secondary-button issue-refresh-button" onClick={() => void refreshIssueFromRedmine()} disabled={refreshBusy}>
                 {refreshBusy ? "Refreshing..." : "Refresh"}
+              </button>
+            )}
+            {!editMode && issue.source === "local" && (
+              <button
+                type="button"
+                className="secondary-button issue-delete-button"
+                onClick={async () => {
+                  if (!confirm(`Delete "${issue.subject}"? This cannot be undone.`)) return;
+                  try {
+                    const res = await fetch(`/api/issues/local/${issue.id}`, { method: "DELETE" });
+                    if (!res.ok) throw new Error("Delete failed");
+                    window.location.href = "/";
+                  } catch (e) {
+                    alert(e instanceof Error ? e.message : "Delete failed");
+                  }
+                }}
+              >
+                Delete
               </button>
             )}
             {!editMode && (
@@ -1111,12 +1147,13 @@ export default function IssueDetailPage() {
         </div>
       </header>
 
-      {/* Quick Actions Panel */}
-      <QuickActionsPanel
-        issueId={issue.redmineIssueId}
-        currentStatus={issue.statusName}
-        currentAssignee={issue.assignedToName ?? undefined}
-        onStatusChange={async (statusId) => {
+      {/* Quick Actions Panel — only for Redmine issues */}
+      {issue.redmineIssueId && (
+        <QuickActionsPanel
+          issueId={issue.redmineIssueId}
+          currentStatus={issue.statusName}
+          currentAssignee={issue.assignedToName ?? undefined}
+          onStatusChange={async (statusId) => {
           try {
             const res = await fetch(`/api/issues/${issueId}/status`, {
               method: "POST",
@@ -1168,6 +1205,7 @@ export default function IssueDetailPage() {
         statuses={transitionStatuses}
         users={users}
       />
+      )}
 
       <section className="card reports-shell issue-detail-shell">
         <div className="reports-head">
@@ -1206,7 +1244,7 @@ export default function IssueDetailPage() {
               placeholder="Issue description (Textile formatting supported)"
             />
           ) : issue.description ? (
-            <MarkdownBlock content={issue.description} attachments={issue.attachments} issueId={issue.redmineIssueId} onImageClick={(src, alt) => setLightboxImage({ src, alt })} />
+            <MarkdownBlock content={issue.description} attachments={issue.attachments} issueId={issue.redmineIssueId ?? undefined} onImageClick={(src, alt) => setLightboxImage({ src, alt })} />
           ) : (
             <p className="muted">No description.</p>
           )}
@@ -1714,7 +1752,7 @@ export default function IssueDetailPage() {
                   <MarkdownBlock
                     content={journal.notes ?? ""}
                     attachments={issue.attachments}
-                    issueId={issue.redmineIssueId}
+                    issueId={issue.redmineIssueId ?? undefined}
                     onImageClick={(src, alt) => setLightboxImage({ src, alt })}
                   />
                 </article>
@@ -1732,7 +1770,7 @@ export default function IssueDetailPage() {
                   <MarkdownBlock
                     content={journal.notes ?? ""}
                     attachments={issue.attachments}
-                    issueId={issue.redmineIssueId}
+                    issueId={issue.redmineIssueId ?? undefined}
                     onImageClick={(src, alt) => setLightboxImage({ src, alt })}
                   />
                 </article>
@@ -1768,7 +1806,7 @@ export default function IssueDetailPage() {
                       <MarkdownBlock
                         content={note.content}
                         attachments={issue.attachments}
-                        issueId={issue.redmineIssueId}
+                        issueId={issue.redmineIssueId ?? undefined}
                         onImageClick={(src, alt) => setLightboxImage({ src, alt })}
                       />
                     </div>
@@ -1800,7 +1838,7 @@ export default function IssueDetailPage() {
                   <MarkdownBlock
                     content={journal.notes ?? ""}
                     attachments={issue.attachments}
-                    issueId={issue.redmineIssueId}
+                    issueId={issue.redmineIssueId ?? undefined}
                     onImageClick={(src, alt) => setLightboxImage({ src, alt })}
                   />
                 </article>
@@ -1854,7 +1892,7 @@ export default function IssueDetailPage() {
           </div>
         </div>
       )}
-      <ChatFab issueId={issue.redmineIssueId} />
+      {issue.redmineIssueId && <ChatFab issueId={issue.redmineIssueId} />}
     </main>
   );
 }

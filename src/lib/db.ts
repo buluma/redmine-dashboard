@@ -5,7 +5,39 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-export const prisma = global.prisma ?? new PrismaClient();
+function buildPrismaUrl(rawUrl: string): string {
+  // Keep pool timeout explicit; connection_limit can be overridden via env in deployments when needed.
+  if (!rawUrl.startsWith("postgres://") && !rawUrl.startsWith("postgresql://")) {
+    return rawUrl;
+  }
+
+  try {
+    const url = new URL(rawUrl);
+    if (!url.searchParams.has("pool_timeout")) {
+      url.searchParams.set("pool_timeout", "30");
+    }
+    const envConnectionLimit = process.env.PRISMA_CONNECTION_LIMIT;
+    if (envConnectionLimit && !url.searchParams.has("connection_limit")) {
+      url.searchParams.set("connection_limit", envConnectionLimit);
+    }
+
+    return url.toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
+const prismaUrl = buildPrismaUrl(env.databaseUrl);
+const prismaClient =
+  prismaUrl === env.databaseUrl
+    ? new PrismaClient()
+    : new PrismaClient({
+        datasources: {
+          db: { url: prismaUrl },
+        },
+      });
+
+export const prisma = global.prisma ?? prismaClient;
 
 async function executeRawIgnoreDuplicate(sql: string): Promise<void> {
   try {

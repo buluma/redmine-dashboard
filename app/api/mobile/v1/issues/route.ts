@@ -153,7 +153,9 @@ export async function GET(request: Request) {
 
         const byRemote = new Map<number, (typeof hydrated)[number]>();
         for (const issue of [...items, ...hydrated]) {
-          byRemote.set(issue.redmineIssueId, issue);
+          if (issue.redmineIssueId) {
+            byRemote.set(issue.redmineIssueId, issue);
+          }
         }
         merged = Array.from(byRemote.values()).sort((a, b) => compareIssuesBySort(a, b, q.sort));
       }
@@ -166,7 +168,7 @@ export async function GET(request: Request) {
         const favorites = await prisma.favorite.findMany({
           where: {
             userId: user.id,
-            issueId: { in: merged.map((issue) => issue.redmineIssueId) },
+            issueId: { in: merged.map((issue) => issue.redmineIssueId).filter((id): id is number => id !== null) },
           },
           select: { issueId: true },
         });
@@ -179,7 +181,7 @@ export async function GET(request: Request) {
     return Response.json({
       items: merged.map((issue) => ({
         ...toIssueView(issue),
-        isFavorited: favoritedIssueIds.has(issue.redmineIssueId),
+        isFavorited: issue.redmineIssueId ? favoritedIssueIds.has(issue.redmineIssueId) : false,
       })),
       total: q.searchMode === "local" ? total : hybridTotal,
       page: q.page,

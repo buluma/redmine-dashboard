@@ -6,6 +6,12 @@ import { issueQuerySchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
 
 type SortMode = "updated_desc" | "updated_asc" | "priority" | "due_date";
+const RELATION_PREVIEW_LIMIT = 5;
+
+function isDbStatementTimeout(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("statement timeout") || message.includes("code: \"57014\"") || message.includes("P2024");
+}
 
 function compareNullableDateAsc(a: Date | null, b: Date | null): number {
   if (!a && !b) return 0;
@@ -55,6 +61,8 @@ export async function GET(request: Request) {
 
     const baseWhere: Prisma.IssueWhereInput = {
       userId: user.id,
+      ...(q.source === "redmine" ? { source: "redmine" } : {}),
+      ...(q.source === "local" ? { source: "local" } : {}),
       ...(q.status ? { statusName: q.status } : {}),
       ...(q.priority ? { priority: q.priority } : {}),
     };
@@ -88,23 +96,23 @@ export async function GET(request: Request) {
         include: {
           journals: {
             orderBy: { createdOnRemote: "desc" },
-            take: 20,
+            take: RELATION_PREVIEW_LIMIT,
           },
           githubLinks: {
             orderBy: { createdAt: "desc" },
-            take: 20,
+            take: RELATION_PREVIEW_LIMIT,
           },
           timeEntries: {
             orderBy: { spentOn: "desc" },
-            take: 20,
+            take: RELATION_PREVIEW_LIMIT,
           },
           attachments: {
             orderBy: { createdOnRemote: "desc" },
-            take: 20,
+            take: RELATION_PREVIEW_LIMIT,
           },
           relations: {
             orderBy: { createdAt: "desc" },
-            take: 20,
+            take: RELATION_PREVIEW_LIMIT,
           },
         },
       }),
@@ -153,16 +161,18 @@ export async function GET(request: Request) {
             redmineIssueId: { in: remoteIssueIds },
           },
           include: {
-            journals: { orderBy: { createdOnRemote: "desc" }, take: 20 },
-            githubLinks: { orderBy: { createdAt: "desc" }, take: 20 },
-            timeEntries: { orderBy: { spentOn: "desc" }, take: 20 },
-            attachments: { orderBy: { createdOnRemote: "desc" }, take: 20 },
-            relations: { orderBy: { createdAt: "desc" }, take: 20 },
+            journals: { orderBy: { createdOnRemote: "desc" }, take: RELATION_PREVIEW_LIMIT },
+            githubLinks: { orderBy: { createdAt: "desc" }, take: RELATION_PREVIEW_LIMIT },
+            timeEntries: { orderBy: { spentOn: "desc" }, take: RELATION_PREVIEW_LIMIT },
+            attachments: { orderBy: { createdOnRemote: "desc" }, take: RELATION_PREVIEW_LIMIT },
+            relations: { orderBy: { createdAt: "desc" }, take: RELATION_PREVIEW_LIMIT },
           },
         });
         const byRemote = new Map<number, (typeof hydrated)[number]>();
         for (const issue of [...issues, ...hydrated]) {
-          byRemote.set(issue.redmineIssueId, issue);
+          if (issue.redmineIssueId) {
+            byRemote.set(issue.redmineIssueId, issue);
+          }
         }
         merged = Array.from(byRemote.values()).sort((a, b) => compareIssuesBySort(a, b, q.sort));
       }
@@ -186,6 +196,17 @@ export async function GET(request: Request) {
       source: q.searchMode === "local" ? "local_cache" : "hybrid",
     });
   } catch (error) {
+    if (isDbStatementTimeout(error)) {
+      return Response.json({
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 25,
+        filters: { statuses: [], priorities: [] },
+        source: "local_cache",
+        degraded: true,
+      });
+    }
     const status = error instanceof Error && error.message === "Unauthorized" ? 401 : 500;
     return Response.json({ error: error instanceof Error ? error.message : "Server error" }, { status });
   }

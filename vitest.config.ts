@@ -8,9 +8,10 @@ export default defineConfig({
     },
   },
   test: {
-    environment: "node",
+    environment: "jsdom",
     globals: true,
-    include: ["src/**/*.test.ts", "app/**/*.test.ts"],
+    setupFiles: ["src/test-setup.ts"],
+    include: ["src/**/*.test.{ts,tsx}", "app/**/*.test.{ts,tsx}"],
     env: {
       DATABASE_URL: "file:./test.db",
       APP_ENCRYPTION_KEY: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
