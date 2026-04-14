@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { getSessionUserId } from "@/src/lib/session";
+import { requirePermission } from "@/src/lib/rbac";
 
 export const runtime = "nodejs";
 
@@ -10,6 +11,21 @@ export default async function AuditLogsPage() {
   const userId = await getSessionUserId();
   if (!userId) {
     redirect("/");
+  }
+
+  // Check permission - require audit:view
+  try {
+    await requirePermission("audit:view");
+  } catch {
+    return (
+      <main className="dashboard">
+        <section className="card">
+          <h1>Access Denied</h1>
+          <p className="muted">You don't have permission to view audit logs.</p>
+          <a href="/" className="secondary-button">Back to Dashboard</a>
+        </section>
+      </main>
+    );
   }
 
   const user = await prisma.user.findUnique({ where: { id: userId } });

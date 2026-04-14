@@ -3,6 +3,7 @@ import { recomputeIssueActivityIndex, recordIssueActivityEvent } from "@/src/lib
 import { prisma } from "@/src/lib/db";
 import { jsonError, parseJson } from "@/src/lib/http";
 import { getAuditService, extractClientIp, extractUserAgent } from "@/src/lib/audit";
+import { hasPermission } from "@/src/lib/rbac";
 import { z } from "zod";
 
 const updateNoteSchema = z.object({
@@ -16,6 +17,12 @@ export async function PATCH(
 ) {
   try {
     const user = await requireCurrentUser();
+    
+    // RBAC: require notes:write permission
+    if (!(await hasPermission(user.id, "notes:write"))) {
+      return jsonError("Permission denied", 403);
+    }
+    
     const { id } = await context.params;
     const body = await parseJson(request, updateNoteSchema);
 
@@ -91,6 +98,12 @@ export async function DELETE(
 ) {
   try {
     const user = await requireCurrentUser();
+    
+    // RBAC: require notes:delete permission
+    if (!(await hasPermission(user.id, "notes:delete"))) {
+      return jsonError("Permission denied", 403);
+    }
+    
     const { id } = await context.params;
 
     // Audit logging setup

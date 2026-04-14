@@ -12,6 +12,7 @@ model User {
   id                String                  @id @default(cuid())
   emailOrUsername   String                  @unique
   displayName       String
+  role              UserRole               @default(USER)
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
   credential        UserRedmineCredential?
@@ -23,6 +24,13 @@ model User {
   syncJobs          SyncJob[]
   favorites         Favorite[]
   internalNotes     InternalNote[]
+}
+
+enum UserRole {
+  ADMIN    // Full access, can manage users, view all data
+  EDITOR  // Can create/edit issues, view all data
+  USER    // Default, limited to own data
+  VIEWER  // Read-only access
 }
 
 model Favorite {

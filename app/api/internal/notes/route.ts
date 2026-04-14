@@ -5,6 +5,7 @@ import { jsonError, parseJson } from "@/src/lib/http";
 import { getSlackNotificationService } from "@/src/lib/slack-notification-service";
 import { getAuditService, extractClientIp, extractUserAgent } from "@/src/lib/audit";
 import { checkRateLimit, addRateLimitHeaders } from "@/src/lib/rate-limit";
+import { hasPermission } from "@/src/lib/rbac";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -17,6 +18,12 @@ const createNoteSchema = z.object({
 export async function GET(request: Request) {
   try {
     const user = await requireCurrentUser();
+    
+    // RBAC: require notes:read permission
+    if (!(await hasPermission(user.id, "notes:read"))) {
+      return jsonError("Permission denied", 403);
+    }
+    
     const { searchParams } = new URL(request.url);
     const issueId = searchParams.get("issueId");
 
@@ -64,6 +71,11 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await requireCurrentUser();
+    
+    // RBAC: require notes:write permission
+    if (!(await hasPermission(user.id, "notes:write"))) {
+      return jsonError("Permission denied", 403);
+    }
 
     // Rate limiting
     const rateLimitResult = await checkRateLimit(request, user.id);

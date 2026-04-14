@@ -393,6 +393,9 @@ export default function OpsPage() {
                 <Link href="/ops/audit-logs" className="secondary-button">
                   📋 View Audit Logs
                 </Link>
+                <Link href="/ops/users" className="secondary-button" style={{ marginLeft: '0.5rem' }}>
+                  👥 User Management
+                </Link>
               </div>
             </article>
 
