@@ -136,11 +136,43 @@ export async function toggleSubscription(id: string, active: boolean): Promise<v
   });
 
   await getAuditService().log({
-    action: active ? 'UPDATE' : 'UPDATE',
+    action: 'UPDATE',
     entityType: 'WebhookSubscription',
     entityId: id,
     metadata: { enabled: active },
   });
+}
+
+export async function updateSubscription(
+  id: string,
+  data: { name?: string; url?: string; secret?: string; events?: string[] }
+): Promise<WebhookSubscription> {
+  const updateData: Record<string, any> = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.url !== undefined) updateData.url = data.url;
+  if (data.secret !== undefined) updateData.secret = data.secret;
+  if (data.events !== undefined) updateData.events = JSON.stringify(data.events);
+
+  const updated = await prisma.webhookSubscription.update({
+    where: { id },
+    data: updateData,
+  });
+
+  await getAuditService().log({
+    action: 'UPDATE',
+    entityType: 'WebhookSubscription',
+    entityId: id,
+    metadata: { updatedFields: Object.keys(data) },
+  });
+
+  return toSubscription(updated);
+}
+
+export async function getSubscription(id: string): Promise<WebhookSubscription | null> {
+  const sub = await prisma.webhookSubscription.findUnique({
+    where: { id },
+  });
+  return sub ? toSubscription(sub) : null;
 }
 
 export async function updateSubscriptionFailure(

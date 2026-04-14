@@ -13,6 +13,7 @@ interface WebhookSubscription {
   lastTriggeredAt: Date | string | null;
   lastStatus: number | null;
   failureCount: number;
+  secret?: string;
 }
 
 interface Props {
@@ -28,9 +29,12 @@ const EVENT_LABELS: Record<string, string> = {
   "ticket.deleted": "🗑️ Deleted",
 };
 
+const ALL_EVENTS = Object.keys(EVENT_LABELS);
+
 export function WebhooksClient({ subscriptions }: Props) {
   const [subs, setSubs] = useState(subscriptions);
   const [showForm, setShowForm] = useState(false);
+  const [editingSub, setEditingSub] = useState<WebhookSubscription | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     url: "",
@@ -57,6 +61,53 @@ export function WebhooksClient({ subscriptions }: Props) {
     if (res.ok) {
       setSubs(prev => prev.map(s => s.id === id ? { ...s, active } : s));
     }
+  };
+
+  const handleEdit = (sub: WebhookSubscription) => {
+    setEditingSub(sub);
+    setFormData({
+      name: sub.name,
+      url: sub.url,
+      secret: "",
+      events: sub.events,
+    });
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.events.length === 0) {
+      alert("Select at least one event");
+      return;
+    }
+    if (!formData.name.trim() || !formData.url) {
+      alert("Name and URL are required");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/webhooks/subscriptions/${editingSub?.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (res.ok) {
+        setEditingSub(null);
+        setFormData({ name: "", url: "", secret: "", events: [] });
+        fetchSubscriptions();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to update webhook");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSub(null);
+    setFormData({ name: "", url: "", secret: "", events: [] });
   };
 
   const handleDelete = async (id: string) => {
@@ -122,8 +173,6 @@ export function WebhooksClient({ subscriptions }: Props) {
     }));
   };
 
-  const allEvents = Object.keys(EVENT_LABELS);
-
   return (
     <>
       {/* Subscriptions Table */}
@@ -138,15 +187,22 @@ export function WebhooksClient({ subscriptions }: Props) {
             >
               {testing ? "Sending..." : "🧪 Test All"}
             </button>
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="primary-button"
-            >
-              {showForm ? "✕ Cancel" : "+ Add Subscription"}
-            </button>
+            {editingSub ? (
+              <button onClick={handleCancelEdit} className="secondary-button">
+                ✕ Cancel Edit
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="primary-button"
+              >
+                {showForm ? "✕ Cancel" : "+ Add Subscription"}
+              </button>
+            )}
           </div>
         </div>
 
+        {/* Create Form */}
         {showForm && (
           <div className="webhook-form">
             <h3>New Webhook Subscription</h3>
@@ -188,7 +244,7 @@ export function WebhooksClient({ subscriptions }: Props) {
               <div className="form-group">
                 <label>Events to Subscribe *</label>
                 <div className="event-checkboxes">
-                  {allEvents.map(event => (
+                  {ALL_EVENTS.map(event => (
                     <label key={event} className="event-checkbox">
                       <input
                         type="checkbox"
@@ -214,6 +270,72 @@ export function WebhooksClient({ subscriptions }: Props) {
                   disabled={submitting}
                 >
                   {submitting ? "Creating..." : "Create Subscription"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Edit Form */}
+        {editingSub && (
+          <div className="webhook-form">
+            <h3>Edit: {editingSub.name}</h3>
+            <form onSubmit={handleEditSubmit}>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="edit-name">Name *</label>
+                  <input
+                    id="edit-name"
+                    type="text"
+                    value={formData.name}
+                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Subscription name"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-url">Webhook URL *</label>
+                  <input
+                    id="edit-url"
+                    type="url"
+                    value={formData.url}
+                    onChange={e => setFormData({ ...formData, url: e.target.value })}
+                    placeholder="https://..."
+                    required
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-secret">Secret (leave empty to keep current)</label>
+                <input
+                  id="edit-secret"
+                  type="password"
+                  value={formData.secret}
+                  onChange={e => setFormData({ ...formData, secret: e.target.value })}
+                  placeholder="New secret (optional)"
+                />
+              </div>
+              <div className="form-group">
+                <label>Events *</label>
+                <div className="event-checkboxes">
+                  {ALL_EVENTS.map(event => (
+                    <label key={event} className="event-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={formData.events.includes(event)}
+                        onChange={() => toggleEvent(event)}
+                      />
+                      <span>{EVENT_LABELS[event]}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="form-actions">
+                <button type="button" onClick={handleCancelEdit} className="secondary-button">
+                  Cancel
+                </button>
+                <button type="submit" disabled={submitting} className="primary-button">
+                  {submitting ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </form>
@@ -277,12 +399,21 @@ export function WebhooksClient({ subscriptions }: Props) {
                     )}
                   </td>
                   <td>
-                    <button
-                      onClick={() => handleDelete(sub.id)}
-                      className="danger-button"
-                    >
-                      Delete
-                    </button>
+                    <div className="action-buttons">
+                      <button
+                        onClick={() => handleEdit(sub)}
+                        className="secondary-button btn-sm"
+                        disabled={editingSub !== null}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(sub.id)}
+                        className="danger-button btn-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -301,6 +432,7 @@ export function WebhooksClient({ subscriptions }: Props) {
         
         .webhook-form h3 {
           margin: 0 0 1rem;
+          color: var(--accent);
         }
         
         .form-row {
@@ -348,6 +480,16 @@ export function WebhooksClient({ subscriptions }: Props) {
           gap: 0.75rem;
           justify-content: flex-end;
           margin-top: 1rem;
+        }
+        
+        .action-buttons {
+          display: flex;
+          gap: 0.5rem;
+        }
+        
+        .btn-sm {
+          padding: 0.375rem 0.75rem;
+          font-size: 0.8rem;
         }
         
         .event-badges {
