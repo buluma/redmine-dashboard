@@ -93,11 +93,14 @@ export async function POST(request: Request) {
     await recomputeIssueActivityIndex(issue.id);
 
     // Send Slack notification for internal note
-    void getSlackNotificationService().notifyInternalNoteAdded(
+    const slackResult = await getSlackNotificationService().notifyInternalNoteAdded(
       issue.id,
       note.content,
       user.displayName
     );
+    if (!slackResult.success) {
+      console.error("Slack notification failed:", slackResult.error);
+    }
 
     return Response.json({
       note: {

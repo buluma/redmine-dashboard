@@ -283,21 +283,21 @@ export class SlackNotifier {
         type: "header",
         text: {
           type: "plain_text",
-          text: `💬 Internal Note #${issue.redmineIssueId}`,
+          text: `💬 Internal Note #${issue.redmineIssueId ?? "local"}`,
           emoji: true,
         },
       },
       {
         type: "section",
         text: {
-          type: "mrkdown",
+          type: "mrkdwn",
           text: `*${issue.subject}*`,
         },
       },
       {
         type: "section",
         text: {
-          type: "mrkdown",
+          type: "mrkdwn",
           text: `> ${truncatedNote.replace(/\n/g, "\n> ")}`,
         },
       },
@@ -305,7 +305,7 @@ export class SlackNotifier {
         type: "context",
         elements: [
           {
-            type: "mrkdown",
+            type: "mrkdwn",
             text: `${projectInfo} by *${authorName}*${link ? ` · <${link}|View in Redmine>` : ""}`,
           },
         ],
