@@ -27,7 +27,7 @@ export default async function PersonalTicketPage({ params }: Props) {
     },
   });
 
-  if (!issue || (issue.userId !== userId && issue.source !== "local")) {
+  if (!issue || issue.userId !== userId) {
     return (
       <main className="dashboard">
         <section className="card">
