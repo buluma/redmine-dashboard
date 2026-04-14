@@ -150,7 +150,7 @@ export default function OpsPage() {
 
     const [statusRes, jobsRes, healthRes, tokensRes, logsRes] = await Promise.all([
       fetch("/api/sync/status", { cache: "no-store" }),
-      fetch("/api/sync/jobs?limit=60", { cache: "no-store" }),
+      fetch("/api/sync/jobs?limit=10", { cache: "no-store" }),
       fetch("/api/health", { cache: "no-store" }),
       fetch("/api/mobile/tokens", { cache: "no-store" }),
       fetch("/api/logs?limit=100", { cache: "no-store" }),
@@ -470,7 +470,7 @@ export default function OpsPage() {
           <section className="card">
             <div className="table-toolbar">
               <h2>Recent Sync Jobs</h2>
-              <p className="muted">{jobs.length} rows</p>
+              <p className="muted">Last {jobs.length} jobs</p>
             </div>
             <div className="drill-table-wrap">
               <table className="issues-table">
