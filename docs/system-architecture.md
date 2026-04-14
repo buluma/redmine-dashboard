@@ -31,18 +31,24 @@ This document provides a high-level overview of the system architecture for Conv
 │ └───────────────┘                │          │
 │                                  │ (Prisma) │
 │                                  ▼          │
-│ ┌───────────────┐      ┌──────────────────┐ │
-│ │ In-process    │      │      SQLite      │ │
-│ │ Sync Poller   │◀────▶│    Database      │ │
-│ └───────┬───────┘      │(Operational Cache)│ │
-│         │              └──────────────────┘ │
-└─────────┼───────────────────────────────────┘
-          │
-          │ (Redmine API)
-          ▼
-┌───────────────────┐
-│   Redmine Server  │
-└───────────────────┘
+│ ┌──────────────────────────────────────────┐│
+│ │           Database (PostgreSQL)          ││
+│ │  ┌─────────────┐  ┌─────────────────┐   ││
+│ │  │ Issues Cache│  │ Streamline Logs │   ││
+│ │  └─────────────┘  └─────────────────┘   ││
+│ └──────────────────────────────────────────┘│
+│                                             │
+│  ┌───────────────┐      ┌────────────────┐  │
+│  │ Sync Poller   │      │ Log Poller     │  │
+│  │ (Leader Lock) │      │ (Leader Lock)  │  │
+│  └───────────────┘      └────────────────┘  │
+└─────────────────────────────────────────────┘
+          │                        │
+          │                        │ (Streamline API)
+          ▼                        ▼
+┌───────────────────┐      ┌───────────────────┐
+│   Redmine Server  │      │ Streamline Server │
+└───────────────────┘      └───────────────────┘
 ```
 
 ## Components
@@ -81,6 +87,15 @@ This document provides a high-level overview of the system architecture for Conv
 - **Polling:** Periodically fetches data from the Redmine API to keep the local cache up to date. The default polling interval is 5 minutes.
 - **Synced Redmine surfaces:** `issues`, `issue_statuses`, enumerations (time entry activities + issue priorities), issue `attachments`, issue `relations`, `allowed_statuses`, and `children`.
 - **Leader Lock:** A leader lock mechanism is used to ensure that only one instance of the poller is active at a time in a multi-instance environment.
+
+### 6. Streamline Log Poller
+
+- **Implementation:** A dedicated in-process poller for auto-fetching logs from the Streamline API.
+- **Polling:** Periodically fetches MBU logs, Server Side Rules logs, and Traces from Streamline. Default interval is 5 minutes.
+- **Leader Lock:** Uses a separate leader lock (`streamline-log-poller`) to ensure only one instance runs the log fetcher.
+- **Upsert Behavior:** Records are upserted by `id + environment + host`, so duplicate records are automatically skipped.
+- **Tables populated:** `MbuLog`, `ServerSideRulesLog`, `Trace`.
+- **Viewing logs:** Available in the `/heimdall` dashboard.
 
 ## Technology Stack
 

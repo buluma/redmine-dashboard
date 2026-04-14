@@ -129,6 +129,93 @@ function transformTraceLog(record: Record<string, unknown>, env: string, host: s
   };
 }
 
+// Upsert a single MBU log record
+export async function upsertMbuLog(
+  prisma: PrismaClient,
+  record: Record<string, unknown>,
+  env: string,
+  host: string,
+): Promise<{ created: boolean }> {
+  const data = transformMbuLog(record, env, host);
+  try {
+    await prisma.mbuLog.upsert({
+      where: {
+        id_environment_host: {
+          id: data.id,
+          environment: env,
+          host,
+        },
+      },
+      create: data,
+      update: data,
+    });
+    return { created: true };
+  } catch (err: any) {
+    if (err.code === 'P2002') {
+      return { created: false };
+    }
+    throw err;
+  }
+}
+
+// Upsert a single Server Side Rules log record
+export async function upsertServerSideRulesLog(
+  prisma: PrismaClient,
+  record: Record<string, unknown>,
+  env: string,
+  host: string,
+): Promise<{ created: boolean }> {
+  const data = transformServerSideRulesLog(record, env, host);
+  try {
+    await prisma.serverSideRulesLog.upsert({
+      where: {
+        id_environment_host: {
+          id: data.id,
+          environment: env,
+          host,
+        },
+      },
+      create: data,
+      update: data,
+    });
+    return { created: true };
+  } catch (err: any) {
+    if (err.code === 'P2002') {
+      return { created: false };
+    }
+    throw err;
+  }
+}
+
+// Upsert a single Trace record
+export async function upsertTrace(
+  prisma: PrismaClient,
+  record: Record<string, unknown>,
+  env: string,
+  host: string,
+): Promise<{ created: boolean }> {
+  const data = transformTraceLog(record, env, host);
+  try {
+    await prisma.trace.upsert({
+      where: {
+        id_environment_host: {
+          id: data.id,
+          environment: env,
+          host,
+        },
+      },
+      create: data,
+      update: data,
+    });
+    return { created: true };
+  } catch (err: any) {
+    if (err.code === 'P2002') {
+      return { created: false };
+    }
+    throw err;
+  }
+}
+
 // Upsert records (skip if already exists by id + environment + host)
 async function upsertRecords(
   model: any,
@@ -174,7 +261,7 @@ async function upsertRecords(
  */
 export async function fetchStreamlineLogsFromAPI(
   options: { environment?: string; limit?: number } = {},
-): Promise<{ mbuLogs: Record<string, unknown>[]; serverSideRules: Record<string, unknown>[]; traces: Record<string, unknown>[]; errors: string[] }> {
+): Promise<{ mbuLogs: Record<string, unknown>[]; serverSideRules: Record<string, unknown>[]; traces: Record<string, unknown>[]; errors: string[]; host: string }> {
   const env = options.environment || 'staging';
   const limit = options.limit || 100;
   const host = extractHostFromEnv(env);
@@ -184,6 +271,7 @@ export async function fetchStreamlineLogsFromAPI(
     serverSideRules: [] as Record<string, unknown>[],
     traces: [] as Record<string, unknown>[],
     errors: [] as string[],
+    host,
   };
 
   // Get token from environment
@@ -217,7 +305,7 @@ export async function fetchStreamlineLogsFromAPI(
       
       if (Array.isArray(records)) {
         // Parse each record (they come as JSON strings)
-        const parsed = records.map((r: unknown) => {
+        const parsed: Record<string, unknown>[] = records.map((r: unknown) => {
           if (typeof r === 'string') {
             try {
               return JSON.parse(r);
@@ -225,9 +313,11 @@ export async function fetchStreamlineLogsFromAPI(
               return { raw: r };
             }
           }
-          return r;
+          return r as Record<string, unknown>;
         });
-        result[model.key as keyof typeof result] = parsed;
+        if (model.key === 'mbuLogs') result.mbuLogs = parsed;
+        else if (model.key === 'serverSideRules') result.serverSideRules = parsed;
+        else if (model.key === 'traces') result.traces = parsed;
       }
     } catch (err: any) {
       result.errors.push(`Failed to fetch ${model.alias}: ${err.message}`);
