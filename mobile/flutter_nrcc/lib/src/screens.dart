@@ -551,10 +551,30 @@ class _IssueListScreenState extends State<IssueListScreen> {
                           ),
                         ],
                       )
-                    : ListView.builder(
-                        itemCount: visibleIssues.length,
-                        itemBuilder: (context, index) {
-                          final issue = visibleIssues[index];
+                    : NotificationListener<ScrollNotification>(
+                        onNotification: (notification) {
+                          if (notification is ScrollEndNotification) {
+                            _onScroll();
+                          }
+                          return false;
+                        },
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          itemCount: visibleIssues.length + (_hasMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index >= visibleIssues.length) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                ),
+                              );
+                            }
+                            final issue = visibleIssues[index];
                           final isDone = _isDoneStatus(issue.statusName);
                           final priorityColor = _isHighPriority(issue.priority)
                               ? scheme.error
@@ -738,6 +758,8 @@ class _IssueListScreenState extends State<IssueListScreen> {
                           );
                         },
                       ),
+              ),
+                    ),
               ),
             ],
           ),
