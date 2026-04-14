@@ -53,3 +53,7 @@ test.txt
 # Debugging logs (may contain sensitive data)
 debugging/logs/*.json
 /logs
+
+# Serwist (PWA Service Worker)
+public/sw*
+public/swe-worker*
