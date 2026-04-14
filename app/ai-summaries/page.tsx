@@ -59,7 +59,7 @@ export default async function AiSummariesPage() {
     take: 200,
   }).catch(() => []);
 
-  const modelsUsed = new Map<string, number>();
+  const modelsUsed = new Map<string, { count: number; inputTokens: number; outputTokens: number }>();
   const statusesMap = new Map<string, number>();
   const prioritiesMap = new Map<string, number>();
   const projectsMap = new Map<string, number>();
@@ -74,7 +74,12 @@ export default async function AiSummariesPage() {
   const totalIssueCount = new Set([...uniqueIssueIds, ...chatUniqueIssueIds]).size;
 
   for (const s of summaries) {
-    modelsUsed.set(s.model, (modelsUsed.get(s.model) ?? 0) + 1);
+    const existing = modelsUsed.get(s.model) ?? { count: 0, inputTokens: 0, outputTokens: 0 };
+    modelsUsed.set(s.model, {
+      count: existing.count + 1,
+      inputTokens: existing.inputTokens + (s.promptEvalCount ?? 0),
+      outputTokens: existing.outputTokens + (s.evalCount ?? 0),
+    });
     statusesMap.set(s.issue.statusName, (statusesMap.get(s.issue.statusName) ?? 0) + 1);
     if (s.issue.projectName) {
       projectsMap.set(s.issue.projectName, (projectsMap.get(s.issue.projectName) ?? 0) + 1);
@@ -85,11 +90,16 @@ export default async function AiSummariesPage() {
   }
 
   // Chat stats
-  const chatModelsUsed = new Map<string, number>();
+  const chatModelsUsed = new Map<string, { count: number; inputTokens: number; outputTokens: number }>();
   const chatIssues = new Map<number, number>();
   for (const m of chatMessages) {
     if (m.model) {
-      chatModelsUsed.set(m.model, (chatModelsUsed.get(m.model) ?? 0) + 1);
+      const existing = chatModelsUsed.get(m.model) ?? { count: 0, inputTokens: 0, outputTokens: 0 };
+      chatModelsUsed.set(m.model, {
+        count: existing.count + 1,
+        inputTokens: existing.inputTokens + (m.promptEvalCount ?? 0),
+        outputTokens: existing.outputTokens + (m.evalCount ?? 0),
+      });
     }
     if (m.issue.redmineIssueId) {
       chatIssues.set(m.issue.redmineIssueId, (chatIssues.get(m.issue.redmineIssueId) ?? 0) + 1);
@@ -97,7 +107,8 @@ export default async function AiSummariesPage() {
   }
 
   const topModels = Array.from(modelsUsed.entries())
-    .sort((a, b) => b[1] - a[1])
+    .map(([model, data]) => ({ model, ...data }))
+    .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
   const topStatuses = Array.from(statusesMap.entries())
@@ -112,19 +123,31 @@ export default async function AiSummariesPage() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6);
 
-  const allModels = new Map<string, { summaries: number; chat: number }>();
+  const allModels = new Map<string, { summaries: number; chat: number; inputTokens: number; outputTokens: number }>();
   
-  // Aggregate model usage
-  for (const [model, count] of modelsUsed) {
-    allModels.set(model, { summaries: count, chat: (allModels.get(model)?.chat ?? 0) });
+  // Aggregate summary model usage
+  for (const [model, data] of modelsUsed) {
+    allModels.set(model, { 
+      summaries: data.count, 
+      chat: 0,
+      inputTokens: data.inputTokens,
+      outputTokens: data.outputTokens,
+    });
   }
-  for (const [model, count] of chatModelsUsed) {
-    const existing = allModels.get(model) ?? { summaries: 0, chat: 0 };
-    allModels.set(model, { summaries: existing.summaries, chat: count });
+  // Aggregate chat model usage
+  for (const [model, data] of chatModelsUsed) {
+    const existing = allModels.get(model) ?? { summaries: 0, chat: 0, inputTokens: 0, outputTokens: 0 };
+    allModels.set(model, { 
+      summaries: existing.summaries, 
+      chat: data.count,
+      inputTokens: existing.inputTokens + data.inputTokens,
+      outputTokens: existing.outputTokens + data.outputTokens,
+    });
   }
 
   const topChatModels = Array.from(chatModelsUsed.entries())
-    .sort((a, b) => b[1] - a[1])
+    .map(([model, data]) => ({ model, ...data }))
+    .sort((a, b) => b.count - a.count)
     .slice(0, 5);
   const topChatIssues = Array.from(chatIssues.entries())
     .sort((a, b) => b[1] - a[1])
@@ -182,7 +205,7 @@ export default async function AiSummariesPage() {
             <StatCard
               label="Summaries"
               value={totalSummaries}
-              foot={`${uniqueIssueIds.size} issues · ${topModels[0]?.[1] ?? 0} with ${topModels[0]?.[0] ?? 'N/A'}`}
+              foot={`${uniqueIssueIds.size} issues · ${topModels[0]?.count ?? 0} with ${topModels[0]?.model ?? 'N/A'}`}
               icon="📝"
               tone="info"
             />
@@ -205,7 +228,7 @@ export default async function AiSummariesPage() {
               value={avgSummaryDuration > 1000 
                 ? `${(avgSummaryDuration / 1000).toFixed(1)}s` 
                 : `${Math.round(avgSummaryDuration)}ms`}
-              foot={topModels[0]?.[0] ?? "—"}
+              foot={topModels[0]?.model ?? "—"}
               icon="⚡"
               tone="warning"
             />
@@ -227,6 +250,7 @@ export default async function AiSummariesPage() {
                       const total = data.summaries + data.chat;
                       const maxTotal = Math.max(...Array.from(allModels.values()).map(d => d.summaries + d.chat));
                       const pct = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
+                      const totalTokens = data.inputTokens + data.outputTokens;
                       return (
                         <div key={model} className="ai-model-row">
                           <div className="ai-model-name">
@@ -240,6 +264,7 @@ export default async function AiSummariesPage() {
                             <div className="ai-model-stats">
                               {data.summaries > 0 && <span>{data.summaries} sum</span>}
                               {data.chat > 0 && <span>{data.chat} chat</span>}
+                              {totalTokens > 0 && <span className="ai-model-tokens">{totalTokens.toLocaleString()} tokens</span>}
                             </div>
                           </div>
                         </div>

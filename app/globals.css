@@ -6982,3 +6982,7 @@ textarea {
 }
 .stale-job { background: #fff3cd; }
 .stale-job:hover { background: #ffeeba; }
+.ai-model-tokens {
+  color: var(--accent-color);
+  font-weight: 500;
+}
