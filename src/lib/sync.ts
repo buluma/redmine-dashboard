@@ -657,14 +657,13 @@ export async function syncSingleIssue(
         redmineIssueId: issue.redmineIssueId,
         subject: issue.subject,
         description: issue.description,
-        projectId: issue.projectId,
         projectName: issue.projectName,
-        trackerName: issue.trackerName,
+        trackerName: issue.tracker,
         statusName: issue.statusName,
-        priorityName: issue.priorityName,
-        assignedToId: issue.assignedToId,
+        priorityName: issue.priority,
+        assignedToId: issue.assignedToId?.toString() ?? null,
         assignedToName: issue.assignedToName,
-        authorId: issue.authorId,
+        authorId: issue.authorId?.toString() ?? null,
         authorName: issue.authorName,
         dueDate: issue.dueDate?.toISOString() || null,
         doneRatio: issue.doneRatio,
@@ -693,11 +692,11 @@ export async function syncSingleIssue(
             newValue: issue.assignedToName,
           });
         }
-        if (upsertResult.oldState.priorityName !== issue.priorityName) {
+        if (upsertResult.oldState.priorityName !== issue.priority) {
           changes.push({
             field: "priority",
             oldValue: upsertResult.oldState.priorityName,
-            newValue: issue.priorityName,
+            newValue: issue.priority,
           });
         }
         if (upsertResult.oldState.dueDate?.toISOString() !== issue.dueDate?.toISOString()) {

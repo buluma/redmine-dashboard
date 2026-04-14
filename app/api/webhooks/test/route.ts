@@ -18,7 +18,6 @@ export async function POST() {
       redmineIssueId: 99999,
       subject: "Test Ticket - Webhook Verification",
       description: "This is a test webhook payload to verify your webhook configuration.",
-      projectId: null,
       projectName: "Test Project",
       trackerName: "Bug",
       statusName: "New",
