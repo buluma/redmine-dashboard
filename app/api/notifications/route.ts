@@ -53,7 +53,7 @@ export async function GET() {
       }
     }
 
-    // Check for recent activity in the last 24h
+    // Check for recent activity in the last 24h - create individual notifications per issue
     const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const recentIssues = await prisma.issue.findMany({
       where: {
@@ -67,23 +67,23 @@ export async function GET() {
         redmineIssueId: true,
         subject: true,
         statusName: true,
+        updatedOnRemote: true,
       },
     });
 
-    if (recentIssues.length > 0) {
-      // Build issue list string
-      const issueList = recentIssues
-        .map(i => i.redmineIssueId ? `#${i.redmineIssueId}` : i.id.substring(0, 8))
-        .join(", ");
+    // Add individual notification for each recently updated issue
+    for (const issue of recentIssues) {
+      const issueLabel = issue.redmineIssueId ? `#${issue.redmineIssueId}` : issue.id.substring(0, 8);
+      const link = issue.redmineIssueId ? `/issues/${issue.id}` : `/personal-tickets/${issue.id}`;
       
       notifications.push({
-        id: "recent-updates",
+        id: `issue-update-${issue.id}`,
         type: "info",
-        title: "Recent Activity",
-        message: `${recentIssues.length} issue(s) updated: ${issueList}`,
-        timestamp: now.toISOString(),
+        title: "Issue Updated",
+        message: `${issueLabel}: ${issue.subject.substring(0, 40)}${issue.subject.length > 40 ? "..." : ""}`,
+        timestamp: issue.updatedOnRemote?.toISOString() || now.toISOString(),
         read: false,
-        link: "/",
+        link: link,
       });
     }
 
