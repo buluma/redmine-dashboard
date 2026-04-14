@@ -512,22 +512,53 @@ export default function IssueDetailPage() {
     setEditSaving(true);
     setActionError(null);
     try {
-      const res = await fetch(`/api/issues/${issueId}/edit`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subject: editDraft.subject || undefined,
-          description: editDraft.description,
-          priorityId: editDraft.priorityId ? parseInt(editDraft.priorityId, 10) : undefined,
-          dueDate: editDraft.dueDate || undefined,
-          estimatedHours: editDraft.estimatedHours ? parseFloat(editDraft.estimatedHours) : undefined,
-          startDate: editDraft.startDate || undefined,
-          categoryId: editDraft.categoryId ? parseInt(editDraft.categoryId, 10) : undefined,
-          customFields: Object.entries(editDraft.customFields)
-            .filter(([, v]) => v !== "")
-            .map(([fieldId, value]) => ({ id: parseInt(fieldId, 10), value })),
-        }),
-      });
+      let res: Response;
+
+      if (issue.source === "local") {
+        // Local issue → PATCH to local API
+        res = await fetch(`/api/issues/local/${issue.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subject: editDraft.subject || undefined,
+            description: editDraft.description || null,
+            tracker: issue.tracker ?? null,
+            priority: editDraft.priorityId ? undefined : (issue.priority ?? null),
+            priorityId: editDraft.priorityId ? parseInt(editDraft.priorityId, 10) : undefined,
+            statusId: issue.statusId,
+            statusName: issue.statusName,
+            dueDate: editDraft.dueDate
+              ? new Date(`${editDraft.dueDate}T00:00:00`).toISOString()
+              : editDraft.dueDate === "" ? null : undefined,
+            startDate: editDraft.startDate
+              ? new Date(`${editDraft.startDate}T00:00:00`).toISOString()
+              : editDraft.startDate === "" ? null : undefined,
+            estimatedHours: editDraft.estimatedHours ? parseFloat(editDraft.estimatedHours) : undefined,
+            doneRatio: issue.doneRatio ?? 0,
+            parentIssueId: issue.parentIssueId ?? undefined,
+            parentIssueLabel: issue.parentIssueLabel ?? undefined,
+          }),
+        });
+      } else {
+        // Redmine issue → PUT via Redmine API then re-sync
+        res = await fetch(`/api/issues/${issueId}/edit`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subject: editDraft.subject || undefined,
+            description: editDraft.description,
+            priorityId: editDraft.priorityId ? parseInt(editDraft.priorityId, 10) : undefined,
+            dueDate: editDraft.dueDate || undefined,
+            estimatedHours: editDraft.estimatedHours ? parseFloat(editDraft.estimatedHours) : undefined,
+            startDate: editDraft.startDate || undefined,
+            categoryId: editDraft.categoryId ? parseInt(editDraft.categoryId, 10) : undefined,
+            customFields: Object.entries(editDraft.customFields)
+              .filter(([, v]) => v !== "")
+              .map(([fieldId, value]) => ({ id: parseInt(fieldId, 10), value })),
+          }),
+        });
+      }
+
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || "Failed to update issue");
@@ -535,7 +566,7 @@ export default function IssueDetailPage() {
       await reloadIssue();
       setEditMode(false);
       setEditDraft(null);
-      setActionInfo("Issue updated in Redmine successfully.");
+      setActionInfo(issue.source === "local" ? "Personal ticket updated." : "Issue updated in Redmine successfully.");
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to update issue");
     } finally {
