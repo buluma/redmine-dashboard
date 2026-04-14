@@ -234,7 +234,7 @@ export default async function AiSummariesPage() {
               value={totalIssueCount}
               foot={`${uniqueProjects.length} projects · ${uniqueStatuses.length} statuses`}
               icon="📊"
-              tone="default"
+              tone="success"
             />
             <StatCard
               label="Avg Response"
