@@ -10,13 +10,15 @@ export async function register() {
     process.stdout.on("error", suppressEpipe);
     process.stderr.on("error", suppressEpipe);
 
-    const [{ ensureMemoryLoggerStarted }, { ensurePollerStarted }] = await Promise.all([
+    const [memoryMod, pollerMod, logPollerMod] = await Promise.all([
       import("./src/lib/memory"),
       import("./src/lib/poller"),
+      import("./src/lib/streamline-log-poller"),
     ]);
     await import("./sentry.server.config");
-    ensureMemoryLoggerStarted();
-    ensurePollerStarted();
+    memoryMod.ensureMemoryLoggerStarted();
+    pollerMod.ensurePollerStarted();
+    logPollerMod.ensureStreamlineLogPollerStarted();
   }
 
   if (process.env.NEXT_RUNTIME === "edge") {

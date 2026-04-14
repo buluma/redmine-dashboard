@@ -23,10 +23,12 @@ export async function GET() {
     database: CheckResult;
     redmine: ({ mode: "skipped" } | ({ mode: "env_probe" } & CheckResult & { login?: string }));
     scheduler: CheckResult & { staleRunningJobs: number; leaderLockOwnerId?: string | null };
+    logPoller: CheckResult & { enabled: boolean; leaderLockOwnerId?: string | null; heartbeatAt?: string; expiresAt?: string };
   } = {
     database: { ok: true },
     redmine: { mode: "skipped" },
     scheduler: { ok: true, staleRunningJobs: 0 },
+    logPoller: { ok: true, enabled: env.enableStreamlineLogPoller },
   };
 
   try {
@@ -38,7 +40,7 @@ export async function GET() {
 
   try {
     const staleBefore = new Date(Date.now() - env.syncJobStaleMs);
-    const [staleRunningJobs, leaderLock] = await Promise.all([
+    const [staleRunningJobs, syncLock, logLock] = await Promise.all([
       prisma.syncJob.count({
         where: {
           status: "running",
@@ -46,12 +48,24 @@ export async function GET() {
         },
       }),
       prisma.leaderLock.findUnique({ where: { name: "sync-poller" } }),
+      env.enableStreamlineLogPoller
+        ? prisma.leaderLock.findUnique({ where: { name: "streamline-log-poller" } })
+        : Promise.resolve(null),
     ]);
     checks.scheduler = {
       ok: true,
       staleRunningJobs,
-      leaderLockOwnerId: leaderLock?.ownerId ?? null,
+      leaderLockOwnerId: syncLock?.ownerId ?? null,
     };
+    if (env.enableStreamlineLogPoller && logLock) {
+      checks.logPoller = {
+        ok: true,
+        enabled: true,
+        leaderLockOwnerId: logLock.ownerId,
+        heartbeatAt: logLock.heartbeatAt.toISOString(),
+        expiresAt: logLock.expiresAt.toISOString(),
+      };
+    }
   } catch (error) {
     status = "degraded";
     checks.scheduler = {

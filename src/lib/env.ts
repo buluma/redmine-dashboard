@@ -55,6 +55,12 @@ export const env = {
   leaderLockTtlMs: numberFromEnv("LEADER_LOCK_TTL_MS", 90000),
   syncJobStaleMs: numberFromEnv("SYNC_JOB_STALE_MS", 10 * 60 * 1000),
   enableSyncPoller: boolFromEnv("ENABLE_SYNC_POLLER", isProduction),
+  // Streamline Log Poller Configuration
+  enableStreamlineLogPoller: boolFromEnv("ENABLE_STREAMLINE_LOG_POLLER", false),
+  streamlineLogPollIntervalMs: numberFromEnv("STREAMLINE_LOG_POLL_INTERVAL_MS", 5 * 60 * 1000), // 5 min default
+  streamlineLogLockTtlMs: numberFromEnv("STREAMLINE_LOG_LOCK_TTL_MS", 90000), // 90 sec default
+  streamlineEnvironment: process.env.STREAMLINE_ENV || "staging",
+  streamlineLogFetchLimit: numberFromEnv("STREAMLINE_LOG_FETCH_LIMIT", 100),
   memoryLogging: boolFromEnv("MEMORY_LOGGING", false),
   memoryLogIntervalMs: numberFromEnv("MEMORY_LOG_INTERVAL_MS", 60000),
   redmineBaseUrl: process.env.REDMINE_BASE_URL,

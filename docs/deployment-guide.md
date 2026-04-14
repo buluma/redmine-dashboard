@@ -52,6 +52,14 @@ Open the `.env` file and set the following variables:
 - `MEMORY_LOGGING`: Enables periodic `process.memoryUsage()` logging (`false` by default).
 - `MEMORY_LOG_INTERVAL_MS`: Interval for memory logs in milliseconds (default: `60000`).
 
+**Optional (Streamline log poller):**
+
+- `ENABLE_STREAMLINE_LOG_POLLER`: Enables auto-fetching of Streamline logs into the database. Defaults to `false`.
+- `STREAMLINE_LOG_POLL_INTERVAL_MS`: Log poller interval in milliseconds. Default: `300000` (5 minutes).
+- `STREAMLINE_LOG_LOCK_TTL_MS`: Leader lock TTL for the log poller. Default: `90000` (90 seconds).
+- `STREAMLINE_ENV`: Streamline environment to fetch logs from (`staging` or `production`). Default: `staging`.
+- `STREAMLINE_LOG_FETCH_LIMIT`: Number of records to fetch per log type per poll. Default: `100`.
+
 **Optional (for first-run bootstrap):**
 
 - `REDMINE_BASE_URL`: The base URL of your Redmine instance (e.g., `https://redmine.example.com`).
@@ -129,6 +137,11 @@ A full list of helper targets is available in the [Makefile](/Users/shadowwalker
 - `MOBILE_API_ENABLED`: Enables the mobile API surface (`true` by default; set to `false` to disable `/api/mobile/v1/*`).
 - `MEMORY_LOGGING`: Enables structured memory usage logging (`false` by default).
 - `MEMORY_LOG_INTERVAL_MS`: Memory log interval in milliseconds (default: `60000`).
+- `ENABLE_STREAMLINE_LOG_POLLER`: Enables the Streamline log poller for auto-fetching logs (`false` by default).
+- `STREAMLINE_LOG_POLL_INTERVAL_MS`: Log poller interval in milliseconds (default: `300000`).
+- `STREAMLINE_LOG_LOCK_TTL_MS`: Leader lock TTL for log poller in milliseconds (default: `90000`).
+- `STREAMLINE_ENV`: Streamline environment (`staging` or `production`; default: `staging`).
+- `STREAMLINE_LOG_FETCH_LIMIT`: Records to fetch per log type per poll (default: `100`).
 - `REDMINE_BASE_URL`: Optional. Used for first-run bootstrap to pre-configure the Redmine connection.
 - `REDMINE_API_KEY`: Optional. Used for first-run bootstrap.
 - `REDMINE_ALLOWED_BASE_URLS`: Optional comma-separated Redmine base URL allowlist for user-provided connect/pair requests.

@@ -73,6 +73,13 @@ type HealthPayload = {
       } | null;
       staleRunningJobs: number;
     };
+    logPoller: {
+      ok: boolean;
+      enabled: boolean;
+      leaderLockOwnerId?: string | null;
+      heartbeatAt?: string;
+      expiresAt?: string;
+    };
   };
 };
 
@@ -341,11 +348,21 @@ export default function OpsPage() {
             </article>
 
             <article className="card">
-              <h2>Leader Lock</h2>
+              <h2>Sync Poller Leader</h2>
               <div className="ops-kv">
                 <p><strong>Owner:</strong> {health?.checks?.scheduler?.lock?.ownerId ?? "-"}</p>
                 <p><strong>Heartbeat:</strong> {formatDateTime(health?.checks?.scheduler?.lock?.heartbeatAt ?? null)}</p>
                 <p><strong>Expires:</strong> {formatDateTime(health?.checks?.scheduler?.lock?.expiresAt ?? null)}</p>
+              </div>
+            </article>
+
+            <article className="card">
+              <h2>Log Poller</h2>
+              <div className="ops-kv">
+                <p><strong>Enabled:</strong> {health?.checks?.logPoller?.enabled ? "Yes" : "No"}</p>
+                <p><strong>Owner:</strong> {health?.checks?.logPoller?.leaderLockOwnerId ?? "-"}</p>
+                <p><strong>Heartbeat:</strong> {formatDateTime(health?.checks?.logPoller?.heartbeatAt ?? null)}</p>
+                <p><strong>Expires:</strong> {formatDateTime(health?.checks?.logPoller?.expiresAt ?? null)}</p>
               </div>
             </article>
           </section>
