@@ -4,6 +4,7 @@ import "./globals.css";
 import { ErrorLoggerProvider } from "@/src/components/ErrorLoggerProvider";
 import { OfflineBanner } from "@/src/components/OfflineBanner";
 import { SyncQueueInitializer } from "@/src/components/SyncQueueInitializer";
+import { ServiceWorkerRegistrar } from "@/src/components/ServiceWorkerRegistrar";
 
 const sora = Sora({
   variable: "--font-geist-sans",
@@ -50,6 +51,7 @@ export default function RootLayout({
         <ErrorLoggerProvider>
           <OfflineBanner />
           <SyncQueueInitializer />
+          <ServiceWorkerRegistrar />
           {children}
         </ErrorLoggerProvider>
       </body>
