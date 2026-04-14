@@ -531,6 +531,46 @@ export default function OpsPage() {
 
           <section className="card">
             <div className="table-toolbar">
+              <h2>Web Logs</h2>
+              <div className="toolbar-right">
+                <span className="muted">{filteredLogs.length} of {logs.length} rows · {errorLogs} errors</span>
+                <input
+                  type="text"
+                  placeholder="Filter..."
+                  value={logFilter}
+                  onChange={(e) => setLogFilter(e.target.value)}
+                  className="log-filter-input"
+                />
+              </div>
+            </div>
+            <div className="logs-list">
+              {filteredLogs.length === 0 && (
+                <p className="muted">No logs{logFilter ? " matching filter" : ""}.</p>
+              )}
+              {filteredLogs.map((log) => (
+                <article key={log.id} className={`log-entry log-${log.level}`}>
+                  <div className="log-head">
+                    <span className={`log-level-badge log-${log.level}`}>{log.level}</span>
+                    <span className="log-source">{log.source ?? "unknown"}</span>
+                    <span className="log-time">{new Date(log.createdAt).toLocaleString("en-GB")}</span>
+                  </div>
+                  <div className="log-message">{log.message}</div>
+                  {log.url && (
+                    <div className="log-url">{log.url}</div>
+                  )}
+                  {log.stack && (
+                    <details className="log-stack">
+                      <summary>Stack trace</summary>
+                      <pre>{log.stack}</pre>
+                    </details>
+                  )}
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="card">
+            <div className="table-toolbar">
               <h2>Active Mobile Tokens</h2>
               <p className="muted">{mobileTokens.length} active</p>
             </div>
@@ -573,46 +613,6 @@ export default function OpsPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
-          </section>
-
-          <section className="card">
-            <div className="table-toolbar">
-              <h2>Web Logs</h2>
-              <div className="toolbar-right">
-                <span className="muted">{filteredLogs.length} of {logs.length} rows · {errorLogs} errors</span>
-                <input
-                  type="text"
-                  placeholder="Filter..."
-                  value={logFilter}
-                  onChange={(e) => setLogFilter(e.target.value)}
-                  className="log-filter-input"
-                />
-              </div>
-            </div>
-            <div className="logs-list">
-              {filteredLogs.length === 0 && (
-                <p className="muted">No logs{logFilter ? " matching filter" : ""}.</p>
-              )}
-              {filteredLogs.map((log) => (
-                <article key={log.id} className={`log-entry log-${log.level}`}>
-                  <div className="log-head">
-                    <span className={`log-level-badge log-${log.level}`}>{log.level}</span>
-                    <span className="log-source">{log.source ?? "unknown"}</span>
-                    <span className="log-time">{new Date(log.createdAt).toLocaleString("en-GB")}</span>
-                  </div>
-                  <div className="log-message">{log.message}</div>
-                  {log.url && (
-                    <div className="log-url">{log.url}</div>
-                  )}
-                  {log.stack && (
-                    <details className="log-stack">
-                      <summary>Stack trace</summary>
-                      <pre>{log.stack}</pre>
-                    </details>
-                  )}
-                </article>
-              ))}
             </div>
           </section>
         </>
