@@ -499,23 +499,6 @@ class _IssueListScreenState extends State<IssueListScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: FilterChip(
-                            label: const Text("Favorites only"),
-                            selected: _showFavoritesOnly,
-                            avatar: Icon(
-                              _showFavoritesOnly
-                                  ? Icons.star
-                                  : Icons.star_border,
-                              size: 16,
-                            ),
-                            onSelected: (value) {
-                              setState(() => _showFavoritesOnly = value);
-                            },
-                          ),
-                        ),
                       ],
                     ),
                   ),
