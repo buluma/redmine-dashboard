@@ -176,6 +176,19 @@ export default async function AiSummariesPage() {
   }
   avgChatDuration = chatCount > 0 ? avgChatDuration / chatCount : 0;
 
+  // Calculate total tokens
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+  for (const s of summaries) {
+    totalInputTokens += s.promptEvalCount ?? 0;
+    totalOutputTokens += s.evalCount ?? 0;
+  }
+  for (const m of chatMessages) {
+    totalInputTokens += m.promptEvalCount ?? 0;
+    totalOutputTokens += m.evalCount ?? 0;
+  }
+  const grandTotalTokens = totalInputTokens + totalOutputTokens;
+
   // Get all unique projects from summaries
   const uniqueProjects = [...new Set(summaries.map((s) => s.issue.projectName).filter(Boolean))];
   const uniqueStatuses = [...new Set(summaries.map((s) => s.issue.statusName))];
@@ -231,6 +244,13 @@ export default async function AiSummariesPage() {
               foot={topModels[0]?.model ?? "—"}
               icon="⚡"
               tone="warning"
+            />
+            <StatCard
+              label="Total Tokens"
+              value={grandTotalTokens.toLocaleString()}
+              foot={`${totalInputTokens.toLocaleString()} in · ${totalOutputTokens.toLocaleString()} out`}
+              icon="🔢"
+              tone="info"
             />
           </div>
 
