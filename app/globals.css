@@ -8,6 +8,14 @@
   --accent: #006d77;
   --accent-strong: #00515a;
   --accent-soft: #d8eff1;
+  --signal: #c65d1f;
+  --signal-soft: #fde8db;
+  --danger: #9f2f2f;
+  --danger-soft: #fbe6e6;
+  --ok: #2a7f52;
+  --ok-soft: #e1f4e9;
+  --radius: 16px;
+  --shadow: 0 12px 30px rgba(24, 32, 44, 0.08);
 }
 
 /* Global link styles */
@@ -22,15 +30,6 @@ a:hover {
 
 a[href^="http"]:not([href*="localhost"]):not([href*="redmine-dashboard"]) {
   target: _blank;
-}
-  --signal: #c65d1f;
-  --signal-soft: #fde8db;
-  --danger: #9f2f2f;
-  --danger-soft: #fbe6e6;
-  --ok: #2a7f52;
-  --ok-soft: #e1f4e9;
-  --radius: 16px;
-  --shadow: 0 12px 30px rgba(24, 32, 44, 0.08);
 }
 
 [data-theme="dark"],
