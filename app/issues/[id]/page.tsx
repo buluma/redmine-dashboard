@@ -641,6 +641,12 @@ export default function IssueDetailPage() {
       return;
     }
     setTransitionStatuses(issue.allowedStatuses ?? []);
+    
+    // Only fetch live statuses for Redmine issues, not local issues
+    if (!issue.redmineIssueId) {
+      return;
+    }
+    
     let mounted = true;
     void (async () => {
       try {
@@ -801,8 +807,9 @@ export default function IssueDetailPage() {
   }
 
   async function toggleFavorite() {
+    if (!issue?.redmineIssueId) return;
     try {
-      const res = await fetch(`/api/issues/${issueId}/favorite`, {
+      const res = await fetch(`/api/issues/${issue.redmineIssueId}/favorite`, {
         method: isFavorited ? "DELETE" : "POST",
       });
       if (res.ok) {
@@ -814,10 +821,10 @@ export default function IssueDetailPage() {
   }
 
   useEffect(() => {
-    if (!issue) return;
+    if (!issue || issue.source === "local") return;
     (async () => {
       try {
-        const res = await fetch(`/api/issues/${issueId}/favorite`);
+        const res = await fetch(`/api/issues/${issue.redmineIssueId}/favorite`);
         if (res.ok) {
           const data = await res.json();
           setIsFavorited(data.favorited ?? false);
@@ -826,7 +833,7 @@ export default function IssueDetailPage() {
         // Ignore errors
       }
     })();
-  }, [issue, issueId]);
+  }, [issue]);
 
   async function submitComment(event: React.FormEvent) {
     event.preventDefault();
