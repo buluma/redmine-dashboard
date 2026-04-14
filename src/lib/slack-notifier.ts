@@ -75,7 +75,8 @@ export class SlackNotifier {
   }
 
   private buildIssueLink(redmineIssueId: number | null): string {
-    if (!redmineIssueId) return "#";
+    // No link for local issues (redmineIssueId is null)
+    if (!redmineIssueId) return "";
     if (!this.config.includeLink || !this.config.redmineBaseUrl) {
       return "";
     }
@@ -283,7 +284,7 @@ export class SlackNotifier {
         type: "header",
         text: {
           type: "plain_text",
-          text: `💬 Internal Note #${issue.redmineIssueId ?? "local"}`,
+          text: issue.redmineIssueId ? `💬 Internal Note #${issue.redmineIssueId}` : "💬 Internal Note (Local)",
           emoji: true,
         },
       },
