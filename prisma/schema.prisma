@@ -78,10 +78,12 @@ model UserRedmineCredential {
 
 model Issue {
   id               String         @id @default(cuid())
-  redmineIssueId   Int
-  redmineBaseUrl   String
+  redmineIssueId   Int?
+  redmineBaseUrl   String?
   userId           String
   user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source           String         @default("redmine") // "redmine" | "local"
+  localIssueNumber Int?           // auto-increment per user for local issues
   subject          String
   description      String?
   projectName      String?
@@ -122,10 +124,12 @@ model Issue {
   updatedAt        DateTime       @updatedAt
 
   @@unique([userId, redmineBaseUrl, redmineIssueId])
+  @@unique([userId, source, localIssueNumber])
   @@index([userId, statusId])
   @@index([userId, updatedOnRemote])
   @@index([userId, lastActivityAt])
   @@index([parentIssueId])
+  @@index([userId, source])
 }
 
 model IssueAttachment {

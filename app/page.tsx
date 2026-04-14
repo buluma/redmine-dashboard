@@ -468,7 +468,7 @@ export default function Home() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const pageSize = 20;
-  const fetchPageSize = 1000;
+  const fetchPageSize = 200;
   const [statuses, setStatuses] = useState<StatusCatalog[]>([]);
   const [priorities, setPriorities] = useState<string[]>([]);
   const [searchSource, setSearchSource] = useState("local_cache");
@@ -559,6 +559,7 @@ export default function Home() {
     () => issues.find((i) => i.redmineIssueId === selectedIssueId) ?? null,
     [issues, selectedIssueId],
   );
+  const legacyIssueDrawerEnabled = false;
 
   const priorityOptions = useMemo(() => {
     const discovered = new Map<number, string>();
@@ -745,7 +746,6 @@ export default function Home() {
     params.set("scope", "issues");
     if (sort) params.set("sort", sort);
     params.set("page", "1");
-    params.set("pageSize", "100");
     return params.toString();
   }, [priorityFilter, search, searchMode, sort, statusFilter]);
 
@@ -794,9 +794,18 @@ export default function Home() {
   }, [activeViewId, priorityFilter, savedViews, search, sort, statusFilter]);
 
   async function loadSession() {
-    const res = await fetch("/api/session/me", { cache: "no-store" });
-    const data = await res.json();
-    setUser(data.user ?? null);
+    try {
+      const res = await fetch("/api/session/me", { cache: "no-store" });
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        setUser(null);
+        return;
+      }
+      const data = await res.json();
+      setUser(data.user ?? null);
+    } catch {
+      setUser(null);
+    }
   }
 
   async function loadBootstrapInfo() {
@@ -1635,6 +1644,9 @@ export default function Home() {
           <button onClick={handleManualPull} disabled={manualRefreshBusy}>
             {manualRefreshBusy ? "Refreshing..." : "Force Refresh"}
           </button>
+          <Link href="/personal-tickets" className="primary-link nav-link">
+            Personal Tickets
+          </Link>
           <Link href="/reports" className="primary-link nav-link">
             Open Reports
           </Link>
@@ -2387,7 +2399,7 @@ export default function Home() {
         )}
       </section>
 
-      {selectedIssue && (
+      {legacyIssueDrawerEnabled ? selectedIssue && (
         <div className="issue-modal-backdrop" onClick={() => setSelectedIssueId(null)}>
           <aside className="card issue-modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="drawer-header">
@@ -2791,7 +2803,7 @@ export default function Home() {
             </section>
           </aside>
         </div>
-      )}
+      ) : null}
 
       {showShortcutHelp && (
         <ShortcutHelp isOpen={showShortcutHelp} onClose={() => setShowShortcutHelp(false)} />

@@ -2,7 +2,7 @@ import type { OllamaChatMessage } from "./ollama";
 
 export interface IssueContext {
   id: string;
-  redmineIssueId: number;
+  redmineIssueId: number | null;
   subject: string;
   description?: string | null;
   projectName?: string | null;

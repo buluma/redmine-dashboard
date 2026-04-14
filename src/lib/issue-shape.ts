@@ -9,6 +9,44 @@ export type IssueChildView = {
   tracker?: string | null;
 };
 
+export type IssueViewBase = {
+  id: string;
+  redmineIssueId: number | null;
+  redmineBaseUrl: string | null;
+  source: string;
+  localIssueNumber: number | null;
+  userId: string;
+  subject: string;
+  description: string | null;
+  projectName: string | null;
+  tracker: string | null;
+  priority: string | null;
+  priorityId: number | null;
+  statusId: number;
+  statusName: string;
+  parentIssueId: number | null;
+  parentIssueLabel: string | null;
+  assignedToId: number | null;
+  assignedToName: string | null;
+  authorId: number | null;
+  authorName: string | null;
+  categoryId: number | null;
+  categoryName: string | null;
+  startDate: Date | null;
+  estimatedHours: number | null;
+  spentHours: number | null;
+  customFieldsJson: JsonValue | null;
+  updatedOnRemote: Date;
+  dueDate: Date | null;
+  doneRatio: number | null;
+  allowedStatusesJson: JsonValue | null;
+  childrenJson: JsonValue | null;
+  lastActivityAt: Date | null;
+  lastActivityType: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 function parseAllowedStatuses(value: JsonValue | null): AllowedStatusView[] {
   if (!Array.isArray(value)) return [];
   return value

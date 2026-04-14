@@ -15,8 +15,8 @@ interface AiSummaryData {
   evalCount: number | null;
   evalDuration: bigint | string | null;
   issue: {
-    redmineIssueId: number;
-    redmineBaseUrl: string;
+    redmineIssueId: number | null;
+    redmineBaseUrl: string | null;
     subject: string;
     statusName: string;
     priority: string | null;
@@ -212,7 +212,7 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
       result = result.filter(
         (s) =>
           s.issue.subject.toLowerCase().includes(term) ||
-          s.issue.redmineIssueId.toString().includes(term) ||
+          (s.issue.redmineIssueId?.toString() ?? "").includes(term) ||
           s.summary.toLowerCase().includes(term)
       );
     }

@@ -1,0 +1,448 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id                String                  @id @default(cuid())
+  emailOrUsername   String                  @unique
+  displayName       String
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  credential        UserRedmineCredential?
+  issues            Issue[]
+  githubLinks       IssueGithubLink[]
+  mobileApiTokens   MobileApiToken[]
+  timeEntries       TimeEntry[]
+  syncState         SyncState?
+  syncJobs          SyncJob[]
+  favorites         Favorite[]
+  internalNotes     InternalNote[]
+}
+
+model Favorite {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  issueId      Int      // Redmine issue ID
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, issueId])
+}
+
+model UserRedmineCredential {
+  userId           String   @id
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  baseUrl          String
+  apiKeyEncrypted  String
+  apiKeyIv         String
+  isActive         Boolean  @default(true)
+  lastValidatedAt  DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Issue {
+  id               String         @id @default(cuid())
+  redmineIssueId   Int?
+  redmineBaseUrl   String?
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source           String         @default("redmine")
+  localIssueNumber Int?
+  subject          String
+  description      String?
+  projectName      String?
+  tracker          String?
+  priority         String?
+  priorityId       Int?
+  statusId         Int
+  statusName       String
+  parentIssueId    Int?
+  parentIssueLabel String?
+  assignedToId     Int?
+  assignedToName   String?
+  authorId         Int?
+  authorName       String?
+  categoryId       Int?
+  categoryName     String?
+  startDate        DateTime?
+  estimatedHours   Float?
+  spentHours       Float?
+  customFieldsJson  Json?
+  updatedOnRemote  DateTime
+  dueDate          DateTime?
+  doneRatio        Int?
+  allowedStatusesJson Json?
+  childrenJson     Json?
+  journals         IssueJournal[]
+  timeEntries      TimeEntry[]
+  githubLinks      IssueGithubLink[]
+  attachments      IssueAttachment[]
+  relations        IssueRelation[]
+  activityEvents   IssueActivityEvent[]
+  aiSummaries      AiSummary[]
+  chatMessages     AiChatMessage[]
+  internalNotes    InternalNote[]
+  lastActivityAt   DateTime?
+  lastActivityType String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([userId, statusId])
+  @@index([userId, lastActivityAt])
+  @@index([parentIssueId])
+  @@index([userId, source])
+}
+
+model IssueAttachment {
+  id                 String   @id @default(cuid())
+  redmineAttachmentId Int
+  issueId            String
+  issue              Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  filename           String
+  filesize           Int
+  contentType        String?
+  author             String?
+  createdOnRemote    DateTime?
+  downloadUrl        String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([issueId])
+}
+
+model IssueRelation {
+  id               String   @id @default(cuid())
+  redmineRelationId Int
+  issueId          String
+  issue            Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  targetIssueId    Int
+  relationType     String
+  delay            Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([issueId])
+}
+
+model IssueActivityEvent {
+  id             String   @id @default(cuid())
+  issueId         String
+  issue           Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  eventType       String
+  source          String
+  sourceRemoteId  String?
+  eventAt         DateTime
+  summary         String?
+  dedupeKey       String
+  createdAt       DateTime @default(now())
+
+  @@index([issueId])
+}
+
+model AiSummary {
+  id                String   @id @default(cuid())
+  issueId           String
+  issue             Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  summary           String
+  model             String
+  totalDuration     BigInt?
+  loadDuration      BigInt?
+  promptEvalCount   Int?
+  promptEvalDuration BigInt?
+  evalCount         Int?
+  evalDuration      BigInt?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([issueId])
+}
+
+model AiChatMessage {
+  id                String   @id @default(cuid())
+  issueId           String
+  issue             Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  role              String
+  content           String
+  model             String?
+  totalDuration     BigInt?
+  loadDuration      BigInt?
+  promptEvalCount   Int?
+  promptEvalDuration BigInt?
+  evalCount         Int?
+  evalDuration      BigInt?
+  createdAt         DateTime @default(now())
+
+  @@index([issueId])
+}
+
+model InternalNote {
+  id        String   @id @default(cuid())
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([issueId])
+  @@index([userId])
+}
+
+model IssueGithubLink {
+  id                String   @id @default(cuid())
+  issueId           String
+  issue             Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repositoryFullName String
+  githubIssueNumber Int?
+  githubPrNumber    Int?
+  url               String
+  title             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([issueId])
+  @@index([userId])
+}
+
+model IssueJournal {
+  id               String   @id @default(cuid())
+  redmineJournalId Int
+  issueId          String
+  issue            Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  author           String?
+  notes            String?
+  createdOnRemote  DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([issueId])
+}
+
+model TimeEntry {
+  id                 String    @id @default(cuid())
+  redmineTimeEntryId Int?
+  issueId            String
+  issue              Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hours              Float
+  activityId         Int
+  activityName       String?
+  authorName         String?
+  comments           String?
+  spentOn            DateTime
+  createdAt          DateTime  @default(now())
+
+  @@index([issueId])
+}
+
+model SyncState {
+  userId                String          @id
+  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastIncrementalSyncAt DateTime?
+  lastFullSyncAt        DateTime?
+  lastSyncStatus        String          @default("idle")
+  lastError             String?
+  runningJobId          String?
+  updatedAt             DateTime        @updatedAt
+}
+
+model SyncJob {
+  id         String       @id @default(cuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobType    String
+  status     String        @default("pending")
+  startedAt  DateTime?
+  endedAt    DateTime?
+  error      String?
+  createdAt  DateTime      @default(now())
+
+  @@index([userId])
+}
+
+model StatusCatalog {
+  id        Int      @id
+  name      String
+  isClosed  Boolean
+  updatedAt DateTime @updatedAt
+}
+
+model EnumerationCatalog {
+  key        String   @id
+  remoteId   Int
+  kind       String
+  name       String
+  isDefault  Boolean  @default(false)
+  isActive   Boolean  @default(true)
+  position   Int?
+  updatedAt  DateTime @updatedAt
+
+  @@index([kind])
+}
+
+model MobileApiToken {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String?
+  tokenHash   String    @unique
+  tokenPrefix String
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model MbuLog {
+  id          BigInt   @id
+  createdAt   DateTime
+  updatedAt   DateTime
+  backtrace   String
+  logLevel    String   @map("log_level")
+  traceType   String   @map("trace_type")
+  traceId     String   @map("trace_id")
+  code        String
+  host        String   @default("localhost")
+  createdBy   Int?
+  updatedBy   Int?
+  ingestedAt  DateTime @default(now())
+  environment String   @default("staging")
+
+  @@index([host])
+  @@index([createdAt])
+  @@index([logLevel])
+  @@index([traceType])
+  @@map("mbu_logs")
+}
+
+model ServerSideRulesLog {
+  id              BigInt   @id
+  createdAt       DateTime
+  updatedAt       DateTime
+  actionName      String   @map("action_name")
+  status          String
+  scriptName      String   @map("script_name")
+  duration        Decimal  @map("duration")
+  ramUsage        Int      @map("ram_usage")
+  cpuUsage        Int      @map("cpu_usage")
+  host            String   @default("localhost")
+  isError         Boolean  @map("is_error") @default(false)
+  errorDescr      String?  @map("error_descr")
+  processId       Int?     @map("process_id")
+  requestId       String?  @map("request_id")
+  threadId        BigInt?  @map("thread_id")
+  dbRequestsTime  Decimal? @map("db_requests_time")
+  coModel         String?  @map("co_model")
+  coRecordId      Int?     @map("co_record_id")
+  resType         String?  @map("res_type")
+  ingestedAt      DateTime @default(now())
+  environment     String   @default("staging")
+
+  @@index([host])
+  @@index([createdAt])
+  @@index([status])
+  @@index([isError])
+  @@map("server_side_rules_log")
+}
+
+model Trace {
+  id           BigInt   @id
+  createdAt    DateTime
+  updatedAt    DateTime
+  traceId      BigInt   @map("trace_id")
+  traceType    String   @map("trace_type")
+  logLevel     String   @map("log_level")
+  backtrace    String
+  code         String?
+  context      String?
+  host         String   @default("localhost")
+  resourceId   Int?     @map("resource_id")
+  resourceType String?  @map("resource_type")
+  resourcePath String?  @map("resource_path")
+  createdBy    Int?
+  updatedBy    Int?
+  ingestedAt   DateTime @default(now())
+  environment  String   @default("staging")
+
+  @@index([host])
+  @@index([createdAt])
+  @@index([logLevel])
+  @@index([traceType])
+  @@index([resourceType])
+  @@map("traces")
+}
+
+model WebLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  message   String
+  level     String
+  source    String?
+  url       String?
+  stack     String?
+  userAgent String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([level])
+  @@index([userId])
+  @@index([source])
+}
+
+model IssueEmbedding {
+  id         String   @id @default(cuid())
+  issueId    String   @unique
+  embedding  String
+  model      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([issueId])
+}
+
+model LeaderLock {
+  name       String   @id
+  ownerId    String
+  heartbeatAt DateTime
+  expiresAt  DateTime
+}
+
+model RedmineUser {
+  id           Int      @id
+  name         String
+  login        String?
+  email        String?
+  isActive     Boolean  @default(true)
+  lastSeenAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([name])
+  @@index([isActive])
+}
+
+model RedmineEnumeration {
+  id           Int      @id
+  kind         String
+  name         String
+  isDefault    Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  position     Int?
+  lastSeenAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([kind])
+}

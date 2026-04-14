@@ -3,6 +3,7 @@ import type { RedmineClient } from "@/src/lib/redmine";
 
 const mockIssueUpsert = vi.fn();
 const mockIssueFindUnique = vi.fn();
+const mockIssueFindFirst = vi.fn();
 const mockIssueUpdate = vi.fn();
 const mockAttachmentDeleteMany = vi.fn();
 const mockRelationDeleteMany = vi.fn();
@@ -11,7 +12,12 @@ const mockIssueActivityEventFindFirst = vi.fn();
 
 vi.mock("@/src/lib/db", () => ({
   prisma: {
-    issue: { upsert: mockIssueUpsert, findUnique: mockIssueFindUnique, update: mockIssueUpdate },
+    issue: {
+      upsert: mockIssueUpsert,
+      findUnique: mockIssueFindUnique,
+      findFirst: mockIssueFindFirst,
+      update: mockIssueUpdate,
+    },
     issueAttachment: { deleteMany: mockAttachmentDeleteMany, upsert: vi.fn() },
     issueRelation: { deleteMany: mockRelationDeleteMany, upsert: vi.fn() },
     issueJournal: { upsert: vi.fn() },
@@ -23,6 +29,7 @@ vi.mock("@/src/lib/db", () => ({
 describe("syncSingleIssue", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIssueFindFirst.mockResolvedValue(null);
     mockIssueUpsert.mockImplementation(({ create }) => Promise.resolve({ id: `${create.userId}:${create.redmineBaseUrl}` }));
     mockIssueFindUnique.mockImplementation(({ where }) => Promise.resolve({
       id: where.id,

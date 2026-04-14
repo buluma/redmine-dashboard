@@ -12,14 +12,28 @@ function configuredFromEnv(): boolean {
 
 export async function GET() {
   const configured = configuredFromEnv();
-  const activeCredentials = await prisma.userRedmineCredential.count({ where: { isActive: true } });
-  const canBootstrap = configured && activeCredentials === 0;
+  try {
+    const activeCredentials = await prisma.userRedmineCredential.count({ where: { isActive: true } });
+    const canBootstrap = configured && activeCredentials === 0;
 
-  return Response.json({
-    configured,
-    canBootstrap,
-    activeCredentials,
-  });
+    return Response.json({
+      configured,
+      canBootstrap,
+      activeCredentials,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to check bootstrap state";
+    return Response.json(
+      {
+        configured,
+        canBootstrap: false,
+        activeCredentials: 0,
+        degraded: true,
+        error: message,
+      },
+      { status: 503 },
+    );
+  }
 }
 
 export async function POST() {

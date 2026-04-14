@@ -394,3 +394,92 @@ export function ProgressRing({
     </svg>
   );
 }
+
+// ─── Stacked Bar Chart ──────────────────────────────────────────────────
+
+export function StackedBarChart({
+  series,
+  colors,
+  onClick,
+  showValue = true,
+}: {
+  series: { name: string; data: { label: string; value: number }[] }[];
+  colors?: string[];
+  onClick?: (seriesName: string, label: string, value: number) => void;
+  showValue?: boolean;
+}) {
+  // Get all unique labels (dates)
+  const labels = Array.from(
+    new Set(series.flatMap(s => s.data.map(d => d.label)))
+  ).sort();
+
+  // Calculate totals for each label
+  const totals: Record<string, number> = {};
+  labels.forEach(label => {
+    totals[label] = series.reduce((sum, s) => {
+      const item = s.data.find(d => d.label === label);
+      return sum + (item?.value ?? 0);
+    }, 0);
+  });
+
+  const maxTotal = Math.max(...Object.values(totals), 1);
+  const palette =
+    colors ?? [
+      "#6366f1",
+      "#10b981",
+      "#f59e0b",
+      "#8b5cf6",
+      "#34d399",
+      "#f87171",
+      "#38bdf8",
+      "#fb923c",
+      "#a3e635",
+      "#e879f9",
+    ];
+
+  return (
+    <div className="stacked-bar-chart">
+      {labels.map((label, labelIndex) => (
+        <div
+          key={label}
+          className="stacked-bar-row"
+          onMouseEnter={() => {
+            // Handle hover state if needed
+          }}
+          onMouseLeave={() => {
+            // Handle hover state if needed
+          }}
+        >
+          <div className="stacked-bar-label">{label}</div>
+          <div className="stacked-bar-track">
+            {series.map((serie, serieIndex) => {
+              const item = serie.data.find(d => d.label === label);
+              const value = item?.value ?? 0;
+              const percentage = totals[label] > 0 ? (value / totals[label]) * 100 : 0;
+              
+              return (
+                <div
+                  key={serie.name}
+                  className="stacked-bar-segment"
+                  style={{
+                    width: `${percentage}%`,
+                    backgroundColor: palette[serieIndex % palette.length],
+                  }}
+                  onClick={() => onClick?.(serie.name, label, value)}
+                  title={`${serie.name}: ${value} (${label})`}
+                >
+                  {showValue && value > 0 && (
+                    <div className="stacked-bar-value">{value}</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {showValue && totals[label] > 0 && (
+            <div className="stacked-bar-total">{totals[label]}</div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}

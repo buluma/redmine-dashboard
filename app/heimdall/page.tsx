@@ -5,7 +5,7 @@ import { prisma } from "@/src/lib/db";
 import { getSessionUserId } from "@/src/lib/session";
 import { HeimdallLogsClient } from "./heimdall-logs-client";
 import { HeimdallHeader } from "./heimdall-header";
-import { StatCard, DonutChart, BarChartEnhanced } from "@/src/components/reports/charts";
+import { StatCard, DonutChart, BarChartEnhanced, StackedBarChart } from "@/src/components/reports/charts";
 
 export const runtime = "nodejs";
 
@@ -48,6 +48,34 @@ export default async function HeimdallPage() {
     ...serverSideRulesLogs.map((l) => l.host),
     ...traces.map((l) => l.host),
   ])).sort();
+
+  // Trend Count Report: Daily log counts by source type for the past 7 days
+  const getDateKey = (date: Date) => date.toISOString().split('T')[0]; // YYYY-MM-DD
+  
+  // Initialize maps for each source type
+  const mbuTrendMap = new Map<string, number>();
+  const ssrTrendMap = new Map<string, number>();
+  const traceTrendMap = new Map<string, number>();
+  
+  // Populate trend maps
+  const addLogsToTrendMap = (logs: any[], trendMap: Map<string, number>) => {
+    for (const log of logs) {
+      const date = getDateKey(log.createdAt);
+      trendMap.set(date, (trendMap.get(date) ?? 0) + 1);
+    }
+  };
+  
+  addLogsToTrendMap(mbuLogs, mbuTrendMap);
+  addLogsToTrendMap(serverSideRulesLogs, ssrTrendMap);
+  addLogsToTrendMap(traces, traceTrendMap);
+  
+  // Generate last 7 days (including today)
+  const trendDates = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    trendDates.push(getDateKey(date));
+  }
 
   // MBU log stats
   const mbuByLevel = new Map<string, number>();
@@ -172,6 +200,39 @@ export default async function HeimdallPage() {
               tone="danger"
             />
           </div>
+
+          {/* Trend Count Report */}
+          <section className="card">
+            <details className="collapsible-section" open>
+              <summary className="collapsible-summary">
+                <div className="collapsible-head">
+                  <h2>📈 Trend Count Report</h2>
+                  <p className="muted">Daily log counts for the past 7 days</p>
+                </div>
+              </summary>
+
+              <div className="ai-overview">
+                <StackedBarChart
+                  showValue={false}
+                  series={[
+                    { name: "MBU Logs", data: trendDates.map(date => ({
+                      label: date,
+                      value: mbuTrendMap.get(date) ?? 0,
+                    })) },
+                    { name: "Server Side Rules", data: trendDates.map(date => ({
+                      label: date,
+                      value: ssrTrendMap.get(date) ?? 0,
+                    })) },
+                    { name: "Traces", data: trendDates.map(date => ({
+                      label: date,
+                      value: traceTrendMap.get(date) ?? 0,
+                    })) }
+                  ]}
+                  colors={['#6366f1', '#10b981', '#f59e0b']}
+                />
+              </div>
+            </details>
+          </section>
 
           {/* Overview Charts */}
           <section className="ai-overview">

@@ -42,8 +42,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   try {
     const user = await requireCurrentUser();
     const { id } = await context.params;
-    const issueId = parseIssueId(id);
-    const cacheKey = `${user.id}:${issueId}`;
+    const cacheKey = `${user.id}:${id}`;
     const nowMs = Date.now();
     const forceFresh = new URL(request.url).searchParams.get("fresh") === "1";
 
@@ -52,17 +51,38 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       return Response.json(cached.payload);
     }
 
-    const readIssue = () => prisma.issue.findFirst({
-      where: { userId: user.id, redmineIssueId: issueId },
-      include: {
-        journals: { orderBy: { createdOnRemote: "desc" }, take: 50 },
-        githubLinks: { orderBy: { createdAt: "desc" }, take: 50 },
-        timeEntries: { orderBy: { spentOn: "desc" }, take: 50 },
-        attachments: { orderBy: { createdOnRemote: "desc" }, take: 50 },
-        relations: { orderBy: { createdAt: "desc" }, take: 50 },
-        aiSummaries: { orderBy: { createdAt: "desc" }, take: 10 },
-      },
-    });
+    // Check if id is a Prisma string ID (for local issues) or a numeric Redmine ID
+    const isNumericId = /^\d+$/.test(id);
+
+    const readIssue = async () => {
+      if (!isNumericId) {
+        // String ID → local issue lookup
+        return prisma.issue.findFirst({
+          where: { userId: user.id, id },
+          include: {
+            journals: { orderBy: { createdOnRemote: "desc" }, take: 50 },
+            githubLinks: { orderBy: { createdAt: "desc" }, take: 50 },
+            timeEntries: { orderBy: { spentOn: "desc" }, take: 50 },
+            attachments: { orderBy: { createdOnRemote: "desc" }, take: 50 },
+            relations: { orderBy: { createdAt: "desc" }, take: 50 },
+            aiSummaries: { orderBy: { createdAt: "desc" }, take: 10 },
+          },
+        });
+      }
+      // Numeric ID → redmine issue lookup
+      const issueId = Number(id);
+      return prisma.issue.findFirst({
+        where: { userId: user.id, redmineIssueId: issueId },
+        include: {
+          journals: { orderBy: { createdOnRemote: "desc" }, take: 50 },
+          githubLinks: { orderBy: { createdAt: "desc" }, take: 50 },
+          timeEntries: { orderBy: { spentOn: "desc" }, take: 50 },
+          attachments: { orderBy: { createdOnRemote: "desc" }, take: 50 },
+          relations: { orderBy: { createdAt: "desc" }, take: 50 },
+          aiSummaries: { orderBy: { createdAt: "desc" }, take: 10 },
+        },
+      });
+    };
 
     const [initialIssue, statuses] = await Promise.all([
       readIssue(),
@@ -70,9 +90,11 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     ]);
 
     let issue = initialIssue;
-    if (!issue) {
+    if (!issue && isNumericId) {
+      // Only try to sync from Redmine for numeric IDs
       try {
         const { client } = await requireRedmineClient();
+        const issueId = Number(id);
         await syncSingleIssue(user.id, client, issueId, {
           pruneAttachments: false,
           pruneRelations: false,
@@ -90,23 +112,25 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
     // Build breadcrumbs from parent chain
     let breadcrumbs: Array<{ id: number; subject: string; tracker?: string; isCached?: boolean }> = [];
-    try {
-      const { client } = await requireRedmineClient();
-      const chain = await buildBreadcrumbChain(client, issueId);
-      const chainIds = chain.map((crumb) => crumb.id);
-      const cached = chainIds.length === 0
-        ? []
-        : await prisma.issue.findMany({
-          where: {
-            userId: user.id,
-            redmineIssueId: { in: chainIds },
-          },
-          select: { redmineIssueId: true },
-        });
-      const cachedIds = new Set(cached.map((row) => row.redmineIssueId));
-      breadcrumbs = chain.map((crumb) => ({ ...crumb, isCached: cachedIds.has(crumb.id) }));
-    } catch {
-      // If Redmine is unavailable, skip breadcrumbs
+    if (isNumericId && issue.redmineIssueId) {
+      try {
+        const { client } = await requireRedmineClient();
+        const chain = await buildBreadcrumbChain(client, issue.redmineIssueId);
+        const chainIds = chain.map((crumb) => crumb.id);
+        const cached = chainIds.length === 0
+          ? []
+          : await prisma.issue.findMany({
+            where: {
+              userId: user.id,
+              redmineIssueId: { in: chainIds },
+            },
+            select: { redmineIssueId: true },
+          });
+        const cachedIds = new Set(cached.map((row) => row.redmineIssueId));
+        breadcrumbs = chain.map((crumb) => ({ ...crumb, isCached: cachedIds.has(crumb.id) }));
+      } catch {
+        // If Redmine is unavailable, skip breadcrumbs
+      }
     }
 
     const issueView = toIssueView(issue);

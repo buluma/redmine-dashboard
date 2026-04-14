@@ -35,7 +35,7 @@ export default async function AiSummariesPage() {
     orderBy: {
       updatedAt: "desc",
     },
-  });
+  }).catch(() => []);
 
   const chatMessages = await prisma.aiChatMessage.findMany({
     where: {
@@ -57,7 +57,7 @@ export default async function AiSummariesPage() {
       createdAt: "desc",
     },
     take: 200,
-  });
+  }).catch(() => []);
 
   const modelsUsed = new Map<string, number>();
   const statusesMap = new Map<string, number>();
@@ -91,7 +91,9 @@ export default async function AiSummariesPage() {
     if (m.model) {
       chatModelsUsed.set(m.model, (chatModelsUsed.get(m.model) ?? 0) + 1);
     }
-    chatIssues.set(m.issue.redmineIssueId, (chatIssues.get(m.issue.redmineIssueId) ?? 0) + 1);
+    if (m.issue.redmineIssueId) {
+      chatIssues.set(m.issue.redmineIssueId, (chatIssues.get(m.issue.redmineIssueId) ?? 0) + 1);
+    }
   }
 
   const topModels = Array.from(modelsUsed.entries())

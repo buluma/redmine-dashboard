@@ -1,12 +1,13 @@
 # TODO
 
 ## In Progress
+- [ ] add a timeline reports to heimdall
 
 ## Pending
 
-- [ ] wrap ollama around tailscale aperture
-- [ ] ai tool calls
-- [ ] add a timeline reports to heimdall
+- [ ] Wrap OpenRouter around tailscale aperture
+- [ ] AI tool calls
+- [ ] Create/update issues from SLACK_DEFAULT_CHANNEL_ID
 
 ## Stalled
 
