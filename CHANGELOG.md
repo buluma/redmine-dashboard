@@ -2,6 +2,45 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-04-14 (Latest)
+
+### Added
+
+- **Full-text search (FTS)** — fast text search across issue subjects, descriptions, and project names.
+  - New route: `GET /api/search?q=` with debounced React component (`FtsSearch`)
+  - Uses PostgreSQL `pg_trgm` similarity matching for fuzzy results
+  - Wired into the main dashboard as a search bar replacement
+
+- **PWA foundation with offline infrastructure**
+  - IndexedDB layer (`lib/offline-db.ts`) via `idb` wrapper: issues cache store + sync queue store, LRU eviction (max 500 issues), typed CRUD functions
+  - Sync queue engine (`lib/sync-queue.ts`): processes queued mutations (status changes, comments, time entries, assignments) on reconnect with exponential backoff (max 3 retries)
+  - Service worker (`public/sw.js`) registered client-side for PWA installability
+  - PWA manifest (`public/manifest.json`) with standalone display, icons, theme color
+  - Offline banner component (`src/components/OfflineBanner.tsx`) — fixed top bar visible only when offline
+  - Online status hook (`hooks/useOnlineStatus.ts`) — dual-check: `navigator.onLine` OR ping to `/api/health` — avoids false negatives from VPNs/virtual NICs
+  - PWA icons: 192×192 maskable + 512×512 in `public/icons/`
+
+- **RBAC with user roles** — Admin / Editor / User / Viewer role system
+  - New `User` model with `role` field, seeded defaults
+  - Role checking utility (`src/lib/rbac.ts`): `requireRole()`, `hasRole()`, permission matrix
+  - Ops pages gated by role: `/ops/users` (Admin only), `/ops/audit-logs` (Admin/Editor)
+  - Role management UI at `/ops/users`
+
+- **Audit log viewer** — browse user actions, role changes, and internal notes at `/ops/audit-logs`
+  - Client-side filtering by user, action type, date range
+
+- **Docker production setup** — hardened `Dockerfile`, `docker-compose.yml` with healthchecks, backup/restore scripts (`scripts/backup.sh`, `scripts/restore.sh`)
+
+### Changed
+
+- **SQLite development schema aligned with PostgreSQL** — `prisma/schema.dev.sqlite.prisma` updated to match production schema including RBAC, local issues, and audit log fields
+- **Back button styling** — Ops sub-pages (`/ops/audit-logs`, `/ops/users`) now use consistent back link styling matching the main dashboard
+
+### Fixed
+
+- **False "offline" banner** — `useOnlineStatus` now uses OR logic (`navigator.onLine || ping succeeds`) instead of requiring both checks to pass. Eliminates false negatives from VPNs, virtual NICs, and Chromium quirks
+- **Date hydration mismatch** — all date formatting in ops pages uses consistent `en-GB` locale to prevent server/client rendering differences
+
 ## 2026-04-14
 
 ### Added
