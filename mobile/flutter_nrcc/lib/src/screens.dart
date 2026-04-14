@@ -2164,26 +2164,28 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Row(
-                          children: <Widget>[
-                            Expanded(
-                              flex: 2,
-                              child: TextField(
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Column(
+                            children: <Widget>[
+                              TextField(
                                 controller: _timeHours,
                                 decoration: const InputDecoration(
                                   labelText: "Hours",
                                   isDense: true,
+                                  prefixIcon: Icon(Icons.timer, size: 20),
                                 ),
                                 keyboardType:
                                     const TextInputType.numberWithOptions(
                                       decimal: true,
                                     ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              flex: 3,
-                              child: DropdownButtonFormField<int>(
+                              const SizedBox(height: 8),
+                              DropdownButtonFormField<int>(
                                 key: ValueKey<int?>(_timeActivityId),
                                 initialValue: _timeActivityId,
                                 isDense: true,
@@ -2205,65 +2207,123 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                 onChanged: (v) =>
                                     setState(() => _timeActivityId = v),
                               ),
-                            ),
-                          ],
-                        ),
-                        TextField(
-                          controller: _timeComment,
-                          decoration: const InputDecoration(
-                            labelText: "Comment (optional)",
-                            isDense: true,
-                          ),
-                          maxLines: 1,
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _timeLoading ? null : _logTime,
-                            child: _timeLoading
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text("Log Time"),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _timeComment,
+                                decoration: const InputDecoration(
+                                  labelText: "Comment (optional)",
+                                  isDense: true,
+                                ),
+                                maxLines: 2,
+                              ),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: _timeLoading ? null : _logTime,
+                                  icon: _timeLoading
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(Icons.add_circle, size: 18),
+                                  label: const Text("Log Time"),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         if (_timeEntries.isNotEmpty) ...<Widget>[
                           const SizedBox(height: 12),
                           Text(
                             "Recent Entries (${_timeEntries.length})",
-                            style: theme.textTheme.labelLarge,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                           ),
+                          const SizedBox(height: 6),
                           ..._timeEntries
                               .take(10)
                               .map(
-                                (entry) => ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  dense: true,
-                                  title: Text(
-                                    "${entry.hours}h${entry.activityName != null ? " - ${entry.activityName}" : ""}",
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                (entry) => Container(
+                                  margin: const EdgeInsets.only(bottom: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
                                   ),
-                                  subtitle: Text(
-                                    "${entry.comments ?? "No comment"} • ${entry.spentOn}",
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  trailing: IconButton(
-                                    icon: const Icon(
-                                      Icons.delete_outline,
-                                      size: 18,
-                                    ),
-                                    onPressed: entry.redmineTimeEntryId != null
-                                        ? () => _deleteTimeEntry(
+                                  child: Row(
+                                    children: <Widget>[
+                                      Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.primaryContainer,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          "${entry.hours}h",
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: theme.colorScheme.onPrimaryContainer,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: <Widget>[
+                                            Text(
+                                              entry.activityName ?? "No activity",
+                                              style: theme.textTheme.bodySmall?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            if (entry.comments != null)
+                                              Text(
+                                                entry.comments!,
+                                                style: theme.textTheme.bodySmall?.copyWith(
+                                                  color: theme.colorScheme.onSurfaceVariant,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            Text(
+                                              entry.spentOn,
+                                              style: theme.textTheme.bodySmall?.copyWith(
+                                                color: theme.colorScheme.onSurfaceVariant,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (entry.redmineTimeEntryId != null)
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                            size: 18,
+                                          ),
+                                          onPressed: () => _deleteTimeEntry(
                                             entry.redmineTimeEntryId!,
-                                          )
-                                        : null,
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(
+                                            minWidth: 32,
+                                            minHeight: 32,
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -2307,7 +2367,15 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                             Expanded(
                               child: OutlinedButton.icon(
                                 onPressed: _aiLoading ? null : _aiCategorize,
-                                icon: const Icon(Icons.label, size: 18),
+                                icon: _aiLoading && _aiCategory == null
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.label, size: 18),
                                 label: const Text("Categorize"),
                               ),
                             ),
@@ -2315,82 +2383,154 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                         ),
                         if (_aiSummary != null) ...<Widget>[
                           const SizedBox(height: 12),
-                          Text("Summary", style: theme.textTheme.labelLarge),
-                          const SizedBox(height: 4),
-                          Text(
-                            _aiSummary!.summary,
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                          if (_aiSummary!.keyPoints.isNotEmpty) ...<Widget>[
-                            const SizedBox(height: 8),
-                            Text(
-                              "Key Points",
-                              style: theme.textTheme.labelLarge,
-                            ),
-                            ..._aiSummary!.keyPoints.map(
-                              (p) => Padding(
-                                padding: const EdgeInsets.only(
-                                  left: 12,
-                                  top: 2,
-                                ),
-                                child: Text(
-                                  "• $p",
-                                  style: theme.textTheme.bodySmall,
-                                ),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: theme.colorScheme.outlineVariant
+                                    .withValues(alpha: 0.3),
                               ),
                             ),
-                          ],
-                          if (_aiSummary!.actionItems.isNotEmpty) ...<Widget>[
-                            const SizedBox(height: 8),
-                            Text(
-                              "Action Items",
-                              style: theme.textTheme.labelLarge,
-                            ),
-                            ..._aiSummary!.actionItems.map(
-                              (a) => Padding(
-                                padding: const EdgeInsets.only(
-                                  left: 12,
-                                  top: 2,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Row(
+                                  children: <Widget>[
+                                    Icon(
+                                      Icons.auto_awesome,
+                                      size: 16,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      "Summary",
+                                      style: theme.textTheme.labelLarge?.copyWith(
+                                        color: theme.colorScheme.primary,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                child: Text(
-                                  "□ $a",
-                                  style: theme.textTheme.bodySmall,
+                                const SizedBox(height: 8),
+                                Text(
+                                  _aiSummary!.summary,
+                                  style: theme.textTheme.bodyMedium,
                                 ),
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 4),
-                          Text(
-                            "Confidence: ${(_aiSummary!.confidence * 100).toInt()}% • ${_aiSummary!.modelUsed}",
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+                                if (_aiSummary!.keyPoints.isNotEmpty) ...<Widget>[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    "Key Points",
+                                    style: theme.textTheme.labelMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  ..._aiSummary!.keyPoints.map(
+                                    (p) => Padding(
+                                      padding: const EdgeInsets.only(
+                                        left: 12,
+                                        top: 2,
+                                      ),
+                                      child: Text(
+                                        "• $p",
+                                        style: theme.textTheme.bodySmall,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                if (_aiSummary!.actionItems.isNotEmpty) ...<Widget>[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    "Action Items",
+                                    style: theme.textTheme.labelMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  ..._aiSummary!.actionItems.map(
+                                    (a) => Padding(
+                                      padding: const EdgeInsets.only(
+                                        left: 12,
+                                        top: 2,
+                                      ),
+                                      child: Text(
+                                        "□ $a",
+                                        style: theme.textTheme.bodySmall,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 8),
+                                Text(
+                                  "Confidence: ${(_aiSummary!.confidence * 100).toInt()}% • ${_aiSummary!.modelUsed}",
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                         if (_aiCategory != null) ...<Widget>[
                           const SizedBox(height: 12),
-                          if (_aiCategory!.suggestedPriority != null)
-                            Text(
-                              "Suggested Priority: ${_aiCategory!.suggestedPriority!["name"]}",
-                              style: theme.textTheme.bodyMedium,
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: theme.colorScheme.outlineVariant
+                                    .withValues(alpha: 0.3),
+                              ),
                             ),
-                          if (_aiCategory!.suggestedCategory != null)
-                            Text(
-                              "Category: ${_aiCategory!.suggestedCategory!["name"]}",
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                          if (_aiCategory!.reasoning.isNotEmpty) ...<Widget>[
-                            const SizedBox(height: 4),
-                            Text(
-                              _aiCategory!.reasoning,
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          ],
-                          const SizedBox(height: 4),
-                          Text(
-                            _aiCategory!.modelUsed,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Row(
+                                  children: <Widget>[
+                                    Icon(
+                                      Icons.label_outline,
+                                      size: 16,
+                                      color: theme.colorScheme.secondary,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      "Categories",
+                                      style: theme.textTheme.labelLarge?.copyWith(
+                                        color: theme.colorScheme.secondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                if (_aiCategory!.suggestedPriority != null)
+                                  Text(
+                                    "Priority: ${_aiCategory!.suggestedPriority!["name"]}",
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                if (_aiCategory!.suggestedCategory != null)
+                                  Text(
+                                    "Category: ${_aiCategory!.suggestedCategory!["name"]}",
+                                    style: theme.textTheme.bodyMedium,
+                                  ),
+                                if (_aiCategory!.reasoning.isNotEmpty) ...<Widget>[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _aiCategory!.reasoning,
+                                    style: theme.textTheme.bodySmall,
+                                  ),
+                                ],
+                                const SizedBox(height: 6),
+                                Text(
+                                  _aiCategory!.modelUsed,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
