@@ -76,10 +76,7 @@ Current session context:
     let result;
 
     try {
-      result = await manager.complete({
-        messages: fullMessages,
-        userId: user.id,
-      });
+      result = await manager.chat(fullMessages, { stream: false });
     } catch (llmError) {
       console.error("LLM completion failed:", llmError);
       return jsonError("AI service unavailable. Please try again later.", 503);
@@ -90,7 +87,7 @@ Current session context:
         role: "assistant",
         content: result.content,
         model: result.model,
-        totalDuration: result.totalDuration?.toString() || null,
+        totalDuration: result.metrics?.totalDuration?.toString() || null,
       },
     });
   } catch (error) {
