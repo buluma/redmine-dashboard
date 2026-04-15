@@ -3,9 +3,29 @@ import { prisma } from "@/src/lib/db";
 import { logEvent } from "@/src/lib/log";
 import { verifyMobileToken } from "@/src/lib/mobile-auth";
 import { RedmineClient } from "@/src/lib/redmine";
-import { getSessionUserId } from "@/src/lib/session";
+import { getSessionUserId, requireCsrf } from "@/src/lib/session";
 
-export async function requireCurrentUser() {
+/**
+ * HTTP methods that require CSRF protection (mutating operations)
+ */
+export const CSRF_PROTECTED_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
+
+/**
+ * Get current request method from headers (for CSRF check)
+ */
+export function isMutatingRequest(method: string | null): boolean {
+  return method ? CSRF_PROTECTED_METHODS.includes(method.toUpperCase()) : false;
+}
+
+/**
+ * Require authenticated user, optionally validating CSRF for mutating requests
+ */
+export async function requireCurrentUser(validateCsrf = false) {
+  // Validate CSRF for mutating requests if requested
+  if (validateCsrf) {
+    await requireCsrf();
+  }
+  
   const userId = await getSessionUserId();
   if (!userId) {
     throw new Error("Unauthorized");
