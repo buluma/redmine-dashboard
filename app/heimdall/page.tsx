@@ -21,28 +21,28 @@ export default async function HeimdallPage() {
     redirect("/");
   }
 
-  // Fetch MBU logs (last 30 days, max 5000)
+  // Fetch MBU logs (last 30 days, max 1000)
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   
   const mbuLogs = await prisma.mbuLog.findMany({
     where: { createdAt: { gte: thirtyDaysAgo } },
     orderBy: { createdAt: "desc" },
-    take: 5000,
+    take: 1000,
   });
 
   // Fetch server side rules logs
   const serverSideRulesLogs = await prisma.serverSideRulesLog.findMany({
     where: { createdAt: { gte: thirtyDaysAgo } },
     orderBy: { createdAt: "desc" },
-    take: 5000,
+    take: 1000,
   });
 
   // Fetch traces
   const traces = await prisma.trace.findMany({
     where: { createdAt: { gte: thirtyDaysAgo } },
     orderBy: { createdAt: "desc" },
-    take: 5000,
+    take: 1000,
   });
 
   // Compute stats
