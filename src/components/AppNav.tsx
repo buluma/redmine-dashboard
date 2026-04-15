@@ -19,14 +19,20 @@ const navItems = [
 
 export function AppNav() {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window === "undefined") return false;
+  const [collapsed, setCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Load collapsed state from localStorage after mount
+  useEffect(() => {
+    setMounted(true);
     try {
-      return localStorage.getItem("converge.nav.collapsed") === "true";
+      if (localStorage.getItem("converge.nav.collapsed") === "true") {
+        setCollapsed(true);
+      }
     } catch {
-      return false;
+      // Ignore
     }
-  });
+  }, []);
 
   useEffect(() => {
     document.body.classList.toggle("nav-collapsed", collapsed);
@@ -39,18 +45,18 @@ export function AppNav() {
 
   return (
     <>
-      <nav className={`app-nav ${collapsed ? "collapsed" : ""}`} aria-label="Primary navigation">
+      <nav className={`app-nav ${mounted && collapsed ? "collapsed" : ""}`} aria-label="Primary navigation">
         <div className="nav-brand">
           <Link href="/" className="brand-link">
-            {collapsed ? "C" : "Converge"}
+            {mounted && collapsed ? "C" : mounted ? "Converge" : "Converge"}
           </Link>
           <button
             type="button"
             className="nav-toggle"
             onClick={() => setCollapsed((prev) => !prev)}
-            title={collapsed ? "Expand menu" : "Collapse menu"}
-            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
-            aria-pressed={collapsed}
+            title={mounted && collapsed ? "Expand menu" : "Collapse menu"}
+            aria-label={mounted && collapsed ? "Expand menu" : "Collapse menu"}
+            aria-pressed={mounted ? collapsed : false}
           >
             {collapsed ? "›" : "‹"}
           </button>
@@ -61,10 +67,10 @@ export function AppNav() {
               key={item.href}
               href={item.href}
               className={`nav-link ${pathname === item.href ? "active" : ""}`}
-              title={collapsed ? item.label : undefined}
+              title={mounted && collapsed ? item.label : undefined}
             >
               <span className="nav-icon">{item.icon}</span>
-              {!collapsed && <span className="nav-label">{item.label}</span>}
+              {(!mounted || !collapsed) && <span className="nav-label">{item.label}</span>}
             </Link>
           ))}
         </div>
