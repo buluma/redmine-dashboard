@@ -89,7 +89,7 @@ export function AiSummariesHeader({
             </span>
           )}
 
-          <Link href="/" className="primary-link">Back to Dashboard</Link>
+
         </div>
       </div>
 

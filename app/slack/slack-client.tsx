@@ -465,7 +465,7 @@ export function SlackMessagesClient({
               </span>
             )}
 
-            <Link href="/" className="primary-link">Back to Dashboard</Link>
+
           </div>
         </div>
       </header>

@@ -22,7 +22,7 @@ export default async function UsersPage() {
         <section className="card">
           <h1>Access Denied</h1>
           <p className="muted">Only administrators can manage users.</p>
-          <a href="/" className="secondary-button">Back to Dashboard</a>
+
         </section>
       </main>
     );

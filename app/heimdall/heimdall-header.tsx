@@ -78,7 +78,7 @@ export function HeimdallHeader({ totalLogs, errorCount, hostCount }: HeimdallHea
             </span>
           )}
 
-          <Link href="/" className="primary-link">Back to Dashboard</Link>
+
         </div>
       </div>
 

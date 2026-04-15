@@ -61,7 +61,7 @@ export default async function WakatimePage() {
               <p className="muted">Powered by WakaTime</p>
             </div>
             <div className="hero-actions">
-              <Link href="/" className="primary-link">Back to Dashboard</Link>
+
             </div>
           </div>
         </header>

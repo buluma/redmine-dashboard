@@ -21,7 +21,7 @@ export default async function PersonalTicketsPage() {
             <p className="muted">Track personal work items locally.</p>
           </div>
           <div className="hero-actions">
-            <Link href="/" className="primary-link">Back to Dashboard</Link>
+
           </div>
         </div>
       </header>

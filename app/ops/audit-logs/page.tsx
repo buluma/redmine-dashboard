@@ -22,7 +22,7 @@ export default async function AuditLogsPage() {
         <section className="card">
           <h1>Access Denied</h1>
           <p className="muted">You don't have permission to view audit logs.</p>
-          <a href="/" className="secondary-button">Back to Dashboard</a>
+
         </section>
       </main>
     );
