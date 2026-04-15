@@ -74,7 +74,7 @@ export async function GET() {
     // Add individual notification for each recently updated issue
     for (const issue of recentIssues) {
       const issueLabel = issue.redmineIssueId ? `#${issue.redmineIssueId}` : issue.id.substring(0, 8);
-      const link = issue.redmineIssueId ? `/issues/${issue.id}` : `/personal-tickets/${issue.id}`;
+      const link = `/issues/${issue.id}`;
       
       notifications.push({
         id: `issue-update-${issue.id}`,
