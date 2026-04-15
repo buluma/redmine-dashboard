@@ -301,14 +301,36 @@ h3 {
   color: var(--ink-soft);
 }
 
+/* Hero header - sticky with scroll-based shrink */
 .hero {
   display: grid;
-  gap: 1rem;
+  gap: 0.75rem;
   position: sticky;
   top: 0;
   z-index: 50;
-  overflow: hidden;
   background: var(--bg-soft);
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+  transition: all 0.2s ease;
+}
+
+/* Shrink hero on scroll (Chrome 115+ only) */
+@supports (animation-timeline: scroll()) {
+  .hero {
+    animation: shrink-hero linear;
+    animation-timeline: scroll();
+  }
+  
+  @keyframes shrink-hero {
+    from {
+      padding: 1rem 1.5rem;
+      gap: 0.75rem;
+    }
+    to {
+      padding: 0.5rem 1.5rem;
+      gap: 0.25rem;
+    }
+  }
 }
 
 .hero::after {
