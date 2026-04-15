@@ -10,6 +10,7 @@ const navItems = [
   { href: "/personal-tickets", label: "Personal", icon: "📝" },
   { href: "/reports", label: "Reports", icon: "📊" },
   { href: "/ai-summaries", label: "AI", icon: "🤖" },
+  { href: "/chat", label: "Chat", icon: "💭" },
   { href: "/ops", label: "Ops", icon: "⚙️" },
   { href: "/slack", label: "Slack", icon: "💬" },
   { href: "/wakatime", label: "WakaTime", icon: "⏱️" },
