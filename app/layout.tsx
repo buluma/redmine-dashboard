@@ -59,18 +59,26 @@ export default function RootLayout({
           </div>
         </ErrorLoggerProvider>
         <style>{`
+          body {
+            --sidebar-width: 200px;
+          }
+
+          body.nav-collapsed {
+            --sidebar-width: 60px;
+          }
+
           .main-content {
-            margin-left: 200px;
+            margin-left: var(--sidebar-width);
             min-height: 100vh;
             transition: margin-left 0.2s;
           }
-          
-          /* When menu collapses, main content adjusts */
-          body:has(.app-nav.collapsed) .main-content {
-            margin-left: 60px;
-          }
-          
+
           @media (max-width: 768px) {
+            body,
+            body.nav-collapsed {
+              --sidebar-width: 0px;
+            }
+
             .main-content {
               margin-left: 0;
               margin-bottom: 60px;

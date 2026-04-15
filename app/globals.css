@@ -75,7 +75,7 @@ body {
 }
 
 .dashboard {
-  width: min(1480px, 96vw);
+  width: min(1760px, calc(100% - 1.5rem));
   margin: 1.25rem auto 2.25rem;
   display: grid;
   gap: 1rem;
@@ -2016,7 +2016,7 @@ kbd {
 
 @media (max-width: 680px) {
   .dashboard {
-    width: min(1520px, 97vw);
+    width: calc(100% - 1rem);
   }
 
   .metrics-grid {
@@ -4843,6 +4843,10 @@ textarea {
 .reports-v2-loading {
   display: grid;
   gap: 0.85rem;
+}
+
+.heimdall-dashboard {
+  margin-bottom: 0.9rem;
 }
 
 .reports-v2-loading .reports-stats-grid {

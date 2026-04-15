@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -20,22 +20,41 @@ const navItems = [
 
 export function AppNav() {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem("converge.nav.collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    document.body.classList.toggle("nav-collapsed", collapsed);
+    try {
+      localStorage.setItem("converge.nav.collapsed", collapsed ? "true" : "false");
+    } catch {
+      // Ignore storage errors; collapse still works for current session.
+    }
+  }, [collapsed]);
 
   return (
     <>
-      <button 
-        className="nav-toggle"
-        onClick={() => setCollapsed(!collapsed)}
-        title={collapsed ? "Expand menu" : "Collapse menu"}
-      >
-        {collapsed ? "→" : "←"}
-      </button>
-      <nav className={`app-nav ${collapsed ? "collapsed" : ""}`}>
+      <nav className={`app-nav ${collapsed ? "collapsed" : ""}`} aria-label="Primary navigation">
         <div className="nav-brand">
           <Link href="/" className="brand-link">
             {collapsed ? "C" : "Converge"}
           </Link>
+          <button
+            type="button"
+            className="nav-toggle"
+            onClick={() => setCollapsed((prev) => !prev)}
+            title={collapsed ? "Expand menu" : "Collapse menu"}
+            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
+            aria-pressed={collapsed}
+          >
+            {collapsed ? "›" : "‹"}
+          </button>
         </div>
         <div className="nav-links">
           {navItems.map((item) => (
@@ -54,26 +73,27 @@ export function AppNav() {
 
       <style>{`
         .nav-toggle {
-          position: fixed;
-          left: 200px;
-          top: 50%;
-          transform: translateY(-50%);
-          z-index: 101;
-          background: var(--surface-2);
+          position: absolute;
+          top: 0.6rem;
+          right: 0.5rem;
+          width: 1.5rem;
+          height: 1.5rem;
+          border-radius: 999px;
           border: 1px solid var(--border);
-          border-radius: 0 6px 6px 0;
-          padding: 0.5rem 0.25rem;
-          cursor: pointer;
-          font-size: 0.875rem;
+          background: var(--surface-1, #fff);
           color: var(--text);
-          transition: left 0.2s;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+          cursor: pointer;
+          display: grid;
+          place-items: center;
+          font-size: 1rem;
+          line-height: 1;
         }
-        
-        .app-nav.collapsed + .nav-toggle,
-        .app-nav:not(.collapsed) .nav-toggle {
-          left: 60px;
+
+        .nav-toggle:hover {
+          background: var(--surface-2);
         }
-        
+
         .app-nav {
           position: fixed;
           left: 0;
@@ -93,22 +113,39 @@ export function AppNav() {
         .app-nav.collapsed {
           width: 60px;
         }
-        
+
         .nav-brand {
+          position: relative;
           padding: 0.5rem 1rem;
           margin-bottom: 1rem;
           min-height: 2rem;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
         }
-        
+
         .brand-link {
           font-size: 1.25rem;
           font-weight: 700;
           color: var(--accent);
           text-decoration: none;
         }
-        
+
         .app-nav.collapsed .brand-link {
           font-size: 1rem;
+        }
+
+        .app-nav.collapsed .nav-brand {
+          justify-content: flex-end;
+        }
+
+        .app-nav.collapsed .brand-link {
+          display: none;
+        }
+
+        .app-nav.collapsed .nav-toggle {
+          width: 1.5rem;
+          height: 1.5rem;
         }
         
         .nav-links {
@@ -132,6 +169,8 @@ export function AppNav() {
         .app-nav.collapsed .nav-link {
           justify-content: center;
           padding: 0.625rem 0.5rem;
+          min-height: 2.35rem;
+          line-height: 1.2;
         }
         
         .nav-link:hover {
@@ -181,21 +220,22 @@ export function AppNav() {
             border-right: none;
             border-top: 1px solid var(--border);
           }
-          
+
           .app-nav.collapsed {
             width: 100%;
           }
-          
-          .nav-brand, .nav-toggle {
+
+          .nav-brand,
+          .nav-toggle {
             display: none;
           }
-          
+
           .nav-links {
             flex-direction: row;
             justify-content: space-around;
             width: 100%;
           }
-          
+
           .nav-link {
             flex-direction: column;
             gap: 0.25rem;
@@ -209,7 +249,7 @@ export function AppNav() {
             border-bottom-color: var(--accent);
             background: transparent;
           }
-          
+
           .nav-label {
             display: block;
             font-size: 0.65rem;
