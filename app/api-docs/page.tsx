@@ -42,7 +42,7 @@ export default function ApiDocsPage() {
             </p>
           </div>
           <div className="hero-actions">
-            <Link href="/" className="primary-link">Back to Dashboard</Link>
+
           </div>
         </div>
       </header>

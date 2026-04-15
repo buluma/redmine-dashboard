@@ -329,7 +329,7 @@ export default function OpsPage() {
               {retrying ? "Enqueueing..." : "Sync Last 24h"}
             </button>
             <Link href="/" className="primary-link nav-link">
-              Back to Dashboard
+
             </Link>
           </div>
         </div>

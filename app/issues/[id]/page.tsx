@@ -1033,7 +1033,7 @@ export default function IssueDetailPage() {
           <p className="muted">{error ?? "Issue not found."}</p>
           <div className="row-actions">
             <Link href="/heimdall" className="primary-link">Back to Heimdall</Link>
-            <Link href="/" className="secondary-button">Back to Dashboard</Link>
+
           </div>
         </section>
       </main>
@@ -1180,7 +1180,7 @@ export default function IssueDetailPage() {
                 Edit
               </button>
             )}
-            <Link href="/" className="primary-link issue-back-link">Back to Dashboard</Link>
+
           </div>
         </div>
       </header>
