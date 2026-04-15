@@ -60,9 +60,6 @@ export default async function WebhooksPage() {
             </p>
           </div>
           <div className="hero-actions">
-            <a href="/ops" className="secondary-button">
-              ← Back to Ops
-            </a>
           </div>
         </div>
       </header>
@@ -87,8 +84,8 @@ export default async function WebhooksPage() {
               (() => {
                 const lastSub = subscriptions.find(s => s.lastTriggeredAt);
                 if (!lastSub?.lastTriggeredAt) return "Never";
-                const date = lastSub.lastTriggeredAt instanceof Date 
-                  ? lastSub.lastTriggeredAt 
+                const date = lastSub.lastTriggeredAt instanceof Date
+                  ? lastSub.lastTriggeredAt
                   : new Date(lastSub.lastTriggeredAt);
                 return formatDateTime(date);
               })()

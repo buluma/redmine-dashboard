@@ -328,9 +328,6 @@ export default function OpsPage() {
             <button type="button" onClick={retryFullSync} disabled={retrying || !user} title="Syncs issues updated in the last 24 hours">
               {retrying ? "Enqueueing..." : "Sync Last 24h"}
             </button>
-            <Link href="/" className="primary-link nav-link">
-
-            </Link>
           </div>
         </div>
       </header>
