@@ -69,6 +69,7 @@ export default function RootLayout({
 
           .main-content {
             margin-left: var(--sidebar-width);
+            padding-top: 1rem;
             min-height: 100vh;
             transition: margin-left 0.2s;
           }

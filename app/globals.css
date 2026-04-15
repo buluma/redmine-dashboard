@@ -304,8 +304,11 @@ h3 {
 .hero {
   display: grid;
   gap: 1rem;
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 50;
   overflow: hidden;
+  background: var(--bg-soft);
 }
 
 .hero::after {
