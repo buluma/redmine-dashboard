@@ -1,5 +1,7 @@
 import { env } from "./env";
 import { getOllamaClient } from "./ollama";
+import type { ToolDefinition } from "./ai-tools";
+import { toAnthropicTools } from "./ai-tools";
 
 export type LLMProvider = "ollama" | "openai" | "anthropic" | "openrouter";
 
@@ -15,11 +17,20 @@ export interface LLMChatMessage {
   content: string;
 }
 
+/** A tool call parsed from an LLM response. */
+export interface LLMToolCall {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
 export interface LLMResponse {
   content: string;
   model: string;
   provider: LLMProvider;
   done: boolean;
+  /** Tool calls requested by the model (when function calling is active). */
+  toolCalls?: LLMToolCall[];
   usage?: {
     promptTokens?: number;
     completionTokens?: number;
@@ -235,18 +246,18 @@ export class LLMProviderManager {
     return status.models;
   }
 
-  async chat(messages: LLMChatMessage[], options: { stream?: boolean; temperature?: number; maxTokens?: number } = {}): Promise<LLMResponse> {
-    const { stream = false, temperature = 0.7, maxTokens = 4096 } = options;
+  async chat(messages: LLMChatMessage[], options: { stream?: boolean; temperature?: number; maxTokens?: number; tools?: ToolDefinition[] } = {}): Promise<LLMResponse> {
+    const { stream = false, temperature = 0.7, maxTokens = 4096, tools } = options;
 
     try {
       if (this.provider === "ollama") {
-        return this.ollamaChat(messages, { stream, temperature, maxTokens });
+        return this.ollamaChat(messages, { stream, temperature, maxTokens, tools });
       } else if (this.provider === "openai") {
-        return this.openaiChat(messages, { stream, temperature, maxTokens });
+        return this.openaiChat(messages, { stream, temperature, maxTokens, tools });
       } else if (this.provider === "anthropic") {
-        return this.anthropicChat(messages, { maxTokens });
+        return this.anthropicChat(messages, { maxTokens, tools });
       } else if (this.provider === "openrouter") {
-        return this.openrouterChat(messages, { temperature, maxTokens });
+        return this.openrouterChat(messages, { temperature, maxTokens, tools });
       }
       throw new Error(`Unsupported provider: ${this.provider}`);
     } catch (error) {
@@ -254,7 +265,7 @@ export class LLMProviderManager {
       if (this.provider !== "ollama") {
         console.warn(`Primary provider ${this.provider} failed, trying Ollama fallback...`);
         try {
-          return await this.ollamaChat(messages, { stream, temperature, maxTokens });
+          return await this.ollamaChat(messages, { stream, temperature, maxTokens, tools });
         } catch {
           // Ollama fallback also failed
         }
@@ -263,13 +274,20 @@ export class LLMProviderManager {
     }
   }
 
-  private async ollamaChat(messages: LLMChatMessage[], options: { stream?: boolean; temperature?: number; maxTokens?: number }): Promise<LLMResponse> {
-    const result = await this.ollama.chat(messages, options);
+  private async ollamaChat(messages: LLMChatMessage[], options: { stream?: boolean; temperature?: number; maxTokens?: number; tools?: ToolDefinition[] }): Promise<LLMResponse> {
+    // Ollama passes tools natively for compatible models (≥ 0.5)
+    const result = await this.ollama.chat(messages, {
+      stream: options.stream,
+      temperature: options.temperature,
+      maxTokens: options.maxTokens,
+      ...(options.tools?.length ? { tools: options.tools } : {}),
+    });
     return {
       content: result.content,
       model: result.model,
       provider: "ollama",
       done: result.done,
+      // Note: Ollama native tool_calls not yet fully supported in response
       metrics: {
         totalDuration: result.total_duration,
         loadDuration: result.load_duration,
@@ -281,9 +299,21 @@ export class LLMProviderManager {
     };
   }
 
-  private async openaiChat(messages: LLMChatMessage[], options: { stream?: boolean; temperature?: number; maxTokens?: number }): Promise<LLMResponse> {
+  private async openaiChat(messages: LLMChatMessage[], options: { stream?: boolean; temperature?: number; maxTokens?: number; tools?: ToolDefinition[] }): Promise<LLMResponse> {
     const apiKey = env.openaiApiKey;
     if (!apiKey) throw new Error("OpenAI API key not configured");
+
+    const body: Record<string, unknown> = {
+      model: env.openaiChatModel,
+      messages,
+      stream: options.stream ?? false,
+      temperature: options.temperature ?? 0.7,
+      max_tokens: options.maxTokens ?? 4096,
+    };
+    if (options.tools?.length) {
+      body.tools = options.tools;
+      body.tool_choice = "auto";
+    }
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -291,13 +321,7 @@ export class LLMProviderManager {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        model: env.openaiChatModel,
-        messages,
-        stream: options.stream ?? false,
-        temperature: options.temperature ?? 0.7,
-        max_tokens: options.maxTokens ?? 4096
-      })
+      body: JSON.stringify(body)
     });
 
     if (!response.ok) {
@@ -310,11 +334,21 @@ export class LLMProviderManager {
     }
 
     const data = await response.json();
+    const choice = data.choices[0];
+    const toolCalls = choice?.message?.tool_calls?.map(
+      (tc: { id: string; function: { name: string; arguments: string } }) => ({
+        id: tc.id,
+        name: tc.function.name,
+        arguments: JSON.parse(tc.function.arguments),
+      })
+    );
+
     return {
-      content: data.choices[0]?.message?.content || "",
+      content: choice?.message?.content || "",
       model: data.model,
       provider: "openai",
       done: true,
+      toolCalls: toolCalls?.length ? toolCalls : undefined,
       usage: {
         promptTokens: data.usage?.prompt_tokens,
         completionTokens: data.usage?.completion_tokens,
@@ -369,7 +403,7 @@ export class LLMProviderManager {
     };
   }
 
-  private async anthropicChat(messages: LLMChatMessage[], options: { maxTokens?: number }): Promise<LLMResponse> {
+  private async anthropicChat(messages: LLMChatMessage[], options: { maxTokens?: number; tools?: ToolDefinition[] }): Promise<LLMResponse> {
     const apiKey = env.anthropicApiKey;
     if (!apiKey) throw new Error("Anthropic API key not configured");
 
@@ -380,6 +414,16 @@ export class LLMProviderManager {
 
     const systemMessage = messages.find(m => m.role === "system");
 
+    const body: Record<string, unknown> = {
+      model: env.anthropicChatModel,
+      messages: anthropicMessages,
+      system: systemMessage?.content,
+      max_tokens: options.maxTokens ?? 4096,
+    };
+    if (options.tools?.length) {
+      body.tools = toAnthropicTools(options.tools);
+    }
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -388,12 +432,7 @@ export class LLMProviderManager {
         "anthropic-version": "2023-06-01",
         "anthropic-dangerous-direct-browser-access": "true"
       },
-      body: JSON.stringify({
-        model: env.anthropicChatModel,
-        messages: anthropicMessages,
-        system: systemMessage?.content,
-        max_tokens: options.maxTokens ?? 4096
-      })
+      body: JSON.stringify(body)
     });
 
     if (!response.ok) {
@@ -402,11 +441,21 @@ export class LLMProviderManager {
     }
 
     const data = await response.json();
+    // Anthropic returns content blocks; text blocks and tool_use blocks
+    const textBlocks = (data.content || []).filter((b: { type: string }) => b.type === "text");
+    const toolUseBlocks = (data.content || []).filter((b: { type: string }) => b.type === "tool_use");
+    const toolCalls = toolUseBlocks.map((b: { id: string; name: string; input: Record<string, unknown> }) => ({
+      id: b.id,
+      name: b.name,
+      arguments: b.input,
+    }));
+
     return {
-      content: data.content[0]?.text || "",
+      content: textBlocks.map((b: { text: string }) => b.text).join("\n") || "",
       model: data.model,
       provider: "anthropic",
       done: true,
+      toolCalls: toolCalls.length ? toolCalls : undefined,
       usage: {
         totalTokens: data.usage?.input_tokens + data.usage?.output_tokens,
         promptTokens: data.usage?.input_tokens,
@@ -415,7 +464,7 @@ export class LLMProviderManager {
     };
   }
 
-  private async openrouterChat(messages: LLMChatMessage[], options: { temperature?: number; maxTokens?: number }): Promise<LLMResponse> {
+  private async openrouterChat(messages: LLMChatMessage[], options: { temperature?: number; maxTokens?: number; tools?: ToolDefinition[] }): Promise<LLMResponse> {
     const apiKey = env.openrouterApiKey;
     if (!apiKey) throw new Error("OpenRouter API key not configured");
 
@@ -437,9 +486,20 @@ export class LLMProviderManager {
     }
   }
 
-  private async openrouterChatWithModel(messages: LLMChatMessage[], model: string, options: { temperature?: number; maxTokens?: number }): Promise<LLMResponse> {
+  private async openrouterChatWithModel(messages: LLMChatMessage[], model: string, options: { temperature?: number; maxTokens?: number; tools?: ToolDefinition[] }): Promise<LLMResponse> {
     const apiKey = env.openrouterApiKey;
     if (!apiKey) throw new Error("OpenRouter API key not configured");
+
+    const body: Record<string, unknown> = {
+      model,
+      messages,
+      temperature: options.temperature ?? 0.7,
+      max_tokens: options.maxTokens ?? 4096,
+    };
+    if (options.tools?.length) {
+      body.tools = options.tools;
+      body.tool_choice = "auto";
+    }
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -449,12 +509,7 @@ export class LLMProviderManager {
         "HTTP-Referer": "https://converge.local",
         "X-Title": "Converge"
       },
-      body: JSON.stringify({
-        model,
-        messages,
-        temperature: options.temperature ?? 0.7,
-        max_tokens: options.maxTokens ?? 4096
-      })
+      body: JSON.stringify(body)
     });
 
     if (!response.ok) {
@@ -463,11 +518,21 @@ export class LLMProviderManager {
     }
 
     const data = await response.json();
+    const choice = data.choices?.[0];
+    const toolCalls = choice?.message?.tool_calls?.map(
+      (tc: { id: string; function: { name: string; arguments: string } }) => ({
+        id: tc.id,
+        name: tc.function.name,
+        arguments: typeof tc.function.arguments === 'string' ? JSON.parse(tc.function.arguments) : tc.function.arguments,
+      })
+    );
+
     return {
-      content: data.choices?.[0]?.message?.content || "",
+      content: choice?.message?.content || "",
       model: data.model,
       provider: "openrouter",
       done: true,
+      toolCalls: toolCalls?.length ? toolCalls : undefined,
       usage: {
         totalTokens: data.usage?.total_tokens,
         promptTokens: data.usage?.prompt_tokens,
