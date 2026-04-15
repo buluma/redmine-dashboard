@@ -147,7 +147,7 @@ export default async function HeimdallPage() {
   ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
   return (
-    <main className="dashboard reports-v2">
+    <main className="dashboard reports-v2 heimdall-dashboard">
       <HeimdallHeader
         totalLogs={totalLogs}
         errorCount={allErrors.length}
