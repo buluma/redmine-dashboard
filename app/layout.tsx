@@ -5,6 +5,7 @@ import { ErrorLoggerProvider } from "@/src/components/ErrorLoggerProvider";
 import { OfflineBanner } from "@/src/components/OfflineBanner";
 import { SyncQueueInitializer } from "@/src/components/SyncQueueInitializer";
 import { ServiceWorkerRegistrar } from "@/src/components/ServiceWorkerRegistrar";
+import { AppNav } from "@/src/components/AppNav";
 
 const sora = Sora({
   variable: "--font-geist-sans",
@@ -52,8 +53,23 @@ export default function RootLayout({
           <OfflineBanner />
           <SyncQueueInitializer />
           <ServiceWorkerRegistrar />
-          {children}
+          <AppNav />
+          <div className="main-content">
+            {children}
+          </div>
         </ErrorLoggerProvider>
+        <style>{`
+          .main-content {
+            margin-left: 200px;
+            min-height: 100vh;
+          }
+          @media (max-width: 768px) {
+            .main-content {
+              margin-left: 0;
+              margin-bottom: 60px;
+            }
+          }
+        `}</style>
       </body>
     </html>
   );

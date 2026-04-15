@@ -134,9 +134,11 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
                 >
                   <span className="notif-icon">{getTypeIcon(notif.type)}</span>
                   <div className="notif-content">
-                    <p className="notif-title">{notif.title}</p>
-                    <p className="notif-message">{notif.message}</p>
-                    <span className="notif-time">{formatTime(notif.timestamp)}</span>
+                    <div className="notif-row">
+                      <p className="notif-title">{notif.title}</p>
+                      <span className="notif-time">{formatTime(notif.timestamp)}</span>
+                    </div>
+                    <p className="notif-message" title={notif.message}>{notif.message}</p>
                   </div>
                 </a>
               ))

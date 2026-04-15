@@ -79,6 +79,7 @@ type IssueChild = {
 type Issue = {
   id: string;
   redmineIssueId: number;
+  localIssueNumber?: number | null;
   redmineBaseUrl: string;
   subject: string;
   description: string | null;
@@ -142,7 +143,8 @@ type SavedView = {
 };
 
 type ActivityEvent = {
-  issueId: number;
+  issueId: string;
+  issueLabel: string;
   issueSubject: string;
   timestamp: string;
   detail: string;
@@ -455,11 +457,41 @@ function formatDurationFromMs(durationMs: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
-function openIssueInNewTab(issueId: number): void {
-  if (!Number.isInteger(issueId) || issueId <= 0) {
+function normalizeIssueRouteId(value: number | string | null | undefined): string | null {
+  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+    return String(value);
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value.trim();
+  }
+  return null;
+}
+
+function issueRouteId(issue: Pick<Issue, "id" | "redmineIssueId">): string {
+  return normalizeIssueRouteId(issue.redmineIssueId) ?? issue.id;
+}
+
+function issueDisplayId(issue: Pick<Issue, "redmineIssueId" | "localIssueNumber">): string {
+  const remote = normalizeIssueRouteId(issue.redmineIssueId);
+  if (remote) {
+    return `#${remote}`;
+  }
+  if (typeof issue.localIssueNumber === "number" && issue.localIssueNumber > 0) {
+    return `#${issue.localIssueNumber}`;
+  }
+  return "#";
+}
+
+function openIssueIdInNewTab(issueId: number | string | null | undefined): void {
+  const routeId = normalizeIssueRouteId(issueId);
+  if (!routeId) {
     return;
   }
-  window.open(`/issues/${issueId}`, "_blank", "noopener,noreferrer");
+  window.open(`/issues/${encodeURIComponent(routeId)}`, "_blank", "noopener,noreferrer");
+}
+
+function openIssueInNewTab(issue: Pick<Issue, "id" | "redmineIssueId">): void {
+  openIssueIdInNewTab(issueRouteId(issue));
 }
 
 export default function Home() {
@@ -541,19 +573,21 @@ export default function Home() {
   const [timerNowMs, setTimerNowMs] = useState(Date.now());
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const prefetchedIssueIdsRef = useRef<Set<number>>(new Set());
+  const prefetchedIssueIdsRef = useRef<Set<string>>(new Set());
 
-  const prefetchIssueDetail = useCallback((targetIssueId: number) => {
-    if (!Number.isInteger(targetIssueId) || targetIssueId <= 0) {
+  const prefetchIssueDetail = useCallback((targetIssueId: number | string | null | undefined) => {
+    const routeId = normalizeIssueRouteId(targetIssueId);
+    if (!routeId) {
       return;
     }
-    if (prefetchedIssueIdsRef.current.has(targetIssueId)) {
+    if (prefetchedIssueIdsRef.current.has(routeId)) {
       return;
     }
-    prefetchedIssueIdsRef.current.add(targetIssueId);
-    router.prefetch(`/issues/${targetIssueId}`);
-    void fetch(`/api/issues/${targetIssueId}`, { cache: "no-store" }).catch(() => {
-      prefetchedIssueIdsRef.current.delete(targetIssueId);
+    prefetchedIssueIdsRef.current.add(routeId);
+    const encodedRouteId = encodeURIComponent(routeId);
+    router.prefetch(`/issues/${encodedRouteId}`);
+    void fetch(`/api/issues/${encodedRouteId}`, { cache: "no-store" }).catch(() => {
+      prefetchedIssueIdsRef.current.delete(routeId);
     });
   }, [router]);
 
@@ -603,7 +637,12 @@ export default function Home() {
     return Math.max(0, timerNowMs - timerStartedAtMs);
   }, [timerIssueId, timerNowMs, timerStartedAtMs]);
 
-  const allVisibleIssueIds = useMemo(() => visibleIssues.map((i) => i.redmineIssueId), [visibleIssues]);
+  const allVisibleIssueIds = useMemo(
+    () => visibleIssues
+      .map((i) => i.redmineIssueId)
+      .filter((id): id is number => Number.isInteger(id) && id > 0),
+    [visibleIssues],
+  );
 
   const selectedAllVisible = useMemo(
     () => allVisibleIssueIds.length > 0 && allVisibleIssueIds.every((id) => selectedIssueIds.includes(id)),
@@ -670,7 +709,8 @@ export default function Home() {
       }
 
       activityFeed.push({
-        issueId: issue.redmineIssueId,
+        issueId: issueRouteId(issue),
+        issueLabel: issueDisplayId(issue),
         issueSubject: issue.subject,
         timestamp: latestIssueActivityTimestamp(issue),
         detail: `Latest activity: ${activityTypeLabel(issue.lastActivityType)}`,
@@ -678,7 +718,8 @@ export default function Home() {
 
       for (const journal of issue.journals.slice(0, 3)) {
         activityFeed.push({
-          issueId: issue.redmineIssueId,
+          issueId: issueRouteId(issue),
+          issueLabel: issueDisplayId(issue),
           issueSubject: issue.subject,
           timestamp: journal.createdOnRemote,
           detail: `${journal.author ?? "Unknown"} commented`,
@@ -687,7 +728,8 @@ export default function Home() {
 
       for (const entry of issue.timeEntries.slice(0, 2)) {
         activityFeed.push({
-          issueId: issue.redmineIssueId,
+          issueId: issueRouteId(issue),
+          issueLabel: issueDisplayId(issue),
           issueSubject: issue.subject,
           timestamp: entry.spentOn,
           detail: `${entry.hours.toFixed(1)}h logged${entry.activityName ? ` (${entry.activityName})` : ""}`,
@@ -1919,14 +1961,14 @@ export default function Home() {
                   key={issue.id}
                   type="button"
                   className={`alert-row ${reason.includes("overdue") ? "tone-critical" : reason.includes("blocked") ? "tone-warning" : "tone-stale"}`}
-                  onMouseEnter={() => prefetchIssueDetail(issue.redmineIssueId)}
-                  onFocus={() => prefetchIssueDetail(issue.redmineIssueId)}
+                  onMouseEnter={() => prefetchIssueDetail(issueRouteId(issue))}
+                  onFocus={() => prefetchIssueDetail(issueRouteId(issue))}
                   onClick={() => {
-                    openIssueInNewTab(issue.redmineIssueId);
+                    openIssueInNewTab(issue);
                   }}
                 >
                   <span>
-                    #{issue.redmineIssueId} {issue.subject}
+                    {issueDisplayId(issue)} {issue.subject}
                   </span>
                   <span>{reason}</span>
                 </button>
@@ -1958,11 +2000,11 @@ export default function Home() {
                   onMouseEnter={() => prefetchIssueDetail(event.issueId)}
                   onFocus={() => prefetchIssueDetail(event.issueId)}
                   onClick={() => {
-                    openIssueInNewTab(event.issueId);
+                    openIssueIdInNewTab(event.issueId);
                   }}
                 >
                   <span>
-                    #{event.issueId} {event.issueSubject}
+                    {event.issueLabel} {event.issueSubject}
                   </span>
                   <span>{event.detail}</span>
                   <span>{new Date(event.timestamp).toLocaleString()}</span>
@@ -2212,7 +2254,8 @@ export default function Home() {
                     const paged = filtered.slice(start, start + pageSize);
                     return paged.map((issue) => {
                     const urgency = issueUrgency(issue);
-                    const allowedStatusIds = allowedStatusIdsByIssue[issue.redmineIssueId];
+                    const issueNumericId = Number.isInteger(issue.redmineIssueId) && issue.redmineIssueId > 0 ? issue.redmineIssueId : null;
+                    const allowedStatusIds = issueNumericId ? allowedStatusIdsByIssue[issueNumericId] : undefined;
                     const selectableStatuses =
                       allowedStatusIds && allowedStatusIds.length > 0
                         ? statuses.filter((s) => allowedStatusIds.includes(s.id))
@@ -2222,23 +2265,28 @@ export default function Home() {
                       <tr
                         key={issue.id}
                         className={`issue-row ${selectedIssueId === issue.redmineIssueId ? "selected" : ""}`}
-                        onMouseEnter={() => prefetchIssueDetail(issue.redmineIssueId)}
+                        onMouseEnter={() => prefetchIssueDetail(issueRouteId(issue))}
                         onClick={() => {
-                          openIssueInNewTab(issue.redmineIssueId);
+                          openIssueInNewTab(issue);
                         }}
                       >
                         <td onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
-                            checked={selectedIssueIds.includes(issue.redmineIssueId)}
-                            onChange={() => toggleIssueSelection(issue.redmineIssueId)}
-                            aria-label={`Select issue ${issue.redmineIssueId}`}
+                            checked={issueNumericId ? selectedIssueIds.includes(issueNumericId) : false}
+                            onChange={() => {
+                              if (issueNumericId) {
+                                toggleIssueSelection(issueNumericId);
+                              }
+                            }}
+                            aria-label={`Select issue ${issueDisplayId(issue)}`}
+                            disabled={!issueNumericId}
                           />
                         </td>
                         <td
                           className="drag-handle"
-                          draggable
-                          onDragStart={() => setDraggedIssueId(issue.redmineIssueId)}
+                          draggable={Boolean(issueNumericId)}
+                          onDragStart={() => setDraggedIssueId(issueNumericId)}
                           onDragEnd={() => setDraggedIssueId(null)}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => {
@@ -2257,10 +2305,10 @@ export default function Home() {
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              #{issue.redmineIssueId}
+                              {issueDisplayId(issue)}
                             </a>
                           ) : (
-                            <span>#{issue.redmineIssueId}</span>
+                            <span>{issueDisplayId(issue)}</span>
                           )}
                         </td>
                         <td
@@ -2292,8 +2340,11 @@ export default function Home() {
                               value={issue.statusId}
                               onChange={(e) => updateStatus(issue, Number(e.target.value))}
                               onFocus={() => {
-                                void loadAllowedStatuses(issue.redmineIssueId);
+                                if (issueNumericId) {
+                                  void loadAllowedStatuses(issueNumericId);
+                                }
                               }}
+                              disabled={!issueNumericId}
                             >
                               {selectableStatuses.map((status) => (
                                 <option key={status.id} value={status.id}>
@@ -2396,7 +2447,7 @@ export default function Home() {
             }}
           >
             <div className="preview-header">
-              <span className="preview-id">#{hoveredIssue.redmineIssueId}</span>
+              <span className="preview-id">{issueDisplayId(hoveredIssue)}</span>
               <span className={`priority-badge priority-${(hoveredIssue.priority ?? "").toLowerCase().replace(/\s+/g, "-")}`}>
                 {hoveredIssue.priority}
               </span>

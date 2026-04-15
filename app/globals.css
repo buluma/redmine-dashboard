@@ -2809,9 +2809,11 @@ kbd {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 8px;
-  width: 320px;
+  width: clamp(320px, 36vw, 560px);
+  max-width: calc(100vw - 1rem);
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   margin-top: 0.5rem;
+  overflow: hidden;
 }
 
 .notif-header {
@@ -2846,10 +2848,15 @@ kbd {
   padding: 0.75rem;
   border-bottom: 1px solid var(--line);
   cursor: pointer;
+  align-items: flex-start;
+  color: var(--ink);
+  text-decoration: none;
+  min-width: 0;
 }
 
 .notif-item:hover {
   background: var(--bg);
+  text-decoration: none;
 }
 
 .notif-item.read {
@@ -2858,20 +2865,50 @@ kbd {
 
 .notif-icon {
   font-size: 1rem;
+  line-height: 1.2;
+  flex: 0 0 auto;
 }
 
 .notif-content {
   flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.notif-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.notif-title {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.25;
+  color: var(--ink);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 .notif-message {
   margin: 0;
   font-size: 0.875rem;
+  color: var(--ink-soft);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
 }
 
 .notif-time {
   font-size: 0.75rem;
   color: var(--ink-soft);
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .notif-empty {
