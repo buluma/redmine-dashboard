@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -19,25 +20,60 @@ const navItems = [
 
 export function AppNav() {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <nav className="app-nav">
-      <div className="nav-brand">
-        <Link href="/" className="brand-link">Converge</Link>
-      </div>
-      <div className="nav-links">
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`nav-link ${pathname === item.href ? "active" : ""}`}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            <span className="nav-label">{item.label}</span>
+    <>
+      <button 
+        className="nav-toggle"
+        onClick={() => setCollapsed(!collapsed)}
+        title={collapsed ? "Expand menu" : "Collapse menu"}
+      >
+        {collapsed ? "→" : "←"}
+      </button>
+      <nav className={`app-nav ${collapsed ? "collapsed" : ""}`}>
+        <div className="nav-brand">
+          <Link href="/" className="brand-link">
+            {collapsed ? "C" : "Converge"}
           </Link>
-        ))}
-      </div>
+        </div>
+        <div className="nav-links">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`nav-link ${pathname === item.href ? "active" : ""}`}
+              title={collapsed ? item.label : undefined}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              {!collapsed && <span className="nav-label">{item.label}</span>}
+            </Link>
+          ))}
+        </div>
+      </nav>
+
       <style>{`
+        .nav-toggle {
+          position: fixed;
+          left: 200px;
+          top: 50%;
+          transform: translateY(-50%);
+          z-index: 101;
+          background: var(--surface-2);
+          border: 1px solid var(--border);
+          border-radius: 0 6px 6px 0;
+          padding: 0.5rem 0.25rem;
+          cursor: pointer;
+          font-size: 0.875rem;
+          color: var(--text);
+          transition: left 0.2s;
+        }
+        
+        .app-nav.collapsed + .nav-toggle,
+        .app-nav:not(.collapsed) .nav-toggle {
+          left: 60px;
+        }
+        
         .app-nav {
           position: fixed;
           left: 0;
@@ -51,11 +87,17 @@ export function AppNav() {
           padding: 1rem 0;
           overflow-y: auto;
           z-index: 100;
+          transition: width 0.2s;
+        }
+        
+        .app-nav.collapsed {
+          width: 60px;
         }
         
         .nav-brand {
           padding: 0.5rem 1rem;
           margin-bottom: 1rem;
+          min-height: 2rem;
         }
         
         .brand-link {
@@ -63,6 +105,10 @@ export function AppNav() {
           font-weight: 700;
           color: var(--accent);
           text-decoration: none;
+        }
+        
+        .app-nav.collapsed .brand-link {
+          font-size: 1rem;
         }
         
         .nav-links {
@@ -83,6 +129,11 @@ export function AppNav() {
           border-left: 3px solid transparent;
         }
         
+        .app-nav.collapsed .nav-link {
+          justify-content: center;
+          padding: 0.625rem 0.5rem;
+        }
+        
         .nav-link:hover {
           background: var(--surface-3);
         }
@@ -93,17 +144,29 @@ export function AppNav() {
           border-left-color: var(--accent);
         }
         
+        .app-nav.collapsed .nav-link.active {
+          border-left-color: transparent;
+          border-bottom: 2px solid var(--accent);
+        }
+        
         .nav-icon {
           font-size: 1rem;
           width: 1.5rem;
           text-align: center;
+          flex-shrink: 0;
         }
         
         .nav-label {
           font-weight: 500;
+          white-space: nowrap;
+          overflow: hidden;
         }
         
-        /* Collapsed mobile view */
+        .app-nav.collapsed .nav-label {
+          display: none;
+        }
+        
+        /* Mobile responsive */
         @media (max-width: 768px) {
           .app-nav {
             position: fixed;
@@ -119,7 +182,11 @@ export function AppNav() {
             border-top: 1px solid var(--border);
           }
           
-          .nav-brand {
+          .app-nav.collapsed {
+            width: 100%;
+          }
+          
+          .nav-brand, .nav-toggle {
             display: none;
           }
           
@@ -144,10 +211,11 @@ export function AppNav() {
           }
           
           .nav-label {
+            display: block;
             font-size: 0.65rem;
           }
         }
       `}</style>
-    </nav>
+    </>
   );
 }
