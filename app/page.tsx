@@ -1685,30 +1685,6 @@ export default function Home() {
         )}
 
         <div className="hero-actions">
-          <Link href="/personal-tickets" className="primary-link nav-link">
-            Personal Tickets
-          </Link>
-          <Link href="/reports" className="primary-link nav-link">
-            Open Reports
-          </Link>
-          <Link href="/ai-summaries" className="primary-link nav-link">
-            AI Summaries
-          </Link>
-          <Link href="/ops" className="primary-link nav-link">
-            Sync Ops
-          </Link>
-          <Link href="/heimdall" className="primary-link nav-link">
-            Heimdall
-          </Link>
-          <Link href="/slack" className="primary-link nav-link">
-            Slack
-          </Link>
-          <Link href="/wakatime" className="primary-link nav-link">
-            Coding Stats
-          </Link>
-          <Link href="/api-docs" className="primary-link nav-link">
-            API Docs
-          </Link>
           <AiStatusIndicator />
           <span style={{ flex: "1" }} />
           <button className="secondary-button" type="button" onClick={handleManualPull} disabled={manualRefreshBusy}>
