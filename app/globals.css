@@ -510,6 +510,14 @@ button:disabled {
   transform: none;
 }
 
+.nav-toggle {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.5rem;
+  width: 1.5rem;
+  height: 2.5rem !important;
+}
+
 .secondary-button {
   color: var(--ink);
   background: #f0ece2;
