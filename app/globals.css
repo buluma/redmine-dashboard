@@ -6266,6 +6266,7 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  background: #fff;
 }
 
 .chat-empty {
@@ -6378,6 +6379,10 @@ textarea {
   border-radius: 8px;
   font-size: 0.8rem;
   margin: 0.25rem 0;
+}
+
+.chat-input {
+  background: #fff !important;
 }
 
 .chat-input-bar {

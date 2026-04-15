@@ -20,7 +20,12 @@ export function ChatInterface() {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -105,7 +110,7 @@ export function ChatInterface() {
                   {msg.role === "user" ? "You" : msg.role === "assistant" ? "AI" : "System"}
                 </span>
                 <span className="message-time">
-                  {msg.createdAt.toLocaleTimeString()}
+                  {mounted ? msg.createdAt.toLocaleTimeString() : ""}
                 </span>
               </div>
               <div className="message-body">
