@@ -70,7 +70,7 @@ export function AppNav() {
               title={mounted && collapsed ? item.label : undefined}
             >
               <span className="nav-icon">{item.icon}</span>
-              {(!mounted || !collapsed) && <span className="nav-label">{item.label}</span>}
+              {(mounted && !collapsed) && <span className="nav-label">{item.label}</span>}
             </Link>
           ))}
         </div>
