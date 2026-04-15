@@ -171,7 +171,7 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
           position: relative;
           display: inline-flex;
           overflow: visible;
-          z-index: 1001;
+          z-index: 4200;
         }
 
         .ai-status-indicator {
@@ -240,22 +240,24 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
         .ai-status-backdrop {
           position: fixed;
           inset: 0;
-          z-index: 999;
+          z-index: 4201;
         }
 
         .ai-status-dropdown {
           position: absolute;
-          top: 100%;
-          right: 0;
-          margin-top: 0.5rem;
+          top: 0;
+          left: calc(100% + 0.5rem);
+          right: auto;
+          margin-top: 0;
           min-width: 300px;
+          max-width: min(360px, calc(100vw - 1rem));
           max-height: 400px;
           overflow-y: auto;
           background: white;
           border: 1px solid #e5e7eb;
           border-radius: 8px;
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-          z-index: 1000;
+          z-index: 4202 !important;
           padding: 1rem;
           scrollbar-width: thin;
           scrollbar-color: #d1d5db transparent;

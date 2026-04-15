@@ -1683,7 +1683,9 @@ export default function Home() {
             Last sync error: {summarizeSyncError(syncState.lastError)}
           </p>
         )}
+      </header>
 
+      <section className="card home-hero-support">
         <div className="hero-actions">
           <AiStatusIndicator />
           <span style={{ flex: "1" }} />
@@ -1748,11 +1750,11 @@ export default function Home() {
                 ? "No available AI insights. Check again later!"
                 : aiSummaryCount === 1
                   ? "1 AI insight generated"
-                  : `${aiSummaryCount} AI insights generated`}
+                : `${aiSummaryCount} AI insights generated`}
             </p>
           </article>
         </section>
-      </header>
+      </section>
 
       <section className="card filters-panel">
         <div className="filters-grid home-filters-grid">
