@@ -62,7 +62,14 @@ export default function RootLayout({
           .main-content {
             margin-left: 200px;
             min-height: 100vh;
+            transition: margin-left 0.2s;
           }
+          
+          /* When menu collapses, main content adjusts */
+          body:has(.app-nav.collapsed) .main-content {
+            margin-left: 60px;
+          }
+          
           @media (max-width: 768px) {
             .main-content {
               margin-left: 0;
