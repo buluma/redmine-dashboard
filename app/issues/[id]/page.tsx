@@ -1194,8 +1194,6 @@ export default function IssueDetailPage() {
           currentStatus={issue.statusName}
           currentAssignee={issue.assignedToName ?? undefined}
           onStatusChange={async (statusId) => {
-          try {
-            const res = await fetch(`/api/issues/${issueId}/status`, {
             await performAction({
               type: "update_status",
               issueId,

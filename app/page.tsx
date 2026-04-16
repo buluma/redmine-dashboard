@@ -18,6 +18,7 @@ import { ExportButton } from "@/src/components/ExportButton";
 import { ShortcutHelp } from "@/src/components/ShortcutHelp";
 import { NotificationsPanel } from "@/src/components/NotificationsPanel";
 import { FtsSearch } from "@/src/components/FtsSearch";
+import { SavedViewsPanel } from "@/src/components/SavedViewsPanel";
 import { useToast } from "@/src/components/ToastProvider";
 import { IssueCreateModal } from "@/src/components/IssueCreateModal";
 import { ColumnPicker, ColumnKey } from "@/src/components/ColumnPicker";
@@ -143,6 +144,7 @@ type SavedView = {
   priorityFilter: string;
   search: string;
   sort: string;
+  position?: number;
 };
 
 type ActivityEvent = {
@@ -555,6 +557,8 @@ export default function Home() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [favoriteIssueIds, setFavoriteIssueIds] = useState<number[]>([]);
   const [showCharts, setShowCharts] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   const [comment, setComment] = useState("");
   const [hours, setHours] = useState("1");
@@ -604,7 +608,7 @@ export default function Home() {
   );
   const legacyIssueDrawerEnabled = false;
 
-  const priorityOptions = useMemo(() => {
+  const computedPriorityOptions = useMemo(() => {
     const discovered = new Map<number, string>();
     for (const issue of issues) {
       if (typeof issue.priorityId === "number" && issue.priorityId > 0) {
@@ -1568,6 +1572,7 @@ export default function Home() {
       priorityFilter,
       search,
       sort,
+      position: existing?.position ?? savedViews.length,
     };
 
     if (existing) {
@@ -1591,6 +1596,21 @@ export default function Home() {
     }
     if (target) {
       toast.info(`Removed view "${target.name}".`);
+    }
+  }
+
+  async function reorderSavedViews(viewIds: string[]) {
+    try {
+      const res = await fetch("/api/saved-views/reorder", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ viewIds }),
+      });
+      if (!res.ok) {
+        console.error("Failed to reorder saved views:", await res.text());
+      }
+    } catch (err) {
+      console.error("Reorder saved views error:", err);
     }
   }
 
@@ -1850,32 +1870,19 @@ export default function Home() {
           </label>
         </div>
 
-        <div className="saved-view-row">
-          <label className="view-name-field">
-            Save Current Filter Set
-            <input
-              placeholder="e.g. Blocked + High Priority"
-              value={viewDraftName}
-              onChange={(e) => setViewDraftName(e.target.value)}
-            />
-          </label>
-          <button type="button" className="secondary-button" onClick={saveCurrentView}>
-            Save View
-          </button>
-          <div className="chip-row saved-view-chips">
-            {savedViews.length === 0 && <span className="muted">No saved views yet.</span>}
-            {savedViews.map((view) => (
-              <div key={view.id} className={`saved-view-pill ${activeViewId === view.id ? "active" : ""}`}>
-                <button type="button" className="saved-view-apply" onClick={() => applySavedView(view)}>
-                  {view.name}
-                </button>
-                <button type="button" className="saved-view-delete" onClick={() => deleteSavedView(view.id)} aria-label={`Delete ${view.name}`}>
-                  x
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
+        <SavedViewsPanel
+          savedViews={savedViews}
+          activeViewId={activeViewId}
+          onApply={(view) => applySavedView(view as SavedView)}
+          onDelete={deleteSavedView}
+          onReorder={reorderSavedViews}
+          onSave={(name) => {
+            setViewDraftName(name);
+            saveCurrentView();
+          }}
+          viewDraftName={viewDraftName}
+          setViewDraftName={setViewDraftName}
+        />
 
         <div className="home-filters-footer">
           <button
@@ -2942,7 +2949,7 @@ export default function Home() {
           setSelectedIssueId(newIssue.redmineIssueId);
         }}
         statuses={statuses}
-        priorities={priorityOptions}
+        priorities={computedPriorityOptions}
       />
     </main>
   );
