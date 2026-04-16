@@ -7,10 +7,12 @@ It provides fast local reads from a synced cache, with all final state owned by 
 
 Originally built as a Redmine command center, Converge has evolved into a powerful ops platform with:
 
-- **Redmine Integration** — Sync and manage issues with AI-powered summaries
+- **Redmine Integration** — Sync and manage issues with AI-powered summaries and **Issue Creation** support
+- **UI/UX Polish** — Global **Toast Notification system** for instant feedback, and **Column Picker** for custom table views
 - **Full-Text Search** — fast fuzzy search across issues, descriptions, and projects
 - **Slack Integration** — Monitor channels and send notifications
 - **AI Insights** — Issue summarization, semantic search, and interactive chat with Redmine tool-calling support (update status, log time, etc.)
+- **Navigation Shortcuts** — High-efficiency shortcuts (e.g., `Alt+1-4` for panels, `a` for AI search)
 - **RBAC** — Role-based access control (Admin, Editor, User, Viewer)
 - **Audit Logging** — Track user actions, role changes, and internal notes
 - **Mobile Support** — Token-authenticated mobile API (v1)

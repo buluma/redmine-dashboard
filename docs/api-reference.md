@@ -53,6 +53,24 @@ Hybrid mode behavior:
 - Result ordering honors the requested `sort` mode after merge.
 - `total` represents full pagination semantics for hybrid responses (not only current-page merged count).
 
+### POST /api/issues
+Creates a new issue in Redmine and syncs it to the local cache.
+
+Request body:
+```json
+{
+  "subject": "Issue subject",
+  "description": "Issue description",
+  "projectId": 12,
+  "statusId": 1,
+  "priorityId": 4,
+  "dueDate": "2026-05-01",
+  "trackerId": 1
+}
+```
+
+Response includes the synced `Issue` object.
+
 ### GET /api/issues/[id]
 Returns enriched issue detail for the selected issue id (cache-backed), including:
 - `journals`
@@ -157,6 +175,11 @@ Allowed `relationType` values:
 ### DELETE /api/issues/[id]/relations/[relationId]
 Deletes Redmine relation and local cache row.
 
+## Projects (Web)
+
+### GET /api/projects
+Returns a list of active Redmine projects.
+
 ## Time Entry Lifecycle (Web)
 
 ### GET /api/time-entries
@@ -215,6 +238,12 @@ Returns assignable Redmine users (from Redmine API if admin access, else local `
 
 ### GET /api/internal/priorities
 Returns issue priority enumerations (from Redmine API if available, else local `RedmineEnumeration` cache).
+
+### GET /api/internal/enumerations
+Returns structured enumerations from the local catalog.
+
+Query params:
+- `kind`: `issue_priority` | `time_entry_activity` (default: `issue_priority`)
 
 ## AI and Chat APIs
 
