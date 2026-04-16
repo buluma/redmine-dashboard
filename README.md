@@ -10,7 +10,7 @@ Originally built as a Redmine command center, Converge has evolved into a powerf
 - **Redmine Integration** — Sync and manage issues with AI-powered summaries
 - **Full-Text Search** — fast fuzzy search across issues, descriptions, and projects
 - **Slack Integration** — Monitor channels and send notifications
-- **AI Insights** — Issue summarization, semantic search, and chat
+- **AI Insights** — Issue summarization, semantic search, and interactive chat with Redmine tool-calling support (update status, log time, etc.)
 - **RBAC** — Role-based access control (Admin, Editor, User, Viewer)
 - **Audit Logging** — Track user actions, role changes, and internal notes
 - **Mobile Support** — Token-authenticated mobile API (v1)

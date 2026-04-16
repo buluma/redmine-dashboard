@@ -27,7 +27,7 @@ The system works by syncing Redmine issues to a local database, providing fast l
 - **Reports V2:** Enhanced reporting with StatCard components, donut charts, and bar charts.
 - **Webhook Subscriptions:** Configure webhooks that fire on ticket events (created, updated, status_changed, assigned, completed) with HMAC signature verification and delivery logging.
 - **External API:** REST API for n8n/Zapier integrations to search and fetch tickets, with API key authentication.
-- **AI Chat:** Standalone chat interface at `/chat` for general AI assistance with access to system context (issues, sync jobs, errors).
+- **AI Chat:** Standalone chat interface at `/chat` for general AI assistance with access to system context (issues, sync jobs, errors) and **Redmine action support** (tool-calling).
 - **Persistent Sidebar:** Collapsible sidebar navigation across all pages with sticky headers.
 
 ## Security
@@ -56,6 +56,7 @@ Converge syncs and caches the following Redmine entities in Supabase (via Prisma
 | `RedmineEnumeration` | `/enumerations/...` | Issue priorities, time entry activities |
 | `UserRedmineCredential` | user setup | Encrypted API key for Redmine access |
 | `IssueJournal`, `IssueGithubLink` | issue detail / local | Notes and GitHub cross-references |
+| `AiToolDefinition` | `src/lib/ai-tools.ts` | Code-defined Redmine actions exposed to LLM |
 | `AiSummary` | AI generation | Generated issue summaries with confidence scores |
 | `AiChatMessage` | AI chat | Chat history with token usage tracking |
 | `MbuLog`, `ServerSideRulesLog`, `Trace` | Streamline API | Application logs from Streamline |

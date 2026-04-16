@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-04-16 (Today)
+
+### Added
+
+- **AI Tool Calls for the Chat Page** — Enable the AI assistant to perform real Redmine actions with user confirmation.
+  - New service: `src/lib/ai-tools.ts` defining 9 tools (get_issue, search_issues, update_status, log_time, etc.) in OpenAI format.
+  - Confirmation loop: Mutating actions (status, time, comments) require explicit user approval via inline chat cards.
+  - Multi-provider support: Tool-calling parsing implemented for OpenAI, Anthropic, OpenRouter, and Ollama (≥0.5).
+  - New endpoint: `POST /api/chat/execute-tools` to execute confirmed actions and summarize results.
+  - UI: Enhanced `ChatInterface` with action badges, confirmation cards, and `slideIn` animations.
+
 ## 2026-04-14 (Latest)
 
 ### Added

@@ -69,8 +69,8 @@ This document provides a high-level overview of the system architecture for Conv
 
 - **Framework:** Next.js API Routes.
 - **Functionality:**
-  - Handles all communication between the web frontend, mobile clients, and the backend.
   - Exposes endpoints for session management, issue data, mutations, synchronization, time-entry lifecycle operations, attachments, and relations.
+  - **AI Tool Calls:** Provides endpoints for LLM-driven actions (`/api/chat`, `/api/chat/execute-tools`) with a multi-step confirmation loop.
   - Provides a dedicated set of token-authenticated endpoints for mobile clients under `/api/mobile/v1/*`.
   - Enforces rate limiting on mutation endpoints.
 - **Validation:** Zod schemas are used to validate incoming request data.
@@ -103,6 +103,21 @@ This document provides a high-level overview of the system architecture for Conv
 - **Database:** Prisma Client + SQLite
 - **Validation:** Zod
 - **Synchronization:** In-process sync poller with a leader lock
+- **AI Tool Calls:** Multi-step confirmation loop using OpenAI-format function calling
+
+## AI Tool-Calling Architecture
+
+The AI assistant at `/chat` uses a structured tool-calling implementation to perform Redmine actions.
+
+### 1. Tool Engine (`src/lib/ai-tools.ts`)
+Defines Redmine operations (update status, log time, close issue) in OpenAI-compatible JSON Schema. It includes a dispatcher that executes these calls via `RedmineClient` after validation.
+
+### 2. Confirmation Loop
+To prevent accidental data mutation, the system uses a two-step confirmation process:
+1. **Selection:** The LLM proposes actions. The `/api/chat` route identifies "mutating" tools and returns them as `pendingToolCalls`.
+2. **Execution:** The client displays a **Confirmation Card**. Once the user clicks "Confirm", the client calls `/api/chat/execute-tools`, which performs the actual Redmine update and returns a summary.
+
+Read-only tools (search, get issue) are **auto-executed** during the first step to provide immediate context to the model.
 
 ## Production Considerations
 
