@@ -5,17 +5,33 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems = [
+  // Main
   { href: "/", label: "Dashboard", icon: "🏠" },
-  { href: "/heimdall", label: "Heimdall", icon: "🔍" },
-  { href: "/personal-tickets", label: "Personal", icon: "📝" },
-  { href: "/reports", label: "Reports", icon: "📊" },
-  { href: "/ai-summaries", label: "AI", icon: "🤖" },
-  { href: "/chat", label: "Chat", icon: "💭" },
-  { href: "/ops", label: "Ops", icon: "⚙️" },
-  { href: "/slack", label: "Slack", icon: "💬" },
-  { href: "/wakatime", label: "WakaTime", icon: "⏱️" },
-  { href: "/webhooks", label: "Webhooks", icon: "🔗" },
-  { href: "/api-docs", label: "API", icon: "📚" },
+  
+  // Personal
+  { href: "/personal-tickets", label: "Personal Tickets", icon: "📝", group: "Personal" },
+  { href: "/ai-summaries", label: "AI Summaries", icon: "🤖", group: "Personal" },
+  { href: "/chat", label: "AI Chat", icon: "💬", group: "Personal" },
+  
+  // Team Operations
+  { href: "/heimdall", label: "Heimdall Logs", icon: "🔍", group: "Team Ops" },
+  { href: "/slack", label: "Slack Monitor", icon: "💬", group: "Team Ops" },
+  { href: "/wakatime", label: "WakaTime", icon: "⏱️", group: "Team Ops" },
+  
+  // Reporting
+  { href: "/reports", label: "Reports", icon: "📊", group: "Reporting" },
+  
+  // Integrations
+  { href: "/webhooks", label: "Webhooks", icon: "🔗", group: "Integrations", children: [
+    { href: "/webhooks/deliveries", label: "Delivery Logs" },
+  ]},
+  { href: "/api-docs", label: "API Docs", icon: "📚", group: "Integrations" },
+  
+  // System
+  { href: "/ops", label: "System Ops", icon: "⚙️", group: "System", children: [
+    { href: "/ops/audit-logs", label: "Audit Logs" },
+    { href: "/ops/users", label: "User Mgmt" },
+  ]},
 ];
 
 export function AppNav() {
@@ -44,6 +60,14 @@ export function AppNav() {
     }
   }, [collapsed]);
 
+  // Group nav items
+  const groupedItems = navItems.reduce((acc, item) => {
+    const group = item.group || "Other";
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(item);
+    return acc;
+  }, {} as Record<string, typeof navItems>);
+
   return (
     <>
       <nav className={`app-nav ${mounted && collapsed ? "collapsed" : ""}`} aria-label="Primary navigation">
@@ -63,16 +87,21 @@ export function AppNav() {
           </button>
         </div>
         <div className="nav-links">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`nav-link ${pathname === item.href ? "active" : ""}`}
-              title={mounted && collapsed ? item.label : undefined}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {(mounted && !collapsed) && <span className="nav-label">{item.label}</span>}
-            </Link>
+          {Object.entries(groupedItems).map(([group, items]) => (
+            <div key={group} className="nav-group">
+              {mounted && !collapsed && <div className="nav-group-label">{group}</div>}
+              {items.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`nav-link ${pathname === item.href ? "active" : ""}`}
+                  title={mounted && collapsed ? item.label : undefined}
+                >
+                  <span className="nav-icon">{item.icon}</span>
+                  {(mounted && !collapsed) && <span className="nav-label">{item.label}</span>}
+                </Link>
+              ))}
+            </div>
           ))}
         </div>
       </nav>
@@ -158,6 +187,28 @@ export function AppNav() {
           display: flex;
           flex-direction: column;
           gap: 0.25rem;
+        }
+        
+        .nav-group {
+          margin-bottom: 0.5rem;
+        }
+        
+        .nav-group-label {
+          font-size: 0.65rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: var(--text-soft);
+          padding: 0.75rem 1rem 0.375rem;
+          margin-top: 0.5rem;
+        }
+        
+        .nav-group:first-child .nav-group-label {
+          margin-top: 0;
+        }
+        
+        .app-nav.collapsed .nav-group-label {
+          display: none;
         }
         
         .nav-link {
