@@ -1,0 +1,106 @@
+{
+  "common": {
+    "backToDashboard": "Повернутися до панелі",
+    "loading": "Завантаження...",
+    "error": "Помилка",
+    "save": "Зберегти",
+    "cancel": "Скасувати",
+    "delete": "Видалити",
+    "edit": "Редагувати",
+    "create": "Створити",
+    "search": "Пошук",
+    "filter": "Фільтр",
+    "refresh": "Оновити",
+    "reset": "Скинути",
+    "apply": "Застосувати",
+    "close": "Закрити",
+    "confirm": "Підтвердити",
+    "yes": "Так",
+    "no": "Ні"
+  },
+  "nav": {
+    "dashboard": "Панель",
+    "heimdall": "Журнали Heimdall",
+    "personalTickets": "Особисті тикети",
+    "reports": "Звіти",
+    "aiSummaries": "Підсумки ІІ",
+    "chat": "Чат ІІ",
+    "ops": "Системні операції",
+    "slack": "Slack",
+    "wakatime": "WakaTime",
+    "webhooks": "Вебхуки",
+    "apiDocs": "API-документація"
+  },
+  "dashboard": {
+    "title": "Панель",
+    "openIssues": "Відкриті тикети",
+    "closedIssues": "Закриті тикети",
+    "inProgress": "В роботі",
+    "recentActivity": "Недавня активність",
+    "noResults": "Результатів не знайдено",
+    "forceRefresh": "Примусове оновлення",
+    "resetFilters": "Скинути фільтри",
+    "shortcuts": "Ярлики",
+    "lastSync": "Остання синхронізація"
+  },
+  "issues": {
+    "subject": "Тема",
+    "description": "Опис",
+    "status": "Статус",
+    "priority": "Пріоритет",
+    "assignee": "Виконавець",
+    "dueDate": "Термін",
+    "startDate": "Дата початку",
+    "estimatedHours": "Оціночні години",
+    "spentHours": "Витрачені години",
+    "project": "Проект",
+    "tracker": "Тип",
+    "author": "Автор",
+    "created": "Створено",
+    "updated": "Оновлено"
+  },
+  "status": {
+    "new": "Новий",
+    "inProgress": "В роботі",
+    "resolved": "Вирішено",
+    "feedback": "Відгук",
+    "closed": "Закритий",
+    "rejected": "Відхилено"
+  },
+  "priority": {
+    "low": "Низький",
+    "normal": "Звичайний",
+    "high": "Високий",
+    "urgent": "Терміновий",
+    "immediate": "Негайний"
+  },
+  "ai": {
+    "summarize": "Створити підсумок",
+    "summarizing": "Створення підсумку...",
+    "summarized": "Підсумок створено",
+    "noActivity": "Немає активності ІІ",
+    "askAI": "Запитати ІІ",
+    "analyzing": "Аналіз тикетів...",
+    "staleIssues": "Застарілі тикети"
+  },
+  "sync": {
+    "syncing": "Синхронізація...",
+    "synced": "Синхронізовано",
+    "failed": "Помилка",
+    "noChanges": "Немає змін",
+    "pulling": "Отримання з Redmine...",
+    "pushing": "Надсилання до Redmine..."
+  },
+  "auth": {
+    "login": "Вхід",
+    "logout": "Вихід",
+    "unauthorized": "Не авторизовано",
+    "sessionExpired": "Сесія закінчилась"
+  },
+  "errors": {
+    "notFound": "Не знайдено",
+    "serverError": "Помилка сервера",
+    "networkError": "Помилка мережі",
+    "rateLimited": "Перевищено ліміт"
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "common": {
+    "backToDashboard": "Keer terug na Dashboard",
+    "loading": "Laai...",
+    "error": "Fout",
+    "save": "Stoor",
+    "cancel": "Kanselleer",
+    "delete": "Verwyder",
+    "edit": "Wysig",
+    "create": "Skep",
+    "search": "Soek",
+    "filter": "Filtreer",
+    "refresh": "Verfris",
+    "reset": "Herstel",
+    "apply": "Pas toe",
+    "close": "Sluit",
+    "confirm": "Bevestig",
+    "yes": "Ja",
+    "no": "Nee"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "heimdall": "Heimdall-logs",
+    "personalTickets": "Persoonlike kaartjies",
+    "reports": "Verslae",
+    "aiSummaries": "KI-opsommings",
+    "chat": "KI-klets",
+    "ops": "Stelsel-ops",
+    "slack": "Slack",
+    "wakatime": "WakaTime",
+    "webhooks": "Webhooks",
+    "apiDocs": "API-dokumentasie"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "openIssues": "Oop kaartjies",
+    "closedIssues": "Geslote kaartjies",
+    "inProgress": "In behandeling",
+    "recentActivity": "Onlangse aktiwiteit",
+    "noResults": "Geen resultate nie",
+    "forceRefresh": "Verfris dwarsdeur",
+    "resetFilters": "Herstel filters",
+    "shortcuts": "Snelkoppies",
+    "lastSync": "Laaste sinkronisering"
+  },
+  "issues": {
+    "subject": "Onderwerp",
+    "description": "Beskrywing",
+    "status": "Status",
+    "priority": "Prioriteit",
+    "assignee": "Toegewys",
+    "dueDate": "Vervaldatum",
+    "startDate": "Begindatum",
+    "estimatedHours": "Geskatte ure",
+    "spentHours": "Bestede ure",
+    "project": "Projek",
+    "tracker": "Tipe",
+    "author": "Skrywer",
+    "created": "Geskep",
+    "updated": "Opgedateer"
+  },
+  "status": {
+    "new": "Nuut",
+    "inProgress": "In behandeling",
+    "resolved": "Opgelos",
+    "feedback": "Terugvoer",
+    "closed": "Gesluit",
+    "rejected": "Verwerp"
+  },
+  "priority": {
+    "low": "Laag",
+    "normal": "Normaal",
+    "high": "Hoog",
+    "urgent": "Dringend",
+    "immediate": "Onmiddellik"
+  },
+  "ai": {
+    "summarize": "Vat saam",
+    "summarizing": "Saamvat...",
+    "summarized": "Saamgevat",
+    "noActivity": "Geen KI-aktiwiteit nie",
+    "askAI": "Vra KI",
+    "analyzing": "Ontleding kaartjies...",
+    "staleIssues": "Ou kaartjies"
+  },
+  "sync": {
+    "syncing": "Sinkroniseer...",
+    "synced": "Gesinkroniseer",
+    "failed": "Misluk",
+    "noChanges": "Geen veranderings nie",
+    "pulling": "Trek van Redmine...",
+    "pushing": "Stoor na Redmine..."
+  },
+  "auth": {
+    "login": "Teken in",
+    "logout": "Teken uit",
+    "unauthorized": "Ongemagtig",
+    "sessionExpired": "Sessie verstryk"
+  },
+  "errors": {
+    "notFound": "Nie gevind nie",
+    "serverError": "Bediener fout",
+    "networkError": "Netwerk fout",
+    "rateLimited": "Koers beperk"
+  }
+}
