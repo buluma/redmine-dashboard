@@ -542,13 +542,54 @@ export class LLMProviderManager {
   }
 
   async generateEmbeddings(texts: string[]): Promise<LLMEmbeddingResponse> {
-    // Currently only Ollama supports embeddings
-    if (this.provider !== "ollama") {
-      // Fallback to Ollama for embeddings
-      const result = await this.ollama.generateEmbeddings(texts);
-      return { embeddings: result.embeddings, model: result.model, provider: "ollama" };
+    // Try to use the configured provider first
+    if (this.provider === "openai" || this.provider === "openrouter") {
+      try {
+        const apiKey = this.provider === "openai" ? env.openaiApiKey : env.openrouterApiKey;
+        if (apiKey) {
+          const model = this.provider === "openai" 
+            ? "text-embedding-3-small" 
+            : env.openrouterChatModel.includes("embed") 
+              ? env.openrouterChatModel 
+              : "openai/text-embedding-3-small";
+          
+          const response = await fetch(
+            this.provider === "openai" 
+              ? "https://api.openai.com/v1/embeddings" 
+              : "https://openrouter.ai/api/v1/embeddings",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${apiKey}`,
+                ...(this.provider === "openrouter" ? {
+                  "HTTP-Referer": "https://converge.local",
+                  "X-Title": "Converge"
+                } : {}),
+              },
+              body: JSON.stringify({
+                model,
+                input: texts,
+              }),
+            }
+          );
+          
+          if (response.ok) {
+            const data = await response.json();
+            const embeddings = data.data.map((item: { embedding: number[] }) => item.embedding);
+            return {
+              embeddings,
+              model: data.model || model,
+              provider: this.provider,
+            };
+          }
+        }
+      } catch (error) {
+        console.warn(`${this.provider} embeddings failed, falling back to Ollama:`, error);
+      }
     }
-
+    
+    // Fallback to Ollama for embeddings
     const result = await this.ollama.generateEmbeddings(texts);
     return { embeddings: result.embeddings, model: result.model, provider: "ollama" };
   }
