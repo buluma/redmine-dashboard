@@ -163,7 +163,7 @@ export async function GET(request: Request) {
           };
         }
         return {
-          assignedToName: { equals: name, mode: "insensitive" },
+          assignedToName: { equals: name },
         };
       });
     }

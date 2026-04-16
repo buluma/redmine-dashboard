@@ -58,3 +58,4 @@ debugging/logs/*.json
 /.openclaude
 /.gemini-tasks
 /.claude
+/backups

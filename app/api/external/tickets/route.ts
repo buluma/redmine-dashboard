@@ -102,12 +102,12 @@ export async function GET(request: NextRequest) {
       const issues = await prisma.issue.findMany({
         where: {
           OR: [
-            { subject: { contains: search, mode: "insensitive" } },
-            { description: { contains: search, mode: "insensitive" } },
+            { subject: { contains: search } },
+            { description: { contains: search } },
           ],
-          ...(status && { statusName: { equals: status, mode: "insensitive" } }),
-          ...(project && { projectName: { contains: project, mode: "insensitive" } }),
-          ...(assignee && { assignedToName: { contains: assignee, mode: "insensitive" } }),
+          ...(status && { statusName: { equals: status } }),
+          ...(project && { projectName: { contains: project } }),
+          ...(assignee && { assignedToName: { contains: assignee } }),
         },
         orderBy: { updatedAt: "desc" },
         take: limit,
@@ -117,8 +117,8 @@ export async function GET(request: NextRequest) {
       const total = await prisma.issue.count({
         where: {
           OR: [
-            { subject: { contains: search, mode: "insensitive" } },
-            { description: { contains: search, mode: "insensitive" } },
+            { subject: { contains: search } },
+            { description: { contains: search } },
           ],
         },
       });
@@ -135,13 +135,13 @@ export async function GET(request: NextRequest) {
     const where: any = {};
     
     if (status) {
-      where.statusName = { equals: status, mode: "insensitive" };
+      where.statusName = { equals: status };
     }
     if (project) {
-      where.projectName = { contains: project, mode: "insensitive" };
+      where.projectName = { contains: project };
     }
     if (assignee) {
-      where.assignedToName = { contains: assignee, mode: "insensitive" };
+      where.assignedToName = { contains: assignee };
     }
 
     const [issues, total] = await Promise.all([
