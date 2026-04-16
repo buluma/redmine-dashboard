@@ -18,7 +18,7 @@
 - [x] **Legacy drawer dead code** — Hidden behind legacyIssueDrawerEnabled=false flag - DONE (can remove after new UI stable)
 - [x] **Embeddings provider gap** — Added OpenAI/OpenRouter embedding support - DONE
 - [x] **`globals.css` size** — Started extracting to dashboard.css - IN PROGRESS
-- [ ] **`swagger.ts` size** — Not implemented (would need Zod schema auto-generation)
+- [x] **`swagger.ts` size** — Added scripts/generate-openapi.js to auto-generate from routes - DONE
 
 ### 🔒 Security / Auth
 - [x] **Add CSRF protection** — mutable API routes (POST/DELETE) currently rely only on session cookies; add a CSRF token header check or SameSite=Strict enforcement audit. - DONE
