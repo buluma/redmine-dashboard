@@ -49,7 +49,7 @@ export function AuditLogsView({ auditLogs, stats }: AuditLogsViewProps) {
         <article className="card">
           <h2>{t("ops.activity24h")}</h2>
           <div className="ops-kv">
-            <p><strong>{t("common.today") || "Today"}:</strong> {t("ops.todayEvents", { count: stats.today })}</p>
+            <p><strong>Today:</strong> {t("ops.todayEvents", { count: stats.today })}</p>
             <p><strong>{t("ops.creates")}:</strong> {stats.creates}</p>
             <p><strong>{t("ops.updates")}:</strong> {stats.updates}</p>
             <p><strong>{t("ops.deletes")}:</strong> {stats.deletes}</p>
@@ -59,7 +59,7 @@ export function AuditLogsView({ auditLogs, stats }: AuditLogsViewProps) {
         <article className="card">
           <h2>{t("ops.overview")}</h2>
           <div className="ops-kv">
-            <p><strong>{t("ops.showing") || "Showing"}:</strong> {t("ops.todayEvents", { count: auditLogs.length })}</p>
+            <p><strong>Showing:</strong> {t("ops.todayEvents", { count: auditLogs.length })}</p>
             <p><strong>{t("ops.uniqueUsers")}:</strong> {stats.uniqueUsers}</p>
           </div>
         </article>
@@ -76,9 +76,9 @@ export function AuditLogsView({ auditLogs, stats }: AuditLogsViewProps) {
               <tr>
                 <th>{t("ops.colTimestamp")}</th>
                 <th>{t("ops.colUser")}</th>
-                <th>{t("ops.colAction")} || {t("common.action")}</th>
+                <th>{t("common.action")}</th>
                 <th>{t("ops.colEntity")}</th>
-                <th>{t("ops.colJobId") || "ID"}</th>
+                <th>ID</th>
                 <th>{t("ops.colIpAddress")}</th>
               </tr>
             </thead>
