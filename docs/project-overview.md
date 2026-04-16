@@ -29,6 +29,23 @@ The system works by syncing Redmine issues to a local database, providing fast l
 - **External API:** REST API for n8n/Zapier integrations to search and fetch tickets, with API key authentication.
 - **AI Chat:** Standalone chat interface at `/chat` for general AI assistance with access to system context (issues, sync jobs, errors) and **Redmine action support** (tool-calling).
 - **Persistent Sidebar:** Collapsible sidebar navigation across all pages with sticky headers.
+- **Webhook Delivery Logs:** Admin UI to view webhook delivery history, retry failed deliveries, and inspect response bodies.
+- **Analytics Reports:** Time-tracking export (CSV), burndown charts, custom report builder with persistence.
+- **Tailscale Aperture:** Private LLM gateway support for internal model access without exposing API keys.
+
+## LLM Providers
+
+Converge supports multiple LLM backends for AI features:
+
+| Provider | Description | Use Case |
+|----------|-------------|----------|
+| **Ollama** | Local models running on localhost | Privacy, no API costs |
+| **Tailscale Aperture** | Private gateway via Tailscale network | Internal org models |
+| **OpenAI** | GPT-4, GPT-4o | Most capable models |
+| **Anthropic** | Claude models | Best reasoning |
+| **OpenRouter** | Aggregated models | Variety, fallback |
+
+Configuration via `LLM_PROVIDER` environment variable. See [aperture.md](aperture.md) for Tailscale setup.
 
 ## Security
 

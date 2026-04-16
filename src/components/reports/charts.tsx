@@ -482,3 +482,187 @@ export function StackedBarChart({
     </div>
   );
 }
+
+// ─── Burndown Chart ─────────────────────────────────────────────────────
+
+interface BurndownPoint {
+  date: string;
+  remaining: number;
+  ideal: number;
+}
+
+export function BurndownChart({
+  points,
+  totalPoints,
+  startDate,
+  endDate,
+}: {
+  points: BurndownPoint[];
+  totalPoints: number;
+  startDate: string;
+  endDate: string;
+}) {
+  if (points.length === 0) {
+    return (
+      <div className="burndown-empty">
+        <p className="muted">No sprint data available</p>
+      </div>
+    );
+  }
+
+  const width = 500;
+  const height = 200;
+  const pad = 30;
+  const chartW = width - pad * 2;
+  const chartH = height - pad * 2;
+  
+  const maxVal = Math.max(totalPoints, 1);
+  const dayCount = points.length;
+  
+  // Calculate ideal slope
+  const idealPoints = points.map((_, i) => ({
+    x: pad + (i / Math.max(1, dayCount - 1)) * chartW,
+    y: pad + chartH - (totalPoints - (totalPoints / dayCount) * i) / maxVal * chartH,
+  }));
+  
+  // Calculate actual remaining line
+  const actualCoords = points.map((p, i) => ({
+    x: pad + (i / Math.max(1, dayCount - 1)) * chartW,
+    y: pad + chartH - (p.remaining / maxVal) * chartH,
+    date: p.date,
+    remaining: p.remaining,
+  }));
+  
+  const idealLine = idealPoints.map(p => `${p.x},${p.y}`).join(" ");
+  const actualLine = actualCoords.map(p => `${p.x},${p.y}`).join(" ");
+  
+  return (
+    <div className="burndown-chart">
+      <svg viewBox={`0 0 ${width} ${height}`} className="burndown-svg">
+        {/* Grid lines */}
+        {[0, 0.25, 0.5, 0.75, 1].map((t, i) => (
+          <line
+            key={i}
+            x1={pad}
+            y1={pad + chartH * t}
+            x2={width - pad}
+            y2={pad + chartH * t}
+            stroke="var(--line)"
+            strokeDasharray="4,4"
+          />
+        ))}
+        
+        {/* Y-axis labels */}
+        {[0, 0.25, 0.5, 0.75, 1].map((t, i) => (
+          <text
+            key={i}
+            x={pad - 5}
+            y={pad + chartH * t + 4}
+            textAnchor="end"
+            fontSize="10"
+            fill="var(--text-soft)"
+          >
+            {Math.round(maxVal * (1 - t))}
+          </text>
+        ))}
+        
+        {/* Ideal line */}
+        <polyline
+          points={idealLine}
+          fill="none"
+          stroke="var(--text-soft)"
+          strokeWidth={2}
+          strokeDasharray="6,4"
+          opacity={0.5}
+        />
+        
+        {/* Actual remaining line */}
+        <polyline
+          points={actualLine}
+          fill="none"
+          stroke="var(--accent)"
+          strokeWidth={3}
+        />
+        
+        {/* Data points */}
+        {actualCoords.map((p, i) => (
+          <g key={i}>
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r={4}
+              fill="var(--accent)"
+            />
+            <title>{`${p.date}: ${p.remaining} remaining`}</title>
+          </g>
+        ))}
+        
+        {/* X-axis labels (first, middle, last) */}
+        {points.length > 0 && (
+          <>
+            <text x={pad} y={height - 5} fontSize="10" fill="var(--text-soft)">
+              {points[0].date}
+            </text>
+            <text x={width / 2} y={height - 5} fontSize="10" fill="var(--text-soft)" textAnchor="middle">
+              {points[Math.floor(points.length / 2)]?.date}
+            </text>
+            <text x={width - pad} y={height - 5} fontSize="10" fill="var(--text-soft)" textAnchor="end">
+              {points[points.length - 1]?.date}
+            </text>
+          </>
+        )}
+      </svg>
+      
+      <div className="burndown-legend">
+        <span className="legend-item">
+          <span className="legend-line ideal"></span>
+          Ideal
+        </span>
+        <span className="legend-item">
+          <span className="legend-line actual"></span>
+          Remaining
+        </span>
+      </div>
+      
+      <style>{`
+        .burndown-chart {
+          padding: 1rem;
+        }
+        .burndown-svg {
+          width: 100%;
+          height: auto;
+        }
+        .burndown-legend {
+          display: flex;
+          gap: 1.5rem;
+          justify-content: center;
+          margin-top: 0.5rem;
+        }
+        .legend-item {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.8rem;
+          color: var(--text-soft);
+        }
+        .legend-line {
+          width: 20px;
+          height: 3px;
+          display: inline-block;
+        }
+        .legend-line.ideal {
+          background: var(--text-soft);
+          opacity: 0.5;
+          border-style: dashed;
+        }
+        .legend-line.actual {
+          background: var(--accent);
+        }
+        .burndown-empty {
+          text-align: center;
+          padding: 2rem;
+        }
+      `}</style>
+    </div>
+  );
+}

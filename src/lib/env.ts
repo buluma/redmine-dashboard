@@ -93,6 +93,10 @@ export const env = {
   openrouterApiKey: process.env.OPENROUTER_API_KEY,
   openrouterChatModel: process.env.OPENROUTER_CHAT_MODEL || "anthropic/claude-3.5-haiku",
   openrouterChatModelFallback: process.env.OPENROUTER_CHAT_MODEL_FALLBACK || "openrouter/free",
+  // Tailscale Aperture Configuration (private LLM gateway)
+  apertureBaseUrl: process.env.APERTURE_BASE_URL || "http://100.108.133.39",
+  apertureApiKey: process.env.APERTURE_API_KEY || "none",  // Usually not required for internal Tailscale
+  apertureChatModel: process.env.APERTURE_CHAT_MODEL || "google/gemma-4-26b-a4b-it:free",
   // Slack Configuration
   slackBotToken: process.env.SLACK_BOT_TOKEN,
   slackDefaultChannelId: process.env.SLACK_DEFAULT_CHANNEL_ID,

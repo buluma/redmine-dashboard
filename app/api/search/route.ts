@@ -18,7 +18,12 @@ interface SearchResultRow {
   doneRatio: number | null;
   source: string;
   rank: number;
+  updatedOnRemote: Date | null;
 }
+
+// Recency boost: issues updated in last 7 days get a boost
+const RECENCY_DAYS = 7;
+const OPEN_STATUSES = ['New', 'In Progress', 'Feedback', 'Assigned'];
 
 export async function GET(request: Request) {
   const userId = await getSessionUserId();
@@ -41,10 +46,15 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Use Prisma's raw query for PostgreSQL full-text search
-    // Search across subject, description, projectName, assignedToName, authorName
     const searchTerms = query.split(/\s+/).filter((t) => t.length > 0);
+    const recencyCutoff = new Date(Date.now() - RECENCY_DAYS * 24 * 60 * 60 * 1000);
     
+    // Full-text search with smarter ranking:
+    // 1. Base FTS rank
+    // 2. Boost exact subject matches
+    // 3. Boost project name matches
+    // 4. Boost recent issues
+    // 5. Boost open statuses
     const results = await prisma.$queryRaw<SearchResultRow[]>`
       SELECT 
         i.id,
@@ -59,7 +69,20 @@ export async function GET(request: Request) {
         i."dueDate",
         i."doneRatio",
         i.source,
-        ts_rank(to_tsvector('english', COALESCE(i.subject, '') || ' ' || COALESCE(i.description, '') || ' ' || COALESCE(i."projectName", '') || ' ' || COALESCE(i."assignedToName", '') || ' ' || COALESCE(i."authorName", '')), plainto_tsquery('english', ${query})) as rank
+        i."updatedOnRemote",
+        (
+          ts_rank(to_tsvector('english', 
+            COALESCE(i.subject, '') || ' ' || 
+            COALESCE(i.description, '') || ' ' || 
+            COALESCE(i."projectName", '') || ' ' || 
+            COALESCE(i."assignedToName", '') || ' ' || 
+            COALESCE(i."authorName", '')
+          ), plainto_tsquery('english', ${query})) 
+          + CASE WHEN i.subject ILIKE ${`%${query}%`} THEN 0.5 ELSE 0 END
+          + CASE WHEN i."projectName" ILIKE ${`%${query}%`} THEN 0.3 ELSE 0 END
+          + CASE WHEN i."updatedOnRemote" > ${recencyCutoff} THEN 0.2 ELSE 0 END
+          + CASE WHEN i."statusName" IN (${OPEN_STATUSES[0]}, ${OPEN_STATUSES[1]}, ${OPEN_STATUSES[2]}, ${OPEN_STATUSES[3]}) THEN 0.1 ELSE 0 END
+        ) as rank
       FROM "Issue" i
       WHERE i."userId" = ${userId}
         AND (
@@ -114,6 +137,9 @@ export async function GET(request: Request) {
         limit,
         offset,
         hasMore: offset + results.length < total,
+      },
+      ranking: {
+        features: ['fts', 'recency', 'status', 'field-match'],
       },
     });
   } catch (error) {

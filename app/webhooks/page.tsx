@@ -60,6 +60,9 @@ export default async function WebhooksPage() {
             </p>
           </div>
           <div className="hero-actions">
+            <a href="/webhooks/deliveries" className="secondary-button">
+              📋 Delivery Logs
+            </a>
           </div>
         </div>
       </header>

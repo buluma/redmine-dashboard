@@ -363,6 +363,33 @@ export class RedmineClient {
     return this.request<RedmineIssueDetail>(`/issues/${issueId}.json${query}`);
   }
 
+  async createIssue(input: {
+    subject: string;
+    description?: string;
+    projectId?: number;
+    priorityId?: number;
+    assignedToId?: number;
+    dueDate?: string;
+  }): Promise<{ id: number; url: string }> {
+    const response = await this.request<{ issue: { id: number } }>("/issues.json", {
+      method: "POST",
+      body: JSON.stringify({
+        issue: {
+          subject: input.subject,
+          description: input.description,
+          project_id: input.projectId,
+          priority_id: input.priorityId,
+          assigned_to_id: input.assignedToId,
+          due_date: input.dueDate,
+        },
+      }),
+    });
+    return {
+      id: response.issue.id,
+      url: `${this.normalizedBaseUrl}/issues/${response.issue.id}`,
+    };
+  }
+
   async uploadFile(input: {
     filename: string;
     contentType?: string;

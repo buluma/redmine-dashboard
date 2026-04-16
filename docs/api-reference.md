@@ -345,3 +345,136 @@ Request body:
 
 ### GET /api/slack/notify
 Returns Slack notifier configuration status.
+
+### POST /api/slack/create-issue
+Creates a Redmine issue from Slack message content using AI.
+
+Request body:
+```json
+{
+  "messageText": "The Slack message text to analyze",
+  "projectName": "My Project",
+  "priorityName": "High",
+  "assigneeName": "John Doe",
+  "dueDate": "2026-05-01"
+}
+```
+
+### GET /api/slack/create-issue
+Analyzes Slack messages for potential Redmine issues.
+
+Query params:
+- `channelId`: Slack channel (default: from env)
+- `threadTs`: specific thread
+- `limit`: messages to analyze (default 20)
+
+## Search API
+
+### GET /api/search
+Full-text search with smart ranking.
+
+Query params:
+- `q`: search query (required, min 2 chars)
+- `limit`: max results (default 20)
+- `offset`: pagination
+- `boost`: enable smart ranking (default true)
+
+Features: field boosts, recency, status weighting
+
+## AI APIs
+
+### GET /api/ai/stream
+Streaming chat via SSE.
+
+Query params:
+- `message`: text to send
+
+### GET/POST /api/ai/summarize-stale
+Bulk AI summarization of stale issues.
+
+## Saved Views API
+
+### GET/POST /api/saved-views
+CRUD for saved filter views.
+
+### PUT/DELETE /api/saved-views/[id]
+Update/delete saved view.
+
+## Reports API
+
+### GET /api/reports/time-export
+Exports time entries with project breakdown.
+
+Query params:
+- `startDate`: ISO date string (default: 30 days ago)
+- `endDate`: ISO date string (default: today)
+- `format`: `"csv" | "json"` (default: json)
+
+Response (JSON):
+```json
+{
+  "period": { "start": "...", "end": "..." },
+  "summary": { "totalHours": 100, "totalEntries": 50, "uniqueIssues": 20, "totalWakaHours": 40 },
+  "byProject": [
+    { "name": "Project A", "hours": 50, "entries": 25, "issues": 10, "wakaHours": 20 }
+  ],
+  "entries": [...]
+}
+```
+
+### GET /api/reports/burndown
+Returns burndown chart data for a date range (simulates sprint burndown).
+
+Query params:
+- `startDate`: ISO date string (default: 14 days ago)
+- `endDate`: ISO date string (default: today)
+- `projectId`: filter by project (optional)
+
+Response:
+```json
+{
+  "sprint": { "startDate": "...", "endDate": "...", "totalPoints": 50, "days": 14 },
+  "points": [
+    { "date": "2026-04-01", "remaining": 50, "ideal": 46, "closed": 0 },
+    { "date": "2026-04-02", "remaining": 45, "ideal": 42, "closed": 5 }
+  ],
+  "summary": { "totalIssues": 50, "totalClosed": 45, "remaining": 5, "velocity": 3.2, "burnRate": 90 }
+}
+```
+
+### GET /api/reports/custom
+Returns saved custom reports for current user.
+
+### POST /api/reports/custom
+Creates a new custom report.
+
+Request body:
+```json
+{
+  "type": "burndown",
+  "name": "Q2 Sprint 1",
+  "config": { "sprintLength": 14, "projectId": "My Project" }
+}
+```
+
+### GET /api/reports/custom/[id]
+Returns a single custom report.
+
+### PUT /api/reports/custom/[id]
+Updates a custom report.
+
+### DELETE /api/reports/custom/[id]
+Deletes a custom report.
+
+## Webhook APIs
+
+### GET /api/webhooks/deliveries
+Returns webhook delivery history (ADMIN/EDITOR only).
+
+Query params:
+- `subscriptionId`: filter by subscription
+- `limit`: number of results (default 50, max 100)
+- `offset`: pagination offset
+
+### POST /api/webhooks/deliveries/[id]/retry
+Retries a failed webhook delivery (ADMIN/EDITOR only).

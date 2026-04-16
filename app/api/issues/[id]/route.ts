@@ -65,7 +65,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
             timeEntries: { orderBy: { spentOn: "desc" }, take: 50 },
             attachments: { orderBy: { createdOnRemote: "desc" }, take: 50 },
             relations: { orderBy: { createdAt: "desc" }, take: 50 },
-            aiSummaries: { orderBy: { createdAt: "desc" }, take: 10 },
+            aiSummaries: { orderBy: { generatedAt: "desc" }, take: 10 },
           },
         });
       }
@@ -79,7 +79,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
           timeEntries: { orderBy: { spentOn: "desc" }, take: 50 },
           attachments: { orderBy: { createdOnRemote: "desc" }, take: 50 },
           relations: { orderBy: { createdAt: "desc" }, take: 50 },
-          aiSummaries: { orderBy: { createdAt: "desc" }, take: 10 },
+          aiSummaries: { orderBy: { generatedAt: "desc" }, take: 10 },
         },
       });
     };

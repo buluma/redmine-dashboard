@@ -17,6 +17,9 @@ Originally built as a Redmine command center, Converge has evolved into a powerf
 - **PWA / Offline** — Installable app with IndexedDB cache, offline viewing, and queued sync
 - **Docker Production** — Multi-stage build, healthchecks, backup/restore scripts
 - **WakaTime Integration** — Coding time tracking with stats, charts, insights, goals, and daily heartbeat data
+- **Tailscale Aperture** — Private LLM gateway via Tailscale network for internal AI access
+- **Analytics Reports** — Time export, burndown charts, custom report builder
+- **Webhook Delivery Logs** — Admin UI for webhook delivery history and retry
 
 ## Documentation
 

@@ -143,13 +143,18 @@ export async function POST(request: Request) {
     // Save the incoming user message
     const lastUserMsg = messages[messages.length - 1];
     if (lastUserMsg.role === "user") {
-      await prisma.aiChatMessage.create({
-        data: {
-          issueId: issue.id,
-          role: "user",
-          content: lastUserMsg.content,
-        },
-      });
+      // We need userId - get from user or issue
+      const userForChat = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+      if (userForChat) {
+        await prisma.aiChatMessage.create({
+          data: {
+            userId: userForChat.id,
+            issueId: issue.id,
+            role: "user",
+            content: lastUserMsg.content,
+          },
+        });
+      }
     }
 
     const issueContext = await buildIssueContext(userId, redmineIssueId);
@@ -196,20 +201,25 @@ export async function POST(request: Request) {
     const usage = result.usage;
 
     // Save the assistant response with performance metrics
-    await prisma.aiChatMessage.create({
-      data: {
-        issueId: issue.id,
-        role: "assistant",
-        content: result.content,
-        model: result.model,
-        totalDuration: toBigInt(metrics?.totalDuration ?? null),
-        loadDuration: toBigInt(metrics?.loadDuration ?? null),
-        promptEvalCount: metrics?.promptEvalCount ?? null,
-        promptEvalDuration: toBigInt(metrics?.promptEvalDuration ?? null),
-        evalCount: metrics?.evalCount ?? usage?.totalTokens ?? null,
-        evalDuration: toBigInt(metrics?.evalDuration ?? null),
-      },
-    });
+    // We need userId - get from user or issue
+    const userForChat2 = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+    if (userForChat2) {
+      await prisma.aiChatMessage.create({
+        data: {
+          userId: userForChat2.id,
+          issueId: issue.id,
+          role: "assistant",
+          content: result.content,
+          model: result.model,
+          totalDuration: toBigInt(metrics?.totalDuration ?? null),
+          loadDuration: toBigInt(metrics?.loadDuration ?? null),
+          promptEvalCount: metrics?.promptEvalCount ?? null,
+          promptEvalDuration: toBigInt(metrics?.promptEvalDuration ?? null),
+          evalCount: metrics?.evalCount ?? usage?.totalTokens ?? null,
+          evalDuration: toBigInt(metrics?.evalDuration ?? null),
+        },
+      });
+    }
 
     // Log success
     const tokenCount = metrics?.evalCount ?? usage?.totalTokens ?? 0;
@@ -268,7 +278,7 @@ export async function GET(request: Request) {
     }
 
     const history = await prisma.aiChatMessage.findMany({
-      where: { issueId: issue.id },
+      where: { issueId: issue.id, userId: user.id },
       orderBy: { createdAt: "asc" },
       select: {
         role: true,
@@ -326,7 +336,7 @@ export async function DELETE(request: Request) {
     }
 
     await prisma.aiChatMessage.deleteMany({
-      where: { issueId: issue.id },
+      where: { issueId: issue.id, userId: user.id },
     });
 
     return Response.json({ ok: true });
