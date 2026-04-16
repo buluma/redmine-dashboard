@@ -7,8 +7,10 @@ import { SyncQueueInitializer } from "@/src/components/SyncQueueInitializer";
 import { ServiceWorkerRegistrar } from "@/src/components/ServiceWorkerRegistrar";
 import { AppNav } from "@/src/components/AppNav";
 import { ToastProvider } from "@/src/components/ToastProvider";
-import { I18nProvider } from "@/src/components/I18nProvider";
+import { I18nProvider, useI18n } from "@/src/components/I18nProvider";
 import { LocaleIndicator } from "@/src/components/LocaleIndicator";
+import React, { useContext } from 'react';
+import { LocaleSwitcherTest } from '@/src/components/LocaleSwitcherTest';
 
 const sora = Sora({
   variable: "--font-geist-sans",

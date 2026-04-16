@@ -212,7 +212,7 @@ function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: { c
     );
   }
 
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   return (
     <div className="markdown">
@@ -278,6 +278,57 @@ function formatDisplayDate(dateLike: string | null, t: (key: string, data?: any)
 
 function issueActivityAt(issue: Pick<Issue, "lastActivityAt" | "updatedOnRemote">): string {
   return issue.lastActivityAt ?? issue.updatedOnRemote;
+}
+
+function normalizeLookup(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, "");
+}
+
+function translateStatusLabel(raw: string | null | undefined, t: (key: string, variables?: Record<string, string | number> | string, fallback?: string) => string): string {
+  if (!raw) return t("issues.notSet");
+  const normalized = normalizeLookup(raw);
+  const map: Record<string, string> = {
+    new: "status.new",
+    inprogress: "status.inProgress",
+    progress: "status.inProgress",
+    resolved: "status.resolved",
+    feedback: "status.feedback",
+    closed: "status.closed",
+    rejected: "status.rejected",
+  };
+  const key = map[normalized];
+  return key ? t(key, raw) : raw;
+}
+
+function translatePriorityLabel(raw: string | null | undefined, t: (key: string, variables?: Record<string, string | number> | string, fallback?: string) => string): string {
+  if (!raw) return t("issues.empty.noPriority");
+  const normalized = normalizeLookup(raw);
+  const map: Record<string, string> = {
+    low: "priority.low",
+    normal: "priority.normal",
+    high: "priority.high",
+    urgent: "priority.urgent",
+    immediate: "priority.immediate",
+  };
+  const key = map[normalized];
+  return key ? t(key, raw) : raw;
+}
+
+function translateTrackerLabel(raw: string | null | undefined, t: (key: string, variables?: Record<string, string | number> | string, fallback?: string) => string): string {
+  if (!raw) return t("issues.tracker");
+  const normalized = normalizeLookup(raw);
+  const map: Record<string, string> = {
+    bug: "issues.trackers.bug",
+    bugs: "issues.trackers.bugs",
+    feature: "issues.trackers.feature",
+    features: "issues.trackers.features",
+    activity: "issues.trackers.activity",
+    activities: "issues.trackers.activities",
+    ticket: "issues.trackers.ticket",
+    issue: "issues.trackers.issue",
+  };
+  const key = map[normalized];
+  return key ? t(key, raw) : raw;
 }
 
 const ATTACHMENT_MARKER_RE = /\/api\/issues\/_ATTACHMENT_\/([^)]+)/gi;
@@ -453,7 +504,7 @@ export default function IssueDetailPage() {
   const prefetchedRelatedIdsRef = useRef<Set<number>>(new Set());
   const attachmentRefreshAttemptedRef = useRef<Set<number>>(new Set());
   const { performAction } = useOfflineAction();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
@@ -1063,7 +1114,7 @@ export default function IssueDetailPage() {
       {/* Breadcrumb Navigation */}
       {breadcrumbItems.length > 0 && (
         <nav className="breadcrumb-nav">
-          <Link href="/" className="breadcrumb-item breadcrumb-home">Dashboard</Link>
+          <Link href="/" className="breadcrumb-item breadcrumb-home">{t("nav.dashboard")}</Link>
           <span className="breadcrumb-sep">›</span>
           {breadcrumbItems.map((crumb, i) => (
             <span key={crumb.id} className="breadcrumb-chain">
@@ -1083,13 +1134,13 @@ export default function IssueDetailPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="breadcrumb-item breadcrumb-external"
-                  title="Open in Redmine (not cached locally)"
+                  title={t("issues.tooltips.openInRedmineNotCached")}
                 >
                   {crumb.tracker && <span className="breadcrumb-tracker">{crumb.tracker}</span>}
                   #{crumb.id}: {crumb.subject}
                 </a>
               ) : (
-                <span className="breadcrumb-item breadcrumb-external" title="Not available locally">
+                <span className="breadcrumb-item breadcrumb-external" title={t("issues.tooltips.notAvailableLocally")}>
                   {crumb.tracker && <span className="breadcrumb-tracker">{crumb.tracker}</span>}
                   #{crumb.id}: {crumb.subject}
                 </span>
@@ -1104,10 +1155,10 @@ export default function IssueDetailPage() {
       <header className="card hero issue-hero">
         <div className="hero-top issue-hero-top">
           <div className="issue-heading">
-            <p className="kicker">{issue.tracker ?? "Issue"}</p>
+            <p className="kicker">{translateTrackerLabel(issue.tracker, t)}</p>
             <div className="issue-title-line">
               {issue.source === "local" ? (
-                <span className="source-badge source-local">🟢 Local</span>
+                <span className="source-badge source-local">{t("issues.badges.local")}</span>
               ) : (
                 externalIssueUrl ? (
                   <a className="redmine-issue-link" href={externalIssueUrl} target="_blank" rel="noopener noreferrer">
@@ -1134,15 +1185,15 @@ export default function IssueDetailPage() {
             </p>
             {externalIssueUrl && (
               <p className="external-issue-row">
-                Redmine source:
+                {t("issues.redmineSource")}
                 <a href={externalIssueUrl} target="_blank" rel="noopener noreferrer">
                   {externalIssueUrl}
                 </a>
               </p>
             )}
             <div className="chip-row">
-              <span className="status-chip active">{issue.statusName}</span>
-              <span className="status-chip">{issue.priority ?? t("issues.empty.noPriority")}</span>
+              <span className="status-chip active">{translateStatusLabel(issue.statusName, t)}</span>
+              <span className="status-chip">{translatePriorityLabel(issue.priority, t)}</span>
               <span className="status-chip">{issue.assignedToName ?? t("issues.empty.unassigned")}</span>
             </div>
             <div className="issue-snapshot-row">
@@ -1166,8 +1217,8 @@ export default function IssueDetailPage() {
           </div>
           <div className="hero-actions issue-hero-actions">
             {!editMode && issue.source !== "local" && (
-              <button type="button" className={`favorite-btn ${isFavorited ? "favorited" : ""}`} onClick={toggleFavorite} title={isFavorited ? "Remove from favorites" : "Add to favorites"}>
-                {isFavorited ? "★ Favorited" : "☆ Favorite"}
+              <button type="button" className={`favorite-btn ${isFavorited ? "favorited" : ""}`} onClick={toggleFavorite} title={isFavorited ? t("issues.actions.removeFromFavorites") : t("issues.actions.addToFavorites")}>
+                {isFavorited ? t("issues.actions.favorited") : t("issues.actions.favorite")}
               </button>
             )}
             {!editMode && issue.source !== "local" && (
@@ -1207,7 +1258,7 @@ export default function IssueDetailPage() {
       {issue.redmineIssueId && (
         <QuickActionsPanel
           issueId={issue.redmineIssueId}
-          currentStatus={issue.statusName}
+            currentStatus={translateStatusLabel(issue.statusName, t)}
           currentAssignee={issue.assignedToName ?? undefined}
           onStatusChange={async (statusId) => {
             await performAction({
@@ -1215,7 +1266,7 @@ export default function IssueDetailPage() {
               issueId,
               payload: { statusId },
               onSuccess: reloadIssue,
-              successMessage: "Status updated in Redmine.",
+              successMessage: t("issues.messages.statusUpdated"),
             });
           }}
           onAssign={async (userId) => {
@@ -1224,7 +1275,7 @@ export default function IssueDetailPage() {
               issueId,
               payload: { userId },
               onSuccess: reloadIssue,
-              successMessage: "Issue assigned.",
+              successMessage: t("issues.messages.assigned"),
             });
           }}
           onAddTime={async (hours, comment) => {
@@ -1233,7 +1284,7 @@ export default function IssueDetailPage() {
               issueId,
               payload: { hours, comments: comment },
               onSuccess: reloadIssue,
-              successMessage: "Time entry logged.",
+              successMessage: t("issues.messages.timeLogged"),
             });
           }}
           statuses={transitionStatuses}
@@ -1252,12 +1303,12 @@ export default function IssueDetailPage() {
         <div className="reports-grid issue-overview-grid">
           <article className="report-card overview-card overview-card-status">
             <p className="report-label">{t("issues.fields.status")}</p>
-            <p className="report-value">{issue.statusName}</p>
-            <p className="report-foot">{t("issues.fields.priority")}: {issue.priority ?? "-"}</p>
+            <p className="report-value">{translateStatusLabel(issue.statusName, t)}</p>
+            <p className="report-foot">{t("issues.fields.priority")}: {translatePriorityLabel(issue.priority, t)}</p>
           </article>
           <article className="report-card overview-card overview-card-due">
             <p className="report-label">{t("issues.fields.dueDate")}</p>
-            <p className="report-value">{issue.dueDate ? new Date(issue.dueDate).toLocaleDateString() : "-"}</p>
+            <p className="report-value">{issue.dueDate ? new Date(issue.dueDate).toLocaleDateString(locale) : "-"}</p>
             <p className="report-foot">{t("issues.fields.done")}: {issue.doneRatio ?? 0}%</p>
           </article>
           <article className="report-card overview-card overview-card-time">
@@ -1377,19 +1428,19 @@ export default function IssueDetailPage() {
                     {issue.startDate && (
                       <div className="metadata-item">
                         <span className="metadata-label">{t("issues.fields.startDate")}</span>
-                        <span className="metadata-value">{new Date(issue.startDate).toLocaleDateString()}</span>
+                        <span className="metadata-value">{new Date(issue.startDate).toLocaleDateString(locale)}</span>
                       </div>
                     )}
                     {issue.dueDate && (
                       <div className="metadata-item">
                         <span className="metadata-label">{t("issues.fields.dueDate")}</span>
-                        <span className="metadata-value">{new Date(issue.dueDate).toLocaleDateString()}</span>
+                        <span className="metadata-value">{new Date(issue.dueDate).toLocaleDateString(locale)}</span>
                       </div>
                     )}
                     {issue.priority && (
                       <div className="metadata-item">
                         <span className="metadata-label">{t("issues.fields.priority")}</span>
-                        <span className="metadata-value">{issue.priority}</span>
+                        <span className="metadata-value">{translatePriorityLabel(issue.priority, t)}</span>
                       </div>
                     )}
                     {issue.estimatedHours != null && (
@@ -1425,7 +1476,7 @@ export default function IssueDetailPage() {
                                 value={assigneeUserId || ""}
                                 onChange={(e) => updateCustomField(String(field.id), e.target.value)}
                               >
-                                <option value="">— Unset —</option>
+                                <option value="">— {t("issues.empty.unset")} —</option>
                                 {users.map((u) => (
                                   <option key={u.id} value={u.id}>{u.name}</option>
                                 ))}
@@ -1457,17 +1508,17 @@ export default function IssueDetailPage() {
                                         });
                                         if (!res.ok) {
                                           const data = await res.json();
-                                          throw new Error(data.error || "Failed to assign");
+                                          throw new Error(data.error || t("issues.messages.assignFailed"));
                                         }
                                         await reloadIssue();
-                                        setActionInfo(`Assigned to ${matchedUser.name}`);
+                                        setActionInfo(t("issues.messages.assignedTo", { name: matchedUser.name }));
                                       } catch (e) {
-                                        setActionError(e instanceof Error ? e.message : "Failed to assign");
+                                        setActionError(e instanceof Error ? e.message : t("issues.messages.assignFailed"));
                                       }
                                     }}
-                                    title={`Assign to ${matchedUser.name}`}
+                                    title={t("issues.actions.assignTo", { name: matchedUser.name })}
                                   >
-                                    Assign
+                                    {t("issues.actions.assign")}
                                   </button>
                                 </span>
                               ) : (
@@ -1506,7 +1557,7 @@ export default function IssueDetailPage() {
                                 checked={editDraft.customFields[field.id] === "1" || editDraft.customFields[field.id] === "true"}
                                 onChange={(e) => updateCustomField(String(field.id), e.target.checked ? "1" : "0")}
                               />
-                              <span className="checkbox-label-text">{editDraft.customFields[field.id] === "1" || editDraft.customFields[field.id] === "true" ? "Yes" : "No"}</span>
+                              <span className="checkbox-label-text">{editDraft.customFields[field.id] === "1" || editDraft.customFields[field.id] === "true" ? t("common.yes") : t("common.no")}</span>
                             </label>
                           ) : isListField && possibleValues.length > 0 ? (
                             <select
@@ -1514,7 +1565,7 @@ export default function IssueDetailPage() {
                               value={editDraft.customFields[field.id] || ""}
                               onChange={(e) => updateCustomField(String(field.id), e.target.value)}
                             >
-                              <option value="">— {isRequired ? "Select..." : "Unset"} —</option>
+                              <option value="">— {isRequired ? t("issues.actions.select") : t("issues.empty.unset")} —</option>
                               {possibleValues.map((pv) => (
                                 <option key={pv.value} value={pv.value}>{pv.value}</option>
                               ))}
@@ -1558,7 +1609,7 @@ export default function IssueDetailPage() {
                           <span className="metadata-value">
                             {isBoolField ? (
                               <span className={`bool-value ${field.value === "1" || field.value === "true" ? "bool-true" : "bool-false"}`}>
-                                {field.value === "1" || field.value === "true" ? "✓ Yes" : "✗ No"}
+                                {field.value === "1" || field.value === "true" ? t("issues.values.trueYes") : t("issues.values.falseNo")}
                               </span>
                             ) : isListField ? (
                               <span className="list-value">{field.value}</span>
@@ -1595,9 +1646,9 @@ export default function IssueDetailPage() {
                 <table className="children-table">
                   <thead>
                     <tr>
-                      <th>#</th>
-                      <th>Tracker</th>
-                      <th>Subject</th>
+                      <th>{t("issues.colNumber")}</th>
+                      <th>{t("issues.tracker")}</th>
+                      <th>{t("issues.subject")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1610,7 +1661,7 @@ export default function IssueDetailPage() {
                         </td>
                         <td className="child-tracker">
                           <span className={`tracker-chip ${(child.tracker ?? "").toLowerCase().replace(" ", "-")}`}>
-                            {child.tracker ?? "-"}
+                            {translateTrackerLabel(child.tracker ?? null, t)}
                           </span>
                         </td>
                         <td className="child-subject">

@@ -35,7 +35,7 @@ if (typeof window !== "undefined") {
 type I18nContextType = {
   locale: string;
   setLocale: (l: string) => void;
-  t: (key: string, variables?: Record<string, string | number>, fallback?: string) => string;
+  t: (key: string, variables?: Record<string, string | number> | string, fallback?: string) => string;
   formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
   formatNumber: (n: number, options?: Intl.NumberFormatOptions) => string;
 };
@@ -66,7 +66,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   };
 
   const t = useMemo(() => {
-    return (key: string, variables?: Record<string, string | number>, fallback?: string): string => {
+    return (key: string, variables?: Record<string, string | number> | string, fallback?: string): string => {
+      const vars = typeof variables === "object" && variables !== null ? variables : undefined;
+      const resolvedFallback = typeof variables === "string" ? variables : fallback;
       const keys = key.split(".");
       
       // Use current locale if available, else fallback to English
@@ -84,13 +86,36 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      let res = value || fallback || key;
-      if (typeof res === "string" && variables) {
-        for (const [k, v] of Object.entries(variables)) {
+      let res = value || resolvedFallback || key;
+      if (typeof res === "string" && vars) {
+        // Basic interpolation
+        for (const [k, v] of Object.entries(vars)) {
           res = res.replace(new RegExp(`{${k}}`, "g"), String(v));
         }
+      } else if (typeof res === "object" && res !== null && vars?.count !== undefined) {
+        // Pluralization logic
+        const count = Number(vars.count);
+        if (typeof count === "number") {
+          if (count === 1 && res.one !== undefined) {
+            res = res.one;
+          } else if (res.other !== undefined) {
+            res = res.other;
+          } else {
+            // Fallback for cases where 'other' is missing but 'one' is not applicable
+            res = res.one || key;
+          }
+
+          // Interpolate remaining variables after selecting plural form
+          if (typeof res === "string") {
+            for (const [k, v] of Object.entries(vars)) {
+              if (k !== 'count') { // Avoid re-interpolating count if it's a variable itself
+                res = res.replace(new RegExp(`{${k}}`, "g"), String(v));
+              }
+            }
+          }
+        }
       }
-      return res;
+      return String(res);
     };
   }, [locale]);
 

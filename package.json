@@ -18,7 +18,9 @@
     "mem:profile": "node --expose-gc -r ./scripts/memory-profiler.js next dev -H 0.0.0.0",
     "prisma:generate": "prisma generate",
     "db:init": "sh scripts/db-init.sh",
-    "sync:all": "node scripts/sync-all-issues.js"
+    "sync:all": "node scripts/sync-all-issues.js",
+    "i18n:audit": "node scripts/i18n-audit.js",
+    "i18n:fill-missing": "node scripts/i18n-fill-missing.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

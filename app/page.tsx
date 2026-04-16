@@ -209,7 +209,7 @@ function MarkdownBlock({ content, attachments = [], issueId }: { content: string
 
     if (srcText.includes(attachmentMarker)) {
       const attachment = attachments.find((item) => filenamesMatch(item.filename, filename));
-      if (!attachment || !issueId) return <span className="muted">[Image: {filename}]</span>;
+      if (!attachment || !issueId) return <span className="muted">{t('issues.imageAlt', { filename })}</span>;
       const url = attachmentUrl(issueId, attachment.redmineAttachmentId);
       return (
         <span className="markdown-image-frame">
@@ -240,7 +240,7 @@ function MarkdownBlock({ content, attachments = [], issueId }: { content: string
       }
       return (
         <details className="md-collapsible-code">
-          <summary>Show code ({lines} lines)</summary>
+          <summary>{t('issues.showCode', { count: lines })}</summary>
           <pre>{props.children}</pre>
         </details>
       );
@@ -388,11 +388,11 @@ function syncTone(status: string | undefined): "idle" | "running" | "success" | 
 
 function summarizeSyncError(message: string | null | undefined): string {
   if (!message) {
-    return "Sync failed with no detail from the server.";
+    return t('sync.noDetailError');
   }
 
   if (message.includes("Unknown argument `parentIssueId`")) {
-    return "Local Prisma client is outdated. Run `npm run prisma:generate` and restart the app.";
+    return t('sync.prismaOutdatedError');
   }
 
   const firstLine = message
@@ -401,7 +401,7 @@ function summarizeSyncError(message: string | null | undefined): string {
     .find((line) => line.length > 0);
 
   if (!firstLine) {
-    return "Sync failed with no detail from the server.";
+    return t('sync.noDetailError');
   }
 
   const redmine = firstLine.match(/Redmine request failed \(\d{3}\):\s*(.+)$/i);
@@ -1140,7 +1140,7 @@ export default function Home() {
       await refreshAll();
       await loadActivities();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Connection failed");
+      toast.error(e instanceof Error ? e.message : t('login.connectionFailed'));
     } finally {
       setLoading(false);
     }
@@ -1178,7 +1178,7 @@ export default function Home() {
       await refreshAll();
       toast.info(t('toasts.manualPullSuccess'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Manual pull failed");
+      toast.error(e instanceof Error ? e.message : t('toasts.manualPullFailed'));
     } finally {
       setManualRefreshBusy(false);
     }
@@ -1196,9 +1196,9 @@ export default function Home() {
       await refreshAll();
       await loadActivities();
       await loadBootstrapInfo();
-      toast.info("Connected using .env configuration.");
+      toast.info(t('toasts.envSuccess'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Unable to bootstrap from environment");
+      toast.error(e instanceof Error ? e.message : t('toasts.envFailed'));
     } finally {
       setBootstrapBusy(false);
     }
@@ -1207,7 +1207,7 @@ export default function Home() {
   async function updateStatus(issue: Issue, nextStatusId: number) {
     const allowed = allowedStatusIdsByIssue[issue.redmineIssueId];
     if (allowed && allowed.length > 0 && !allowed.includes(nextStatusId)) {
-      toast.error("Selected status is not allowed for this issue.");
+      toast.error(t('toasts.statusNotAllowed'));
       return;
     }
 
@@ -1239,7 +1239,7 @@ export default function Home() {
       await refreshAll();
     } catch (e) {
       setIssues(previous);
-      toast.error(e instanceof Error ? e.message : "Status update failed");
+      toast.error(e instanceof Error ? e.message : t('toasts.statusFailed'));
     }
   }
 
@@ -1294,17 +1294,17 @@ export default function Home() {
       const failedCount = Number(data.failedCount ?? 0);
       const updatedCount = Number(data.updatedCount ?? 0);
       if (failedCount > 0) {
-        toast.error(`Updated ${updatedCount} issue(s), ${failedCount} failed. Open browser console for details.`);
+        toast.error(t('toasts.bulkFailedLog', { updated: updatedCount, failed: failedCount }));
         // keep a compact breadcrumb for deeper troubleshooting.
         console.error("Bulk update failures", data.failures ?? []);
       } else {
-        toast.info(`Updated ${updatedCount} issue(s).`);
+        toast.info(t('toasts.bulkSuccess', { updated: updatedCount }));
       }
 
       await refreshAll();
       setSelectedIssueIds([]);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Bulk status update failed");
+      toast.error(e instanceof Error ? e.message : t('toasts.bulkUpdateFailed'));
     } finally {
       setBulkUpdating(false);
     }
@@ -1327,13 +1327,13 @@ export default function Home() {
         throw new Error(data.error ?? "Status update failed");
       }
       if (data.failures?.length > 0) {
-         throw new Error(data.failures[0].error || "Action not permitted");
+         throw new Error(data.failures[0].error || t('toasts.actionNotPermitted'));
       }
       
-      toast.info("Status updated.");
+      toast.info(t('toasts.statusUpdated'));
       await refreshAll();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Kanban drop failed. Reverting...");
+      toast.error(e instanceof Error ? e.message : t('toasts.dropFailed'));
       await refreshAll(); // fetch reality from server to revert optimistic board
     }
   }
@@ -1381,14 +1381,13 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error ?? "Log time failed");
+        throw new Error(data.error ?? t('toasts.commentFailed'));
       }
       await refreshAll();
     } catch (e) {
       setComment(toPost);
-      toast.error(e instanceof Error ? e.message : "Log time failed");
-    }
-  }
+      toast.error(e instanceof Error ? e.message : t('toasts.commentFailed'));
+    }  }
 
   async function submitTimelog(event: React.FormEvent) {
     event.preventDefault();
@@ -1411,9 +1410,9 @@ export default function Home() {
       }
       setTimeComment("");
       await refreshAll();
-      toast.info("Time entry added.");
+      toast.info(t('toasts.timeLogAdded'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Timelog failed");
+      toast.error(e instanceof Error ? e.message : t('toasts.timeLogFailed'));
     }
   }
 
@@ -1449,9 +1448,9 @@ export default function Home() {
       setGithubUrl("");
       setGithubTitle("");
       await refreshAll();
-      toast.info("GitHub link added.");
+      toast.info(t('toasts.ghLinkAdded'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Unable to link GitHub reference");
+      toast.error(e instanceof Error ? e.message : t('toasts.ghLinkFailed'));
     } finally {
       setGithubBusy(false);
     }
@@ -1468,12 +1467,12 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error ?? "Unable to remove GitHub link");
+        throw new Error(data.error ?? t('toasts.ghRemoveFailed'));
       }
       await refreshAll();
-      toast.info("GitHub link removed.");
+      toast.info(t('toasts.ghLinkRemoved'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Unable to remove GitHub link");
+      toast.error(e instanceof Error ? e.message : t('toasts.ghRemoveFailed'));
     } finally {
       setGithubBusy(false);
     }
@@ -1503,9 +1502,9 @@ export default function Home() {
       setAttachmentFile(null);
       setAttachmentDescription("");
       await refreshAll();
-      toast.info("Attachment uploaded.");
+      toast.info(t('toasts.attachAdded'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Unable to upload attachment");
+      toast.error(e instanceof Error ? e.message : t('toasts.attachFailed'));
     } finally {
       setAttachmentBusy(false);
     }
@@ -1517,7 +1516,7 @@ export default function Home() {
 
     const issueToId = Number(relationIssueToId);
     if (!Number.isInteger(issueToId) || issueToId <= 0) {
-      toast.error("Enter a valid related issue ID.");
+      toast.error(t('toasts.invalidRelId'));
       return;
     }
 
@@ -1537,14 +1536,13 @@ export default function Home() {
       if (!res.ok) {
         throw new Error(data.error ?? "Unable to add relation");
       }
-
       setRelationIssueToId("");
       setRelationDelay("");
       await refreshAll();
-      toast.info("Relation added.");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Unable to add relation");
-    } finally {
+      toast.info(t('toasts.relAdded'));
+      } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('toasts.relFailed'));
+      } finally {
       setRelationBusy(false);
     }
   }
@@ -1559,12 +1557,12 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error ?? "Unable to remove relation");
+        throw new Error(data.error ?? t('toasts.relRemoveFailed'));
       }
       await refreshAll();
-      toast.info("Relation removed.");
+      toast.info(t('toasts.relRemoved'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Unable to remove relation");
+      toast.error(e instanceof Error ? e.message : t('toasts.relRemoveFailed'));
     } finally {
       setRelationBusy(false);
     }
@@ -1575,7 +1573,7 @@ export default function Home() {
     const now = Date.now();
     setTimerStartedAtMs(now);
     setTimerNowMs(now);
-    toast.info(`Started timer for issue #${issueId}.`);
+    toast.info(t('toasts.timerStarted', { id: issueId }));
   }
 
   function stopTimerAndApply() {
@@ -1587,7 +1585,7 @@ export default function Home() {
     setTimerIssueId(null);
     setTimerStartedAtMs(null);
     setTimerNowMs(Date.now());
-    toast.info(`Timer stopped. hours prefilled to ${elapsedHours.toFixed(1)}.`);
+    toast.info(t('toasts.timerStopped', { hours: elapsedHours.toFixed(1) }));
   }
 
   function applySavedView(view: SavedView) {
@@ -1599,7 +1597,7 @@ export default function Home() {
   }
 
   function saveCurrentView() {
-    const name = viewDraftName.trim() || `View ${savedViews.length + 1}`;
+    const name = viewDraftName.trim() || t('views.defaultName', { count: savedViews.length + 1 });
     const existing = savedViews.find((v) => v.name.toLowerCase() === name.toLowerCase());
     const nextView: SavedView = {
       id: existing?.id ?? `${Date.now()}`,
@@ -1613,11 +1611,11 @@ export default function Home() {
 
     if (existing) {
       setSavedViews((current) => current.map((v) => (v.id === existing.id ? nextView : v)));
-      toast.info(`Saved changes to view "${name}".`);
+      toast.info(t('toasts.viewSavedChanges', { name }));
       setActiveViewId(existing.id);
     } else {
       setSavedViews((current) => [nextView, ...current].slice(0, 12));
-      toast.info(`Saved view "${name}".`);
+      toast.info(t('toasts.viewSaved', { name }));
       setActiveViewId(nextView.id);
     }
 
@@ -1631,7 +1629,7 @@ export default function Home() {
       setActiveViewId(null);
     }
     if (target) {
-      toast.info(`Removed view "${target.name}".`);
+      toast.info(t('toasts.viewRemoved', { name: target.name }));
     }
   }
 
@@ -1690,12 +1688,12 @@ export default function Home() {
               <p className="kicker">{t('login.kickerOps')}</p>
               <h1>{t('login.missionControl')}</h1>
               <p className="muted">
-                Connect your Redmine account and manage issues from one unified dashboard.
+                {t('login.connectRedmineDescription')}
               </p>
             </div>
             <form className="form" onSubmit={connectRedmine}>
               <label>
-                Base URL
+                {t('login.baseUrlLabel')}
                 <input
                   value={baseUrl}
                   onChange={(e) => setBaseUrl(e.target.value)}
@@ -1704,7 +1702,7 @@ export default function Home() {
                 />
               </label>
               <label>
-                API Key
+                {t('login.apiKeyLabel')}
                 <input
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
@@ -1713,7 +1711,7 @@ export default function Home() {
                 />
               </label>
               <button type="submit" disabled={loading}>
-                {loading ? "Connecting..." : "Launch Dashboard"}
+                {loading ? t('login.connecting') : t('login.launchDashboard')}
               </button>
               {bootstrapInfo?.configured && (
                 <button
@@ -1722,7 +1720,7 @@ export default function Home() {
                   onClick={bootstrapFromEnv}
                   disabled={bootstrapBusy || !bootstrapInfo.canBootstrap}
                 >
-                  {bootstrapBusy ? "Using .env..." : "Use .env Configuration"}
+                  {bootstrapBusy ? t('login.usingEnv') : t('login.useEnvConfig')}
                 </button>
               )}
               {bootstrapInfo?.configured && !bootstrapInfo.canBootstrap && (
@@ -1838,11 +1836,7 @@ export default function Home() {
             <p className="metric-label">{t('metrics.aiInsightsLabel')}</p>
             <p className="metric-value">{aiSummaryCount}</p>
             <p className="metric-foot">
-              {aiSummaryCount === 0
-                ? "No available AI insights. Check again later!"
-                : aiSummaryCount === 1
-                  ? "1 AI insight generated"
-                : `${aiSummaryCount} AI insights generated`}
+              {t('ai.insightsCount', { count: aiSummaryCount })}
             </p>
           </article>
         </section>
@@ -2558,7 +2552,7 @@ export default function Home() {
           ) : (
             <>
               <p className="muted collapsible-meta">
-                {t('pagination.queueHidden', { loadedCount: visibleIssues.length, selectedCount: selectedIssueIds.length })}
+                {t('pagination.queueHidden', { count: visibleIssues.length, loadedCount: visibleIssues.length, selectedCount: selectedIssueIds.length })}
               </p>
             </>
           )}

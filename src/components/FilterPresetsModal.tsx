@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useI18n } from "./I18nProvider";
 
 export interface FilterPreset {
   id: string;
@@ -35,6 +36,7 @@ export function FilterPresetsModal({
   onDelete,
   onApply,
 }: FilterPresetsModalProps) {
+  const { t } = useI18n();
   const [newPresetName, setNewPresetName] = useState("");
   const [showSaveForm, setShowSaveForm] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -59,29 +61,29 @@ export function FilterPresetsModal({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Filter Presets</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <h2>{t("filterPresetsModal.title")}</h2>
+          <button className="modal-close" onClick={onClose} aria-label={t("filterPresetsModal.close")}>×</button>
         </div>
 
         <div className="modal-body">
           {/* Current Filters Display */}
           <div className="current-filters">
-            <h3>Current Filters</h3>
+            <h3>{t("filterPresetsModal.currentFilters")}</h3>
             <div className="filter-tags">
               {currentFilters.statusFilter && (
-                <span className="filter-tag">Status: {currentFilters.statusFilter}</span>
+                <span className="filter-tag">{t("filterPresetsModal.status")}: {currentFilters.statusFilter}</span>
               )}
               {currentFilters.priorityFilter && (
-                <span className="filter-tag">Priority: {currentFilters.priorityFilter}</span>
+                <span className="filter-tag">{t("filterPresetsModal.priority")}: {currentFilters.priorityFilter}</span>
               )}
               {currentFilters.search && (
-                <span className="filter-tag">Search: {currentFilters.search}</span>
+                <span className="filter-tag">{t("filterPresetsModal.search")}: {currentFilters.search}</span>
               )}
               {currentFilters.showFavoritesOnly && (
-                <span className="filter-tag">Favorites Only</span>
+                <span className="filter-tag">{t("filterPresetsModal.favoritesOnly")}</span>
               )}
               {!currentFilters.statusFilter && !currentFilters.priorityFilter && !currentFilters.search && !currentFilters.showFavoritesOnly && (
-                <span className="filter-tag muted">No filters applied</span>
+                <span className="filter-tag muted">{t("filterPresetsModal.noFilters")}</span>
               )}
             </div>
           </div>
@@ -92,7 +94,7 @@ export function FilterPresetsModal({
               <input
                 ref={inputRef}
                 type="text"
-                placeholder="Enter preset name..."
+                placeholder={t("filterPresetsModal.placeholder")}
                 value={newPresetName}
                 onChange={(e) => setNewPresetName(e.target.value)}
                 onKeyDown={(e) => {
@@ -101,8 +103,8 @@ export function FilterPresetsModal({
                 }}
               />
               <div className="save-form-actions">
-                <button className="btn-primary" onClick={handleSave}>Save</button>
-                <button className="btn-secondary" onClick={() => setShowSaveForm(false)}>Cancel</button>
+                <button className="btn-primary" onClick={handleSave}>{t("filterPresetsModal.save")}</button>
+                <button className="btn-secondary" onClick={() => setShowSaveForm(false)}>{t("filterPresetsModal.cancel")}</button>
               </div>
             </div>
           ) : (
@@ -110,15 +112,15 @@ export function FilterPresetsModal({
               className="btn-primary save-preset-btn"
               onClick={() => setShowSaveForm(true)}
             >
-              + Save Current Filters
+              {t("filterPresetsModal.saveCurrent")}
             </button>
           )}
 
           {/* Preset List */}
           <div className="presets-list">
-            <h3>Saved Presets ({presets.length})</h3>
+            <h3>{t("filterPresetsModal.savedPresets", { count: presets.length })}</h3>
             {presets.length === 0 ? (
-              <p className="empty-message">No saved presets yet.</p>
+              <p className="empty-message">{t("filterPresetsModal.noneSaved")}</p>
             ) : (
               <ul>
                 {presets.map((preset) => (
@@ -129,15 +131,15 @@ export function FilterPresetsModal({
                     >
                       <span className="preset-name">{preset.name}</span>
                       <span className="preset-filters">
-                        {preset.statusFilter && `Status: ${preset.statusFilter}`}
+                        {preset.statusFilter && `${t("filterPresetsModal.status")}: ${preset.statusFilter}`}
                         {preset.statusFilter && preset.priorityFilter && ", "}
-                        {preset.priorityFilter && `Priority: ${preset.priorityFilter}`}
+                        {preset.priorityFilter && `${t("filterPresetsModal.priority")}: ${preset.priorityFilter}`}
                       </span>
                     </button>
                     <button
                       className="preset-delete"
                       onClick={() => onDelete(preset.id)}
-                      title="Delete preset"
+                      title={t("filterPresetsModal.delete")}
                     >
                       🗑️
                     </button>

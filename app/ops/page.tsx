@@ -98,9 +98,9 @@ type HealthPayload = {
   };
 };
 
-function formatDateTime(value: string | null): string {
+function formatDateTime(value: string | null, locale: string): string {
   if (!value) return "-";
-  return new Date(value).toLocaleString("en-GB");
+  return new Date(value).toLocaleString(locale);
 }
 
 function formatDuration(ms: number | null, t: any): string {
@@ -117,7 +117,7 @@ function checkPill(ok: boolean): string {
 }
 
 export default function OpsPage() {
-  const { t, formatDate } = useI18n();
+  const { t, formatDate, locale, formatNumber } = useI18n();
   const [user, setUser] = useState<User | null>(null);
   const [syncState, setSyncState] = useState<SyncState>(null);
   const [latestJob, setLatestJob] = useState<SyncJob | null>(null);
@@ -238,7 +238,7 @@ export default function OpsPage() {
       if (!res.ok) {
         throw new Error(data.error ?? "Failed to revoke token");
       }
-      setInfo("Mobile token revoked.");
+      setInfo(t("ops.tokenRevoked"));
       await loadData();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to revoke token");
@@ -261,7 +261,7 @@ export default function OpsPage() {
       if (!res.ok) {
         throw new Error(data.error ?? "Failed to cancel job");
       }
-      setInfo("Job cancelled.");
+      setInfo(t("ops.jobCancelled"));
       await loadData();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to cancel job");
@@ -284,7 +284,7 @@ export default function OpsPage() {
       if (!res.ok) {
         throw new Error(data.error ?? "Failed to restart job");
       }
-      setInfo("New incremental job created.");
+      setInfo(t("ops.newIncrementalJob"));
       await loadData();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to restart job");
@@ -356,22 +356,22 @@ export default function OpsPage() {
               <h2>{t("ops.syncState")}</h2>
               <div className="ops-kv">
                 <p><strong>{t("common.status")}:</strong> {syncState?.lastSyncStatus ?? t("ops.statusIdle")}</p>
-                <p><strong>Running Job:</strong> {syncState?.runningJobId ?? "-"}</p>
-                <p><strong>Last Incremental:</strong> {formatDateTime(syncState?.lastIncrementalSyncAt ?? null)}</p>
-                <p><strong>Last Full:</strong> {formatDateTime(syncState?.lastFullSyncAt ?? null)}</p>
-                <p><strong>Last Error:</strong> {syncState?.lastError ?? "-"}</p>
+                <p><strong>{t("ops.runningJob")}:</strong> {syncState?.runningJobId ?? "-"}</p>
+                <p><strong>{t("ops.lastIncremental")}:</strong> {formatDateTime(syncState?.lastIncrementalSyncAt ?? null, locale)}</p>
+                <p><strong>{t("ops.lastFull")}:</strong> {formatDateTime(syncState?.lastFullSyncAt ?? null, locale)}</p>
+                <p><strong>{t("ops.lastError")}:</strong> {syncState?.lastError ?? "-"}</p>
               </div>
             </article>
 
             <article className="card">
               <h2>{t("ops.jobSnapshot")}</h2>
               <div className="ops-kv">
-                <p><strong>Running/Pending:</strong> {runningJobs}</p>
-                <p><strong>Failed (window):</strong> {failedJobs}</p>
-                <p><strong>Latest Job:</strong> {latestJob?.id ?? "-"}</p>
-                <p><strong>Latest Type:</strong> {latestJob?.jobType ?? "-"}</p>
-                <p><strong>Latest Status:</strong> {latestJob?.status ?? "-"}</p>
-                <p><strong>Latest Duration:</strong> {formatDuration(latestJob?.durationMs ?? null, t)}</p>
+                <p><strong>{t("ops.runningPending")}:</strong> {runningJobs}</p>
+                <p><strong>{t("ops.failedWindow")}:</strong> {failedJobs}</p>
+                <p><strong>{t("ops.latestJob")}:</strong> {latestJob?.id ?? "-"}</p>
+                <p><strong>{t("ops.latestType")}:</strong> {latestJob?.jobType ?? "-"}</p>
+                <p><strong>{t("ops.latestStatus")}:</strong> {latestJob?.status ?? "-"}</p>
+                <p><strong>{t("ops.latestDuration")}:</strong> {formatDuration(latestJob?.durationMs ?? null, t)}</p>
               </div>
             </article>
           </section>
@@ -382,18 +382,18 @@ export default function OpsPage() {
               <div className="health-grid">
                 <div className="health-row">
                   <span>{t("ops.checkOverall")}</span>
-                  <span className={`sync-pill ${checkPill(health?.status === "ok")}`}>{health?.status ?? "unknown"}</span>
+                  <span className={`sync-pill ${checkPill(health?.status === "ok")}`}>{health?.status ?? t("ops.unknown")}</span>
                 </div>
                 <div className="health-row">
                   <span>{t("ops.checkDatabase")}</span>
                   <span className={`sync-pill ${checkPill(Boolean(health?.checks?.database?.ok))}`}>
-                    {health?.checks?.database?.ok ? "ok" : "failed"}
+                    {health?.checks?.database?.ok ? t("ops.ok") : t("ops.failed")}
                   </span>
                 </div>
                 <div className="health-row">
                   <span>{t("ops.checkRedmine")}</span>
                   <span className={`sync-pill ${checkPill(Boolean(health?.checks?.redmine?.ok || health?.checks?.redmine?.mode === "skipped"))}`}>
-                    {health?.checks?.redmine?.mode === "skipped" ? "skipped" : health?.checks?.redmine?.ok ? "ok" : "failed"}
+                    {health?.checks?.redmine?.mode === "skipped" ? t("ops.skipped") : health?.checks?.redmine?.ok ? t("ops.ok") : t("ops.failed")}
                   </span>
                 </div>
                 <div className="health-row">
@@ -409,67 +409,67 @@ export default function OpsPage() {
             </article>
 
             <article className="card">
-              <h2>Sync Poller Leader</h2>
+              <h2>{t("ops.pollerLeader")}</h2>
               <div className="ops-kv">
-                <p><strong>Owner:</strong> {health?.checks?.scheduler?.lock?.ownerId ?? "-"}</p>
-                <p><strong>Heartbeat:</strong> {formatDateTime(health?.checks?.scheduler?.lock?.heartbeatAt ?? null)}</p>
-                <p><strong>Expires:</strong> {formatDateTime(health?.checks?.scheduler?.lock?.expiresAt ?? null)}</p>
+                <p><strong>{t("ops.owner")}:</strong> {health?.checks?.scheduler?.lock?.ownerId ?? "-"}</p>
+                <p><strong>{t("ops.heartbeat")}:</strong> {formatDateTime(health?.checks?.scheduler?.lock?.heartbeatAt ?? null, locale)}</p>
+                <p><strong>{t("ops.expires")}:</strong> {formatDateTime(health?.checks?.scheduler?.lock?.expiresAt ?? null, locale)}</p>
               </div>
             </article>
 
             <article className="card">
-              <h2>Log Poller</h2>
+              <h2>{t("ops.logPoller")}</h2>
               <div className="ops-kv">
-                <p><strong>Enabled:</strong> {health?.checks?.logPoller?.enabled ? "Yes" : "No"}</p>
-                <p><strong>Owner:</strong> {health?.checks?.logPoller?.leaderLockOwnerId ?? "-"}</p>
-                <p><strong>Heartbeat:</strong> {formatDateTime(health?.checks?.logPoller?.heartbeatAt ?? null)}</p>
-                <p><strong>Expires:</strong> {formatDateTime(health?.checks?.logPoller?.expiresAt ?? null)}</p>
+                <p><strong>{t("ops.enabled")}:</strong> {health?.checks?.logPoller?.enabled ? t("common.yes") : t("common.no")}</p>
+                <p><strong>{t("ops.owner")}:</strong> {health?.checks?.logPoller?.leaderLockOwnerId ?? "-"}</p>
+                <p><strong>{t("ops.heartbeat")}:</strong> {formatDateTime(health?.checks?.logPoller?.heartbeatAt ?? null, locale)}</p>
+                <p><strong>{t("ops.expires")}:</strong> {formatDateTime(health?.checks?.logPoller?.expiresAt ?? null, locale)}</p>
               </div>
             </article>
           </section>
 
           <section className="ops-grid">
             <article className="card">
-              <h2>System Metrics</h2>
+              <h2>{t("ops.sysMetrics")}</h2>
               <div className="ops-kv">
-                <p><strong>Version:</strong> {health?.version ?? "-"}</p>
-                <p><strong>Environment:</strong> {health?.environment ?? "-"}</p>
-                <p><strong>Uptime:</strong> {health?.uptime ? `${Math.floor(health.uptime / 86400)}d ${Math.floor((health.uptime % 86400) / 3600)}h ${Math.floor((health.uptime % 3600) / 60)}m` : "-"}</p>
+                <p><strong>{t("ops.version")}:</strong> {health?.version ?? "-"}</p>
+                <p><strong>{t("ops.environment")}:</strong> {health?.environment ?? "-"}</p>
+                <p><strong>{t("ops.uptime")}:</strong> {health?.uptime ? `${Math.floor(health.uptime / 86400)}d ${Math.floor((health.uptime % 86400) / 3600)}h ${Math.floor((health.uptime % 3600) / 60)}m` : "-"}</p>
               </div>
               <div style={{ marginTop: '1rem' }}>
                 <Link href="/ops/audit-logs" className="secondary-button">
-                  📋 View Audit Logs
+                  {t("ops.viewAuditLogs")}
                 </Link>
                 <Link href="/ops/users" className="secondary-button" style={{ marginLeft: '0.5rem' }}>
-                  👥 User Management
+                  {t("ops.userManagement")}
                 </Link>
               </div>
             </article>
 
             <article className="card">
-              <h2>Data Metrics</h2>
+              <h2>{t("ops.dataMetrics")}</h2>
               <div className="ops-kv">
-                <p><strong>Issues:</strong> {health?.checks?.metrics?.issues?.toLocaleString() ?? "-"}</p>
-                <p><strong>Users:</strong> {health?.checks?.metrics?.users ?? "-"}</p>
-                <p><strong>Active Users (24h):</strong> {health?.checks?.metrics?.activeUsers ?? "-"}</p>
-                <p><strong>Internal Notes:</strong> {health?.checks?.metrics?.internalNotes?.toLocaleString() ?? "-"}</p>
+                <p><strong>{t("ops.issues")}:</strong> {typeof health?.checks?.metrics?.issues === "number" ? formatNumber(health.checks.metrics.issues) : "-"}</p>
+                <p><strong>{t("ops.users")}:</strong> {health?.checks?.metrics?.users ?? "-"}</p>
+                <p><strong>{t("ops.activeUsers")}:</strong> {health?.checks?.metrics?.activeUsers ?? "-"}</p>
+                <p><strong>{t("ops.internalNotes")}:</strong> {typeof health?.checks?.metrics?.internalNotes === "number" ? formatNumber(health.checks.metrics.internalNotes) : "-"}</p>
               </div>
             </article>
 
             <article className="card">
-              <h2>Activity Metrics (24h)</h2>
+              <h2>{t("ops.activityMetrics")}</h2>
               <div className="ops-kv">
-                <p><strong>Sync Jobs:</strong> {health?.checks?.metrics?.syncJobs ?? "-"}</p>
-                <p><strong>Audit Logs:</strong> {health?.checks?.metrics?.auditLogs24h?.toLocaleString() ?? "-"}</p>
-                <p><strong>Web Logs:</strong> {health?.checks?.metrics?.webLogs24h?.toLocaleString() ?? "-"}</p>
+                <p><strong>{t("ops.syncJobsCount")}:</strong> {health?.checks?.metrics?.syncJobs ?? "-"}</p>
+                <p><strong>{t("ops.auditLogsCount")}:</strong> {typeof health?.checks?.metrics?.auditLogs24h === "number" ? formatNumber(health.checks.metrics.auditLogs24h) : "-"}</p>
+                <p><strong>{t("ops.webLogsCount")}:</strong> {typeof health?.checks?.metrics?.webLogs24h === "number" ? formatNumber(health.checks.metrics.webLogs24h) : "-"}</p>
               </div>
             </article>
           </section>
 
           <section className="card">
             <div className="table-toolbar">
-              <h2>Recent Sync Jobs</h2>
-              <p className="muted">Last {jobs.length} jobs</p>
+              <h2>{t("ops.recentJobs")}</h2>
+              <p className="muted">{t("ops.lastJobs", { count: jobs.length })}</p>
             </div>
             <div className="drill-table-wrap">
               <table className="issues-table">
@@ -496,8 +496,8 @@ export default function OpsPage() {
                           {job.status === 'running' && job.startedAt && Date.now() - new Date(job.startedAt).getTime() > 600000 ? ' (STALE)' : ''}
                         </span>
                       </td>
-                      <td>{formatDateTime(job.startedAt)}</td>
-                      <td>{formatDateTime(job.endedAt)}</td>
+                      <td>{formatDateTime(job.startedAt, locale)}</td>
+                      <td>{formatDateTime(job.endedAt, locale)}</td>
                       <td>{formatDuration(job.durationMs, t)}</td>
                       <td>{job.error ? job.error.slice(0, 140) : "-"}</td>
                       <td>
@@ -530,7 +530,7 @@ export default function OpsPage() {
 
           <section className="card">
             <div className="table-toolbar">
-              <h2>Web Logs</h2>
+              <h2>{t("ops.webLogs")}</h2>
               <div className="toolbar-right">
                 <span className="muted">{t("ops.rowsInfo", { filtered: filteredLogs.length, total: logs.length, errors: errorLogs })}</span>
                 <input
@@ -550,8 +550,8 @@ export default function OpsPage() {
                 <article key={log.id} className={`log-entry log-${log.level}`}>
                   <div className="log-head">
                     <span className={`log-level-badge log-${log.level}`}>{log.level}</span>
-                    <span className="log-source">{log.source ?? "unknown"}</span>
-                    <span className="log-time">{new Date(log.createdAt).toLocaleString("en-GB")}</span>
+                    <span className="log-source">{log.source ?? t("ops.unknown")}</span>
+                    <span className="log-time">{new Date(log.createdAt).toLocaleString(locale)}</span>
                   </div>
                   <div className="log-message">{log.message}</div>
                   {log.url && (
@@ -559,7 +559,7 @@ export default function OpsPage() {
                   )}
                   {log.stack && (
                     <details className="log-stack">
-                      <summary>Stack trace</summary>
+                      <summary>{t("ops.stackTrace")}</summary>
                       <pre>{log.stack}</pre>
                     </details>
                   )}
@@ -570,8 +570,8 @@ export default function OpsPage() {
 
           <section className="card">
             <div className="table-toolbar">
-              <h2>Active Mobile Tokens</h2>
-              <p className="muted">{mobileTokens.length} active</p>
+              <h2>{t("ops.mobileTokens")}</h2>
+              <p className="muted">{t("ops.activeCount", { count: mobileTokens.length })}</p>
             </div>
             <div className="drill-table-wrap">
               <table className="issues-table">
@@ -580,7 +580,7 @@ export default function OpsPage() {
                     <th>{t("ops.colName")}</th>
                     <th>{t("ops.colPrefix")}</th>
                     <th>{t("ops.colStarted")}</th>
-                    <th>{t("ops.colUpdated")}</th>
+                    <th>{t("common.updated") || "Updated"}</th>
                     <th>{t("ops.colDuration")}</th>
                     <th>{t("ops.colActions")}</th>
                   </tr>
@@ -588,16 +588,16 @@ export default function OpsPage() {
                 <tbody>
                   {mobileTokens.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="muted">No active mobile tokens.</td>
+                      <td colSpan={6} className="muted">{t("ops.noActiveMobileTokens")}</td>
                     </tr>
                   )}
                   {mobileTokens.map((token) => (
                     <tr key={token.id}>
                       <td>{token.name ?? "-"}</td>
                       <td>{token.tokenPrefix}</td>
-                      <td>{formatDateTime(token.createdAt)}</td>
-                      <td>{formatDateTime(token.lastUsedAt)}</td>
-                      <td>{formatDateTime(token.expiresAt)}</td>
+                      <td>{formatDateTime(token.createdAt, locale)}</td>
+                      <td>{formatDateTime(token.lastUsedAt, locale)}</td>
+                      <td>{formatDateTime(token.expiresAt, locale)}</td>
                       <td>
                         <button
                           type="button"

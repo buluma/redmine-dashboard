@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useI18n } from "./I18nProvider";
 
 interface QuickActionsPanelProps {
   issueId: number;
@@ -23,6 +24,7 @@ export function QuickActionsPanel({
   statuses,
   users,
 }: QuickActionsPanelProps) {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<"status" | "assign" | "time">("status");
   const [selectedStatus, setSelectedStatus] = useState<number>(0);
   const [selectedUser, setSelectedUser] = useState<number>(0);
@@ -47,12 +49,12 @@ export function QuickActionsPanel({
   return (
     <div className="quick-actions-panel">
       <div className="qa-header">
-        <span className="qa-title">Quick Actions</span>
+        <span className="qa-title">{t("quickActions.title")}</span>
         <span className="qa-issue">#{issueId}</span>
       </div>
       <div className="qa-meta-row">
-        <span className="qa-meta-pill">Status: {currentStatus}</span>
-        <span className="qa-meta-pill">Assignee: {currentAssignee || "Unassigned"}</span>
+        <span className="qa-meta-pill">{t("quickActions.status")}: {currentStatus}</span>
+        <span className="qa-meta-pill">{t("quickActions.assignee")}: {currentAssignee || t("quickActions.unassigned")}</span>
       </div>
 
       <div className="qa-tabs">
@@ -60,19 +62,19 @@ export function QuickActionsPanel({
           className={activeTab === "status" ? "active" : ""}
           onClick={() => setActiveTab("status")}
         >
-          Status
+          {t("quickActions.tabs.status")}
         </button>
         <button
           className={activeTab === "assign" ? "active" : ""}
           onClick={() => setActiveTab("assign")}
         >
-          Assign
+          {t("quickActions.tabs.assign")}
         </button>
         <button
           className={activeTab === "time" ? "active" : ""}
           onClick={() => setActiveTab("time")}
         >
-          Time
+          {t("quickActions.tabs.time")}
         </button>
       </div>
 
@@ -80,7 +82,7 @@ export function QuickActionsPanel({
         {activeTab === "status" && (
           <div className="qa-section">
             <label className="qa-label">
-              Current: <strong>{currentStatus}</strong>
+              {t("quickActions.current")}: <strong>{currentStatus}</strong>
             </label>
             <select
               value={selectedStatusIsAllowed ? selectedStatus : 0}
@@ -88,20 +90,20 @@ export function QuickActionsPanel({
               className="qa-select"
               disabled={statuses.length === 0}
             >
-              <option value={0}>Select new status...</option>
+              <option value={0}>{t("quickActions.selectStatus")}</option>
               {statuses.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
             {statuses.length === 0 && (
-              <p className="muted entry-meta">No allowed status transitions are available for this issue.</p>
+              <p className="muted entry-meta">{t("quickActions.noStatusTransitions")}</p>
             )}
             <button
               className="qa-button primary"
               onClick={() => selectedStatusIsAllowed && onStatusChange(selectedStatus)}
               disabled={!selectedStatusIsAllowed}
             >
-              Update Status
+              {t("quickActions.updateStatus")}
             </button>
           </div>
         )}
@@ -109,14 +111,14 @@ export function QuickActionsPanel({
         {activeTab === "assign" && (
           <div className="qa-section">
             <label className="qa-label">
-              Current: <strong>{currentAssignee || "Unassigned"}</strong>
+              {t("quickActions.current")}: <strong>{currentAssignee || t("quickActions.unassigned")}</strong>
             </label>
             {users.length > 10 && (
               <input
                 type="text"
                 value={userSearch}
                 onChange={(e) => { setUserSearch(e.target.value); setSelectedUser(0); }}
-                placeholder="Search users..."
+                placeholder={t("quickActions.searchUsers")}
                 className="qa-input qa-user-search"
               />
             )}
@@ -127,9 +129,9 @@ export function QuickActionsPanel({
               size={Math.min(filteredUsers.length + 1, 12)}
               disabled={filteredUsers.length === 0 && !userSearch}
             >
-              <option value={0}>Select user...</option>
+              <option value={0}>{t("quickActions.selectUser")}</option>
               {filteredUsers.length === 0 && userSearch ? (
-                <option disabled>No users match &quot;{userSearch}&quot;</option>
+                <option disabled>{t("quickActions.noUsersMatch", { search: userSearch })}</option>
               ) : (
                 filteredUsers.map((u) => (
                   <option key={u.id} value={u.id}>{u.name}</option>
@@ -137,27 +139,27 @@ export function QuickActionsPanel({
               )}
             </select>
             {users.length === 0 && (
-              <p className="muted entry-meta">No assignable Redmine users are available from the current cache.</p>
+              <p className="muted entry-meta">{t("quickActions.noAssignableUsers")}</p>
             )}
-            <p className="muted entry-meta">{users.length} user(s) loaded{userSearch ? ` • ${filteredUsers.length} shown` : ""}</p>
+            <p className="muted entry-meta">{t("quickActions.usersLoaded", { count: users.length, shown: userSearch ? filteredUsers.length : users.length })}</p>
             <button
               className="qa-button primary"
               onClick={() => selectedUser > 0 && onAssign(selectedUser)}
               disabled={selectedUser === 0 || (filteredUsers.length === 0 && !userSearch)}
             >
-              Assign
+              {t("quickActions.assign")}
             </button>
           </div>
         )}
 
         {activeTab === "time" && (
           <div className="qa-section">
-            <label className="qa-label">Log Time</label>
+            <label className="qa-label">{t("quickActions.logTime")}</label>
             <input
               type="number"
               value={hours}
               onChange={(e) => setHours(e.target.value)}
-              placeholder="Hours"
+              placeholder={t("quickActions.hoursPlaceholder")}
               step="0.25"
               min="0"
               className="qa-input"
@@ -166,7 +168,7 @@ export function QuickActionsPanel({
               type="text"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Work description"
+              placeholder={t("quickActions.workDescription")}
               className="qa-input"
             />
             <button
@@ -174,7 +176,7 @@ export function QuickActionsPanel({
               onClick={handleTimeSubmit}
               disabled={!hours || parseFloat(hours) <= 0}
             >
-              Log Time
+              {t("quickActions.logTimeButton")}
             </button>
           </div>
         )}
