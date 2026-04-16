@@ -63,12 +63,15 @@ model SavedView {
   priorityIds   Int[]    @default([])
   assignedToMe  Boolean  @default(false)
   dueInDays    Int?
+  // Position for drag-and-drop reordering
+  position      Int      @default(0)
   // Metadata
   isDefault     Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([userId])
+  @@index([userId, position])
 }
 
 model RedmineUser {
