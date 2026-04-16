@@ -380,7 +380,7 @@ export default async function AiSummariesPage() {
               </summary>
 
               {chatMessages.length === 0 ? (
-                <p className="muted" style={{ padding: "1rem 0" }}>No chat messages yet.</p>
+                <p className="muted" style={{ padding: "1rem 0" }}>{"ai.noChatMessages"}</p>
               ) : (
                 <AiChatHistoryClient messages={chatMessages} />
               )}
