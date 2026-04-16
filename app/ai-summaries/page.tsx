@@ -4,6 +4,8 @@ import { prisma } from "@/src/lib/db";
 import { AiSummariesClient } from "./ai-summaries-client";
 import { AiChatHistoryClient } from "./ai-chat-history-client";
 import { AiSummariesHeader } from "./ai-summaries-header";
+import { AiSummariesEmpty } from "./ai-summaries-empty";
+import { AiChatMessagesEmpty } from "./ai-chat-messages-empty";
 import { StatCard } from "@/src/components/reports/charts";
 
 export const runtime = "nodejs";
@@ -184,14 +186,7 @@ export default async function AiSummariesPage() {
       />
 
       {summaries.length === 0 && chatMessages.length === 0 ? (
-        <section className="card">
-          <div className="reports-head">
-            <div>
-              <h2>No AI Activity Yet</h2>
-              <p className="muted">Summaries and chat history will appear here once you interact with AI features.</p>
-            </div>
-          </div>
-        </section>
+        <AiSummariesEmpty />
       ) : (
         <>
           {/* Stats Grid */}
@@ -380,7 +375,7 @@ export default async function AiSummariesPage() {
               </summary>
 
               {chatMessages.length === 0 ? (
-                <p className="muted" style={{ padding: "1rem 0" }}>{"ai.noChatMessages"}</p>
+                <AiChatMessagesEmpty />
               ) : (
                 <AiChatHistoryClient messages={chatMessages} />
               )}
