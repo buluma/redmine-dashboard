@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-type Locale = "en" | "es" | "de" | "fr" | "ja" | "zh";
+type Locale = "en" | "es" | "de" | "fr" | "ja" | "zh" | "ru" | "uk" | "af";
 
 const languages = [
   { code: "en" as const, label: "English", flag: "🇺🇸" },
@@ -11,6 +11,9 @@ const languages = [
   { code: "fr" as const, label: "Français", flag: "🇫🇷" },
   { code: "ja" as const, label: "日本語", flag: "🇯🇵" },
   { code: "zh" as const, label: "中文", flag: "🇨🇳" },
+  { code: "ru" as const, label: "Русский", flag: "🇷🇺" },
+  { code: "uk" as const, label: "Українська", flag: "🇺🇦" },
+  { code: "af" as const, label: "Afrikaans", flag: "🇿🇦" },
 ];
 
 export function LanguageSwitcher() {

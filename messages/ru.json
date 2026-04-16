@@ -1,0 +1,106 @@
+{
+  "common": {
+    "backToDashboard": "Вернуться на панель",
+    "loading": "Загрузка...",
+    "error": "Ошибка",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "create": "Создать",
+    "search": "Поиск",
+    "filter": "Фильтр",
+    "refresh": "Обновить",
+    "reset": "Сбросить",
+    "apply": "Применить",
+    "close": "Закрыть",
+    "confirm": "Подтвердить",
+    "yes": "Да",
+    "no": "Нет"
+  },
+  "nav": {
+    "dashboard": "Панель",
+    "heimdall": "Журналы Heimdall",
+    "personalTickets": "Личные тикеты",
+    "reports": "Отчеты",
+    "aiSummaries": "ИИ-сводки",
+    "chat": "ИИ-чат",
+    "ops": "Системные операции",
+    "slack": "Slack",
+    "wakatime": "WakaTime",
+    "webhooks": "Вебхуки",
+    "apiDocs": "API-документация"
+  },
+  "dashboard": {
+    "title": "Панель",
+    "openIssues": "Открытые тикеты",
+    "closedIssues": "Закрытые тикеты",
+    "inProgress": "В работе",
+    "recentActivity": "Недавняя активность",
+    "noResults": "Результатов не найдено",
+    "forceRefresh": "Принудительное обновление",
+    "resetFilters": "Сбросить фильтры",
+    "shortcuts": "Ярлыки",
+    "lastSync": "Последняя синхронизация"
+  },
+  "issues": {
+    "subject": "Тема",
+    "description": "Описание",
+    "status": "Статус",
+    "priority": "Приоритет",
+    "assignee": "Исполнитель",
+    "dueDate": "Срок",
+    "startDate": "Дата начала",
+    "estimatedHours": "Оценочные часы",
+    "spentHours": "Потраченные часы",
+    "project": "Проект",
+    "tracker": "Тип",
+    "author": "Автор",
+    "created": "Создан",
+    "updated": "Обновлен"
+  },
+  "status": {
+    "new": "Новый",
+    "inProgress": "В работе",
+    "resolved": "Решен",
+    "feedback": "Обратная связь",
+    "closed": "Закрыт",
+    "rejected": "Отклонен"
+  },
+  "priority": {
+    "low": "Низкий",
+    "normal": "Обычный",
+    "high": "Высокий",
+    "urgent": "Срочный",
+    "immediate": "Немедленный"
+  },
+  "ai": {
+    "summarize": "Создать сводку",
+    "summarizing": "Создание сводки...",
+    "summarized": "Сводка создана",
+    "noActivity": "Нет активности ИИ",
+    "askAI": "Спросить ИИ",
+    "analyzing": "Анализ тикетов...",
+    "staleIssues": "Устаревшие тикеты"
+  },
+  "sync": {
+    "syncing": "Синхронизация...",
+    "synced": "Синхронизировано",
+    "failed": "Ошибка",
+    "noChanges": "Нет изменений",
+    "pulling": "Получение из Redmine...",
+    "pushing": "Отправка в Redmine..."
+  },
+  "auth": {
+    "login": "Вход",
+    "logout": "Выход",
+    "unauthorized": "Не авторизован",
+    "sessionExpired": "Сессия истекла"
+  },
+  "errors": {
+    "notFound": "Не найдено",
+    "serverError": "Ошибка сервера",
+    "networkError": "Ошибка сети",
+    "rateLimited": "Превышен лимит"
+  }
+}
