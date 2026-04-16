@@ -498,7 +498,7 @@ export default function OpsPage() {
                       </td>
                       <td>{formatDateTime(job.startedAt)}</td>
                       <td>{formatDateTime(job.endedAt)}</td>
-                      <td>{formatDuration(job.durationMs)}</td>
+                      <td>{formatDuration(job.durationMs, t)}</td>
                       <td>{job.error ? job.error.slice(0, 140) : "-"}</td>
                       <td>
                         {job.status === 'running' && job.startedAt && Date.now() - new Date(job.startedAt).getTime() > 600000 ? (
