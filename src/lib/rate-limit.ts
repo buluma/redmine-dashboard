@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
 import { env } from "@/src/lib/env";
+import { checkRedisHealth, isRedisHealthy } from "./redis";
 
 // In-memory rate limiting (original implementation)
 const buckets = new Map<string, number[]>();

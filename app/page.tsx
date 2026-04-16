@@ -18,6 +18,9 @@ import { ExportButton } from "@/src/components/ExportButton";
 import { ShortcutHelp } from "@/src/components/ShortcutHelp";
 import { NotificationsPanel } from "@/src/components/NotificationsPanel";
 import { FtsSearch } from "@/src/components/FtsSearch";
+import { useToast } from "@/src/components/ToastProvider";
+import { IssueCreateModal } from "@/src/components/IssueCreateModal";
+import { ColumnPicker, ColumnKey } from "@/src/components/ColumnPicker";
 
 type User = {
   id: string;
@@ -512,8 +515,12 @@ export default function Home() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [syncState, setSyncState] = useState<SyncState>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [priorityOptions, setPriorityOptions] = useState<Array<{ id: number; name: string }>>([]);
+  const toast = useToast();
+  const [showIssueCreateModal, setShowIssueCreateModal] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(
+    new Set<ColumnKey>(["priority", "due", "progress", "updated"])
+  );
   const [manualRefreshBusy, setManualRefreshBusy] = useState(false);
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [allowedStatusIdsByIssue, setAllowedStatusIdsByIssue] = useState<Record<number, number[]>>({});
@@ -947,21 +954,32 @@ export default function Home() {
 
   async function refreshAll() {
     setLoading(true);
-    setError(null);
     try {
       await loadIssues();
       await loadSyncStatus();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to refresh dashboard");
+      toast.error(e instanceof Error ? e.message : "Failed to refresh dashboard");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadPriorities() {
+    try {
+      const res = await fetch("/api/internal/enumerations?kind=issue_priority");
+      if (res.ok) {
+        const data = await res.json();
+        setPriorityOptions(data.items.map((i: any) => ({ id: i.remoteId, name: i.name })));
+      }
+    } catch {
+      // Ignore
     }
   }
 
   useEffect(() => {
     void (async () => {
       try {
-        await Promise.all([loadSession(), loadBootstrapInfo(), loadAiStatus(), loadAiSummaryCount()]);
+        await Promise.all([loadSession(), loadBootstrapInfo(), loadAiStatus(), loadAiSummaryCount(), loadPriorities()]);
       } finally {
         setLoading(false);
       }
@@ -1045,6 +1063,28 @@ export default function Home() {
       if (event.key === "?") {
         event.preventDefault();
         setShowShortcutHelp((current) => !current);
+        return;
+      }
+
+      if (event.key.toLowerCase() === "a" && aiStatus?.available) {
+        event.preventDefault();
+        setAiSearchOpen((current) => !current);
+        return;
+      }
+
+      const navigateTo = (id: string) => {
+        const el = document.getElementById(id);
+        if (el) {
+          event.preventDefault();
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      };
+
+      if (event.altKey) {
+        if (event.key === "1") navigateTo("summary-insights");
+        if (event.key === "2") navigateTo("ops-alerts");
+        if (event.key === "3") navigateTo("activity-feed");
+        if (event.key === "4") navigateTo("issue-queue");
       }
     };
 
@@ -1070,7 +1110,6 @@ export default function Home() {
 
   async function connectRedmine(event: React.FormEvent) {
     event.preventDefault();
-    setError(null);
     setLoading(true);
 
     try {
@@ -1089,7 +1128,7 @@ export default function Home() {
       await refreshAll();
       await loadActivities();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Connection failed");
+      toast.error(e instanceof Error ? e.message : "Connection failed");
     } finally {
       setLoading(false);
     }
@@ -1125,9 +1164,9 @@ export default function Home() {
       }
 
       await refreshAll();
-      setInfoMessage("Manual full refresh completed.");
+      toast.info("Manual full refresh completed.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Manual pull failed");
+      toast.error(e instanceof Error ? e.message : "Manual pull failed");
     } finally {
       setManualRefreshBusy(false);
     }
@@ -1135,7 +1174,6 @@ export default function Home() {
 
   async function bootstrapFromEnv() {
     setBootstrapBusy(true);
-    setError(null);
     try {
       const res = await fetch("/api/redmine/bootstrap", { method: "POST" });
       const data = await res.json();
@@ -1146,9 +1184,9 @@ export default function Home() {
       await refreshAll();
       await loadActivities();
       await loadBootstrapInfo();
-      setInfoMessage("Connected using .env configuration.");
+      toast.info("Connected using .env configuration.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to bootstrap from environment");
+      toast.error(e instanceof Error ? e.message : "Unable to bootstrap from environment");
     } finally {
       setBootstrapBusy(false);
     }
@@ -1157,7 +1195,7 @@ export default function Home() {
   async function updateStatus(issue: Issue, nextStatusId: number) {
     const allowed = allowedStatusIdsByIssue[issue.redmineIssueId];
     if (allowed && allowed.length > 0 && !allowed.includes(nextStatusId)) {
-      setError("Selected status is not allowed for this issue.");
+      toast.error("Selected status is not allowed for this issue.");
       return;
     }
 
@@ -1189,7 +1227,7 @@ export default function Home() {
       await refreshAll();
     } catch (e) {
       setIssues(previous);
-      setError(e instanceof Error ? e.message : "Status update failed");
+      toast.error(e instanceof Error ? e.message : "Status update failed");
     }
   }
 
@@ -1244,17 +1282,17 @@ export default function Home() {
       const failedCount = Number(data.failedCount ?? 0);
       const updatedCount = Number(data.updatedCount ?? 0);
       if (failedCount > 0) {
-        setError(`Updated ${updatedCount} issue(s), ${failedCount} failed. Open browser console for details.`);
+        toast.error(`Updated ${updatedCount} issue(s), ${failedCount} failed. Open browser console for details.`);
         // keep a compact breadcrumb for deeper troubleshooting.
         console.error("Bulk update failures", data.failures ?? []);
       } else {
-        setInfoMessage(`Updated ${updatedCount} issue(s).`);
+        toast.info(`Updated ${updatedCount} issue(s).`);
       }
 
       await refreshAll();
       setSelectedIssueIds([]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Bulk status update failed");
+      toast.error(e instanceof Error ? e.message : "Bulk status update failed");
     } finally {
       setBulkUpdating(false);
     }
@@ -1308,7 +1346,7 @@ export default function Home() {
       await refreshAll();
     } catch (e) {
       setComment(toPost);
-      setError(e instanceof Error ? e.message : "Comment failed");
+      toast.error(e instanceof Error ? e.message : "Comment failed");
     }
   }
 
@@ -1333,9 +1371,9 @@ export default function Home() {
       }
       setTimeComment("");
       await refreshAll();
-      setInfoMessage("Time entry added.");
+      toast.info("Time entry added.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Timelog failed");
+      toast.error(e instanceof Error ? e.message : "Timelog failed");
     }
   }
 
@@ -1371,9 +1409,9 @@ export default function Home() {
       setGithubUrl("");
       setGithubTitle("");
       await refreshAll();
-      setInfoMessage("GitHub link added.");
+      toast.info("GitHub link added.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to link GitHub reference");
+      toast.error(e instanceof Error ? e.message : "Unable to link GitHub reference");
     } finally {
       setGithubBusy(false);
     }
@@ -1393,9 +1431,9 @@ export default function Home() {
         throw new Error(data.error ?? "Unable to remove GitHub link");
       }
       await refreshAll();
-      setInfoMessage("GitHub link removed.");
+      toast.info("GitHub link removed.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to remove GitHub link");
+      toast.error(e instanceof Error ? e.message : "Unable to remove GitHub link");
     } finally {
       setGithubBusy(false);
     }
@@ -1406,7 +1444,6 @@ export default function Home() {
     if (!selectedIssue || !attachmentFile) return;
 
     setAttachmentBusy(true);
-    setError(null);
     try {
       const form = new FormData();
       form.set("file", attachmentFile);
@@ -1426,9 +1463,9 @@ export default function Home() {
       setAttachmentFile(null);
       setAttachmentDescription("");
       await refreshAll();
-      setInfoMessage("Attachment uploaded.");
+      toast.info("Attachment uploaded.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to upload attachment");
+      toast.error(e instanceof Error ? e.message : "Unable to upload attachment");
     } finally {
       setAttachmentBusy(false);
     }
@@ -1440,7 +1477,7 @@ export default function Home() {
 
     const issueToId = Number(relationIssueToId);
     if (!Number.isInteger(issueToId) || issueToId <= 0) {
-      setError("Enter a valid related issue ID.");
+      toast.error("Enter a valid related issue ID.");
       return;
     }
 
@@ -1464,9 +1501,9 @@ export default function Home() {
       setRelationIssueToId("");
       setRelationDelay("");
       await refreshAll();
-      setInfoMessage("Relation added.");
+      toast.info("Relation added.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to add relation");
+      toast.error(e instanceof Error ? e.message : "Unable to add relation");
     } finally {
       setRelationBusy(false);
     }
@@ -1485,9 +1522,9 @@ export default function Home() {
         throw new Error(data.error ?? "Unable to remove relation");
       }
       await refreshAll();
-      setInfoMessage("Relation removed.");
+      toast.info("Relation removed.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to remove relation");
+      toast.error(e instanceof Error ? e.message : "Unable to remove relation");
     } finally {
       setRelationBusy(false);
     }
@@ -1498,7 +1535,7 @@ export default function Home() {
     const now = Date.now();
     setTimerStartedAtMs(now);
     setTimerNowMs(now);
-    setInfoMessage(`Started timer for issue #${issueId}.`);
+    toast.info(`Started timer for issue #${issueId}.`);
   }
 
   function stopTimerAndApply() {
@@ -1510,7 +1547,7 @@ export default function Home() {
     setTimerIssueId(null);
     setTimerStartedAtMs(null);
     setTimerNowMs(Date.now());
-    setInfoMessage(`Timer stopped. Hours prefilled to ${elapsedHours.toFixed(1)}.`);
+    toast.info(`Timer stopped. Hours prefilled to ${elapsedHours.toFixed(1)}.`);
   }
 
   function applySavedView(view: SavedView) {
@@ -1535,11 +1572,11 @@ export default function Home() {
 
     if (existing) {
       setSavedViews((current) => current.map((v) => (v.id === existing.id ? nextView : v)));
-      setInfoMessage(`Saved changes to view "${name}".`);
+      toast.info(`Saved changes to view "${name}".`);
       setActiveViewId(existing.id);
     } else {
       setSavedViews((current) => [nextView, ...current].slice(0, 12));
-      setInfoMessage(`Saved view "${name}".`);
+      toast.info(`Saved view "${name}".`);
       setActiveViewId(nextView.id);
     }
 
@@ -1553,7 +1590,7 @@ export default function Home() {
       setActiveViewId(null);
     }
     if (target) {
-      setInfoMessage(`Removed view "${target.name}".`);
+      toast.info(`Removed view "${target.name}".`);
     }
   }
 
@@ -1859,7 +1896,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="insights-grid">
+      <section id="summary-insights" className="insights-grid">
         <article className="card">
           <h2>Status Mix</h2>
           <p className="muted">Click a status to filter quickly.</p>
@@ -1897,8 +1934,7 @@ export default function Home() {
         </article>
       </section>
 
-      {error && <p className="error-banner">{error}</p>}
-      {infoMessage && <p className="info-banner">{infoMessage}</p>}
+
 
       {aiSearchOpen && aiStatus?.available && (
         <section className="card filters-panel">
@@ -1920,19 +1956,25 @@ export default function Home() {
       )}
 
       <section className="collapsible-stack">
-        <article className="card">
+        <article id="ops-alerts" className="card">
           <div className="collapsible-head">
             <div>
               <h2>Ops Alerts</h2>
               <p className="muted">Highest risk issues based on overdue, blocked, and stale signals.</p>
             </div>
-            <button type="button" className="secondary-button" onClick={() => setOpsAlertsOpen((current) => !current)}>
+            <button 
+              type="button" 
+              className="secondary-button" 
+              onClick={() => setOpsAlertsOpen((current) => !current)}
+              aria-expanded={opsAlertsOpen}
+              aria-controls="ops-alerts-content"
+            >
               {opsAlertsOpen ? "Collapse" : "Expand"}
             </button>
           </div>
 
           {opsAlertsOpen ? (
-            <div className="alert-list">
+            <div id="ops-alerts-content" className="alert-list">
               {summary.atRisk.length === 0 && <p className="muted">No active risk alerts.</p>}
               {summary.atRisk.map(({ issue, reason }) => (
                 <button
@@ -1957,19 +1999,25 @@ export default function Home() {
           )}
         </article>
 
-        <article className="card activity-card">
+        <article id="activity-feed" className="card activity-card">
           <div className="collapsible-head">
             <div>
               <h2>Recent Activity Feed</h2>
               <p className="muted">Last {summary.recentActivity.length} events from updates, comments, and timelogs.</p>
             </div>
-            <button type="button" className="secondary-button" onClick={() => setActivityFeedOpen((current) => !current)}>
+            <button 
+              type="button" 
+              className="secondary-button" 
+              onClick={() => setActivityFeedOpen((current) => !current)}
+              aria-expanded={activityFeedOpen}
+              aria-controls="activity-feed-content"
+            >
               {activityFeedOpen ? "Collapse" : "Expand"}
             </button>
           </div>
 
           {activityFeedOpen ? (
-            <div className="activity-feed">
+            <div id="activity-feed-content" className="activity-feed">
               {summary.recentActivity.map((event, idx) => (
                 <button
                   key={`${event.issueId}-${event.timestamp}-${idx}`}
@@ -2010,7 +2058,7 @@ export default function Home() {
           )}
         </article>
 
-        <article className="card issues-panel">
+        <article id="issue-queue" className="card issues-panel">
           <div className="collapsible-head">
             <div>
               <h2>Issue Queue</h2>
@@ -2032,14 +2080,20 @@ export default function Home() {
               <span className={`queue-stat ${summary.stale > 0 ? "queue-stale" : ""}`} title="Stale 3+ days">
                 🕐 {summary.stale}
               </span>
-              <button type="button" className="secondary-button" onClick={() => setIssueQueueOpen((current) => !current)}>
+              <button 
+                type="button" 
+                className="secondary-button" 
+                onClick={() => setIssueQueueOpen((current) => !current)}
+                aria-expanded={issueQueueOpen}
+                aria-controls="issue-queue-content"
+              >
                 {issueQueueOpen ? "Collapse" : "Expand"}
               </button>
             </div>
           </div>
 
           {issueQueueOpen ? (
-            <div className="issue-queue-content">
+            <div id="issue-queue-content" className="issue-queue-content">
               <div className="bulk-toolbar">
                 <p className="muted">
                   Selected: <strong>{selectedIssueIds.length}</strong>
@@ -2135,6 +2189,14 @@ export default function Home() {
                         </option>
                       ))}
                     </select>
+                    <button
+                      type="button"
+                      className="primary-button new-issue-btn"
+                      onClick={() => setShowIssueCreateModal(true)}
+                    >
+                      + New Issue
+                    </button>
+                    <ColumnPicker visibleColumns={visibleColumns} onChange={setVisibleColumns} />
                     {filterPresets.length > 0 && (
                       <button
                         type="button"
@@ -2198,31 +2260,37 @@ export default function Home() {
                     <th>ID</th>
                     <th>Subject</th>
                     <th>Status</th>
-                    <th
-                      className="sortable-header"
-                      onClick={() => handleSort("priority")}
-                      style={{ cursor: "pointer" }}
-                      title="Sort by priority"
-                    >
-                      Priority{getSortIndicator("priority")}
-                    </th>
-                    <th
-                      className="sortable-header"
-                      onClick={() => handleSort("due")}
-                      style={{ cursor: "pointer" }}
-                      title="Sort by due date"
-                    >
-                      Due{getSortIndicator("due")}
-                    </th>
-                    <th>Progress</th>
-                    <th
-                      className="sortable-header"
-                      onClick={() => handleSort("updated")}
-                      style={{ cursor: "pointer" }}
-                      title="Sort by update time"
-                    >
-                      Activity{getSortIndicator("updated")}
-                    </th>
+                    {visibleColumns.has("priority") && (
+                      <th
+                        className="sortable-header"
+                        onClick={() => handleSort("priority")}
+                        style={{ cursor: "pointer" }}
+                        title="Sort by priority"
+                      >
+                        Priority{getSortIndicator("priority")}
+                      </th>
+                    )}
+                    {visibleColumns.has("due") && (
+                      <th
+                        className="sortable-header"
+                        onClick={() => handleSort("due")}
+                        style={{ cursor: "pointer" }}
+                        title="Sort by due date"
+                      >
+                        Due{getSortIndicator("due")}
+                      </th>
+                    )}
+                    {visibleColumns.has("progress") && <th>Progress</th>}
+                    {visibleColumns.has("updated") && (
+                      <th
+                        className="sortable-header"
+                        onClick={() => handleSort("updated")}
+                        style={{ cursor: "pointer" }}
+                        title="Sort by update time"
+                      >
+                        Activity{getSortIndicator("updated")}
+                      </th>
+                    )}
                   </tr>
                   </thead>
                   <tbody>
@@ -2333,22 +2401,28 @@ export default function Home() {
                             <span className={`status-dot ${isOpenStatus(issue.statusName) ? "dot-open" : ""} ${isDoneStatus(issue.statusName) ? "dot-done" : ""} ${isBlockedStatus(issue.statusName) ? "dot-blocked" : ""} ${isInProgressStatus(issue.statusName) ? "dot-progress" : ""}`} />
                           </div>
                         </td>
-                        <td>
-                          <span className={`priority-badge priority-${(issue.priority ?? "").toLowerCase().replace(/\s+/g, "-")}`}>
-                            {issue.priority ?? "-"}
-                          </span>
-                        </td>
-                        <td className={urgency === "overdue" ? "due-overdue" : urgency === "soon" ? "due-soon" : ""}>
-                          {issue.dueDate ? (
-                            <span className={`due-badge ${urgency}`}>
-                              {new Date(issue.dueDate).toLocaleDateString()}
-                              {urgency === "overdue" && " ⚠️"}
-                              {urgency === "soon" && " ⏰"}
+                        {visibleColumns.has("priority") && (
+                          <td>
+                            <span className={`priority-badge priority-${(issue.priority ?? "").toLowerCase().replace(/\s+/g, "-")}`}>
+                              {issue.priority ?? "-"}
                             </span>
-                          ) : "-"}
-                        </td>
-                        <td>{issue.doneRatio ?? 0}%</td>
-                        <td>{new Date(latestIssueActivityTimestamp(issue)).toLocaleString()}</td>
+                          </td>
+                        )}
+                        {visibleColumns.has("due") && (
+                          <td className={urgency === "overdue" ? "due-overdue" : urgency === "soon" ? "due-soon" : ""}>
+                            {issue.dueDate ? (
+                              <span className={`due-badge ${urgency}`}>
+                                {new Date(issue.dueDate).toLocaleDateString()}
+                                {urgency === "overdue" && " ⚠️"}
+                                {urgency === "soon" && " ⏰"}
+                              </span>
+                            ) : "-"}
+                          </td>
+                        )}
+                        {visibleColumns.has("progress") && <td>{issue.doneRatio ?? 0}%</td>}
+                        {visibleColumns.has("updated") && (
+                          <td>{new Date(latestIssueActivityTimestamp(issue)).toLocaleString()}</td>
+                        )}
                       </tr>
                     );
                   });
@@ -2859,6 +2933,17 @@ export default function Home() {
       {showShortcutHelp && (
         <ShortcutHelp isOpen={showShortcutHelp} onClose={() => setShowShortcutHelp(false)} />
       )}
+      
+      <IssueCreateModal
+        isOpen={showIssueCreateModal}
+        onClose={() => setShowIssueCreateModal(false)}
+        onCreated={(newIssue) => {
+          setIssues((prev) => [newIssue, ...prev]);
+          setSelectedIssueId(newIssue.redmineIssueId);
+        }}
+        statuses={statuses}
+        priorities={priorityOptions}
+      />
     </main>
   );
 }

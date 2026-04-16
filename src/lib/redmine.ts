@@ -251,6 +251,11 @@ export class RedmineClient {
     const data = await this.request<{ user: RedmineCurrentUser }>("/users/current.json");
     return data.user;
   }
+  
+  async listProjects(): Promise<Array<{ id: number; name: string; identifier: string }>> {
+    const data = await this.request<{ projects: Array<{ id: number; name: string; identifier: string }> }>("/projects.json?status=1&limit=100");
+    return data.projects;
+  }
 
   async getIssueStatuses(): Promise<RedmineStatus[]> {
     const data = await this.request<{ issue_statuses: RedmineStatus[] }>("/issue_statuses.json");

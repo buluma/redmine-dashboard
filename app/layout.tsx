@@ -6,6 +6,7 @@ import { OfflineBanner } from "@/src/components/OfflineBanner";
 import { SyncQueueInitializer } from "@/src/components/SyncQueueInitializer";
 import { ServiceWorkerRegistrar } from "@/src/components/ServiceWorkerRegistrar";
 import { AppNav } from "@/src/components/AppNav";
+import { ToastProvider } from "@/src/components/ToastProvider";
 
 const sora = Sora({
   variable: "--font-geist-sans",
@@ -50,13 +51,15 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${sora.variable} ${mono.variable} ${display.variable}`}>
         <ErrorLoggerProvider>
-          <OfflineBanner />
-          <SyncQueueInitializer />
-          <ServiceWorkerRegistrar />
-          <AppNav />
-          <div className="main-content">
-            {children}
-          </div>
+          <ToastProvider>
+            <OfflineBanner />
+            <SyncQueueInitializer />
+            <ServiceWorkerRegistrar />
+            <AppNav />
+            <div className="main-content">
+              {children}
+            </div>
+          </ToastProvider>
         </ErrorLoggerProvider>
         <style>{`
           body {

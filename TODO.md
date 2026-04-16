@@ -58,10 +58,10 @@
 
 ### 🛠️ DevOps / Infrastructure
 - [x] **GitHub Actions CI** — add a workflow to run `npm run lint && npm run test` on PRs. - DONE
-- [ ] **Database migration safety** — multiple migration files exist; document the rollback strategy and add a `make migrate:rollback` target.
-- [ ] **Structured logging** — `src/lib/log.ts` is a thin wrapper; integrate with a proper log aggregator (Loki, Datadog, etc.) for the production Docker image.
-- [ ] **Memory profiling** — `mem:dev` / `mem:start` scripts exist but there's no automated memory regression test to catch leaks introduced in new features.
-- [ ] **Upstash Redis health check** — `redis.ts` is used for rate limiting; add a startup health check so the app fails fast if Redis is unavailable rather than silently falling back.
+- [x] **Database migration safety** — multiple migration files exist; document the rollback strategy and add a `make migrate:rollback` target. - DONE
+- [x] **Structured logging** — `src/lib/log.ts` is a thin wrapper; integrate with a proper log aggregator (Loki, Datadog, etc.) for the production Docker image. - DONE
+- [x] **Memory profiling** — `mem:dev` / `mem:start` scripts exist but there's no automated memory regression test to catch leaks introduced in new features. - DONE
+- [x] **Upstash Redis health check** — `redis.ts` is used for rate limiting; add a startup health check so the app fails fast if Redis is unavailable rather than silently falling back. - DONE
 
 ---
 

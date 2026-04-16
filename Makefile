@@ -1,17 +1,22 @@
-.PHONY: help up down logs restart shell reset-db health status backup clean
+.PHONY: help up down logs restart shell reset-db health status backup clean migrate migrate:rollback db-status
 
 help:
 	@echo "NRCC Docker targets:"
-	@echo "  make up        - Build and start dashboard in background"
-	@echo "  make down      - Stop and remove containers"
-	@echo "  make logs      - Tail dashboard logs"
-	@echo "  make restart   - Restart dashboard service"
-	@echo "  make shell     - Open shell in dashboard container"
-	@echo "  make reset-db  - Remove SQLite db and restart service"
-	@echo "  make health    - Check container health status"
-	@echo "  make status    - Show container status and health"
-	@echo "  make backup    - Backup the database"
-	@echo "  make clean     - Remove build artifacts and caches"
+	@echo "  make up             - Build and start dashboard in background"
+	@echo "  make down           - Stop and remove containers"
+	@echo "  make logs           - Tail dashboard logs"
+	@echo "  make restart        - Restart dashboard service"
+	@echo "  make shell          - Open shell in dashboard container"
+	@echo "  make reset-db       - Remove SQLite db and restart service"
+	@echo "  make health         - Check container health status"
+	@echo "  make status         - Show container status and health"
+	@echo "  make backup         - Backup the database"
+	@echo "  make clean          - Remove build artifacts and caches"
+	@echo ""
+	@echo "Database Migration targets:"
+	@echo "  make migrate        - Apply pending migrations"
+	@echo "  make migrate:rollback - Rollback last migration (use with caution!)"
+	@echo "  make db-status      - Show migration status"
 
 up:
 	docker compose up --build -d
@@ -57,6 +62,23 @@ backup:
 	@if [ -f prisma/dev.db ]; then cp prisma/dev.db backups/dev.db.$(date +%Y%m%d_%H%M%S); fi
 	@echo "Backup complete. Files:"
 	@ls -la backups/
+
+# Database migrations
+migrate:
+	@echo "Applying database migrations..."
+	@npx prisma migrate deploy
+	@echo "Migrations applied successfully"
+
+migrate:rollback:
+	@echo "⚠️  Rolling back last migration..."
+	@read -p "Are you sure? This may cause data loss. Type 'yes' to confirm: " confirm && [ "$$confirm" = "yes" ] || exit 1
+	@echo "Rolling back..."
+	@npx prisma migrate rollback
+	@echo "Migration rolled back"
+
+db-status:
+	@echo "=== Migration Status ==="
+	@npx prisma migrate status
 
 clean:
 	echo "Cleaning build artifacts..."
