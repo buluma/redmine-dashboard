@@ -23,6 +23,7 @@ model User {
   syncState         SyncState?
   syncJobs          SyncJob[]
   favorites         Favorite[]
+  savedViews        SavedView[]
   internalNotes     InternalNote[]
 }
 
@@ -41,6 +42,29 @@ model Favorite {
   createdAt    DateTime @default(now())
 
   @@unique([userId, issueId])
+}
+
+model SavedView {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  project       String?
+  status        String?  @default("open")
+  search        String?
+  sortBy        String?  @default("updated")
+  sortOrder     String   @default("desc")
+  // Advanced filters
+  statusIds     Int[]    @default([])
+  priorityIds   Int[]    @default([])
+  assignedToMe  Boolean  @default(false)
+  dueInDays    Int?
+  // Metadata
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model RedmineUser {
