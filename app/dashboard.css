@@ -1,0 +1,368 @@
+/* Dashboard-specific styles extracted from globals.css */
+
+/* Dashboard layout */
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem 1.5rem;
+  max-width: 1800px;
+  margin: 0 auto;
+}
+
+.dashboard.reports-v2 {
+  max-width: 1600px;
+}
+
+/* Metrics grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.metric-card {
+  padding: 1rem 1.25rem;
+  background: var(--surface-1);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.metric-primary {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+
+.metric-label {
+  font-size: 0.8rem;
+  color: var(--text-soft);
+  margin: 0;
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0.25rem 0 0;
+}
+
+.metric-value span {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--text-soft);
+}
+
+/* Status chips */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-chip.open {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.status-chip.closed {
+  background: var(--surface-3);
+  color: var(--text-soft);
+}
+
+.status-chip.in-progress {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Priority chips */
+.priority-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.priority-chip.high {
+  background: var(--signal-soft);
+  color: var(--signal);
+}
+
+.priority-chip.normal {
+  background: var(--surface-3);
+  color: var(--text-soft);
+}
+
+.priority-chip.low {
+  background: var(--bg-soft);
+  color: var(--text-soft);
+}
+
+/* Issue table */
+.issue-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.issue-table th {
+  text-align: left;
+  padding: 0.75rem 0.5rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  border-bottom: 2px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-soft);
+  z-index: 10;
+}
+
+.issue-table td {
+  padding: 0.625rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.issue-table tr:hover {
+  background: var(--surface-2);
+}
+
+.issue-table .issue-checkbox {
+  width: 1.5rem;
+}
+
+.issue-table .issue-id {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.issue-table .issue-subject {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.issue-table .issue-project {
+  color: var(--text-soft);
+  font-size: 0.8rem;
+}
+
+.issue-table .issue-status {
+  min-width: 80px;
+}
+
+.issue-table .issue-priority {
+  min-width: 60px;
+}
+
+.issue-table .issue-assignee {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.issue-table .issue-updated {
+  font-size: 0.8rem;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+
+/* Drag handle */
+.drag-handle {
+  cursor: grab;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+
+.drag-handle:hover {
+  opacity: 1;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.pagination button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-1);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pagination button:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination .page-info {
+  font-size: 0.875rem;
+  color: var(--text-soft);
+}
+
+/* Quick actions panel */
+.quick-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.75rem;
+  background: var(--surface-2);
+  border-radius: 8px;
+}
+
+.quick-actions select,
+.quick-actions input {
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-1);
+  font-size: 0.875rem;
+}
+
+.quick-actions button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.quick-actions .primary-btn {
+  background: var(--accent);
+  color: white;
+}
+
+.quick-actions .primary-btn:hover {
+  background: var(--accent-strong);
+}
+
+.quick-actions .secondary-btn {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+/* Filters section */
+.filters-bar {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 1rem;
+  background: var(--surface-2);
+  border-radius: 8px;
+}
+
+.filters-bar .search-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.filters-bar select {
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-1);
+  font-size: 0.9rem;
+}
+
+/* Bulk actions bar */
+.bulk-actions-bar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.bulk-actions-bar .selected-count {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Loading and empty states */
+.loading-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: var(--text-soft);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-soft);
+}
+
+.empty-state h3 {
+  margin-bottom: 0.5rem;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.2s ease;
+}
+
+.slide-in {
+  animation: slideIn 0.2s ease;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 0.75rem;
+  }
+  
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .issue-table {
+    font-size: 0.8rem;
+  }
+  
+  .issue-table .issue-subject {
+    max-width: 150px;
+  }
+  
+  .filters-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
