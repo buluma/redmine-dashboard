@@ -45,6 +45,8 @@ This directory contains reusable library code, components, and other source file
   - `memory.ts`: Memory usage polling for diagnostics.
   - `http.ts`: HTTP utilities (JSON parsing, error responses).
   - `rate-limit.ts`: In-memory rate limiting.
+  - `ai-tools.ts`: Definitions and execution engine for Redmine AI tools.
+  - `llm-provider.ts`: Multi-provider LLM manager with tool-calling support.
   - `ai-prompt.ts`: Prompt construction for AI features.
 - **`src/components/`:** Reusable React components.
   - `QuickActionsPanel.tsx`: Status, assign, and time logging panel.

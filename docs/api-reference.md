@@ -216,7 +216,43 @@ Returns assignable Redmine users (from Redmine API if admin access, else local `
 ### GET /api/internal/priorities
 Returns issue priority enumerations (from Redmine API if available, else local `RedmineEnumeration` cache).
 
-### GET /api/health
+## AI and Chat APIs
+
+### POST /api/chat
+The primary chat endpoint. Returns a message from the LLM, optionally including `pendingToolCalls` if the model wants to take an action.
+
+Request body:
+```json
+{
+  "messages": [
+    { "role": "user", "content": "Close issue #123" }
+  ]
+}
+```
+
+Response for mutating actions:
+```json
+{
+  "message": { "role": "assistant", "content": "I'd like to close issue #123. Please confirm.", "model": "..." },
+  "pendingToolCalls": [
+    { "id": "tc_1", "name": "close_issue", "arguments": { "issue_id": 123 }, "summary": "Close issue #123" }
+  ],
+  "conversationContext": [...]
+}
+```
+
+### POST /api/chat/execute-tools
+Executes user-confirmed tool calls and returns a final natural-language summary.
+
+Request body:
+```json
+{
+  "toolCalls": [...],
+  "conversationContext": [...]
+}
+```
+
+## GET /api/health
 System health probe.
 
 ## Mobile API
