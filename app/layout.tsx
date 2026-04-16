@@ -7,6 +7,8 @@ import { SyncQueueInitializer } from "@/src/components/SyncQueueInitializer";
 import { ServiceWorkerRegistrar } from "@/src/components/ServiceWorkerRegistrar";
 import { AppNav } from "@/src/components/AppNav";
 import { ToastProvider } from "@/src/components/ToastProvider";
+import { I18nProvider } from "@/src/components/I18nProvider";
+import { LocaleIndicator } from "@/src/components/LocaleIndicator";
 
 const sora = Sora({
   variable: "--font-geist-sans",
@@ -52,13 +54,16 @@ export default function RootLayout({
       <body className={`${sora.variable} ${mono.variable} ${display.variable}`}>
         <ErrorLoggerProvider>
           <ToastProvider>
-            <OfflineBanner />
-            <SyncQueueInitializer />
-            <ServiceWorkerRegistrar />
-            <AppNav />
-            <div className="main-content">
-              {children}
-            </div>
+            <I18nProvider>
+              <LocaleIndicator />
+              <OfflineBanner />
+              <SyncQueueInitializer />
+              <ServiceWorkerRegistrar />
+              <AppNav />
+              <div className="main-content">
+                {children}
+              </div>
+            </I18nProvider>
           </ToastProvider>
         </ErrorLoggerProvider>
         <style>{`
