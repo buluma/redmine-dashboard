@@ -11,6 +11,7 @@ Welcome to the documentation for Converge. This documentation is intended to hel
 - **[External Tickets API](./external-api.md):** REST API for n8n, Zapier, and external integrations.
 - **[Webhooks](./webhooks.md):** Configure outgoing webhooks for external system integrations.
 - **[Slack Integration](./slack-integration.md):** Configure Slack for reading messages and sending Redmine updates.
+- **[Tailscale Aperture](./aperture.md):** Private LLM gateway configuration and usage.
 - **[Code Standards](./code-standards.md):** The coding standards and conventions used in the project.
 - **[Telemetry Conventions](./telemetry.md):** Standards for logs and metrics naming, tagging, and route instrumentation patterns.
 - **[Memory Profiling Guide](./perf-memory.md):** Repeatable process for measuring and reducing runtime memory usage.

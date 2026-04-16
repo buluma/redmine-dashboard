@@ -13,9 +13,7 @@ export default async function AiSummariesPage() {
 
   const summaries = await prisma.aiSummary.findMany({
     where: {
-      issue: {
-        userId: user.id,
-      },
+      userId: user.id,
     },
     include: {
       issue: {
@@ -33,15 +31,13 @@ export default async function AiSummariesPage() {
       },
     },
     orderBy: {
-      updatedAt: "desc",
+      generatedAt: "desc",
     },
-  }).catch(() => []);
+  });
 
   const chatMessages = await prisma.aiChatMessage.findMany({
     where: {
-      issue: {
-        userId: user.id,
-      },
+      userId: user.id,
     },
     include: {
       issue: {

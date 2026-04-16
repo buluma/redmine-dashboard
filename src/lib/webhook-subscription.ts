@@ -230,7 +230,7 @@ function generateSignature(payload: string, secret: string): string {
 async function deliverWebhook(
   subscription: WebhookSubscription,
   payload: WebhookPayload
-): Promise<{ success: boolean; status?: number; error?: string }> {
+): Promise<{ success: boolean; status?: number; responseBody?: string; error?: string }> {
   const body = JSON.stringify(payload);
   const signature = generateSignature(body, subscription.secret);
 
@@ -262,6 +262,7 @@ async function deliverWebhook(
           resolve({
             success,
             status: res.statusCode,
+            responseBody: data,
             error: success ? undefined : `HTTP ${res.statusCode}: ${data.substring(0, 100)}`,
           });
         });
@@ -315,12 +316,31 @@ export async function dispatchWebhook(
   // Deliver to all interested subscribers in parallel
   await Promise.all(
     interested.map(async (sub) => {
+      const startTime = Date.now();
       try {
         const result = await deliverWebhook(sub, payload);
+        const durationMs = Date.now() - startTime;
+        
         await updateSubscriptionFailure(sub.id, result.status ?? null, result.success);
+        
+        // Log delivery to database
+        await prisma.webhookDelivery.create({
+          data: {
+            subscriptionId: sub.id,
+            event,
+            payload: payload as any,
+            responseStatus: result.status,
+            responseBody: result.responseBody?.slice(0, 1000),
+            error: result.error,
+            durationMs,
+            attempt: 1,
+            deliveredAt: new Date(),
+          },
+        }).catch(err => {
+          console.error("[Webhook] Failed to log delivery:", err);
+        });
 
-        // Log delivery attempt (skip audit for high-frequency deliveries)
-        console.log(`[Webhook] Delivery ${result.success ? '✓' : '✗'} to ${maskUrl(sub.url)}: ${result.status}`);
+        console.log(`[Webhook] Delivery ${result.success ? '✓' : '✗'} to ${maskUrl(sub.url)}: ${result.status} (${durationMs}ms)`);
 
         if (!result.success) {
           console.error(`[Webhook] Delivery failed to ${maskUrl(sub.url)}:`, result.error);
@@ -328,6 +348,18 @@ export async function dispatchWebhook(
       } catch (err) {
         console.error(`[Webhook] Error delivering to ${maskUrl(sub.url)}:`, err);
         await updateSubscriptionFailure(sub.id, null, false);
+        
+        // Log failed delivery
+        await prisma.webhookDelivery.create({
+          data: {
+            subscriptionId: sub.id,
+            event,
+            payload: payload as any,
+            error: err instanceof Error ? err.message : "Unknown error",
+            attempt: 1,
+            deliveredAt: new Date(),
+          },
+        }).catch(() => {});
       }
     })
   );

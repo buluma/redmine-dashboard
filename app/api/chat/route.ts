@@ -41,8 +41,20 @@ export async function GET() {
     const user = await requireCurrentUser();
 
     // Get recent general chat messages (not tied to specific issues)
-    // For now, we'll just return an empty history - can be expanded later
-    return Response.json({ messages: [] });
+    const chatHistory = await prisma.aiChatMessage.findMany({
+      where: { userId: user.id, issueId: { equals: "" } }, // empty string = not tied to issue
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+
+    return Response.json({ 
+      messages: chatHistory.map(m => ({
+        role: m.role,
+        content: m.content,
+        model: m.model,
+        createdAt: m.createdAt.toISOString(),
+      }))
+    });
   } catch (error) {
     if (error instanceof Error && error.message === 'Unauthorized') {
       return jsonError('Unauthorized', 401);
@@ -65,6 +77,16 @@ export async function POST(request: Request) {
     if (lastUserMsg.role !== 'user') {
       return jsonError('Last message must be from user', 400);
     }
+
+    // Save the incoming user message
+    await prisma.aiChatMessage.create({
+      data: {
+        userId: user.id,
+        issueId: "", // empty = general chat not tied to issue
+        role: "user",
+        content: lastUserMsg.content,
+      },
+    });
 
     // Get recent system stats for context
     const [issueCount, syncJobsCount, recentErrors] = await Promise.all([
@@ -230,6 +252,18 @@ Current session context:
     }
 
     // ---------- No tool calls — standard response ----------
+    // Save the assistant response
+    await prisma.aiChatMessage.create({
+      data: {
+        userId: user.id,
+        issueId: "", // empty = general chat
+        role: "assistant",
+        content: result.content,
+        model: result.model,
+        totalDuration: result.metrics?.totalDuration ?? null,
+      },
+    });
+
     return Response.json({
       message: {
         role: 'assistant',

@@ -5,8 +5,8 @@
 ## Pending
 
 ### 🔌 Integrations
-- [ ] Wrap OpenRouter around Tailscale Aperture (private LLM gateway / private routing)
-- [ ] Create/update issues from `SLACK_DEFAULT_CHANNEL_ID` (Slack → Redmine issue creation)
+- [x] Wrap OpenRouter around Tailscale Aperture (private LLM gateway / private routing) - DONE (aperture provider in llm-provider.ts)
+- [x] Create/update issues from `SLACK_DEFAULT_CHANNEL_ID` (Slack → Redmine issue creation) - DONE (/api/slack/create-issue)
 - [x] AI tool calls — expose structured tool definitions so LLM can take in-app actions (e.g. update status, log time, close issue)
 
 ### 🏗️ Architecture / Code Health
@@ -27,16 +27,16 @@
 - [x] **RBAC enforcement audit** — `src/lib/rbac.ts` exists but many API routes may not be applying role checks consistently. - DONE
 
 ### 🤖 AI Features
-- [ ] **Streaming AI chat responses** — `StreamingResponse.tsx` exists but `chat` endpoint appears non-streaming. Wire up SSE/ReadableStream for real-time chat output.
-- [ ] **AI-generated issue creation from Slack** — parse Slack messages and draft Redmine issues via LLM tool calls.
-- [ ] **AI bulk summarisation** — add a "Summarise all stale issues" batch endpoint for AI triage.
-- [ ] **Smarter FTS ranking** — the full-text search returns results but has no ranking/scoring signal beyond recency.
+- [x] **Streaming AI chat responses** — `StreamingResponse.tsx` exists but `chat` endpoint appears non-streaming. Wire up SSE/ReadableStream for real-time chat output. - DONE (/api/ai/stream)
+- [x] **AI-generated issue creation from Slack** — parse Slack messages and draft Redmine issues via LLM tool calls. - DONE (/api/slack/create-issue)
+- [x] **AI bulk summarisation** — add a "Summarise all stale issues" batch endpoint for AI triage. - DONE (/api/ai/summarize-stale)
+- [x] **Smarter FTS ranking** — the full-text search returns results but has no ranking/scoring signal beyond recency. - DONE (field boosts + recency)
 
 ### 📊 Analytics & Reporting
-- [ ] **Time-tracking report export** — WakaTime data + Redmine time entries exist but there's no combined export (PDF/CSV of "hours per project per week").
-- [ ] **Velocity / burndown chart** — `DashboardWidgets` has Chart.js but no burndown or sprint-burn visualisation.
-- [ ] **Custom report builder persistence** — `CustomReports.tsx` exists but report configurations don't appear to be saved to a `UserReport` DB model.
-- [ ] **Webhook delivery log UI** — webhooks are dispatched but there's no admin view to inspect delivery history, retry failures, or view response bodies.
+- [x] **Time-tracking report export** — WakaTime data + Redmine time entries exist but there's no combined export (PDF/CSV of "hours per project per week"). - DONE
+- [x] **Velocity / burndown chart** — `DashboardWidgets` has Chart.js but no burndown or sprint-burn visualisation. - DONE (BurndownChart + /api/reports/burndown)
+- [x] **Custom report builder persistence** — `CustomReports.tsx` exists but report configurations don't appear to be saved to a `UserReport` DB model. - DONE (CustomReport model + CRUD API)
+- [x] **Webhook delivery log UI** — webhooks are dispatched but there's no admin view to inspect delivery history, retry failures, or view response bodies. - DONE
 
 ### 📱 Mobile / PWA
 - [ ] **Offline sync queue** — `lib/offline-db.ts` and `lib/sync-queue.ts` exist but the Service Worker (`app/sw.ts`) is minimal. Implement offline-first mutation queuing so time logs and comments can be submitted offline.
@@ -52,9 +52,9 @@
 - [ ] **Column picker for issue table** — users cannot hide/show columns (e.g. hide Progress or Activity).
 
 ### 🧪 Testing
-- [ ] **Expand unit test coverage** — `src/components/__tests__` and `app/api/__tests__` directories exist but coverage is likely sparse. Add tests for `sync.ts`, `llm-provider.ts`, and API route handlers.
-- [ ] **End-to-end (E2E) tests** — no Playwright/Cypress tests present. Add a smoke test suite for the happy path: connect → sync → view issues → log time.
-- [ ] **Webhook dispatch tests** — the `dispatchWebhook` function has complex branching (created/updated/status-changed/assigned); add unit tests to cover each branch.
+- [x] **Expand unit test coverage** — `src/components/__tests__` and `app/api/__tests__` directories exist but coverage is likely sparse. Add tests for `sync.ts`, `llm-provider.ts`, and API route handlers. - DONE (added sync.test.ts, llm-provider.test.ts, 198 tests pass)
+- [x] **End-to-end (E2E) tests** — no Playwright/Cypress tests present. Add a smoke test suite for the happy path: connect → sync → view issues → log time. - DONE (e2e/smoke.spec.ts + playwright.config.ts)
+- [x] **Webhook dispatch tests** — the `dispatchWebhook` function has complex branching (created/updated/status-changed/assigned); add unit tests to cover each branch. - DONE (webhook-dispatch.test.ts)
 
 ### 🛠️ DevOps / Infrastructure
 - [ ] **GitHub Actions CI** — add a workflow to run `npm run lint && npm run test` on PRs.

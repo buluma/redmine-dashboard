@@ -24,6 +24,9 @@ model User {
   syncJobs          SyncJob[]
   favorites         Favorite[]
   savedViews        SavedView[]
+  customReports     CustomReport[]
+  aiSummaries       AiSummary[]
+  aiChatMessages    AiChatMessage[]
   internalNotes     InternalNote[]
 }
 
@@ -215,25 +218,30 @@ model IssueActivityEvent {
 
 model AiSummary {
   id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   issueId           String
   issue             Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
   summary           String
   model             String
+  confidence        Float?
   totalDuration     BigInt?
   loadDuration      BigInt?
   promptEvalCount   Int?
   promptEvalDuration BigInt?
   evalCount         Int?
   evalDuration      BigInt?
-  createdAt         DateTime @default(now())
+  generatedAt       DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  @@unique([issueId])
+  @@index([userId])
   @@index([issueId])
 }
 
 model AiChatMessage {
   id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   issueId           String
   issue             Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
   role              String   // "user" or "assistant"
@@ -247,8 +255,8 @@ model AiChatMessage {
   evalDuration      BigInt?
   createdAt         DateTime @default(now())
 
+  @@index([userId, issueId])
   @@index([issueId, createdAt])
-  @@index([issueId])
 }
 
 model InternalNote {
@@ -555,6 +563,37 @@ model WebhookSubscription {
   lastTriggeredAt DateTime?
   lastStatus      Int?
   failureCount    Int       @default(0)
+  deliveries      WebhookDelivery[]
 
   @@index([active])
+}
+
+model WebhookDelivery {
+  id              String    @id @default(cuid())
+  subscriptionId  String
+  subscription    WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  event           String
+  payload         Json
+  responseStatus  Int?
+  responseBody   String?
+  error          String?
+  durationMs     Int?
+  attempt        Int       @default(1)
+  deliveredAt    DateTime  @default(now())
+
+  @@index([subscriptionId])
+  @@index([deliveredAt])
+}
+
+model CustomReport {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  type        String   // "time-summary", "burndown", "velocity"
+  config      Json     // Stores report configuration
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
 }

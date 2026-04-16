@@ -210,30 +210,43 @@ export async function POST(request: Request) {
       val != null ? BigInt(val) : null;
 
     // Persist summary to database
-    await prisma.aiSummary.upsert({
-      where: { issueId },
-      update: {
-        summary: summaryText,
-        model: result.model,
-        totalDuration: toBigInt(result.total_duration),
-        loadDuration: toBigInt(result.load_duration),
-        promptEvalCount: result.prompt_eval_count ?? null,
-        promptEvalDuration: toBigInt(result.prompt_eval_duration),
-        evalCount: result.eval_count ?? null,
-        evalDuration: toBigInt(result.eval_duration),
-      },
-      create: {
-        issueId,
-        summary: summaryText,
-        model: result.model,
-        totalDuration: toBigInt(result.total_duration),
-        loadDuration: toBigInt(result.load_duration),
-        promptEvalCount: result.prompt_eval_count ?? null,
-        promptEvalDuration: toBigInt(result.prompt_eval_duration),
-        evalCount: result.eval_count ?? null,
-        evalDuration: toBigInt(result.eval_duration),
-      },
+    const existingSummary = await prisma.aiSummary.findFirst({
+      where: { issueId, userId: actorUserId },
     });
+
+    if (existingSummary) {
+      await prisma.aiSummary.update({
+        where: { id: existingSummary.id },
+        data: {
+          summary: summaryText,
+          model: result.model,
+          totalDuration: toBigInt(result.total_duration),
+          loadDuration: toBigInt(result.load_duration),
+          promptEvalCount: result.prompt_eval_count ?? null,
+          promptEvalDuration: toBigInt(result.prompt_eval_duration),
+          evalCount: result.eval_count ?? null,
+          evalDuration: toBigInt(result.eval_duration),
+          confidence: 0.7,
+        },
+      });
+    } else {
+      await prisma.aiSummary.create({
+        data: {
+          userId: actorUserId,
+          issueId,
+          summary: summaryText,
+          model: result.model,
+          totalDuration: toBigInt(result.total_duration),
+          loadDuration: toBigInt(result.load_duration),
+          promptEvalCount: result.prompt_eval_count ?? null,
+          promptEvalDuration: toBigInt(result.prompt_eval_duration),
+          evalCount: result.eval_count ?? null,
+          evalDuration: toBigInt(result.eval_duration),
+          confidence: 0.7,
+          generatedAt: new Date(),
+        },
+      });
+    }
 
     // Log success
     await prisma.webLog.create({
