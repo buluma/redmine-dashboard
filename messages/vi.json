@@ -1,0 +1,106 @@
+{
+  "common": {
+    "backToDashboard": "Quay lại Dashboard",
+    "loading": "Đang tải...",
+    "error": "Lỗi",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "delete": "Xóa",
+    "edit": "Sửa",
+    "create": "Tạo",
+    "search": "Tìm kiếm",
+    "filter": "Lọc",
+    "refresh": "Làm mới",
+    "reset": "Đặt lại",
+    "apply": "Áp dụng",
+    "close": "Đóng",
+    "confirm": "Xác nhận",
+    "yes": "Có",
+    "no": "Không"
+  },
+  "nav": {
+    "dashboard": "Bảng điều khiển",
+    "heimdall": "Nhật ký Heimdall",
+    "personalTickets": "Phiếu cá nhân",
+    "reports": "Báo cáo",
+    "aiSummaries": "Tóm tắt AI",
+    "chat": "Trò chuyện AI",
+    "ops": "Vận hành",
+    "slack": "Slack",
+    "wakatime": "WakaTime",
+    "webhooks": "Webhook",
+    "apiDocs": "Tài liệu API"
+  },
+  "dashboard": {
+    "title": "Bảng điều khiển",
+    "openIssues": "Phiếu mở",
+    "closedIssues": "Phiếu đã đóng",
+    "inProgress": "Đang xử lý",
+    "recentActivity": "Hoạt động gần đây",
+    "noResults": "Không có kết quả",
+    "forceRefresh": "Buộc làm mới",
+    "resetFilters": "Đặt lại bộ lọc",
+    "shortcuts": "Phím tắt",
+    "lastSync": "Đồng bộ cuối"
+  },
+  "issues": {
+    "subject": "Chủ đề",
+    "description": "Mô tả",
+    "status": "Trạng thái",
+    "priority": "Ưu tiên",
+    "assignee": "Người được giao",
+    "dueDate": "Ngày đến hạn",
+    "startDate": "Ngày bắt đầu",
+    "estimatedHours": "Giờ ước tính",
+    "spentHours": "Giờ đã dùng",
+    "project": "Dự án",
+    "tracker": "Loại",
+    "author": "Tác giả",
+    "created": "Tạo",
+    "updated": "Cập nhật"
+  },
+  "status": {
+    "new": "Mới",
+    "inProgress": "Đang xử lý",
+    "resolved": "Đã giải quyết",
+    "feedback": "Phản hồi",
+    "closed": "Đã đóng",
+    "rejected": "Bị từ chối"
+  },
+  "priority": {
+    "low": "Thấp",
+    "normal": "Bình thường",
+    "high": "Cao",
+    "urgent": "Khẩn cấp",
+    "immediate": "Ngay lập tức"
+  },
+  "ai": {
+    "summarize": "Tóm tắt phiếu",
+    "summarizing": "Đang tóm tắt...",
+    "summarized": "Đã tóm tắt",
+    "noActivity": "Không có hoạt động AI",
+    "askAI": "Hỏi AI",
+    "analyzing": "Phân tích phiếu...",
+    "staleIssues": "Phiếu cũ"
+  },
+  "sync": {
+    "syncing": "Đang đồng bộ...",
+    "synced": "Đã đồng bộ",
+    "failed": "Thất bại",
+    "noChanges": "Không có thay đổi",
+    "pulling": "Kéo từ Redmine...",
+    "pushing": "Đẩy đến Redmine..."
+  },
+  "auth": {
+    "login": "Đăng nhập",
+    "logout": "Đăng xuất",
+    "unauthorized": "Chưa xác thực",
+    "sessionExpired": "Hết phiên"
+  },
+  "errors": {
+    "notFound": "Không tìm thấy",
+    "serverError": "Lỗi máy chủ",
+    "networkError": "Lỗi mạng",
+    "rateLimited": "Giới hạn tốc độ"
+  }
+}
