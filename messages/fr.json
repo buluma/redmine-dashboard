@@ -1,0 +1,106 @@
+{
+  "common": {
+    "backToDashboard": "Retour au Tableau de Bord",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "save": "Sauvegarder",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "refresh": "Actualiser",
+    "reset": "Réinitialiser",
+    "apply": "Appliquer",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "yes": "Oui",
+    "no": "Non"
+  },
+  "nav": {
+    "dashboard": "Tableau de Bord",
+    "heimdall": "Journaux Heimdall",
+    "personalTickets": "Tickets Personnels",
+    "reports": "Rapports",
+    "aiSummaries": "Résumés IA",
+    "chat": "Chat IA",
+    "ops": "Ops Système",
+    "slack": "Slack",
+    "wakatime": "WakaTime",
+    "webhooks": "Webhooks",
+    "apiDocs": "Docs API"
+  },
+  "dashboard": {
+    "title": "Tableau de Bord",
+    "openIssues": "Tickets Ouverts",
+    "closedIssues": "Tickets Fermés",
+    "inProgress": "En Cours",
+    "recentActivity": "Activité Récente",
+    "noResults": "Aucun résultat trouvé",
+    "forceRefresh": "Forcer Actualisation",
+    "resetFilters": "Réinitialiser Filtres",
+    "shortcuts": "Raccourcis",
+    "lastSync": "Dernière sync"
+  },
+  "issues": {
+    "subject": "Sujet",
+    "description": "Description",
+    "status": "Statut",
+    "priority": "Priorité",
+    "assignee": "Assigné",
+    "dueDate": "Date Échéance",
+    "startDate": "Date Début",
+    "estimatedHours": "Heures Estimées",
+    "spentHours": "Heures Passées",
+    "project": "Projet",
+    "tracker": "Type",
+    "author": "Auteur",
+    "created": "Créé",
+    "updated": "Mis à jour"
+  },
+  "status": {
+    "new": "Nouveau",
+    "inProgress": "En Cours",
+    "resolved": "Résolu",
+    "feedback": "Commentaires",
+    "closed": "Fermé",
+    "rejected": "Rejeté"
+  },
+  "priority": {
+    "low": "Basse",
+    "normal": "Normale",
+    "high": "Haute",
+    "urgent": "Urgente",
+    "immediate": "Immédiate"
+  },
+  "ai": {
+    "summarize": "Résumer Tickets",
+    "summarizing": "Résumation...",
+    "summarized": "Résumé",
+    "noActivity": "Pas d'Activité IA",
+    "askAI": "Demander IA",
+    "analyzing": "Analyse des tickets...",
+    "staleIssues": "Tickets Anciens"
+  },
+  "sync": {
+    "syncing": "Synchronisation...",
+    "synced": "Synchronisé",
+    "failed": "Échoué",
+    "noChanges": "Pas de changements",
+    "pulling": "Réception de Redmine...",
+    "pushing": "Envoi à Redmine..."
+  },
+  "auth": {
+    "login": "Connexion",
+    "logout": "Déconnexion",
+    "unauthorized": "Non autorisé",
+    "sessionExpired": "Session expirée"
+  },
+  "errors": {
+    "notFound": "Non trouvé",
+    "serverError": "Erreur serveur",
+    "networkError": "Erreur réseau",
+    "rateLimited": "Rate limité"
+  }
+}

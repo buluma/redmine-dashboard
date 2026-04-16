@@ -1,0 +1,106 @@
+{
+  "common": {
+    "backToDashboard": "返回仪表板",
+    "loading": "加载中...",
+    "error": "错误",
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "create": "创建",
+    "search": "搜索",
+    "filter": "筛选",
+    "refresh": "刷新",
+    "reset": "重置",
+    "apply": "应用",
+    "close": "关闭",
+    "confirm": "确认",
+    "yes": "是",
+    "no": "否"
+  },
+  "nav": {
+    "dashboard": "仪表板",
+    "heimdall": "Heimdall日志",
+    "personalTickets": "个人工单",
+    "reports": "报告",
+    "aiSummaries": "AI摘要",
+    "chat": "AI聊天",
+    "ops": "系统运维",
+    "slack": "Slack",
+    "wakatime": "WakaTime",
+    "webhooks": "Webhooks",
+    "apiDocs": "API文档"
+  },
+  "dashboard": {
+    "title": "仪表板",
+    "openIssues": "待处理工单",
+    "closedIssues": "已关闭工单",
+    "inProgress": "进行中",
+    "recentActivity": "最近活动",
+    "noResults": "未找到结果",
+    "forceRefresh": "强制刷新",
+    "resetFilters": "重置筛选",
+    "shortcuts": "快捷键",
+    "lastSync": "最后同步"
+  },
+  "issues": {
+    "subject": "主题",
+    "description": "描述",
+    "status": "状态",
+    "priority": "优先级",
+    "assignee": "负责人",
+    "dueDate": "截止日期",
+    "startDate": "开始日期",
+    "estimatedHours": "预估时间",
+    "spentHours": "已用时间",
+    "project": "项目",
+    "tracker": "类型",
+    "author": "创建者",
+    "created": "创建于",
+    "updated": "更新于"
+  },
+  "status": {
+    "new": "新建",
+    "inProgress": "进行中",
+    "resolved": "已解决",
+    "feedback": "反馈",
+    "closed": "已关闭",
+    "rejected": "已拒绝"
+  },
+  "priority": {
+    "low": "低",
+    "normal": "普通",
+    "high": "高",
+    "urgent": "紧急",
+    "immediate": "立即"
+  },
+  "ai": {
+    "summarize": "汇总工单",
+    "summarizing": "汇总中...",
+    "summarized": "已汇总",
+    "noActivity": "暂无AI活动",
+    "askAI": "询问AI",
+    "analyzing": "分析工单中...",
+    "staleIssues": "陈旧工单"
+  },
+  "sync": {
+    "syncing": "同步中...",
+    "synced": "已同步",
+    "failed": "失败",
+    "noChanges": "无变更",
+    "pulling": "从Redmine拉取...",
+    "pushing": "推送到Redmine..."
+  },
+  "auth": {
+    "login": "登录",
+    "logout": "退出",
+    "unauthorized": "未授权",
+    "sessionExpired": "会话过期"
+  },
+  "errors": {
+    "notFound": "未找到",
+    "serverError": "服务器错误",
+    "networkError": "网络错误",
+    "rateLimited": "超出限制"
+  }
+}

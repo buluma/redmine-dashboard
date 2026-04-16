@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 const navItems = [
   // Main
@@ -103,6 +104,9 @@ export function AppNav() {
               ))}
             </div>
           ))}
+        </div>
+        <div className="nav-footer">
+          <LanguageSwitcher />
         </div>
       </nav>
 
@@ -205,6 +209,16 @@ export function AppNav() {
         
         .nav-group:first-child .nav-group-label {
           margin-top: 0;
+        }
+        
+        .nav-footer {
+          margin-top: auto;
+          padding-top: 0.5rem;
+          border-top: 1px solid var(--border);
+        }
+        
+        .app-nav.collapsed .nav-footer {
+          display: none;
         }
         
         .app-nav.collapsed .nav-group-label {
