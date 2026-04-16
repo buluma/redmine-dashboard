@@ -57,7 +57,7 @@
 - [x] **Webhook dispatch tests** — the `dispatchWebhook` function has complex branching (created/updated/status-changed/assigned); add unit tests to cover each branch. - DONE (webhook-dispatch.test.ts)
 
 ### 🛠️ DevOps / Infrastructure
-- [ ] **GitHub Actions CI** — add a workflow to run `npm run lint && npm run test` on PRs.
+- [x] **GitHub Actions CI** — add a workflow to run `npm run lint && npm run test` on PRs. - DONE
 - [ ] **Database migration safety** — multiple migration files exist; document the rollback strategy and add a `make migrate:rollback` target.
 - [ ] **Structured logging** — `src/lib/log.ts` is a thin wrapper; integrate with a proper log aggregator (Loki, Datadog, etc.) for the production Docker image.
 - [ ] **Memory profiling** — `mem:dev` / `mem:start` scripts exist but there's no automated memory regression test to catch leaks introduced in new features.
