@@ -102,14 +102,12 @@
       "priority": "Priority",
       "status": "Status",
       "assignee": "Assignee",
-      "startDate": "Start Date",
       "dueDate": "Due Date",
       "estimatedHours": "Estimated Hours",
       "spentHours": "Spent Hours",
       "done": "Done",
       "description": "Description",
       "category": "Category",
-      "startDate": "Start Date",
       "titleLabel": "Title"
     },
     "sections": {
@@ -887,6 +885,11 @@
     "ticketAssigned": "Ticket assigned to user",
     "ticketCompleted": "Ticket marked as completed",
     "ticketDeleted": "Ticket deleted (future)"
+  },
+  "apiDocs": {
+    "kicker": "Developer",
+    "title": "API Documentation",
+    "description": "Converge REST API Reference"
   },
   "notFound": {
     "title": "Page Not Found",

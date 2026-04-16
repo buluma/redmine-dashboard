@@ -333,6 +333,11 @@
     "invalidRelId": "有効な関連問題 ID を入力してください。",
     "viewSavedChanges": "「{name}」を表示するための変更を保存しました。",
     "viewSaved": "ビュー「{name}」を保存しました。",
-    "viewRemoved": "ビュー「{name}」を削除しました。"
+    "viewRemoved": "ビュー「{name}」を削除しました。",
+    "apiDocs": {
+      "kicker": "開発者",
+      "title": "APIドキュメント",
+      "description": "Converge REST API リファレンス"
+    }
   }
 }

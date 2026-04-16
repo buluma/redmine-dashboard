@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/src/components/I18nProvider";
+
 import { useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -26,6 +28,8 @@ const suppressWarnings = () => {
 };
 
 export default function ApiDocsPage() {
+  const { t } = useI18n();
+
   useEffect(() => {
     suppressWarnings();
   }, []);
@@ -35,15 +39,11 @@ export default function ApiDocsPage() {
       <header className="card hero">
         <div className="hero-top">
           <div>
-            <p className="kicker">Developer</p>
-            <h1>API Documentation</h1>
-            <p className="muted">
-              Converge REST API Reference
-            </p>
+            <p className="kicker">{t("apiDocs.kicker")}</p>
+            <h1>{t("apiDocs.title")}</h1>
+            <p className="muted">{t("apiDocs.description")}</p>
           </div>
-          <div className="hero-actions">
-
-          </div>
+          <div className="hero-actions"></div>
         </div>
       </header>
 

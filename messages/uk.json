@@ -333,6 +333,11 @@
     "invalidRelId": "Введіть дійсний ідентифікатор пов’язаної проблеми.",
     "viewSavedChanges": "Збережено зміни для перегляду \"{name}\".",
     "viewSaved": "Збережений перегляд \"{name}\".",
-    "viewRemoved": "Видалено вид \"{name}\"."
+    "viewRemoved": "Видалено вид \"{name}\".",
+    "apiDocs": {
+      "kicker": "Розробник",
+      "title": "Документація API",
+      "description": "Посібник з Converge REST API"
+    }
   }
 }

@@ -333,6 +333,11 @@
     "invalidRelId": "Nhập ID vấn đề liên quan hợp lệ.",
     "viewSavedChanges": "Đã lưu các thay đổi để xem \"{name}\".",
     "viewSaved": "Chế độ xem đã lưu \"{name}\".",
-    "viewRemoved": "Đã xóa chế độ xem \"{name}\"."
+    "viewRemoved": "Đã xóa chế độ xem \"{name}\".",
+    "apiDocs": {
+      "kicker": "Nhà phát triển",
+      "title": "Tài liệu API",
+      "description": "Tham chiếu API REST của Converge"
+    }
   }
 }

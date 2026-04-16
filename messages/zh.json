@@ -333,6 +333,11 @@
     "invalidRelId": "输入有效的相关问题 ID。",
     "viewSavedChanges": "已保存对视图“{name}”的更改。",
     "viewSaved": "已保存视图“{name}”。",
-    "viewRemoved": "删除了视图“{name}”。"
+    "viewRemoved": "删除了视图“{name}”。",
+    "apiDocs": {
+      "kicker": "开发者",
+      "title": "API文档",
+      "description": "Converge REST API 参考"
+    }
   }
 }

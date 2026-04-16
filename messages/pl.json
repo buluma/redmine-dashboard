@@ -333,6 +333,11 @@
     "invalidRelId": "Wprowadź prawidłowy identyfikator powiązanego problemu.",
     "viewSavedChanges": "Zapisano zmiany w widoku „{name}”.",
     "viewSaved": "Zapisany widok „{name}”.",
-    "viewRemoved": "Usunięto widok „{name}”."
+    "viewRemoved": "Usunięto widok „{name}”.",
+    "apiDocs": {
+      "kicker": "Deweloper",
+      "title": "Dokumentacja API",
+      "description": "Referencja REST API Converge"
+    }
   }
 }

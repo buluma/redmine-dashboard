@@ -335,4 +335,9 @@
     "viewSaved": "Gespeicherte Ansicht „{name}“.",
     "viewRemoved": "Ansicht „{name}“ entfernt."
   }
+},
+"apiDocs": {
+  "kicker": "Entwickler",
+  "title": "API-Dokumentation",
+  "description": "Converge REST API Referenz"
 }
