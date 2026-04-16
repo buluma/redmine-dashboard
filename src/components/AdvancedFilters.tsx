@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useI18n } from "./I18nProvider";
 
 export interface FilterState {
   search: string;
@@ -29,6 +30,7 @@ export function AdvancedFilters({
   onClear,
 }: AdvancedFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useI18n();
 
   const updateFilter = useCallback(<K extends keyof FilterState>(
     key: K,
@@ -64,7 +66,7 @@ export function AdvancedFilters({
         className="filter-toggle"
         onClick={() => setIsOpen(!isOpen)}
       >
-        ⚙️ Filters
+        {t("advancedFilters.toggleBtn")}
         {activeFilterCount > 0 && (
           <span className="filter-badge">{activeFilterCount}</span>
         )}
@@ -74,7 +76,7 @@ export function AdvancedFilters({
         <div className="filter-panel">
           <div className="filter-row">
             <div className="filter-group">
-              <label>Status</label>
+              <label>{t("advancedFilters.statusLabel")}</label>
               <div className="filter-chips">
                 {statuses.map((s) => (
                   <button
@@ -90,7 +92,7 @@ export function AdvancedFilters({
             </div>
 
             <div className="filter-group">
-              <label>Priority</label>
+              <label>{t("advancedFilters.priorityLabel")}</label>
               <div className="filter-chips">
                 {priorities.map((p) => (
                   <button
@@ -108,7 +110,7 @@ export function AdvancedFilters({
 
           <div className="filter-row">
             <div className="filter-group">
-              <label>Flags</label>
+              <label>{t("advancedFilters.flagsLabel")}</label>
               <div className="filter-checkboxes">
                 <label className="filter-checkbox">
                   <input
@@ -116,7 +118,7 @@ export function AdvancedFilters({
                     checked={filters.hasGithubLinks}
                     onChange={(e) => updateFilter("hasGithubLinks", e.target.checked)}
                   />
-                  Has GitHub Links
+                  {t("advancedFilters.hasGhLinks")}
                 </label>
                 <label className="filter-checkbox">
                   <input
@@ -124,13 +126,13 @@ export function AdvancedFilters({
                     checked={filters.hasAttachments}
                     onChange={(e) => updateFilter("hasAttachments", e.target.checked)}
                   />
-                  Has Attachments
+                  {t("advancedFilters.hasAttachments")}
                 </label>
               </div>
             </div>
 
             <div className="filter-group">
-              <label>Due Date</label>
+              <label>{t("advancedFilters.dueDateLabel")}</label>
               <select
                 value={filters.dueInDays ?? ""}
                 onChange={(e) => {
@@ -147,16 +149,16 @@ export function AdvancedFilters({
                 }}
                 className="filter-select"
               >
-                <option value="">Any</option>
-                <option value="7">Due within 7 days</option>
-                <option value="14">Due within 14 days</option>
-                <option value="30">Due within 30 days</option>
-                <option value="overdue">Overdue</option>
+                <option value="">{t("advancedFilters.anyOption")}</option>
+                <option value="7">{t("advancedFilters.within7Days")}</option>
+                <option value="14">{t("advancedFilters.within14Days")}</option>
+                <option value="30">{t("advancedFilters.within30Days")}</option>
+                <option value="overdue">{t("advancedFilters.overdueOption")}</option>
               </select>
             </div>
 
             <div className="filter-group">
-              <label>Updated After</label>
+              <label>{t("advancedFilters.updatedAfterLabel")}</label>
               <input
                 type="date"
                 value={filters.updatedAfter ?? ""}
@@ -168,10 +170,10 @@ export function AdvancedFilters({
 
           <div className="filter-actions">
             <button type="button" onClick={onClear} className="filter-clear">
-              Clear All
+              {t("advancedFilters.clearAllBtn")}
             </button>
             <button type="button" onClick={() => setIsOpen(false)} className="filter-apply">
-              Done
+              {t("advancedFilters.doneBtn")}
             </button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { AllowedStatusView } from "@/src/lib/issue-shape";
+import { useI18n } from "@/src/components/I18nProvider";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -506,6 +507,7 @@ function openIssueInNewTab(issue: Pick<Issue, "id" | "redmineIssueId">): void {
 
 export default function Home() {
   const router = useRouter();
+  const { t } = useI18n();
   const [user, setUser] = useState<User | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [total, setTotal] = useState(0);
@@ -1174,7 +1176,7 @@ export default function Home() {
       }
 
       await refreshAll();
-      toast.info("Manual full refresh completed.");
+      toast.info(t('toasts.manualPullSuccess'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Manual pull failed");
     } finally {
@@ -1364,7 +1366,7 @@ export default function Home() {
     }));
   }
 
-  async function submitComment(event: React.FormEvent) {
+  async function submitTimeComment(event: React.FormEvent) {
     event.preventDefault();
     if (!selectedIssue || !comment.trim()) return;
 
@@ -1379,12 +1381,12 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error ?? "Comment failed");
+        throw new Error(data.error ?? "Log time failed");
       }
       await refreshAll();
     } catch (e) {
       setComment(toPost);
-      toast.error(e instanceof Error ? e.message : "Comment failed");
+      toast.error(e instanceof Error ? e.message : "Log time failed");
     }
   }
 
@@ -1585,7 +1587,7 @@ export default function Home() {
     setTimerIssueId(null);
     setTimerStartedAtMs(null);
     setTimerNowMs(Date.now());
-    toast.info(`Timer stopped. Hours prefilled to ${elapsedHours.toFixed(1)}.`);
+    toast.info(`Timer stopped. hours prefilled to ${elapsedHours.toFixed(1)}.`);
   }
 
   function applySavedView(view: SavedView) {
@@ -1685,8 +1687,8 @@ export default function Home() {
         <section className="card auth-panel">
           <div className="auth-grid">
             <div>
-              <p className="kicker">Operations</p>
-              <h1>Mission Control Dashboard</h1>
+              <p className="kicker">{t('login.kickerOps')}</p>
+              <h1>{t('login.missionControl')}</h1>
               <p className="muted">
                 Connect your Redmine account and manage issues from one unified dashboard.
               </p>
@@ -1697,7 +1699,7 @@ export default function Home() {
                 <input
                   value={baseUrl}
                   onChange={(e) => setBaseUrl(e.target.value)}
-                  placeholder="https://redmine.example.com"
+                  placeholder={t('login.baseUrlPlaceholder')}
                   required
                 />
               </label>
@@ -1706,7 +1708,7 @@ export default function Home() {
                 <input
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="your-redmine-api-key"
+                  placeholder={t('login.apiKeyPlaceholder')}
                   required
                 />
               </label>
@@ -1725,7 +1727,7 @@ export default function Home() {
               )}
               {bootstrapInfo?.configured && !bootstrapInfo.canBootstrap && (
                 <p className="muted">
-                  .env bootstrap is available only on first run (active credentials:{" "}
+                  {t('login.envBootstrapHelp', { activeCredentials: String(authStore.getCredentials()?.type) })}:{" "}
                   {bootstrapInfo.activeCredentials}).
                 </p>
               )}
@@ -1746,8 +1748,8 @@ export default function Home() {
       <header className="card hero">
         <div className="hero-top">
           <div className="hero-heading">
-            <p className="kicker">Operations Hub</p>
-            <h1 className="hero-title">Converge</h1>
+            <p className="kicker">{t('hero.kicker')}</p>
+            <h1 className="hero-title">{t('hero.title')}</h1>
             <p className="muted">
               Signed in as <strong>{user.displayName}</strong> ({user.username})
             </p>
@@ -1781,7 +1783,7 @@ export default function Home() {
           <AiStatusIndicator />
           <span style={{ flex: "1" }} />
           <button className="secondary-button" type="button" onClick={handleManualPull} disabled={manualRefreshBusy}>
-            {manualRefreshBusy ? "Refreshing..." : "Force Refresh"}
+            {manualRefreshBusy ? "{t('hero.refreshing')}" : "{t('hero.forceRefresh')}"}
           </button>
           <button className="secondary-button" type="button" onClick={resetFilters}>
             Reset Filters
@@ -1809,32 +1811,32 @@ export default function Home() {
             </div>
           </article>
           <article className="card metric-card metric-open">
-            <p className="metric-label">Open</p>
+            <p className="metric-label">{t('metrics.openLabel')}</p>
             <p className="metric-value">{summary.open}</p>
             <p className="metric-foot">In progress: {summary.inProgress}</p>
           </article>
           <article className="card metric-card metric-risk">
-            <p className="metric-label">Risk Bucket</p>
+            <p className="metric-label">{t('metrics.riskBucketLabel')}</p>
             <p className="metric-value">{summary.overdue}</p>
             <p className="metric-foot">Overdue issues • Due soon: {summary.dueSoon}</p>
           </article>
           <article className="card metric-card metric-health">
-            <p className="metric-label">Delivery Health</p>
+            <p className="metric-label">{t('metrics.deliveryHealthLabel')}</p>
             <p className="metric-value">{summary.completion}%</p>
             <p className="metric-foot">Done: {summary.done} • Avg done ratio: {summary.avgDoneRatio}%</p>
           </article>
           <article className="card metric-card metric-blocked">
-            <p className="metric-label">Blocked</p>
+            <p className="metric-label">{t('metrics.blockedLabel')}</p>
             <p className="metric-value">{summary.blocked}</p>
-            <p className="metric-foot">Status contains blocked/hold/waiting</p>
+            <p className="metric-foot">{t('metrics.blockedFoot')}</p>
           </article>
           <article className="card metric-card metric-stale">
-            <p className="metric-label">Stale Queue</p>
+            <p className="metric-label">{t('metrics.staleQueueLabel')}</p>
             <p className="metric-value">{summary.stale}</p>
             <p className="metric-foot">No visible activity in 3+ days • Avg since activity: {summary.avgOpenAgeDays}d</p>
           </article>
           <article className="card metric-card metric-ai-insights">
-            <p className="metric-label">AI Insights</p>
+            <p className="metric-label">{t('metrics.aiInsightsLabel')}</p>
             <p className="metric-value">{aiSummaryCount}</p>
             <p className="metric-foot">
               {aiSummaryCount === 0
@@ -1852,7 +1854,7 @@ export default function Home() {
           <label className="filter-field">
             Status
             <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); resetPage(); }}>
-              <option value="">All Statuses</option>
+              <option value="">{t('filters.allStatuses')}</option>
               {statuses.map((s) => (
                 <option key={s.id} value={s.name}>
                   {s.name}
@@ -1864,7 +1866,7 @@ export default function Home() {
           <label className="filter-field">
             Priority
             <select value={priorityFilter} onChange={(e) => { setPriorityFilter(e.target.value); resetPage(); }}>
-              <option value="">All Priorities</option>
+              <option value="">{t('filters.allPriorities')}</option>
               {priorities.map((p) => (
                 <option key={p} value={p}>
                   {p}
@@ -1876,10 +1878,10 @@ export default function Home() {
           <label className="filter-field">
             Sort
             <select value={sort} onChange={(e) => setSort(e.target.value)}>
-              <option value="updated_desc">Activity (Newest)</option>
-              <option value="updated_asc">Activity (Oldest)</option>
-              <option value="priority">Priority</option>
-              <option value="due_date">Due Date</option>
+              <option value="updated_desc">{t('filters.sortNewest')}</option>
+              <option value="updated_asc">{t('filters.sortOldest')}</option>
+              <option value="priority">{t('filters.sortPriority')}</option>
+              <option value="due_date">{t('filters.sortDueDate')}</option>
             </select>
           </label>
 
@@ -1887,7 +1889,7 @@ export default function Home() {
             Search
             <input
               ref={searchInputRef}
-              placeholder="Subject, description, assignee"
+              placeholder={t('filters.searchPlaceholder')}
               value={search}
               onChange={(e) => { setSearch(e.target.value); resetPage(); }}
             />
@@ -1897,8 +1899,8 @@ export default function Home() {
             Search Source
             <select value={searchMode} onChange={(e) => setSearchMode((e.target.value as "local" | "hybrid" | "fts"))}>
               <option value="local">Local Cache</option>
-              <option value="hybrid">Hybrid (Redmine + Cache)</option>
-              <option value="fts">Full-text Search (DB)</option>
+              <option value="hybrid">{t('filters.sourceHybrid')}</option>
+              <option value="fts">{t('filters.sourceFts')}</option>
             </select>
             <span className="muted">Mode: {searchSource === "local_cache" ? "Local cache" : searchMode === "fts" ? "Full-text Search" : "Hybrid"}</span>
           </label>
@@ -1939,7 +1941,7 @@ export default function Home() {
 
       <section id="summary-insights" className="insights-grid">
         <article className="card">
-          <h2>Status Mix</h2>
+          <h2>{t('insights.statusMixTitle')}</h2>
           <p className="muted">Click a status to filter quickly.</p>
           <div className="chip-row">
             {summary.topStatuses.length === 0 && <span className="muted">No status data yet.</span>}
@@ -1957,7 +1959,7 @@ export default function Home() {
         </article>
 
         <article className="card">
-          <h2>Priority Mix</h2>
+          <h2>{t('insights.priorityMixTitle')}</h2>
           <div className="bars-list">
             {summary.priorityMix.length === 0 && <span className="muted">No priority data yet.</span>}
             {summary.priorityMix.map(([name, count]) => (
@@ -2000,7 +2002,7 @@ export default function Home() {
         <article id="ops-alerts" className="card">
           <div className="collapsible-head">
             <div>
-              <h2>Ops Alerts</h2>
+              <h2>{t('opsAlerts.title')}</h2>
               <p className="muted">Highest risk issues based on overdue, blocked, and stale signals.</p>
             </div>
             <button 
@@ -2087,8 +2089,8 @@ export default function Home() {
         <article className="card charts-card">
           <div className="collapsible-head">
             <div>
-              <h2>📊 Analytics Dashboard</h2>
-              <p className="muted">Issue trends and workload distribution</p>
+              <h2>{t('analytics.title')}</h2>
+              <p className="muted">{t('analytics.desc')}</p>
             </div>
             <button type="button" className="secondary-button" onClick={() => setShowCharts((c) => !c)}>
               {showCharts ? "Collapse" : "Expand"}
@@ -2102,9 +2104,9 @@ export default function Home() {
         <article id="issue-queue" className="card issues-panel">
           <div className="collapsible-head">
             <div>
-              <h2>Issue Queue</h2>
+              <h2>{t('queue.title')}</h2>
               <p className="muted">
-                {loading ? "Refreshing..." : `${visibleIssues.length} loaded`}
+                {loading ? "{t('hero.refreshing')}" : `${visibleIssues.length} loaded`}
                 {summary.open > 0 && <span> · Open: {summary.open}</span>}
                 {summary.inProgress > 0 && <span> · In Progress: {summary.inProgress}</span>}
                 {summary.blocked > 0 && <span> · Blocked: {summary.blocked}</span>}
@@ -2223,7 +2225,7 @@ export default function Home() {
                         }
                       }}
                     >
-                      <option value="">Presets</option>
+                      <option value="">{t('queue.presets')}</option>
                       {filterPresets.map((preset) => (
                         <option key={preset.id} value={preset.id}>
                           {preset.name}
@@ -2280,7 +2282,7 @@ export default function Home() {
                       resetPage();
                     }}
                   >
-                    {showFavoritesOnly ? "★ Favorites" : "☆ Favorites"}
+                    {showFavoritesOnly ? "{t('queue.favoritesOn')}" : "{t('queue.favoritesOff')}"}
                   </button>
                   <ExportButton issues={visibleIssues} format="csv" />
                   <ExportButton issues={visibleIssues} format="print" />
@@ -2289,13 +2291,13 @@ export default function Home() {
 
               <div className="view-mode-tabs" style={{ display: "flex", gap: "8px", marginBottom: "16px", marginTop: "8px", paddingBottom: "16px", borderBottom: "1px solid var(--border)" }}>
                 <button type="button" className={`secondary-button ${viewMode === "list" ? "active border-primary text-primary" : ""}`} onClick={() => setViewMode("list")}>
-                  📑 List
+                  {t('queue.viewList')}
                 </button>
                 <button type="button" className={`secondary-button ${viewMode === "board" ? "active border-primary text-primary" : ""}`} onClick={() => setViewMode("board")}>
-                  🗂 Board
+                  {t('queue.viewBoard')}
                 </button>
                 <button type="button" className={`secondary-button ${viewMode === "gantt" ? "active border-primary text-primary" : ""}`} onClick={() => setViewMode("gantt")}>
-                  📈 Gantt
+                  {t('queue.viewGantt')}
                 </button>
               </div>
 
@@ -2329,9 +2331,9 @@ export default function Home() {
                       />
                     </th>
                     <th className="drag-col"></th>
-                    <th>ID</th>
-                    <th>Subject</th>
-                    <th>Status</th>
+                    <th>{t('queue.colId')}</th>
+                    <th>{t('queue.colSubject')}</th>
+                    <th>{t('queue.colStatus')}</th>
                     {visibleColumns.has("priority") && (
                       <th
                         className="sortable-header"
@@ -2352,7 +2354,7 @@ export default function Home() {
                         Due{getSortIndicator("due")}
                       </th>
                     )}
-                    {visibleColumns.has("progress") && <th>Progress</th>}
+                    {visibleColumns.has("progress") && <th>{t('queue.colProgress')}</th>}
                     {visibleColumns.has("updated") && (
                       <th
                         className="sortable-header"
@@ -2360,7 +2362,7 @@ export default function Home() {
                         style={{ cursor: "pointer" }}
                         title="Sort by update time"
                       >
-                        Activity{getSortIndicator("updated")}
+                        {t('drawer.activity')}{getSortIndicator("updated")}
                       </th>
                     )}
                   </tr>
@@ -2528,9 +2530,9 @@ export default function Home() {
                     «
                   </button>
                   <span className="pagination-info">
-                    Page <strong>{safePage}</strong> of <strong>{maxPage}</strong>
-                    {" · "}Showing {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, filteredTotal)} of {filteredTotal}
-                    {filteredTotal < total ? ` (filtered from ${total.toLocaleString()})` : ""}
+                    {t('pagination.pageInfo', { current: safePage, max: maxPage })}
+                    {" · "}{t('pagination.showing', { start: (safePage - 1) * pageSize + 1, end: Math.min(safePage * pageSize, filteredTotal), total: filteredTotal })}
+                    {filteredTotal < total ? t('pagination.filtered', { unfilteredTotal: total.toLocaleString() }) : ""}
                   </span>
                   <button
                     type="button"
@@ -2557,7 +2559,7 @@ export default function Home() {
           ) : (
             <>
               <p className="muted collapsible-meta">
-                Queue hidden. {visibleIssues.length} issue(s) loaded, {selectedIssueIds.length} selected.
+                {t('pagination.queueHidden', { loadedCount: visibleIssues.length, selectedCount: selectedIssueIds.length })}
               </p>
             </>
           )}
@@ -2580,12 +2582,12 @@ export default function Home() {
             </div>
             <p className="preview-subject">{hoveredIssue.subject}</p>
             <div className="preview-meta">
-              <span>Status: {hoveredIssue.statusName}</span>
-              <span>Progress: {hoveredIssue.doneRatio ?? 0}%</span>
+              <span>{t('preview.status', { name: hoveredIssue.statusName })}</span>
+              <span>{t('preview.progress', { ratio: hoveredIssue.doneRatio ?? 0 })}</span>
             </div>
             {hoveredIssue.dueDate && (
               <div className="preview-due">
-                Due: {new Date(hoveredIssue.dueDate).toLocaleDateString()}
+                {t('preview.due', { date: new Date(hoveredIssue.dueDate).toLocaleDateString() })}
               </div>
             )}
             {hoveredIssue.description && (
@@ -2619,18 +2621,18 @@ export default function Home() {
                   <h2>{selectedIssue.subject}</h2>
                 </div>
                 <p className="issue-meta">
-                  {selectedIssue.projectName ?? "No Project"} • {selectedIssue.statusName} • {selectedIssue.priority ?? "No Priority"}
+                  {selectedIssue.projectName ?? t('drawer.noProject')} • {selectedIssue.statusName} • {selectedIssue.priority ?? t('drawer.noPriority')}
                 </p>
                 {redmineIssueUrl(selectedIssue) && (
                   <p className="external-issue-row">
-                    Redmine source:
+                    {t('drawer.redmineSource')}
                     <a href={redmineIssueUrl(selectedIssue) ?? undefined} target="_blank" rel="noopener noreferrer">
                       {redmineIssueUrl(selectedIssue)}
                     </a>
                   </p>
                 )}
                 {selectedIssue.children.length > 0 && (
-                  <p className="muted">Children: {selectedIssue.children.map((c) => `#${c.id}`).join(", ")}</p>
+                  <p className="muted">{t('drawer.children', { ids: selectedIssue.children.map((c) => `#${c.id}`).join(", ") })}</p>
                 )}
               </div>
               <button className="secondary-button" type="button" onClick={() => setSelectedIssueId(null)}>
@@ -2639,10 +2641,10 @@ export default function Home() {
             </div>
 
             <section className="detail-section">
-              <h3>GitHub Links</h3>
+              <h3>{t('drawer.ghLinksTitle')}</h3>
               <form className="form" onSubmit={submitGithubLink}>
                 <label>
-                  Repository (`owner/repo`)
+                  {t('drawer.ghRepo')}
                   <input
                     value={githubRepo}
                     onChange={(e) => setGithubRepo(e.target.value)}
@@ -2651,7 +2653,7 @@ export default function Home() {
                   />
                 </label>
                 <label>
-                  GitHub Issue #
+                  {t('drawer.ghIssueNum')}
                   <input
                     type="number"
                     min="1"
@@ -2662,7 +2664,7 @@ export default function Home() {
                   />
                 </label>
                 <label>
-                  GitHub PR #
+                  {t('drawer.ghPrNum')}
                   <input
                     type="number"
                     min="1"
@@ -2673,7 +2675,7 @@ export default function Home() {
                   />
                 </label>
                 <label>
-                  Direct URL (optional)
+                  {t('drawer.ghUrl')}
                   <input
                     value={githubUrl}
                     onChange={(e) => setGithubUrl(e.target.value)}
@@ -2681,7 +2683,7 @@ export default function Home() {
                   />
                 </label>
                 <label>
-                  Title (optional)
+                  {t('drawer.ghTitle')}
                   <input
                     value={githubTitle}
                     onChange={(e) => setGithubTitle(e.target.value)}
@@ -2689,12 +2691,12 @@ export default function Home() {
                   />
                 </label>
                 <button type="submit" disabled={githubBusy}>
-                  {githubBusy ? "Linking..." : "Add GitHub Link"}
+                  {githubBusy ? t('drawer.linking') : t('drawer.addGhLink')}
                 </button>
               </form>
 
               <div className="timeline">
-                {selectedIssue.githubLinks.length === 0 && <p className="muted">No GitHub links yet.</p>}
+                {selectedIssue.githubLinks.length === 0 && <p className="muted">{t('drawer.noGhLinks')}</p>}
                 {selectedIssue.githubLinks.map((link) => (
                   <div key={link.id} className="timeline-item">
                     <div className="entry-head">
@@ -2717,7 +2719,7 @@ export default function Home() {
                     </div>
                     <p className="muted entry-meta">
                       {link.repositoryFullName}
-                      {link.githubIssueNumber ? ` • Issue #${link.githubIssueNumber}` : ""}
+                      {link.githubIssueNumber ? ` • {t('drawer.relIssueId')}${link.githubIssueNumber}` : ""}
                       {link.githubPrNumber ? ` • PR #${link.githubPrNumber}` : ""}
                     </p>
                     <p className="muted">{link.url}</p>
@@ -2727,7 +2729,7 @@ export default function Home() {
             </section>
 
             <section className="detail-section">
-              <h3>Attachments</h3>
+              <h3>{t('drawer.attachmentsTitle')}</h3>
               <form className="form" onSubmit={submitAttachment}>
                 <label>
                   File
@@ -2741,16 +2743,16 @@ export default function Home() {
                   <input
                     value={attachmentDescription}
                     onChange={(e) => setAttachmentDescription(e.target.value)}
-                    placeholder="Optional note"
+                    placeholder={t('drawer.attachDesc')}
                   />
                 </label>
                 <button type="submit" disabled={attachmentBusy || !attachmentFile}>
-                  {attachmentBusy ? "Uploading..." : "Upload Attachment"}
+                  {attachmentBusy ? t('drawer.uploading') : t('drawer.uploadAttach')}
                 </button>
               </form>
 
               <div className="timeline">
-                {selectedIssue.attachments.length === 0 && <p className="muted">No attachments yet.</p>}
+                {selectedIssue.attachments.length === 0 && <p className="muted">{t('drawer.noAttach')}</p>}
                 {selectedIssue.attachments.map((attachment) => (
                   <div key={attachment.id} className="timeline-item">
                     <div className="entry-head">
@@ -2784,11 +2786,11 @@ export default function Home() {
                       <iframe
                         className="attachment-preview-pdf"
                         src={attachmentUrl(selectedIssue.redmineIssueId, attachment.redmineAttachmentId)}
-                        title={`Preview ${attachment.filename}`}
+                        title={t('drawer.previewMsg', { filename: attachment.filename })}
                       />
                     )}
                     <p className="muted entry-meta">
-                      {attachment.author ?? "Unknown author"}
+                      {attachment.author ?? t('drawer.unknownAuthor')}
                       {attachment.createdOnRemote ? ` • ${new Date(attachment.createdOnRemote).toLocaleString()}` : ""}
                     </p>
                   </div>
@@ -2797,10 +2799,10 @@ export default function Home() {
             </section>
 
             <section className="detail-section">
-              <h3>Relations</h3>
+              <h3>{t('drawer.relationsTitle')}</h3>
               <form className="form" onSubmit={submitRelation}>
                 <label>
-                  Issue #
+                  {t('drawer.relIssueId')}
                   <input
                     type="number"
                     min="1"
@@ -2811,7 +2813,7 @@ export default function Home() {
                   />
                 </label>
                 <label>
-                  Type
+                  {t('drawer.relType')}
                   <select value={relationType} onChange={(e) => setRelationType(e.target.value)}>
                     <option value="relates">relates</option>
                     <option value="duplicated">duplicated</option>
@@ -2825,7 +2827,7 @@ export default function Home() {
                   </select>
                 </label>
                 <label>
-                  Delay (optional)
+                  {t('drawer.relDelay')}
                   <input
                     type="number"
                     min="0"
@@ -2840,7 +2842,7 @@ export default function Home() {
               </form>
 
               <div className="timeline">
-                {selectedIssue.relations.length === 0 && <p className="muted">No relations yet.</p>}
+                {selectedIssue.relations.length === 0 && <p className="muted">{t('drawer.noRelations')}</p>}
                 {selectedIssue.relations.map((relation) => (
                   <div key={relation.id} className="timeline-item">
                     <div className="entry-head">
@@ -2863,7 +2865,7 @@ export default function Home() {
             </section>
 
             <section className="detail-section">
-              <h3>Description</h3>
+              <h3>{t('drawer.descTitle')}</h3>
               {selectedIssue.description ? (
                 <MarkdownBlock
                   content={selectedIssue.description}
@@ -2880,18 +2882,18 @@ export default function Home() {
             )}
 
             <section className="detail-section">
-              <h3>Comments</h3>
-              <form className="form" onSubmit={submitComment}>
+              <h3>{t('drawer.commentsTitle')}</h3>
+              <form className="form" onSubmit={submitTimeComment}>
                 <textarea
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  placeholder="Share an update"
+                  placeholder={t('drawer.shareUpdate')}
                   rows={3}
                 />
-                <button type="submit">Post Comment</button>
+                <button type="submit">Post {t('drawer.timeComment')}</button>
               </form>
               <div className="timeline">
-                {selectedIssue.journals.every((journal) => !journal.notes?.trim()) && <p className="muted">No comments yet.</p>}
+                {selectedIssue.journals.every((journal) => !journal.notes?.trim()) && <p className="muted">{t(`drawer.no${t('drawer.timeComment')}s`)}</p>}
                 {selectedIssue.journals.filter((journal) => Boolean(journal.notes?.trim())).map((j) => (
                   <div key={j.id} className="timeline-item">
                     <p className="muted">
@@ -2908,24 +2910,24 @@ export default function Home() {
             </section>
 
             <section className="detail-section">
-              <h3>Time Logs</h3>
+              <h3>{t('drawer.timeLogsTitle')}</h3>
 
               <div className="timer-row">
                 {!timerRunningOnSelected && (
                   <button type="button" className="secondary-button" onClick={() => startTimerForIssue(selectedIssue.redmineIssueId)}>
-                    Start Timer
+                    {t('drawer.startTimer')}
                   </button>
                 )}
                 {timerRunningOnSelected && (
                   <>
                     <span className="timer-pill">Running: {formatDurationFromMs(timerElapsedMs)}</span>
                     <button type="button" className="secondary-button" onClick={stopTimerAndApply}>
-                      Stop and Fill Hours
+                      {t('drawer.stopFill')}
                     </button>
                   </>
                 )}
                 {timerIssueId && timerIssueId !== selectedIssue.redmineIssueId && (
-                  <span className="muted">Timer is currently running on issue #{timerIssueId}.</span>
+                  <span className="muted">{t('drawer.timerRunningInfo', { id: timerIssueId })}</span>
                 )}
                 <div className="quick-hours">
                   {[0.5, 1, 2, 4].map((value) => (
@@ -2938,7 +2940,7 @@ export default function Home() {
 
               <form className="form" onSubmit={submitTimelog}>
                 <label>
-                  Hours
+                  {t('drawer.hours')}
                   <input
                     type="number"
                     min="0.1"
@@ -2948,7 +2950,7 @@ export default function Home() {
                   />
                 </label>
                 <label>
-                  Activity
+                  {t('drawer.activity')}
                   <select value={activityId} onChange={(e) => setActivityId(Number(e.target.value))}>
                     {activities.map((a) => (
                       <option key={a.id} value={a.id}>
@@ -2962,11 +2964,11 @@ export default function Home() {
                   <input type="date" value={spentOn} onChange={(e) => setSpentOn(e.target.value)} />
                 </label>
                 <label>
-                  Comment
+                  {t('drawer.timeComment')}
                   <textarea
                     value={timeComment}
                     onChange={(e) => setTimeComment(e.target.value)}
-                    placeholder="Summarize the work"
+                    placeholder={t('drawer.timeCommentPlaceholder')}
                     rows={2}
                   />
                 </label>
@@ -2974,7 +2976,7 @@ export default function Home() {
               </form>
 
               <div className="timeline">
-                {selectedIssue.timeEntries.length === 0 && <p className="muted">No time entries yet.</p>}
+                {selectedIssue.timeEntries.length === 0 && <p className="muted">{t('drawer.noTimeLogs')}</p>}
                 {selectedIssue.timeEntries.map((t) => (
                   <div key={t.id} className="timeline-item">
                     <div className="entry-head">
@@ -2982,7 +2984,7 @@ export default function Home() {
                         <strong>{t.hours}h</strong> • {new Date(t.spentOn).toLocaleDateString()}
                       </p>
                       <span className={`entry-source ${t.redmineTimeEntryId ? "synced" : "local"}`}>
-                        {t.redmineTimeEntryId ? "Synced from Redmine" : "Local entry"}
+                        {t.redmineTimeEntryId ? "{t('drawer.syncedFromRedmine')}" : "{t('drawer.localEntry')}"}
                       </span>
                     </div>
                     <p className="muted entry-meta">
@@ -2995,7 +2997,7 @@ export default function Home() {
                         attachments={selectedIssue.attachments}
                         issueId={selectedIssue.redmineIssueId}
                       />
-                    ) : <p>(no comment)</p>}
+                    ) : <p>{t('drawer.noTimeComment')}</p>}
                   </div>
                 ))}
               </div>

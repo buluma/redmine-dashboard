@@ -4,6 +4,7 @@ import { AllowedStatusView } from "@/src/lib/issue-shape";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useI18n } from "@/src/components/I18nProvider";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
@@ -139,7 +140,7 @@ function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: { c
       }
       return (
         <details className="md-collapsible-code">
-          <summary>Show code ({lines} lines)</summary>
+          <summary>{t("issues.showCode", { count: lines })}</summary>
           <pre>{props.children}</pre>
         </details>
       );
@@ -211,6 +212,8 @@ function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: { c
     );
   }
 
+  const { t } = useI18n();
+
   return (
     <div className="markdown">
       {segments.map((segment, index) => {
@@ -253,23 +256,23 @@ function isPdfAttachment(attachment: Attachment): boolean {
   return type === "application/pdf" || attachment.filename.toLowerCase().endsWith(".pdf");
 }
 
-function formatAgo(dateLike: string | undefined | null): string {
+function formatAgo(dateLike: string | undefined | null, t: (key: string, data?: any) => string): string {
   if (!dateLike) return "—";
   const ts = new Date(dateLike).getTime();
   if (Number.isNaN(ts)) return "—";
   const deltaSec = Math.max(1, Math.floor((Date.now() - ts) / 1000));
-  if (deltaSec < 60) return `${deltaSec}s ago`;
+  if (deltaSec < 60) return t("issues.ago.s", { count: deltaSec });
   const mins = Math.floor(deltaSec / 60);
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return t("issues.ago.m", { count: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  if (hours < 24) return t("issues.ago.h", { count: hours });
+  return t("issues.ago.d", { count: Math.floor(hours / 24) });
 }
 
-function formatDisplayDate(dateLike: string | null): string {
-  if (!dateLike) return "Not set";
+function formatDisplayDate(dateLike: string | null, t: (key: string, data?: any) => string): string {
+  if (!dateLike) return t("issues.notSet");
   const d = new Date(dateLike);
-  if (Number.isNaN(d.getTime())) return "Not set";
+  if (Number.isNaN(d.getTime())) return t("issues.notSet");
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
@@ -313,6 +316,7 @@ function normalizeTab(raw: string | null): IssueTab {
 }
 
 function IssueLoadingShell() {
+  const { t } = useI18n();
   return (
     <main className="dashboard issue-loading-page" aria-busy="true" aria-live="polite">
       <div className="issue-loading-breadcrumb skeleton-line" />
@@ -477,9 +481,9 @@ export default function IssueDetailPage() {
         throw new Error(data.error ?? "Unable to refresh issue");
       }
       await reloadIssue();
-      setActionInfo("Issue refreshed from Redmine.");
+      setActionInfo(t("issues.messages.refreshed"));
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Unable to refresh issue");
+      setActionError(e instanceof Error ? e.message : t("issues.messages.refreshed"));
     } finally {
       setRefreshBusy(false);
     }
@@ -568,7 +572,7 @@ export default function IssueDetailPage() {
       await reloadIssue();
       setEditMode(false);
       setEditDraft(null);
-      setActionInfo(issue.source === "local" ? "Personal ticket updated." : "Issue updated in Redmine successfully.");
+      setActionInfo(issue.source === "local" ? t("issues.messages.personalUpdated") : t("issues.messages.redmineUpdated"));
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to update issue");
     } finally {
@@ -592,7 +596,7 @@ export default function IssueDetailPage() {
 
   useEffect(() => {
     if (!issueId || issueId.trim().length === 0) {
-      setError("Invalid issue id");
+      setError(t("common.error"));
       setLoading(false);
       return;
     }
@@ -745,7 +749,7 @@ export default function IssueDetailPage() {
       setGithubPrNumber("");
       setGithubUrl("");
       setGithubTitle("");
-      setActionInfo("GitHub link added.");
+      setActionInfo(t("issues.messages.githubLinked"));
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Unable to link GitHub reference");
     } finally {
@@ -766,7 +770,7 @@ export default function IssueDetailPage() {
         throw new Error(data.error ?? "Unable to remove GitHub link");
       }
       await reloadIssue();
-      setActionInfo("GitHub link removed.");
+      setActionInfo(t("issues.messages.githubRemoved"));
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Unable to remove GitHub link");
     } finally {
@@ -787,7 +791,7 @@ export default function IssueDetailPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to add note");
+        throw new Error(data.error || t("issues.messages.noteFailed"));
       }
       setNewNoteContent("");
       await loadInternalNotes();
@@ -801,7 +805,7 @@ export default function IssueDetailPage() {
   async function deleteInternalNote(noteId: string) {
     try {
       const res = await fetch(`/api/internal/notes/${noteId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete note");
+      if (!res.ok) throw new Error(t("issues.messages.noteFailed"));
       await loadInternalNotes();
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to delete note");
@@ -858,7 +862,7 @@ export default function IssueDetailPage() {
       }
       setComment("");
       await reloadIssue();
-      setActionInfo("Comment posted to Redmine.");
+      setActionInfo(t("issues.messages.redmineUpdated"));
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Unable to post comment");
     } finally {
@@ -1031,11 +1035,10 @@ export default function IssueDetailPage() {
     return (
       <main className="dashboard">
         <section className="card">
-          <h1>Issue could not be loaded</h1>
-          <p className="muted">{error ?? "Issue not found."}</p>
+          <h1>{t("common.error")}</h1>
+          <p className="muted">{error ?? t("issues.errors.notFound")}</p>
           <div className="row-actions">
-            <Link href="/heimdall" className="primary-link">Back to Heimdall</Link>
-
+            <Link href="/heimdall" className="primary-link">{t("issues.backToDashboard")}</Link>
           </div>
         </section>
       </main>
@@ -1114,7 +1117,7 @@ export default function IssueDetailPage() {
               )}
             </div>
             <p className="muted">
-              {issue.projectName ?? "No project"} • Activity {formatAgo(issueActivityAt(issue))}
+              {issue.projectName ?? t("issues.empty.noProject")} • {t("nav.groups.activity")} {formatAgo(issueActivityAt(issue), t)}
             </p>
             {externalIssueUrl && (
               <p className="external-issue-row">
@@ -1126,25 +1129,25 @@ export default function IssueDetailPage() {
             )}
             <div className="chip-row">
               <span className="status-chip active">{issue.statusName}</span>
-              <span className="status-chip">{issue.priority ?? "No priority"}</span>
-              <span className="status-chip">{issue.assignedToName ?? "Unassigned"}</span>
+              <span className="status-chip">{issue.priority ?? t("issues.empty.noPriority")}</span>
+              <span className="status-chip">{issue.assignedToName ?? t("issues.empty.unassigned")}</span>
             </div>
             <div className="issue-snapshot-row">
               <div className="issue-snapshot">
-                <span>Due</span>
-                <strong>{formatDisplayDate(issue.dueDate)}</strong>
+                <span>{t("issues.fields.dueDate")}</span>
+                <strong>{formatDisplayDate(issue.dueDate, t)}</strong>
               </div>
               <div className="issue-snapshot">
-                <span>Progress</span>
+                <span>{t("issues.fields.done")}</span>
                 <strong>{issue.doneRatio ?? 0}%</strong>
               </div>
               <div className="issue-snapshot">
-                <span>Logged</span>
+                <span>{t("issues.fields.spentHours")}</span>
                 <strong>{totalSpent.toFixed(1)}h</strong>
               </div>
               <div className="issue-snapshot">
-                <span>Last activity</span>
-                <strong>{formatAgo(issueActivityAt(issue))}</strong>
+                <span>{t("issues.sections.history")}</span>
+                <strong>{formatAgo(issueActivityAt(issue), t)}</strong>
               </div>
             </div>
           </div>
@@ -1156,7 +1159,7 @@ export default function IssueDetailPage() {
             )}
             {!editMode && issue.source !== "local" && (
               <button type="button" className="secondary-button issue-refresh-button" onClick={() => void refreshIssueFromRedmine()} disabled={refreshBusy}>
-                {refreshBusy ? "Refreshing..." : "Refresh"}
+                {refreshBusy ? t("common.loading") : t("issues.actions.refresh")}
               </button>
             )}
             {!editMode && issue.source === "local" && (
@@ -1164,22 +1167,22 @@ export default function IssueDetailPage() {
                 type="button"
                 className="secondary-button issue-delete-button"
                 onClick={async () => {
-                  if (!confirm(`Delete "${issue.subject}"? This cannot be undone.`)) return;
+                  if (!confirm(t("issues.actions.confirmDelete", { name: issue.subject }))) return;
                   try {
                     const res = await fetch(`/api/issues/local/${issue.id}`, { method: "DELETE" });
-                    if (!res.ok) throw new Error("Delete failed");
+                    if (!res.ok) throw new Error(t("issues.messages.noteFailed"));
                     window.location.href = "/";
                   } catch (e) {
-                    alert(e instanceof Error ? e.message : "Delete failed");
+                    alert(e instanceof Error ? e.message : t("issues.messages.noteFailed"));
                   }
                 }}
               >
-                Delete
+                {t("issues.actions.delete")}
               </button>
             )}
             {!editMode && (
               <button type="button" className="primary-link" onClick={startEditMode}>
-                Edit
+                {t("issues.actions.edit")}
               </button>
             )}
 
@@ -1228,43 +1231,43 @@ export default function IssueDetailPage() {
       <section className="card reports-shell issue-detail-shell">
         <div className="reports-head">
           <div>
-            <h2>Issue Overview</h2>
-            <p className="muted">Core fields and delivery snapshot for this issue.</p>
+            <h2>{t("issues.sections.overview")}</h2>
+            <p className="muted">{t("issues.sections.overviewSubtitle")}</p>
           </div>
         </div>
 
         <div className="reports-grid issue-overview-grid">
           <article className="report-card overview-card overview-card-status">
-            <p className="report-label">Status</p>
+            <p className="report-label">{t("issues.fields.status")}</p>
             <p className="report-value">{issue.statusName}</p>
-            <p className="report-foot">Priority: {issue.priority ?? "-"}</p>
+            <p className="report-foot">{t("issues.fields.priority")}: {issue.priority ?? "-"}</p>
           </article>
           <article className="report-card overview-card overview-card-due">
-            <p className="report-label">Due Date</p>
+            <p className="report-label">{t("issues.fields.dueDate")}</p>
             <p className="report-value">{issue.dueDate ? new Date(issue.dueDate).toLocaleDateString() : "-"}</p>
-            <p className="report-foot">% Done: {issue.doneRatio ?? 0}%</p>
+            <p className="report-foot">{t("issues.fields.done")}: {issue.doneRatio ?? 0}%</p>
           </article>
           <article className="report-card overview-card overview-card-time">
-            <p className="report-label">Spent Time</p>
+            <p className="report-label">{t("issues.fields.spentHours")}</p>
             <p className="report-value">{totalSpent.toFixed(1)}h</p>
-            <p className="report-foot">Assignee: {issue.assignedToName ?? "Unassigned"}</p>
+            <p className="report-foot">{t("issues.fields.assignee")}: {issue.assignedToName ?? t("issues.empty.unassigned")}</p>
           </article>
         </div>
 
         <article className="report-card issue-description-card">
-          <p className="report-label">Description</p>
+          <p className="report-label">{t("issues.fields.description")}</p>
           {editMode && editDraft ? (
             <textarea
               className="edit-description-textarea"
               value={editDraft.description}
               onChange={(e) => setEditDraft({ ...editDraft, description: e.target.value })}
               rows={8}
-              placeholder="Issue description (Textile formatting supported)"
+              placeholder={t("issues.placeholders.description")}
             />
           ) : issue.description ? (
             <MarkdownBlock content={issue.description} attachments={issue.attachments} issueId={issue.redmineIssueId ?? undefined} onImageClick={(src, alt) => setLightboxImage({ src, alt })} />
           ) : (
-            <p className="muted">No description.</p>
+            <p className="muted">{t("issues.empty.noDescription")}</p>
           )}
         </article>
 
@@ -1272,14 +1275,14 @@ export default function IssueDetailPage() {
         {(issue.authorName || issue.categoryName || issue.startDate || issue.estimatedHours || issue.spentHours || (issue.customFieldsJson && issue.customFieldsJson.length > 0)) && (
           <article className="report-card issue-metadata-card">
             <details className="issue-collapsible">
-              <summary>Issue Metadata</summary>
+              <summary>{t("issues.sections.metadata")}</summary>
               {editMode && editDraft && (
                 <div className="edit-actions">
                   <button type="button" className="edit-save-btn" onClick={saveEdit} disabled={editSaving}>
-                    {editSaving ? "Saving..." : "💾 Save Changes"}
+                    {editSaving ? t("common.loading") : t("issues.actions.save")}
                   </button>
                   <button type="button" className="edit-cancel-btn" onClick={cancelEditMode} disabled={editSaving}>
-                    Cancel
+                    {t("issues.actions.cancel")}
                   </button>
                 </div>
               )}
@@ -1287,20 +1290,20 @@ export default function IssueDetailPage() {
                 {/* Show read-only fields only when NOT in edit mode */}
                 {!editMode && issue.authorName && (
                   <div className="metadata-item">
-                    <span className="metadata-label">Author</span>
+                    <span className="metadata-label">{t("issues.fields.author")}</span>
                     <span className="metadata-value">{issue.authorName}</span>
                   </div>
                 )}
                 {issue.categoryName && !editMode && (
                   <div className="metadata-item">
-                    <span className="metadata-label">Category</span>
+                    <span className="metadata-label">{t("issues.fields.category")}</span>
                     <span className="metadata-value">{issue.categoryName}</span>
                   </div>
                 )}
                 {editMode && editDraft ? (
                   <>
                     <div className="metadata-item metadata-item-editable">
-                      <span className="metadata-label">Start Date</span>
+                      <span className="metadata-label">{t("issues.fields.startDate")}</span>
                       <input
                         type="date"
                         className="edit-metadata-input edit-date-input"
@@ -1309,7 +1312,7 @@ export default function IssueDetailPage() {
                       />
                     </div>
                     <div className="metadata-item metadata-item-editable">
-                      <span className="metadata-label">Due Date</span>
+                      <span className="metadata-label">{t("issues.fields.dueDate")}</span>
                       <input
                         type="date"
                         className="edit-metadata-input edit-date-input"
@@ -1318,33 +1321,33 @@ export default function IssueDetailPage() {
                       />
                     </div>
                     <div className="metadata-item metadata-item-editable">
-                      <span className="metadata-label">Category</span>
+                      <span className="metadata-label">{t("issues.fields.category")}</span>
                       <select
                         className="edit-metadata-input edit-category-select"
                         value={editDraft.categoryId}
                         onChange={(e) => setEditDraft({ ...editDraft, categoryId: e.target.value })}
                       >
-                        <option value="">— No category —</option>
+                        <option value="">— {t("issues.empty.noCategory")} —</option>
                         <option value="32">activities</option>
                         <option value="33">bugs</option>
                         <option value="34">features</option>
                       </select>
                     </div>
                     <div className="metadata-item metadata-item-editable">
-                      <span className="metadata-label">Priority</span>
+                      <span className="metadata-label">{t("issues.fields.priority")}</span>
                       <select
                         className="edit-metadata-input edit-priority-select"
                         value={editDraft.priorityId}
                         onChange={(e) => setEditDraft({ ...editDraft, priorityId: e.target.value })}
                       >
-                        <option value="">— No priority —</option>
+                        <option value="">— {t("issues.empty.noPriority")} —</option>
                         {priorities.map((p) => (
                           <option key={p.id} value={p.id}>{p.name}{p.isDefault ? " (default)" : ""}</option>
                         ))}
                       </select>
                     </div>
                     <div className="metadata-item metadata-item-editable">
-                      <span className="metadata-label">Estimated Hours</span>
+                      <span className="metadata-label">{t("issues.fields.estimatedHours")}</span>
                       <input
                         type="number"
                         className="edit-metadata-input"
@@ -1360,25 +1363,25 @@ export default function IssueDetailPage() {
                   <>
                     {issue.startDate && (
                       <div className="metadata-item">
-                        <span className="metadata-label">Start Date</span>
+                        <span className="metadata-label">{t("issues.fields.startDate")}</span>
                         <span className="metadata-value">{new Date(issue.startDate).toLocaleDateString()}</span>
                       </div>
                     )}
                     {issue.dueDate && (
                       <div className="metadata-item">
-                        <span className="metadata-label">Due Date</span>
+                        <span className="metadata-label">{t("issues.fields.dueDate")}</span>
                         <span className="metadata-value">{new Date(issue.dueDate).toLocaleDateString()}</span>
                       </div>
                     )}
                     {issue.priority && (
                       <div className="metadata-item">
-                        <span className="metadata-label">Priority</span>
+                        <span className="metadata-label">{t("issues.fields.priority")}</span>
                         <span className="metadata-value">{issue.priority}</span>
                       </div>
                     )}
                     {issue.estimatedHours != null && (
                       <div className="metadata-item">
-                        <span className="metadata-label">Estimated Hours</span>
+                        <span className="metadata-label">{t("issues.fields.estimatedHours")}</span>
                         <span className="metadata-value">{issue.estimatedHours.toFixed(2)}h</span>
                       </div>
                     )}
@@ -1387,7 +1390,7 @@ export default function IssueDetailPage() {
                 {/* Always show spent hours as read-only (not editable) */}
                 {issue.spentHours != null && (
                   <div className="metadata-item metadata-item-readonly">
-                    <span className="metadata-label">Spent Hours (Redmine)</span>
+                    <span className="metadata-label">{t("issues.fields.spentHours")} (Redmine)</span>
                     <span className="metadata-value">{issue.spentHours.toFixed(2)}h</span>
                   </div>
                 )}
@@ -1517,7 +1520,7 @@ export default function IssueDetailPage() {
         <article className="report-card">
           <details className="issue-collapsible">
             <summary>
-              Child Issues
+              {t("issues.sections.subtickets")}
               <span className="muted">({issue.children ? issue.children.length : 0})</span>
             </summary>
             {issue.children && issue.children.length > 0 ? (
@@ -1554,7 +1557,7 @@ export default function IssueDetailPage() {
                 </table>
               </div>
             ) : (
-              <p className="muted">No child issues.</p>
+              <p className="muted">{t("issues.empty.subtickets")}</p>
             )}
           </details>
         </article>
@@ -1562,10 +1565,10 @@ export default function IssueDetailPage() {
         <article className="report-card">
           <details className="issue-collapsible">
             <summary>
-              Attachments <span className="muted">({issue.attachments.length})</span>
+              {t("issues.sections.attachments")} <span className="muted">({issue.attachments.length})</span>
             </summary>
             <div className="timeline">
-              {issue.attachments.length === 0 && <p className="muted">No attachments.</p>}
+              {issue.attachments.length === 0 && <p className="muted">{t("issues.empty.attachments")}</p>}
               {issue.attachments.map((attachment) => (
                 <div key={attachment.id} className="timeline-item timeline-item-attachment">
                   <div className="entry-head">
@@ -1612,7 +1615,7 @@ export default function IssueDetailPage() {
         <article className="report-card">
           <details className="issue-collapsible">
             <summary>
-              GitHub Links
+              {t("issues.sections.github")}
               <span className="muted">({issue.githubLinks.length})</span>
             </summary>
             {actionError && <p className="error-banner">{actionError}</p>}
@@ -1658,7 +1661,7 @@ export default function IssueDetailPage() {
                 />
               </label>
               <label>
-                Title (optional)
+                {t("issues.fields.titleLabel")} (optional)
                 <input
                   value={githubTitle}
                   onChange={(e) => setGithubTitle(e.target.value)}
@@ -1666,12 +1669,12 @@ export default function IssueDetailPage() {
                 />
               </label>
               <button type="submit" disabled={githubBusy}>
-                {githubBusy ? "Linking..." : "Add GitHub Link"}
+                {githubBusy ? t("common.loading") : t("issues.actions.linkGithub")}
               </button>
             </form>
 
             <div className="timeline">
-              {issue.githubLinks.length === 0 && <p className="muted">No GitHub links yet.</p>}
+              {issue.githubLinks.length === 0 && <p className="muted">{t("issues.empty.github")}</p>}
               {issue.githubLinks.map((link) => (
                 <article key={link.id} className="timeline-item timeline-item-github">
                   <div className="entry-head">
@@ -1689,7 +1692,7 @@ export default function IssueDetailPage() {
                       onClick={() => void deleteGithubLink(link.id)}
                       disabled={githubBusy}
                     >
-                      Remove
+                      {t("issues.actions.delete")}
                     </button>
                   </div>
                   <p className="muted entry-meta">
@@ -1734,53 +1737,53 @@ export default function IssueDetailPage() {
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="Write a Redmine note"
+                placeholder={t("issues.placeholders.comment")}
                 rows={4}
               />
             </label>
             <button type="submit" disabled={commentBusy || comment.trim().length === 0}>
-              {commentBusy ? "Posting..." : "Post to Redmine"}
+              {commentBusy ? t("common.loading") : t("issues.actions.postToRedmine")}
             </button>
           </form>
         </article>
 
         <div className="issue-tabs" ref={tabsRef}>
           <Link href={`/issues/${issue.id}?tab=history`} scroll={false} className={activeTab === "history" ? "active" : ""}>
-            History
+            {t("issues.tabs.history")}
             <span className="tab-count">{historyJournals.length}</span>
           </Link>
           <Link href={`/issues/${issue.id}?tab=notes`} scroll={false} className={activeTab === "notes" ? "active" : ""}>
-            Notes
+            {t("issues.tabs.notes")}
             <span className="tab-count">{noteJournals.length}</span>
           </Link>
           <Link href={`/issues/${issue.id}?tab=internal-notes`} scroll={false} className={activeTab === "internal-notes" ? "active" : ""}>
-            Internal Notes
+            {t("issues.tabs.internalNotes")}
             <span className="tab-count">{internalNotes.length}</span>
           </Link>
           <Link href={`/issues/${issue.id}?tab=properties`} scroll={false} className={activeTab === "properties" ? "active" : ""}>
-            Property changes
+            {t("issues.tabs.properties")}
             <span className="tab-count">{propertyJournals.length}</span>
           </Link>
           <Link href={`/issues/${issue.id}?tab=time_entries`} scroll={false} className={activeTab === "time_entries" ? "active" : ""}>
-            Spent time
+            {t("issues.tabs.timeEntries")}
             <span className="tab-count">{issue.timeEntries.length}</span>
           </Link>
         </div>
 
         <article className="report-card">
           <p className="report-label">
-            {activeTab === "history" && "History"}
-            {activeTab === "notes" && "Notes"}
-            {activeTab === "properties" && "Property changes"}
-            {activeTab === "time_entries" && "Spent time"}
+            {activeTab === "history" && t("issues.tabs.history")}
+            {activeTab === "notes" && t("issues.tabs.notes")}
+            {activeTab === "properties" && t("issues.tabs.properties")}
+            {activeTab === "time_entries" && t("issues.tabs.timeEntries")}
           </p>
           {activeTab === "history" && (
             <div className="timeline">
-              {historyJournals.length === 0 && <p className="muted">No history entries yet.</p>}
+              {historyJournals.length === 0 && <p className="muted">{t("issues.empty.history")}</p>}
               {historyJournals.map((journal) => (
                 <article key={journal.id} className="timeline-item timeline-item-history">
                   <p className="muted">
-                    <strong>{journal.author ?? "Unknown"}</strong> • {formatAgo(journal.createdOnRemote)}
+                    <strong>{journal.author ?? t("issues.empty.unknown")}</strong> • {formatAgo(journal.createdOnRemote, t)}
                   </p>
                   <MarkdownBlock
                     content={journal.notes ?? ""}
@@ -1794,11 +1797,11 @@ export default function IssueDetailPage() {
           )}
           {activeTab === "notes" && (
             <div className="timeline">
-              {noteJournals.length === 0 && <p className="muted">No notes yet.</p>}
+              {noteJournals.length === 0 && <p className="muted">{t("issues.empty.notes")}</p>}
               {noteJournals.map((journal) => (
                 <article key={journal.id} className="timeline-item timeline-item-note">
                   <p className="muted">
-                    <strong>{journal.author ?? "Unknown"}</strong> • {formatAgo(journal.createdOnRemote)}
+                    <strong>{journal.author ?? t("issues.empty.unknown")}</strong> • {formatAgo(journal.createdOnRemote, t)}
                   </p>
                   <MarkdownBlock
                     content={journal.notes ?? ""}
@@ -1815,25 +1818,25 @@ export default function IssueDetailPage() {
               {actionError && <p className="error-banner">{actionError}</p>}
               <form className="form" onSubmit={submitInternalNote}>
                 <label>
-                  Add Internal Note
+                  {t("issues.tabs.internalNotes")}
                   <textarea
                     value={newNoteContent}
                     onChange={(e) => setNewNoteContent(e.target.value)}
-                    placeholder="Private note — only visible to your team"
+                    placeholder={t("issues.placeholders.internalNote")}
                     rows={3}
                   />
                 </label>
                 <button type="submit" disabled={noteBusy || newNoteContent.trim().length === 0}>
-                  {noteBusy ? "Saving..." : "Add Note"}
+                  {noteBusy ? t("common.loading") : t("issues.actions.save")}
                 </button>
               </form>
               <div className="internal-notes-list">
-                {internalNotes.length === 0 && <p className="muted">No internal notes yet.</p>}
+                {internalNotes.length === 0 && <p className="muted">{t("issues.empty.notes")}</p>}
                 {internalNotes.map((note) => (
                   <article key={note.id} className="internal-note-item">
                     <div className="internal-note-head">
                       <span className="internal-note-author">{note.authorName}</span>
-                      <span className="internal-note-date">{formatAgo(new Date(note.createdAt).toISOString())}</span>
+                      <span className="internal-note-date">{formatAgo(new Date(note.createdAt).toISOString(), t)}</span>
                     </div>
                     <div className="internal-note-content">
                       <MarkdownBlock
@@ -1847,7 +1850,7 @@ export default function IssueDetailPage() {
                       type="button"
                       className="internal-note-delete"
                       onClick={() => {
-                        if (confirm("Delete this internal note?")) {
+                        if (confirm(t("issues.actions.confirmDeleteNote"))) {
                           void deleteInternalNote(note.id);
                         }
                       }}
@@ -1862,11 +1865,11 @@ export default function IssueDetailPage() {
           )}
           {activeTab === "properties" && (
             <div className="timeline">
-              {propertyJournals.length === 0 && <p className="muted">No property changes detected.</p>}
+              {propertyJournals.length === 0 && <p className="muted">{t("issues.empty.properties")}</p>}
               {propertyJournals.map((journal) => (
                 <article key={journal.id} className="timeline-item timeline-item-property">
                   <p className="muted">
-                    <strong>{journal.author ?? "Unknown"}</strong> • {formatAgo(journal.createdOnRemote)}
+                    <strong>{journal.author ?? t("issues.empty.unknown")}</strong> • {formatAgo(journal.createdOnRemote, t)}
                   </p>
                   <MarkdownBlock
                     content={journal.notes ?? ""}
@@ -1885,9 +1888,9 @@ export default function IssueDetailPage() {
                   id: e.id,
                   hours: e.hours,
                   comments: e.comments,
-                  activityName: e.activityName || "General",
+                  activityName: e.activityName || t("issues.empty.general"),
                   spentOn: e.spentOn,
-                  authorName: e.authorName || "Unknown",
+                  authorName: e.authorName || t("issues.empty.unknown"),
                 }))}
         onAddEntry={async (hours, activityId, comments, spentOn) => {
           await performAction({
@@ -1895,7 +1898,7 @@ export default function IssueDetailPage() {
             issueId,
             payload: { hours, activityId, comments, spentOn },
             onSuccess: reloadIssue,
-            successMessage: "Time entry logged.",
+            successMessage: t("issues.messages.redmineUpdated"),
           });
         }}
                 activities={activities}

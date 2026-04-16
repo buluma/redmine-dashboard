@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useI18n } from "@/src/components/I18nProvider";
 import {
   AreaChart,
   DonutChart,
@@ -58,19 +59,13 @@ function roundHours(totalSeconds: number): number {
   return Math.round((totalSeconds / 3600) * 10) / 10;
 }
 
-function hoursLabel(totalSeconds: number): string {
-  return `${roundHours(totalSeconds)}h`;
+function hoursLabel(totalSeconds: number, t: any): string {
+  return t("wakatime.h", { hours: roundHours(totalSeconds) });
 }
 
-function formatDay(value: string): string {
+function formatDay(value: string, formatDate: any): string {
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const [, monthRaw, dayRaw] = value.split("-");
-    const monthIdx = Number(monthRaw) - 1;
-    const day = Number(dayRaw);
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    if (monthIdx >= 0 && monthIdx < months.length) {
-      return `${months[monthIdx]} ${day}`;
-    }
+    return formatDate(new Date(`${value}T00:00:00`), { day: "numeric", month: "short" });
   }
   return value;
 }
@@ -94,17 +89,17 @@ function toFiniteNumber(value: unknown): number | null {
   return null;
 }
 
-function formatMixValue(value: number, mode: "heartbeats" | "summaries"): string {
+function formatMixValue(value: number, mode: "heartbeats" | "summaries", t: any): string {
   if (mode === "heartbeats") {
     const rounded = Math.round(value);
-    return `${rounded} event${rounded === 1 ? "" : "s"}`;
+    return t("wakatime.events", { count: rounded });
   }
   const totalMinutes = Math.round(value * 60);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  if (hours <= 0) return `${minutes}m`;
-  if (minutes <= 0) return `${hours}h`;
-  return `${hours}h ${minutes}m`;
+  if (hours <= 0) return t("wakatime.m", { minutes });
+  if (minutes <= 0) return t("wakatime.h", { hours });
+  return t("wakatime.hm", { hours, minutes });
 }
 
 export function WakatimeChartsClient({
@@ -117,6 +112,7 @@ export function WakatimeChartsClient({
   heartbeatDays,
   initialRange,
 }: Props) {
+  const { t, formatDate } = useI18n();
   const [selectedRange, setSelectedRange] = useState<WakaTimeRange>(initialRange);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -186,9 +182,9 @@ export function WakatimeChartsClient({
     const delta = ((secondTotal - firstTotal) / firstTotal) * 100;
     return {
       value: Number(delta.toFixed(1)),
-      label: `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}% vs earlier period`,
+      label: t("wakatime.vsEarlierPeriod", { prefix: delta >= 0 ? "+" : "", percent: delta.toFixed(1) }),
     };
-  }, [summaryDays]);
+  }, [summaryDays, t]);
 
   const topDays = useMemo(
     () =>
@@ -241,13 +237,13 @@ export function WakatimeChartsClient({
           cadence: goal.delta === "week" ? "weekly" : "daily",
           status,
           progress,
-          actualText: latest?.actual_seconds_text || hoursLabel(actualSeconds),
-          targetText: latest?.goal_seconds_text || (goalSeconds > 0 ? hoursLabel(goalSeconds) : "No target"),
+          actualText: latest?.actual_seconds_text || hoursLabel(actualSeconds, t),
+          targetText: latest?.goal_seconds_text || (goalSeconds > 0 ? hoursLabel(goalSeconds, t) : t("common.noTarget") || "No target"),
           reason: latest?.range_status_reason || "",
         };
       })
       .slice(0, 6);
-  }, [report.goals]);
+  }, [report.goals, t]);
 
   const onTrackGoals = useMemo(
     () => goalRows.filter((goal) => goal.status.toLowerCase().includes("success")).length,
@@ -448,8 +444,8 @@ export function WakatimeChartsClient({
       <section className="card reports-filters-panel">
         <div className="reports-head">
           <div>
-            <h2>Report Window</h2>
-            <p className="muted">{selectedRangeLabel} view</p>
+            <h2>{t("wakatime.reportWindow")}</h2>
+            <p className="muted">{t("wakatime.viewLabel", { range: selectedRangeLabel })}</p>
           </div>
           <div className="window-toggle" role="tablist" aria-label="WakaTime report range">
             {WAKATIME_RANGE_OPTIONS.map((option) => (
@@ -462,7 +458,7 @@ export function WakatimeChartsClient({
                 onClick={() => handleRangeChange(option.value)}
                 disabled={busy}
               >
-                {busy && selectedRange === option.value ? "Loading..." : option.label}
+                {busy && selectedRange === option.value ? t("wakatime.loading") : option.label}
               </button>
             ))}
           </div>
@@ -472,34 +468,34 @@ export function WakatimeChartsClient({
 
       <div className="reports-stats-grid">
         <StatCard
-          label="Range Total"
-          value={hoursLabel(d.total_seconds)}
-          foot={`${selectedRangeLabel} coding time · ${currentStreak}d streak`}
+          label={t("wakatime.rangeTotal")}
+          value={hoursLabel(d.total_seconds, t)}
+          foot={`${selectedRangeLabel} ${t("wakatime.totalTime")} · ${t("wakatime.streak", { count: currentStreak })}`}
           tone="info"
           trend={rangeTrend ?? undefined}
         />
         <StatCard
-          label="Daily Average"
-          value={hoursLabel(d.daily_average)}
-          foot={`${summaryDays.length || d.days_including_holidays} days in report`}
+          label={t("wakatime.dailyAverage")}
+          value={hoursLabel(d.daily_average, t)}
+          foot={t("wakatime.daysInReport", { count: summaryDays.length || d.days_including_holidays })}
           tone="success"
         />
         <StatCard
-          label="Active Days"
+          label={t("wakatime.activeDays")}
           value={`${activeDays}/${summaryDays.length}`}
-          foot={`${summaryDays.length > 0 ? Math.round((activeDays / summaryDays.length) * 100) : 0}% with coding activity`}
+          foot={t("wakatime.withCodingActivity", { percent: summaryDays.length > 0 ? Math.round((activeDays / summaryDays.length) * 100) : 0 })}
           tone="success"
         />
         <StatCard
-          label="Goals"
+          label={t("wakatime.goals")}
           value={goalRows.length > 0 ? `${onTrackGoals}/${goalRows.length}` : "-"}
-          foot={goalRows.length > 0 ? "goals currently successful" : "No goals or missing read_goals scope"}
+          foot={goalRows.length > 0 ? t("wakatime.goalsSuccessful") : t("wakatime.noGoals")}
           tone={goalRows.length > 0 && onTrackGoals === goalRows.length ? "success" : "default"}
         />
         <StatCard
-          label="All Time"
+          label={t("wakatime.allTimeLabel")}
           value={report.allTime?.data.text ?? "-"}
-          foot={`Today: ${report.today?.data.text ?? "0m"}${report.today ? ` since ${formatTime(report.today.data.range.start)}` : ""}`}
+          foot={`${t("wakatime.today")}: ${report.today?.data.text ?? "0m"}${report.today ? ` ${t("wakatime.since", { time: formatTime(report.today.data.range.start) })}` : ""}`}
           tone="info"
         />
       </div>
@@ -508,22 +504,22 @@ export function WakatimeChartsClient({
         <div className="reports-charts-grid reports-charts-row-2">
           <div className="card report-panel">
             <div className="report-panel-head">
-              <h3>Daily Coding Trend</h3>
-              <span className="report-panel-badge">{dailyTrend.length} days</span>
+              <h3>{t("wakatime.dailyTrend")}</h3>
+              <span className="report-panel-badge">{t("wakatime.daysBadge", { count: dailyTrend.length })}</span>
             </div>
             <AreaChart
               points={dailyTrend}
               stroke="#0f6f87"
               fill="#34d399"
               height={140}
-              tooltipLabel={(k, v) => `${formatDay(k)}: ${v}h`}
+              tooltipLabel={(k, v) => `${formatDay(k, formatDate)}: ${v}h`}
             />
           </div>
 
           <div className="card report-panel">
             <div className="report-panel-head">
-              <h3>Daily Performance</h3>
-              <span className="report-panel-badge">{gaugePercent}% of average</span>
+              <h3>{t("wakatime.performance")}</h3>
+              <span className="report-panel-badge">{t("wakatime.percentOfAverage", { percent: gaugePercent })}</span>
             </div>
             <div className="wakatime-gauge-panel">
               <svg viewBox="0 0 220 140" className="wakatime-gauge-svg" role="img" aria-label="Today vs average coding time gauge">
@@ -547,16 +543,16 @@ export function WakatimeChartsClient({
               </svg>
               <div className="wakatime-gauge-copy">
                 <div className="wakatime-gauge-today">
-                  <strong>{report.today?.data.text ?? "0m"}</strong> today
+                  <strong>{report.today?.data.text ?? "0m"}</strong> {t("wakatime.today").toLowerCase()}
                 </div>
                 <div className={`wakatime-gauge-delta ${deltaPercent >= 0 ? "up" : "down"}`}>
-                  {deltaPercent >= 0 ? "↑" : "↓"} {Math.abs(deltaPercent)}% vs daily average
+                  {deltaPercent >= 0 ? t("wakatime.vsAverage", { percent: Math.abs(deltaPercent) }) : t("wakatime.vsAverageDown", { percent: Math.abs(deltaPercent) })}
                 </div>
                 <div className="wakatime-gauge-meta">
-                  Daily avg: <strong>{hoursLabel(dailyAverageSeconds)}</strong>
+                  {t("wakatime.dailyAvgLabel")} <strong>{hoursLabel(dailyAverageSeconds, t)}</strong>
                 </div>
                 <div className="wakatime-gauge-meta">
-                  Most active: <strong>{topDays[0] ? formatDay(topDays[0].range.start) : "n/a"}</strong>
+                  {t("wakatime.mostActiveLabel")} <strong>{topDays[0] ? formatDay(topDays[0].range.start, formatDate) : "n/a"}</strong>
                 </div>
               </div>
             </div>
@@ -567,32 +563,32 @@ export function WakatimeChartsClient({
       <div className="reports-charts-grid reports-charts-row-3 wakatime-bottom-grid">
         <div className="card report-panel">
           <div className="report-panel-head">
-            <h3>Languages</h3>
+            <h3>{t("wakatime.languages")}</h3>
             <span className="report-panel-badge">{(d.languages ?? []).filter((l) => l.total_seconds > 0).length}</span>
           </div>
           <DonutChart
             segments={toSegments(d.languages)}
-            centerLabel="Hours"
+            centerLabel={t("wakatime.hours")}
             centerValue={roundHours(d.total_seconds)}
           />
         </div>
 
         <div className="card report-panel">
           <div className="report-panel-head">
-            <h3>Projects</h3>
-            <span className="report-panel-badge">top 8</span>
+            <h3>{t("wakatime.projects")}</h3>
+            <span className="report-panel-badge">{t("wakatime.top8")}</span>
           </div>
           <BarChartEnhanced items={toBarItems(d.projects)} showValue />
         </div>
 
         <div className="card report-panel">
           <div className="report-panel-head">
-            <h3>Editors</h3>
+            <h3>{t("wakatime.editors")}</h3>
             <span className="report-panel-badge">{(d.editors ?? []).filter((e) => e.total_seconds > 0).length}</span>
           </div>
           <DonutChart
             segments={toSegments(d.editors)}
-            centerLabel="Top"
+            centerLabel={t("wakatime.top")}
             centerValue={d.editors?.[0]?.name ?? "-"}
           />
         </div>
@@ -601,9 +597,9 @@ export function WakatimeChartsClient({
       <div className="reports-charts-grid reports-charts-row-3">
         <div className="card report-panel">
           <div className="report-panel-head">
-            <h3>Weekday Activity Mix</h3>
+            <h3>{t("wakatime.weekdayMix")}</h3>
             <span className="report-panel-badge">
-              {weekdayActivityMix.mode === "heartbeats" ? "heartbeats (7d)" : "summaries fallback"}
+              {weekdayActivityMix.mode === "heartbeats" ? t("wakatime.heartbeatsLabel") : t("wakatime.summariesLabel")}
             </span>
           </div>
           {weekdayMixRows.length > 0 ? (
@@ -645,7 +641,7 @@ export function WakatimeChartsClient({
                           {item.name}
                         </span>
                         <span className="wakatime-weekday-tooltip-value">
-                          {formatMixValue(item.value, weekdayActivityMix.mode)}
+                          {formatMixValue(item.value, weekdayActivityMix.mode, t)}
                         </span>
                       </div>
                     ))}
@@ -654,19 +650,19 @@ export function WakatimeChartsClient({
               </div>
               {weekdayActivityMix.missingHeartbeatsScope && weekdayActivityMix.mode !== "heartbeats" && (
                 <p className="muted wakatime-scope-note">
-                  Heartbeats unavailable. Add <code>read_heartbeats</code> scope to power this with raw activity.
+                  {t("wakatime.noHeartbeatsScope")}
                 </p>
               )}
             </>
           ) : (
-            <p className="muted">No activity mix data available.</p>
+            <p className="muted">{t("wakatime.noActivityMix")}</p>
           )}
         </div>
 
         <div className="card report-panel">
           <div className="report-panel-head">
-            <h3>Goals Progress</h3>
-            <span className="report-panel-badge">{goalRows.length} active</span>
+            <h3>{t("wakatime.goalsProgress")}</h3>
+            <span className="report-panel-badge">{t("wakatime.activeBadge", { count: goalRows.length })}</span>
           </div>
           {goalRows.length > 0 ? (
             <div className="wakatime-goals-list">
@@ -688,22 +684,22 @@ export function WakatimeChartsClient({
             </div>
           ) : (
             <div className="wakatime-empty-state">
-              <p className="muted">Goals unavailable. Confirm your key has <code>read_goals</code> access and a WakaTime premium plan.</p>
+              <p className="muted">{t("wakatime.noGoalsAvailable")}</p>
             </div>
           )}
         </div>
 
         <div className="card report-panel">
           <div className="report-panel-head">
-            <h3>Top Coding Days</h3>
-            <span className="report-panel-badge">{topDays.length} entries</span>
+            <h3>{t("wakatime.topCodingDays")}</h3>
+            <span className="report-panel-badge">{t("wakatime.entriesBadge", { count: topDays.length })}</span>
           </div>
           {topDays.length > 0 ? (
             <div className="wakatime-top-days">
               {topDays.map((day) => (
                 <div key={day.id} className="wakatime-top-day-row">
                   <div className="wakatime-top-day-main">
-                    <span className="wakatime-top-day-date">{formatDay(day.range.start)}</span>
+                    <span className="wakatime-top-day-date">{formatDay(day.range.start, formatDate)}</span>
                     <span className="wakatime-top-day-total">{day.grand_total.text}</span>
                   </div>
                   <div className="wakatime-top-day-sub muted">
@@ -715,7 +711,7 @@ export function WakatimeChartsClient({
             </div>
           ) : (
             <div className="wakatime-empty-state">
-              <p className="muted">No coding days found for this range.</p>
+              <p className="muted">{t("wakatime.noCodingDays")}</p>
               <div className="wakatime-empty-actions">
                 <button
                   type="button"
@@ -723,7 +719,7 @@ export function WakatimeChartsClient({
                   onClick={() => handleRangeChange("last_30_days")}
                   disabled={busy || selectedRange === "last_30_days"}
                 >
-                  Try Last 30 Days
+                  {t("wakatime.tryLast30Days")}
                 </button>
               </div>
             </div>

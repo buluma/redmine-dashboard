@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useI18n } from "./I18nProvider";
 
 interface ExportOptions {
   issues: {
@@ -17,23 +18,34 @@ interface ExportOptions {
 }
 
 export function ExportButton({ issues, format }: ExportOptions) {
+  const { t, formatDate } = useI18n();
+
   const handleExport = useCallback(() => {
     if (format === "csv") {
-      exportCSV(issues);
+      exportCSV(issues, t, formatDate);
     } else {
-      printIssues(issues);
+      printIssues(issues, t, formatDate);
     }
-  }, [issues, format]);
+  }, [issues, format, t, formatDate]);
 
   return (
     <button type="button" onClick={handleExport} className="export-btn">
-      {format === "csv" ? "📥 CSV" : "🖨️ Print"}
+      {format === "csv" ? t("export.csvBtn") : t("export.printBtn")}
     </button>
   );
 }
 
-function exportCSV(issues: ExportOptions["issues"]) {
-  const headers = ["ID", "Subject", "Status", "Priority", "Project", "Assignee", "Due Date", "Updated"];
+function exportCSV(issues: ExportOptions["issues"], t: any, formatDate: any) {
+  const headers = [
+    t("export.colId"),
+    t("export.colSubject"),
+    t("export.colStatus"),
+    t("export.colPriority"),
+    t("export.colProject"),
+    t("export.colAssignee"),
+    t("export.colDue"),
+    t("export.colUpdated")
+  ];
   const rows = issues.map((i) => [
     i.redmineIssueId,
     `"${i.subject.replace(/"/g, '""')}"`,
@@ -42,7 +54,7 @@ function exportCSV(issues: ExportOptions["issues"]) {
     i.projectName ?? "",
     i.assignedToName ?? "",
     i.dueDate ?? "",
-    new Date(i.updatedAt).toLocaleDateString(),
+    formatDate(i.updatedAt),
   ]);
 
   const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
@@ -58,12 +70,12 @@ function exportCSV(issues: ExportOptions["issues"]) {
   URL.revokeObjectURL(url);
 }
 
-function printIssues(issues: ExportOptions["issues"]) {
+function printIssues(issues: ExportOptions["issues"], t: any, formatDate: any) {
   const html = `
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Issues Report</title>
+  <title>${t("export.reportTitle")}</title>
   <style>
     body { font-family: system-ui, sans-serif; padding: 2rem; }
     h1 { margin-bottom: 1rem; }
@@ -79,18 +91,18 @@ function printIssues(issues: ExportOptions["issues"]) {
   </style>
 </head>
 <body>
-  <h1>Issues Report</h1>
-  <p class="print-date">Generated: ${new Date().toLocaleString()}</p>
+  <h1>${t("export.reportTitle")}</h1>
+  <p class="print-date">${t("export.generatedAt", { date: new Date().toLocaleString() })}</p>
   <table>
     <thead>
       <tr>
-        <th>ID</th>
-        <th>Subject</th>
-        <th>Status</th>
-        <th>Priority</th>
-        <th>Project</th>
-        <th>Assignee</th>
-        <th>Due Date</th>
+        <th>${t("export.colId")}</th>
+        <th>${t("export.colSubject")}</th>
+        <th>${t("export.colStatus")}</th>
+        <th>${t("export.colPriority")}</th>
+        <th>${t("export.colProject")}</th>
+        <th>${t("export.colAssignee")}</th>
+        <th>${t("export.colDue")}</th>
       </tr>
     </thead>
     <tbody>
@@ -102,12 +114,12 @@ function printIssues(issues: ExportOptions["issues"]) {
           <td>${i.priorityName ?? "-"}</td>
           <td>${i.projectName ?? "-"}</td>
           <td>${i.assignedToName ?? "-"}</td>
-          <td>${i.dueDate ? new Date(i.dueDate).toLocaleDateString() : "-"}</td>
+          <td>${i.dueDate ? formatDate(i.dueDate) : "-"}</td>
         </tr>
       `).join("")}
     </tbody>
   </table>
-  <button onclick="window.print()">Print</button>
+  <button onclick="window.print()">${t("export.printBtnAction")}</button>
   <script>window.onload = () => window.print();</script>
 </body>
 </html>

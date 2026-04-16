@@ -1,81 +1,70 @@
-import { redirect } from "next/navigation";
 import { requireCurrentUser } from "@/src/lib/auth";
 import { env } from "@/src/lib/env";
-import { SlackMessagesClient } from "./slack-client";
 import { SlackClient } from "@/src/lib/slack";
+import { SlackMessagesClient } from "./slack-client";
+import { SlackErrorView } from "./error-view";
 
 export const runtime = "nodejs";
 
 export default async function SlackPage() {
-  const user = await requireCurrentUser();
+  // Validate session
+  await requireCurrentUser();
 
-  const botToken = env.slackBotToken;
-
-  // Get all channel IDs to monitor (default + additional)
-  const allChannelIds = env.slackDefaultChannelId 
-    ? [env.slackDefaultChannelId, ...env.slackMonitorChannelIds.filter(id => id !== env.slackDefaultChannelId)]
-    : env.slackMonitorChannelIds;
-
-  let messages: Awaited<ReturnType<SlackClient["getChannelMessages"]>> = [];
-  let channels: Array<{ id: string; name: string }> = [];
   let error: string | null = null;
+  let messages: any[] = [];
   let initialUserNames: Record<string, string> = {};
+  let channels: Array<{ id: string; name: string }> = [];
+  const defaultChannelId = env.slackDefaultChannelId || "";
 
-  if (!botToken) {
-    error = "Slack bot token not configured. Please set SLACK_BOT_TOKEN in your environment.";
-  } else if (allChannelIds.length === 0) {
-    error = "No Slack channels configured. Please set SLACK_DEFAULT_CHANNEL_ID or SLACK_MONITOR_CHANNEL_IDS in your environment.";
-  } else {
-    try {
-      const slackClient = new SlackClient(botToken);
-      channels = await slackClient.getChannels();
-
-      // Get channel names for all monitored channels
-      const channelMap = new Map(channels.map((c) => [c.id, c.name]));
-
-      // Fetch messages from default channel
-      const defaultChannelId = env.slackDefaultChannelId || allChannelIds[0];
-      messages = await slackClient.getChannelMessages(defaultChannelId);
-
-      // Build user names map
-      const userIds = [...new Set(messages.map((m) => m.user).filter(Boolean))];
-      for (const userId of userIds) {
-        if (userId) {
-          const userInfo = await slackClient.getUserInfo(userId);
-          if (userInfo) {
-            initialUserNames[userId] = userInfo;
-          }
-        }
-      }
-    } catch (err) {
-      error = err instanceof Error ? err.message : "Failed to fetch Slack messages";
+  try {
+    if (!env.slackBotToken) {
+      throw new Error("Slack bot token not configured.");
     }
-  }
 
-  const defaultChannelId = env.slackDefaultChannelId || (channels[0]?.id ?? "");
+    const slack = new SlackClient(env.slackBotToken);
+    
+    // Get list of channels
+    const allChannels = await slack.getChannels();
+    
+    // Filter to monitored channels if configured
+    if (env.slackMonitorChannelIds.length > 0) {
+      channels = allChannels.filter(c => env.slackMonitorChannelIds.includes(c.id));
+    } else {
+      channels = allChannels;
+    }
+
+    if (channels.length === 0) {
+      if (defaultChannelId) {
+        try {
+          const info = await slack.getChannelInfo(defaultChannelId);
+          channels = [info];
+        } catch {
+          throw new Error("No Slack channels configured and default channel invalid.");
+        }
+      } else {
+        throw new Error("No Slack channels configured.");
+      }
+    }
+
+    const targetChannelId = defaultChannelId || (channels.length > 0 ? channels[0].id : null);
+
+    if (targetChannelId) {
+      messages = await slack.getChannelMessages(targetChannelId);
+      
+      // Pre-fetch user names for initial display
+      const userIds = Array.from(new Set(messages.map(m => m.user).filter(Boolean) as string[]));
+      const userMap = await slack.getUsers(userIds);
+      initialUserNames = Object.fromEntries(userMap);
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to load Slack data";
+    console.error("Slack page error:", err);
+  }
 
   return (
     <main className="dashboard">
       {error ? (
-        <>
-          <header className="card hero">
-            <div className="hero-top">
-              <div>
-                <p className="kicker">Slack</p>
-                <h1>Slack Messages</h1>
-                <p className="muted">Configuration Required</p>
-              </div>
-            </div>
-          </header>
-          <section className="card">
-            <div className="reports-head">
-              <div>
-                <h2>Configuration Error</h2>
-                <p className="muted">{error}</p>
-              </div>
-            </div>
-          </section>
-        </>
+        <SlackErrorView error={error} />
       ) : (
         <SlackMessagesClient 
           initialMessages={messages} 

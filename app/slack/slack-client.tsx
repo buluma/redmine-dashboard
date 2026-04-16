@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useI18n } from "@/src/components/I18nProvider";
 import type { SlackMessage } from "@/src/lib/slack";
 
 interface SlackMessagesClientProps {
@@ -57,20 +58,16 @@ function MessageItem({
   onThreadClick: (threadTs: string) => void;
   showAvatar?: boolean;
 }) {
+  const { t, formatDate } = useI18n();
   const isThreadReply = !!message.threadTs && message.ts !== message.threadTs;
   const userId = message.user || "unknown";
-  const userName = userNames[userId] || userId;
+  const userName = userNames[userId] || (userId === "unknown" ? t("slack.unknown") : userId);
   const isBot = !!message.botId;
   const initial = userName.charAt(0).toUpperCase();
 
   // Format time like Slack: "11:51 AM"
   const formatTime = (ts: string) => {
-    const date = new Date(parseFloat(ts) * 1000);
-    return date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true
-    });
+    return formatDate(new Date(parseFloat(ts) * 1000));
   };
 
   // Check if this is a system message subtype
@@ -87,13 +84,13 @@ function MessageItem({
   // Format system message text
   const getSystemMessageText = () => {
     if (text.includes("joined") || subtype === "channel_join") {
-      return `${userName} joined the channel`;
+      return t("slack.joinedChannel", { user: userName });
     }
     if (text.includes("left") || subtype === "channel_leave") {
-      return `${userName} left the channel`;
+      return t("slack.leftChannel", { user: userName });
     }
     if (subtype === "pinned_item") {
-      return `${userName} pinned a message`;
+      return t("slack.pinnedMessage", { user: userName });
     }
     return text;
   };
@@ -119,7 +116,7 @@ function MessageItem({
             <div className="message-header">
               <span className="message-author">
                 {userName}
-                {isBot && <span className="bot-label">Bot</span>}
+                {isBot && <span className="bot-label">{t("slack.bot")}</span>}
               </span>
               <span className="message-time">{formatTime(message.ts)}</span>
             </div>
@@ -142,11 +139,15 @@ function MessageItem({
             )}
             {message.reactions && message.reactions.length > 0 && (
               <div className="message-reactions">
-                {message.reactions.map((reaction, idx) => (
-                  <span key={idx} className="reaction" title={`${reaction.users?.length || reaction.count} ${reaction.count === 1 ? "person" : "people"}`}>
-                    {formatReactionEmoji(reaction.name)} {reaction.count}
-                  </span>
-                ))}
+                {message.reactions.map((reaction, idx) => {
+                  const count = reaction.count;
+                  const personLabel = count === 1 ? t("slack.person") : t("slack.people");
+                  return (
+                    <span key={idx} className="reaction" title={`${reaction.users?.length || count} ${personLabel}`}>
+                      {formatReactionEmoji(reaction.name)} {count}
+                    </span>
+                  );
+                })}
               </div>
             )}
             {message.replyCount && message.replyCount > 0 && (
@@ -154,7 +155,7 @@ function MessageItem({
                 className="thread-info"
                 onClick={() => onThreadClick(message.ts)}
               >
-                💬 {message.replyCount} {message.replyCount === 1 ? "reply" : "replies"}
+                💬 {message.replyCount} {message.replyCount === 1 ? t("slack.reply") : t("slack.replies")}
                 {message.replyUsers && message.replyUsers.length > 0 &&
                   ` · ${message.replyUsers.slice(0, 2).map(u => userNames[u] || u).join(", ")}`
                 }
@@ -188,6 +189,7 @@ export function SlackMessagesClient({
   refreshIntervalMs = 30000,
   channelCount
 }: SlackMessagesClientProps) {
+  const { t, formatDate } = useI18n();
   const [messages, setMessages] = useState<SlackMessage[]>(initialMessages);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -313,12 +315,12 @@ export function SlackMessagesClient({
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setTestResult({ success: true, message: "Test notification sent!" });
+        setTestResult({ success: true, message: t("slack.testSuccess") });
       } else {
-        setTestResult({ success: false, message: data.error || "Failed to send" });
+        setTestResult({ success: false, message: data.error || t("slack.testFailed") });
       }
     } catch {
-      setTestResult({ success: false, message: "Network error" });
+      setTestResult({ success: false, message: t("slack.testNetworkError") });
     } finally {
       setIsSendingTest(false);
       // Clear result after 5 seconds
@@ -432,17 +434,17 @@ export function SlackMessagesClient({
               onClick={handleRefresh}
               disabled={isRefreshing}
             >
-              {isRefreshing ? "⟳ Refreshing…" : "⟳ Refresh"}
+              {isRefreshing ? t("slack.refreshing") : t("slack.refresh")}
             </button>
             
             <button
               type="button"
               className={`auto-refresh-toggle ${isAutoRefreshEnabled ? "active" : ""}`}
               onClick={() => setIsAutoRefreshEnabled(!isAutoRefreshEnabled)}
-              title={isAutoRefreshEnabled ? "Auto-refresh enabled (5 min)" : "Auto-refresh disabled"}
+              title={isAutoRefreshEnabled ? t("slack.autoRefreshTitleOn") : t("slack.autoRefreshTitleOff")}
             >
               <span className="toggle-indicator" />
-              Auto-refresh {isAutoRefreshEnabled ? "ON" : "OFF"}
+              {isAutoRefreshEnabled ? t("slack.autoRefreshOn") : t("slack.autoRefreshOff")}
             </button>
 
             {isAutoRefreshEnabled && (
@@ -456,7 +458,7 @@ export function SlackMessagesClient({
               onClick={handleTestNotification}
               disabled={isSendingTest}
             >
-              {isSendingTest ? "Sending…" : "Test Notification"}
+              {isSendingTest ? t("slack.sending") : t("slack.testNotification")}
             </button>
 
             {testResult && (
@@ -1045,13 +1047,13 @@ export function SlackMessagesClient({
                 <animateTransform attributeName="transform" type="rotate" from="0 10 10" to="360 10 10" dur="1s" repeatCount="indefinite"/>
               </circle>
             </svg>
-            Loading thread...
+            {t("slack.loadingThread")}
           </div>
         )}
 
         {mainMessages.length === 0 ? (
           <div className="empty-state">
-            <p>No messages found in #{currentChannel?.name || "unknown"}</p>
+            <p>{t("slack.noMessages", { channel: currentChannel?.name || t("slack.unknown") })}</p>
           </div>
         ) : (
           <div className="slack-message-list">

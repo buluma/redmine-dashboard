@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useI18n } from "@/src/components/I18nProvider";
 
 export default function OfflinePage() {
   const [online, setOnline] = useState(false);
+  const { t } = useI18n();
 
   useEffect(() => {
     setOnline(navigator.onLine);
@@ -22,9 +24,9 @@ export default function OfflinePage() {
     return (
       <main className="dashboard">
         <section className="card" style={{ textAlign: "center", padding: "3rem" }}>
-          <h1>📡 Connection Restored</h1>
-          <p className="muted">You're back online. Redirecting...</p>
-          <Link href="/" className="primary-link">Go to Dashboard</Link>
+          <h1>📡 {t("offline.restored")}</h1>
+          <p className="muted">{t("offline.redirecting")}</p>
+          <Link href="/" className="primary-link">{t("offline.backToDashboard")}</Link>
         </section>
       </main>
     );
@@ -33,15 +35,15 @@ export default function OfflinePage() {
   return (
     <main className="dashboard">
       <section className="card" style={{ textAlign: "center", padding: "3rem" }}>
-        <h1>📡 You're Offline</h1>
+        <h1>📡 {t("offline.title")}</h1>
         <p className="muted" style={{ marginTop: "0.5rem" }}>
-          Showing cached data. Some features may be limited.
+          {t("offline.cached")}
         </p>
         <div style={{ marginTop: "1.5rem" }}>
-          <Link href="/" className="primary-link">Back to Dashboard</Link>
+          <Link href="/" className="primary-link">{t("offline.backToDashboard")}</Link>
         </div>
         <p className="muted" style={{ marginTop: "1rem", fontSize: "0.8rem" }}>
-          Tip: Visit issues while online to cache them for offline viewing.
+          {t("offline.tip")}
         </p>
       </section>
     </main>

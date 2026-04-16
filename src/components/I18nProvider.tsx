@@ -1,65 +1,113 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useMemo } from "react";
+import enMessagesRaw from "../../messages/en.json";
+
+// Handle potential .default wrapping from different bundler behaviors
+const enMessages = (enMessagesRaw as any).default || enMessagesRaw;
 
 type Messages = Record<string, Record<string, any>>;
 
-const translations: Messages = {};
+const translations: Messages = {
+  en: enMessages
+};
 
-// Preload all messages
+// Preload all other messages
 const loadAllMessages = async () => {
-  const locales = ["en", "es", "de", "fr", "ja", "zh", "ru", "uk", "af", "tl", "pl", "vi"];
+  const locales = ["es", "de", "fr", "ja", "zh", "ru", "uk", "af", "tl", "pl", "vi"];
   for (const locale of locales) {
     try {
-      translations[locale] = (await import(`../../messages/${locale}.json`)).default;
-    } catch {
+      const msg = await import(`../../messages/${locale}.json`);
+      translations[locale] = msg.default || msg;
+    } catch (err) {
+      console.error(`Failed to load locale: ${locale}`, err);
       translations[locale] = translations.en;
     }
   }
 };
 
-// Load on init
-loadAllMessages();
+// Load on init - only in browser to avoid SSR issues with dynamic imports if possible, 
+// though Next.js handles it.
+if (typeof window !== "undefined") {
+  loadAllMessages();
+}
 
 type I18nContextType = {
   locale: string;
   setLocale: (l: string) => void;
-  t: (key: string, fallback?: string) => string;
+  t: (key: string, variables?: Record<string, string | number>, fallback?: string) => string;
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+  formatNumber: (n: number, options?: Intl.NumberFormatOptions) => string;
 };
 
 const I18nContext = createContext<I18nContextType>({
   locale: "en",
   setLocale: () => {},
   t: (key) => key,
+  formatDate: (date) => new Date(date).toLocaleDateString(),
+  formatNumber: (n) => n.toLocaleString(),
 });
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocale] = useState("en");
-  const [, setReady] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("converge-locale") || "en";
     setLocale(stored);
-    setReady(true);
+    document.documentElement.lang = stored;
+    setMounted(true);
   }, []);
 
   const handleSetLocale = (l: string) => {
     setLocale(l);
     localStorage.setItem("converge-locale", l);
+    document.documentElement.lang = l;
   };
 
-  const t = (key: string, fallback?: string): string => {
-    const keys = key.split(".");
-    let value: any = translations[locale] || translations.en;
-    for (const k of keys) {
-      value = value?.[k];
-    }
-    return value || fallback || key;
+  const t = useMemo(() => {
+    return (key: string, variables?: Record<string, string | number>, fallback?: string): string => {
+      const keys = key.split(".");
+      
+      // Use current locale if available, else fallback to English
+      let value: any = translations[locale] || translations.en;
+      
+      for (const k of keys) {
+        value = value?.[k];
+      }
+      
+      // If not found in current locale and current is not English, try English
+      if (value === undefined && locale !== "en") {
+        value = translations.en;
+        for (const k of keys) {
+          value = value?.[k];
+        }
+      }
+      
+      let res = value || fallback || key;
+      if (typeof res === "string" && variables) {
+        for (const [k, v] of Object.entries(variables)) {
+          res = res.replace(new RegExp(`{${k}}`, "g"), String(v));
+        }
+      }
+      return res;
+    };
+  }, [locale]);
+
+  const formatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => {
+    if (!date) return "";
+    const d = typeof date === "string" ? new Date(date) : date;
+    if (Number.isNaN(d.getTime())) return typeof date === "string" ? date : "";
+    return d.toLocaleDateString(locale, options);
   };
 
-  // Always render children - i18n loads async
+  const formatNumber = (n: number, options?: Intl.NumberFormatOptions) => {
+    if (typeof n !== "number") return "";
+    return n.toLocaleString(locale, options);
+  };
+
   return (
-    <I18nContext.Provider value={{ locale, setLocale: handleSetLocale, t }}>
+    <I18nContext.Provider value={{ locale, setLocale: handleSetLocale, t, formatDate, formatNumber }}>
       {children}
     </I18nContext.Provider>
   );

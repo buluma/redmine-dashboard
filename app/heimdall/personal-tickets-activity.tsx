@@ -1,6 +1,6 @@
 import { prisma } from "@/src/lib/db";
 import { getSessionUserId } from "@/src/lib/session";
-import { PersonalTicketCreateForm } from "./personal-ticket-create-form";
+import { PersonalTicketsView } from "./personal-tickets-view";
 
 function isLegacyPrismaIssueShapeError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -84,79 +84,13 @@ export async function PersonalTicketsDashboard() {
     }
   })();
 
-  function formatDate(date: Date | null): string {
-    if (!date) return "—";
-    return date.toLocaleDateString();
-  }
+  // Transform dates to ISO strings for client component
+  const transformedIssues = issues.map(i => ({
+    ...i,
+    createdAt: i.createdAt.toISOString(),
+    updatedAt: i.updatedAt.toISOString(),
+    dueDate: i.dueDate ? i.dueDate.toISOString() : null,
+  }));
 
-  function formatTimeAgo(date: Date): string {
-    const diffMs = Date.now() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 60) return `${Math.max(diffMins, 1)}m ago`;
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d ago`;
-  }
-
-  function statusDotClass(statusName: string): string {
-    const lower = statusName.toLowerCase();
-    if (lower.includes("closed") || lower.includes("done") || lower.includes("resolved")) return "dot-time";
-    if (lower.includes("progress") || lower.includes("feedback")) return "dot-time";
-    return "dot-comment";
-  }
-
-  return (
-    <section className="card">
-      <details className="collapsible-section" open>
-        <summary className="collapsible-summary">
-          <div className="collapsible-head">
-            <h2>📋 My Tickets</h2>
-            <p className="muted">Personal tickets — local only, never synced to Redmine</p>
-          </div>
-        </summary>
-
-        <div className="ai-overview">
-          <PersonalTicketCreateForm />
-
-          {issues.length === 0 && (
-            <p className="text-center text-gray-500 py-8">No personal tickets found. Create one from the dashboard.</p>
-          )}
-
-          {issues.length > 0 && (
-            <div className="heimdall-tickets-feed activity-timeline">
-              {issues.map((issue) => (
-                <a
-                  key={issue.id}
-                  href={`/issues/${issue.id}`}
-                  className="activity-item"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <div className={`activity-dot ${statusDotClass(issue.statusName)}`} />
-                  <div className="activity-body">
-                    <div className="activity-head">
-                      <span className="activity-issue">
-                        #{issue.localIssueNumber ?? "—"} {issue.subject}
-                      </span>
-                      <span className="activity-time">{formatTimeAgo(issue.updatedAt)}</span>
-                    </div>
-                    <div className="activity-detail">
-                      <span className="activity-type type-comment">{issue.tracker ?? "Ticket"}</span>
-                      <span className="activity-note">
-                        {issue.statusName} · {issue.priority || "Normal"} · {issue.doneRatio ?? 0}%
-                      </span>
-                      {issue.dueDate && (
-                        <span className="activity-note">Due {formatDate(issue.dueDate)}</span>
-                      )}
-                    </div>
-                  </div>
-                </a>
-              ))}
-            </div>
-          )}
-        </div>
-      </details>
-    </section>
-  );
+  return <PersonalTicketsView issues={transformedIssues} />;
 }

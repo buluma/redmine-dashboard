@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useI18n } from "@/src/components/I18nProvider";
 
 type LogEntry = {
   id: string;
@@ -23,6 +24,7 @@ export function HeimdallLogsClient({ type, logs }: HeimdallLogsClientProps) {
   const [search, setSearch] = useState("");
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { t } = useI18n();
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
@@ -71,13 +73,19 @@ export function HeimdallLogsClient({ type, logs }: HeimdallLogsClientProps) {
     }
   };
 
+  const getPlaceholder = () => {
+    if (type === "mbu") return t("heimdall.searchMbu");
+    if (type === "ssr") return t("heimdall.searchSsr");
+    return t("heimdall.searchTrace");
+  };
+
   return (
     <div>
       {/* Filters */}
       <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem", flexWrap: "wrap", alignItems: "center" }}>
         <input
           type="text"
-          placeholder={`Search ${type === "mbu" ? "MBU" : type === "ssr" ? "Server Side Rules" : "Trace"} logs…`}
+          placeholder={getPlaceholder()}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{
@@ -105,7 +113,7 @@ export function HeimdallLogsClient({ type, logs }: HeimdallLogsClientProps) {
               fontWeight: levelFilter === "all" ? 600 : 400,
             }}
           >
-            All ({logs.length})
+            {t("heimdall.allFilter", { count: logs.length })}
           </button>
           {levels.map(([level, count]) => (
             <button
@@ -131,15 +139,15 @@ export function HeimdallLogsClient({ type, logs }: HeimdallLogsClientProps) {
       {/* Results count */}
       {search || levelFilter !== "all" ? (
         <p className="muted" style={{ marginBottom: "0.75rem", fontSize: "0.82rem" }}>
-          Showing {filteredLogs.length} of {logs.length} logs
-          {search && ` matching "${search}"`}
+          {t("heimdall.showingXofY", { count: filteredLogs.length, total: logs.length })}
+          {search && t("heimdall.matchingSearch", { search })}
         </p>
       ) : null}
 
       {/* Log list */}
       {filteredLogs.length === 0 ? (
         <p className="muted" style={{ padding: "1rem 0" }}>
-          No logs match the current filters.
+          {t("heimdall.noLogsMatch")}
         </p>
       ) : (
         <div className="summaries-list">
@@ -207,17 +215,17 @@ export function HeimdallLogsClient({ type, logs }: HeimdallLogsClientProps) {
                       )}
                       {log.extra.cpuUsage != null && (
                         <span className="ai-confidence" style={{ fontSize: "0.72rem" }}>
-                          🖥 CPU: {log.extra.cpuUsage}%
+                          {t("heimdall.cpu", { count: log.extra.cpuUsage })}
                         </span>
                       )}
                       {log.extra.ramUsage != null && (
                         <span className="ai-confidence" style={{ fontSize: "0.72rem" }}>
-                          💾 RAM: {formatBytes(log.extra.ramUsage as number)}
+                          {t("heimdall.ram", { size: formatBytes(log.extra.ramUsage as number) })}
                         </span>
                       )}
                       {log.extra.resourceId != null && (
                         <span className="ai-confidence" style={{ fontSize: "0.72rem" }}>
-                          Resource #{log.extra.resourceId}
+                          {t("heimdall.resource", { id: log.extra.resourceId })}
                         </span>
                       )}
                     </div>
@@ -232,7 +240,7 @@ export function HeimdallLogsClient({ type, logs }: HeimdallLogsClientProps) {
                       color: "var(--muted, #888)",
                     }}
                   >
-                    {isExpanded ? "▲ collapse" : "▼ expand"}
+                    {isExpanded ? t("heimdall.collapse") : t("heimdall.expand")}
                   </span>
                 </div>
 
@@ -247,7 +255,7 @@ export function HeimdallLogsClient({ type, logs }: HeimdallLogsClientProps) {
                   }}
                 >
                   <span>
-                    ID: {log.id} · Trace: {log.traceId}
+                    {t("heimdall.idPrefix")}{log.id}{t("heimdall.tracePrefix")}{log.traceId}
                   </span>
                   <span>
                     {log.host ? truncateHost(log.host) : log.environment}
@@ -258,7 +266,7 @@ export function HeimdallLogsClient({ type, logs }: HeimdallLogsClientProps) {
           })}
           {filteredLogs.length > 100 && (
             <p className="muted" style={{ padding: "0.5rem 0", textAlign: "center" }}>
-              Showing 100 of {filteredLogs.length} logs. Refine your search to narrow results.
+              {t("common.showingXofY", { count: 100, total: filteredLogs.length })}
             </p>
           )}
         </div>
