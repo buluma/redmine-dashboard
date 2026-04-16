@@ -31,6 +31,36 @@ make logs
 make down
 ```
 
+## Supabase Import To Local Docker Postgres
+
+Use this when you want your Docker app to run against a local Postgres copy of Supabase data.
+
+1. Import Supabase into local Docker Postgres:
+
+```bash
+make import-supabase SUPABASE_DATABASE_URL="postgresql://user:pass@host:5432/postgres"
+```
+
+Note: the import flow excludes Supabase-managed extension objects (`pg_graphql`, `supabase_vault`) so restore works on standard Postgres images.
+
+2. Start the Postgres-mode stack:
+
+```bash
+make up-pg
+```
+
+3. Tail logs:
+
+```bash
+make logs-pg
+```
+
+4. Stop Postgres-mode stack:
+
+```bash
+make down-pg
+```
+
 ## Data Persistence
 
 - SQLite DB path in container: `file:./prisma/dev.db`
@@ -66,8 +96,9 @@ make help
 ## Environment Notes
 
 - Compose loads `.env` via `env_file`.
-- `docker-compose.yml` also includes fallback defaults for required variables.
-- Docker DB URL uses `DOCKER_DATABASE_URL` (not `DATABASE_URL`) to avoid clashing with local non-Docker dev settings.
+- Docker Compose forces `DATABASE_URL=file:./prisma/dev.db` for the container, so it uses local `./prisma` data and not remote Supabase/Postgres values from `.env`.
+- Docker build generates Prisma client from `prisma/schema.dev.sqlite.prisma` for SQLite compatibility.
+- Postgres mode uses `docker-compose.postgres.yml` and `DATABASE_URL=${DOCKER_POSTGRES_DATABASE_URL}`.
 - For first-run Redmine bootstrap, set:
   - `REDMINE_BASE_URL`
   - `REDMINE_API_KEY`

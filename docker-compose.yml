@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        PRISMA_SCHEMA: prisma/schema.dev.sqlite.prisma
     restart: unless-stopped
     ports:
       - "${DOCKER_PORT:-3000}:3000"
@@ -10,21 +12,20 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=${DOCKER_DATABASE_URL:-file:./prisma/dev.db}
-      - DIRECT_URL=${DIRECT_URL:-}
-      # Override these in .env for production
+      # Force local SQLite inside Docker (host-mapped prisma folder), never Supabase.
+      - DATABASE_URL=file:./prisma/dev.db
+      - DIRECT_URL=
       - ENABLE_SYNC_POLLER=${ENABLE_SYNC_POLLER:-true}
       - ENABLE_STREAMLINE_LOG_POLLER=${ENABLE_STREAMLINE_LOG_POLLER:-false}
       - POLL_INTERVAL_MS=${POLL_INTERVAL_MS:-300000}
       - LEADER_LOCK_TTL_MS=${LEADER_LOCK_TTL_MS:-90000}
       - SYNC_JOB_STALE_MS=${SYNC_JOB_STALE_MS:-600000}
       - MOBILE_API_ENABLED=${MOBILE_API_ENABLED:-true}
+      - PRISMA_SCHEMA_PATH=prisma/schema.dev.sqlite.prisma
     volumes:
       - ./prisma:/app/prisma
-      # Named volume for SQLite database persistence
-      - db-data:/app/prisma
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -49,6 +50,5 @@ services:
   #     timeout: 5s
   #     retries: 3
 
-volumes:
-  db-data:
-  # redis-data:
+# volumes:
+#   redis-data:

@@ -113,12 +113,40 @@ A Docker setup is provided for a containerized development environment. For more
     make reset-db
     ```
 
+### Supabase -> Local Docker Postgres Import
+
+If you want Docker to run on a local Postgres copy of Supabase data:
+
+1. Import Supabase into local Docker Postgres:
+   ```bash
+   make import-supabase SUPABASE_DATABASE_URL="postgresql://user:pass@host:5432/postgres"
+   ```
+   The importer excludes Supabase-managed extension objects (`pg_graphql`, `supabase_vault`) during restore.
+2. Start Postgres-mode stack:
+   ```bash
+   make up-pg
+   ```
+3. Tail logs:
+   ```bash
+   make logs-pg
+   ```
+4. Stop Postgres-mode stack:
+   ```bash
+   make down-pg
+   ```
+
 A full list of helper targets is available in the [Makefile](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/Makefile).
 
 ## Environment Variables Reference
 
 - `DATABASE_URL`: SQLite file path for local development (default: `file:./dev.db`).
 - `DOCKER_DATABASE_URL`: Optional Docker-only SQLite path override. Recommended to use `file:./prisma/dev.db` for Docker Compose setups.
+- `DOCKER_POSTGRES_DB`: Local Docker Postgres DB name for Postgres-mode stack.
+- `DOCKER_POSTGRES_USER`: Local Docker Postgres username.
+- `DOCKER_POSTGRES_PASSWORD`: Local Docker Postgres password.
+- `DOCKER_POSTGRES_PORT`: Host port mapping for local Docker Postgres (default: `5433`).
+- `DOCKER_POSTGRES_DATABASE_URL`: Dashboard connection string used by `docker-compose.postgres.yml`.
+- `SUPABASE_DATABASE_URL`: Optional convenience variable used by `make import-supabase`.
 - `APP_ENCRYPTION_KEY`: Secret key for encrypting Redmine API keys at rest.
 - `SESSION_SECRET`: HMAC secret for signing session cookies.
 - `SENTRY_DSN`: Optional but recommended for server-side Sentry telemetry.
