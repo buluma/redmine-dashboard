@@ -107,7 +107,10 @@
       "estimatedHours": "Estimated Hours",
       "spentHours": "Spent Hours",
       "done": "Done",
-      "description": "Description"
+      "description": "Description",
+      "category": "Category",
+      "startDate": "Start Date",
+      "titleLabel": "Title"
     },
     "sections": {
       "overview": "Overview",
@@ -116,13 +119,16 @@
       "relations": "Relations",
       "subtickets": "Subtickets",
       "history": "History",
-      "github": "GitHub References"
+      "github": "GitHub References",
+      "metadata": "Metadata"
     },
     "empty": {
       "attachments": "No attachments",
       "relations": "No relations",
       "subtickets": "No subtickets",
-      "github": "No GitHub references linked yet"
+      "github": "No GitHub references linked yet",
+      "noCategory": "No Category",
+      "noPriority": "No Priority"
     },
     "placeholders": {
       "comment": "Add a comment...",
