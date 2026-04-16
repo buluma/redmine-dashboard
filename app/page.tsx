@@ -1750,19 +1750,19 @@ export default function Home() {
             <p className="kicker">{t('hero.kicker')}</p>
             <h1 className="hero-title">{t('hero.title')}</h1>
             <p className="muted">
-              Signed in as <strong>{user.displayName}</strong> ({user.username})
+              {t('hero.signedInAs', { displayName: user.displayName, username: user.username })}
             </p>
           </div>
           <div className="hero-status-rail">
             <div className={`sync-pill sync-${syncStateTone}`}>
-              Sync: {syncState?.lastSyncStatus ?? "idle"}
+              {t('hero.syncStatus', { status: syncState?.lastSyncStatus ?? "idle" })}
               {lastSyncAt
                 ? ` • ${new Date(lastSyncAt).toLocaleString()}`
-                : " • Waiting for first sync"}
+                : ` • ${t('hero.syncWaiting')}`}
             </div>
             {aiStatus?.available && (
               <div className="ai-status-pill">
-                🤖 AI: {aiStatus.usingFallback ? "Fallback" : "Cloud"}
+                {t(aiStatus.usingFallback ? 'hero.aiFallback' : 'hero.aiCloud')}
               </div>
             )}
             <div className="notif-shell">
@@ -1785,16 +1785,16 @@ export default function Home() {
             {manualRefreshBusy ? t('hero.refreshing') : t('hero.forceRefresh')}
           </button>
           <button className="secondary-button" type="button" onClick={resetFilters}>
-            Reset Filters
+            {t('hero.resetFilters')}
           </button>
           <button className="secondary-button" type="button" onClick={() => setShowShortcutHelp(true)}>
-            Shortcuts
+            {t('hero.shortcutsBtn')}
           </button>
         </div>
 
         <section className="metrics-grid">
           <article className="card metric-card metric-primary">
-            <p className="metric-label">Visible / Total</p>
+            <p className="metric-label">{t('metrics.visibleTotalLabel')}</p>
             <p className="metric-value">
               {summary.totalVisible} <span>/ {summary.total}</span>
             </p>
@@ -1805,24 +1805,24 @@ export default function Home() {
               />
             </div>
             <div className="metric-signal-row">
-              <span>Due Today: {summary.dueToday}</span>
-              <span>Avg Since Update: {summary.avgOpenAgeDays}d</span>
+              <span>{t('metrics.dueTodayInfo', { count: summary.dueToday })}</span>
+              <span>{t('metrics.avgOpenAgeInfo', { days: summary.avgOpenAgeDays })}</span>
             </div>
           </article>
           <article className="card metric-card metric-open">
             <p className="metric-label">{t('metrics.openLabel')}</p>
             <p className="metric-value">{summary.open}</p>
-            <p className="metric-foot">In progress: {summary.inProgress}</p>
+            <p className="metric-foot">{t('metrics.inProgressFoot', { count: summary.inProgress })}</p>
           </article>
           <article className="card metric-card metric-risk">
             <p className="metric-label">{t('metrics.riskBucketLabel')}</p>
             <p className="metric-value">{summary.overdue}</p>
-            <p className="metric-foot">Overdue issues • Due soon: {summary.dueSoon}</p>
+            <p className="metric-foot">{t('metrics.riskFoot', { count: summary.dueSoon })}</p>
           </article>
           <article className="card metric-card metric-health">
             <p className="metric-label">{t('metrics.deliveryHealthLabel')}</p>
             <p className="metric-value">{summary.completion}%</p>
-            <p className="metric-foot">Done: {summary.done} • Avg done ratio: {summary.avgDoneRatio}%</p>
+            <p className="metric-foot">{t('metrics.deliveryHealthFoot', { done: summary.done, ratio: summary.avgDoneRatio })}</p>
           </article>
           <article className="card metric-card metric-blocked">
             <p className="metric-label">{t('metrics.blockedLabel')}</p>
@@ -1832,7 +1832,7 @@ export default function Home() {
           <article className="card metric-card metric-stale">
             <p className="metric-label">{t('metrics.staleQueueLabel')}</p>
             <p className="metric-value">{summary.stale}</p>
-            <p className="metric-foot">No visible activity in 3+ days • Avg since activity: {summary.avgOpenAgeDays}d</p>
+            <p className="metric-foot">{t('metrics.staleQueueFoot', { days: summary.avgOpenAgeDays })}</p>
           </article>
           <article className="card metric-card metric-ai-insights">
             <p className="metric-label">{t('metrics.aiInsightsLabel')}</p>
