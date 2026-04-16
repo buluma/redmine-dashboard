@@ -14,6 +14,7 @@ const shortcuts: Shortcut[] = [
   { key: "Escape", description: "Close modal / deselect", category: "Navigation" },
   
   // Actions
+  { key: "a", description: "Toggle AI search panel", category: "Actions" },
   { key: "r", description: "Force refresh data", category: "Actions" },
   { key: "f", description: "Reset all filters", category: "Actions" },
   { key: "/", description: "Focus search input", category: "Actions" },
@@ -24,6 +25,12 @@ const shortcuts: Shortcut[] = [
   { key: "Shift+j", description: "Add next to selection", category: "Selection" },
   { key: "Shift+k", description: "Add previous to selection", category: "Selection" },
   { key: "*", description: "Select all visible issues", category: "Selection" },
+  
+  // Panels
+  { key: "Alt+1", description: "Jump to Insights", category: "Panels" },
+  { key: "Alt+2", description: "Jump to Alerts", category: "Panels" },
+  { key: "Alt+3", description: "Jump to Feed", category: "Panels" },
+  { key: "Alt+4", description: "Jump to Issue Queue", category: "Panels" },
   
   // View
   { key: "?", description: "Show this help", category: "View" },

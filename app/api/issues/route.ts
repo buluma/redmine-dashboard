@@ -211,3 +211,48 @@ export async function GET(request: Request) {
     return Response.json({ error: error instanceof Error ? error.message : "Server error" }, { status });
   }
 }
+
+export async function POST(request: Request) {
+  try {
+    const user = await requireCurrentUser();
+    const { client } = await requireRedmineClientForUser(user.id);
+    const body = await request.json();
+
+    const { subject, description, projectId, priorityId, assignedToId, dueDate, trackerId } = body;
+
+    if (!subject || !projectId) {
+      return Response.json({ error: "Subject and Project are required" }, { status: 400 });
+    }
+
+    // Create in Redmine
+    const remote = await client.request<{ issue: { id: number } }>("/issues.json", {
+      method: "POST",
+      body: JSON.stringify({
+        issue: {
+          subject,
+          description,
+          project_id: projectId,
+          priority_id: priorityId,
+          assigned_to_id: assignedToId,
+          due_date: dueDate,
+          tracker_id: trackerId,
+        },
+      }),
+    });
+
+    // Sync back to local DB
+    const issue = await syncSingleIssue(user.id, client, remote.issue.id, {
+      pruneAttachments: true,
+      pruneRelations: true,
+      pruneTimeEntries: false,
+    });
+
+    return Response.json({
+      issue: toIssueView(issue),
+    });
+  } catch (error) {
+    console.error("Issue creation failed:", error);
+    const status = error instanceof Error && error.message === "Unauthorized" ? 401 : 500;
+    return Response.json({ error: error instanceof Error ? error.message : "Server error" }, { status });
+  }
+}
