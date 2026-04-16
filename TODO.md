@@ -25,10 +25,10 @@
 - [ ] **`swagger.ts` size** — 24 KB of hand-written Swagger docs. Consider auto-generating from Zod schemas to keep docs in sync with validation.
 
 ### 🔒 Security / Auth
-- [ ] **Add CSRF protection** — mutable API routes (POST/DELETE) currently rely only on session cookies; add a CSRF token header check or SameSite=Strict enforcement audit.
-- [ ] **Rate-limit `sync/manual-pull`** — the endpoint has no per-user throttle; a rapid user can hammer Redmine.
-- [ ] **Credential rotation UX** — users have no UI to change their Redmine API key once connected; implement a "Re-connect" flow in Settings.
-- [ ] **RBAC enforcement audit** — `src/lib/rbac.ts` exists but many API routes may not be applying role checks consistently.
+- [x] **Add CSRF protection** — mutable API routes (POST/DELETE) currently rely only on session cookies; add a CSRF token header check or SameSite=Strict enforcement audit. - DONE
+- [x] **Rate-limit `sync/manual-pull`** — the endpoint has no per-user throttle; a rapid user can hammer Redmine. - DONE
+- [x] **Credential rotation UX** — users have no UI to change their Redmine API key once connected; implement a "Re-connect" flow in Settings. - DONE
+- [x] **RBAC enforcement audit** — `src/lib/rbac.ts` exists but many API routes may not be applying role checks consistently. - DONE
 
 ### 🤖 AI Features
 - [ ] **Streaming AI chat responses** — `StreamingResponse.tsx` exists but `chat` endpoint appears non-streaming. Wire up SSE/ReadableStream for real-time chat output.
