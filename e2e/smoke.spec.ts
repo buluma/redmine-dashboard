@@ -149,6 +149,6 @@ test.describe('Webhook Delivery Tests', () => {
     
     // Should either show page or redirect
     const currentUrl = page.url();
-    expect(currentUrl).toMatch(/webhooks|login|/$/);
+    expect(currentUrl).toMatch(/webhooks|login|\/$/);
   });
 });
