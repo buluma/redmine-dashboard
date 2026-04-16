@@ -67,7 +67,7 @@ export function PersonalTicketsView({ issues }: PersonalTicketsViewProps) {
                     <div className="activity-detail">
                       <span className="activity-type type-comment">{issue.tracker ?? t("personalTickets.ticketDefault")}</span>
                       <span className="activity-note">
-                        {issue.statusName} · {issue.priority || "Normal"} · {issue.doneRatio ?? 0}%
+                        {issue.statusName} · {issue.priority ?? t("normal")} · {issue.doneRatio ?? 0}%
                       </span>
                       {issue.dueDate && (
                         <span className="activity-note">{t("personalTickets.due", { date: formatDate(issue.dueDate) })}</span>
