@@ -2,6 +2,7 @@
 
 ## In Progress
 - [ ] **Localization (i18n)** — Adding support for multiple languages using `next-intl` or similar to support global teams.
+
 ## Pending
 
 ### ✨ Future / Post-MVP Features
