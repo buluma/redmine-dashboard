@@ -333,6 +333,11 @@
     "invalidRelId": "Saisissez un ID de problème associé valide.",
     "viewSavedChanges": "Modifications enregistrées pour afficher \"{name}\".",
     "viewSaved": "Vue enregistrée \"{name}\".",
-    "viewRemoved": "Vue supprimée \"{name}\"."
+    "viewRemoved": "Vue supprimée \"{name}\".",
+    "apiDocs": {
+      "kicker": "Développeur",
+      "title": "Documentation de l'API",
+      "description": "Référence API REST de Converge"
+    }
   }
 }

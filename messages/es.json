@@ -335,4 +335,10 @@
     "viewSaved": "Vista guardada \"{name}\".",
     "viewRemoved": "Vista eliminada \"{name}\"."
   }
+  },
+  "apiDocs": {
+    "kicker": "Desarrollador",
+    "title": "Documentación de API",
+    "description": "Referencia REST de API de Converge"
+  }
 }

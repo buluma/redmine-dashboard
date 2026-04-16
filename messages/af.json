@@ -333,6 +333,11 @@
     "invalidRelId": "Voer 'n geldige verwante kwessie-ID in.",
     "viewSavedChanges": "Gestoor veranderinge om \"{name}\" te sien.",
     "viewSaved": "Gestoorde aansig \"{name}\".",
-    "viewRemoved": "Verwyder aansig \"{name}\"."
+    "viewRemoved": "Verwyder aansig \"{name}\".",
+    "apiDocs": {
+      "kicker": "Ontwikkelaar",
+      "title": "API Dokumentasie",
+      "description": "Converge REST API Verwysing"
+    }
   }
 }

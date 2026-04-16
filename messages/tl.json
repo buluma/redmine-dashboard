@@ -333,6 +333,11 @@
     "invalidRelId": "Maglagay ng wastong nauugnay na ID ng isyu.",
     "viewSavedChanges": "Nai-save na mga pagbabago upang tingnan ang \"{name}\".",
     "viewSaved": "Naka-save na view \"{name}\".",
-    "viewRemoved": "Inalis ang view na \"{name}\"."
+    "viewRemoved": "Inalis ang view na \"{name}\".",
+    "apiDocs": {
+      "kicker": "Developer",
+      "title": "Documentation ng API",
+      "description": "Converge REST API Reference"
+    }
   }
 }
