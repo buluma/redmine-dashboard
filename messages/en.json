@@ -104,9 +104,12 @@
       "dueDate": "Due Date",
       "estimatedHours": "Estimated Hours",
       "spentHours": "Spent Hours",
-      "done": "Done"
+      "done": "Done",
+      "description": "Description"
     },
     "sections": {
+      "overview": "Overview",
+      "overviewSubtitle": "Summary of the issue details",
       "attachments": "Attachments",
       "relations": "Relations",
       "subtickets": "Subtickets",
