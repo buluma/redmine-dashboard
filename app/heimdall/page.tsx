@@ -121,9 +121,31 @@ export default async function HeimdallPage() {
       totalLogs={totalLogs}
       errorCount={allErrors.length}
       hostCount={allHosts.length}
-      mbuLogs={mbuLogs.map(l => ({ ...l, id: l.id.toString(), createdAt: l.createdAt.toISOString() }))}
-      ssrLogs={serverSideRulesLogs.map(l => ({ ...l, id: l.id.toString(), createdAt: l.createdAt.toISOString() }))}
-      traces={traces.map(l => ({ ...l, id: l.id.toString(), createdAt: l.createdAt.toISOString() }))}
+      mbuLogs={mbuLogs.map(l => ({ 
+        ...l, 
+        id: l.id.toString(), 
+        createdAt: l.createdAt.toISOString(),
+        updatedAt: l.updatedAt.toISOString(),
+        ingestedAt: l.ingestedAt.toISOString()
+      }))}
+      ssrLogs={serverSideRulesLogs.map(l => ({ 
+        ...l, 
+        id: l.id.toString(), 
+        createdAt: l.createdAt.toISOString(),
+        updatedAt: l.updatedAt.toISOString(),
+        ingestedAt: l.ingestedAt.toISOString(),
+        duration: l.duration.toNumber(),
+        dbRequestsTime: l.dbRequestsTime?.toNumber() ?? null,
+        threadId: l.threadId?.toString() ?? null
+      }))}
+      traces={traces.map(l => ({ 
+        ...l, 
+        id: l.id.toString(), 
+        createdAt: l.createdAt.toISOString(),
+        updatedAt: l.updatedAt.toISOString(),
+        ingestedAt: l.ingestedAt.toISOString(),
+        traceId: l.traceId.toString()
+      }))}
       trendDates={trendDates}
       mbuTrend={trendDates.map(d => mbuTrendMap.get(d) ?? 0)}
       ssrTrend={trendDates.map(d => ssrTrendMap.get(d) ?? 0)}
