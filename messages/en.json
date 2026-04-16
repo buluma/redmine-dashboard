@@ -16,7 +16,8 @@
     "close": "Close",
     "confirm": "Confirm",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "action": "Action"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -36,7 +37,8 @@
       "reporting": "Reporting",
       "integrations": "Integrations",
       "system": "System",
-      "other": "Other"
+      "other": "Other",
+      "activity": "Activity"
     },
     "tooltips": {
       "expand": "Expand menu",
