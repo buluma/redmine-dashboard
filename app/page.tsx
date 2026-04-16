@@ -1782,7 +1782,7 @@ export default function Home() {
           <AiStatusIndicator />
           <span style={{ flex: "1" }} />
           <button className="secondary-button" type="button" onClick={handleManualPull} disabled={manualRefreshBusy}>
-            {manualRefreshBusy ? "{t('hero.refreshing')}" : "{t('hero.forceRefresh')}"}
+            {manualRefreshBusy ? t('hero.refreshing') : t('hero.forceRefresh')}
           </button>
           <button className="secondary-button" type="button" onClick={resetFilters}>
             Reset Filters
@@ -2105,7 +2105,7 @@ export default function Home() {
             <div>
               <h2>{t('queue.title')}</h2>
               <p className="muted">
-                {loading ? "{t('hero.refreshing')}" : `${visibleIssues.length} loaded`}
+                {loading ? t('hero.refreshing') : `${visibleIssues.length} loaded`}
                 {summary.open > 0 && <span> · Open: {summary.open}</span>}
                 {summary.inProgress > 0 && <span> · In Progress: {summary.inProgress}</span>}
                 {summary.blocked > 0 && <span> · Blocked: {summary.blocked}</span>}
@@ -2281,7 +2281,7 @@ export default function Home() {
                       resetPage();
                     }}
                   >
-                    {showFavoritesOnly ? "{t('queue.favoritesOn')}" : "{t('queue.favoritesOff')}"}
+                    {showFavoritesOnly ? t('queue.favoritesOn') : t('queue.favoritesOff')}
                   </button>
                   <ExportButton issues={visibleIssues} format="csv" />
                   <ExportButton issues={visibleIssues} format="print" />
@@ -2983,7 +2983,7 @@ export default function Home() {
                         <strong>{entry.hours}h</strong> • {new Date(entry.spentOn).toLocaleDateString()}
                       </p>
                       <span className={`entry-source ${entry.redmineTimeEntryId ? "synced" : "local"}`}>
-                        {entry.redmineTimeEntryId ? "{t('drawer.syncedFromRedmine')}" : "{t('drawer.localEntry')}"}
+                        {entry.redmineTimeEntryId ? t('drawer.syncedFromRedmine') : t('drawer.localEntry')}
                       </span>
                     </div>
                     <p className="muted entry-meta">
