@@ -4,41 +4,27 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { useI18n } from "./I18nProvider";
 
 const navItems = [
-  // Main
-  { href: "/", label: "Dashboard", icon: "🏠" },
-  
-  // Personal
-  { href: "/personal-tickets", label: "Personal Tickets", icon: "📝", group: "Personal" },
-  { href: "/ai-summaries", label: "AI Summaries", icon: "🤖", group: "Personal" },
-  { href: "/chat", label: "AI Chat", icon: "💬", group: "Personal" },
-  
-  // Team Operations
-  { href: "/heimdall", label: "Heimdall Logs", icon: "🔍", group: "Team Ops" },
-  { href: "/slack", label: "Slack Monitor", icon: "💬", group: "Team Ops" },
-  { href: "/wakatime", label: "WakaTime", icon: "⏱️", group: "Team Ops" },
-  
-  // Reporting
-  { href: "/reports", label: "Reports", icon: "📊", group: "Reporting" },
-  
-  // Integrations
-  { href: "/webhooks", label: "Webhooks", icon: "🔗", group: "Integrations", children: [
-    { href: "/webhooks/deliveries", label: "Delivery Logs" },
-  ]},
-  { href: "/api-docs", label: "API Docs", icon: "📚", group: "Integrations" },
-  
-  // System
-  { href: "/ops", label: "System Ops", icon: "⚙️", group: "System", children: [
-    { href: "/ops/audit-logs", label: "Audit Logs" },
-    { href: "/ops/users", label: "User Mgmt" },
-  ]},
+  { href: "/", labelKey: "nav.dashboard", icon: "🏠" },
+  { href: "/personal-tickets", labelKey: "nav.personalTickets", icon: "📝", group: "Personal" },
+  { href: "/ai-summaries", labelKey: "nav.aiSummaries", icon: "🤖", group: "Personal" },
+  { href: "/chat", labelKey: "nav.chat", icon: "💬", group: "Personal" },
+  { href: "/heimdall", labelKey: "nav.heimdall", icon: "🔍", group: "Team Ops" },
+  { href: "/slack", labelKey: "nav.slack", icon: "💬", group: "Team Ops" },
+  { href: "/wakatime", labelKey: "nav.wakatime", icon: "⏱️", group: "Team Ops" },
+  { href: "/reports", labelKey: "nav.reports", icon: "📊", group: "Reporting" },
+  { href: "/webhooks", labelKey: "nav.webhooks", icon: "🔗", group: "Integrations" },
+  { href: "/api-docs", labelKey: "nav.apiDocs", icon: "📚", group: "Integrations" },
+  { href: "/ops", labelKey: "nav.ops", icon: "⚙️", group: "System" },
 ];
 
 export function AppNav() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const { t } = useI18n();
 
   // Load collapsed state from localStorage after mount
   useEffect(() => {
@@ -96,10 +82,10 @@ export function AppNav() {
                   key={item.href}
                   href={item.href}
                   className={`nav-link ${pathname === item.href ? "active" : ""}`}
-                  title={mounted && collapsed ? item.label : undefined}
+                  title={mounted && collapsed ? t(item.labelKey) : undefined}
                 >
                   <span className="nav-icon">{item.icon}</span>
-                  {(mounted && !collapsed) && <span className="nav-label">{item.label}</span>}
+                  {(mounted && !collapsed) && <span className="nav-label">{t(item.labelKey)}</span>}
                 </Link>
               ))}
             </div>
