@@ -304,8 +304,6 @@ export class LLMProviderManager {
         return this.openrouterChat(messages, { temperature, maxTokens, tools });
       } else if (this.provider === "aperture") {
         return this.apertureChat(messages, { stream, temperature, maxTokens, tools });
-      } else if (this.provider === "aperture") {
-        return this.apertureChat(messages, { stream, temperature, maxTokens, tools });
       }
       throw new Error(`Unsupported provider: ${this.provider}`);
     } catch (error) {
@@ -609,6 +607,8 @@ export class LLMProviderManager {
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
+      "HTTP-Referer": "https://converge.local",
+      "X-Title": "Converge",
     };
     if (apiKey) {
       headers["Authorization"] = `Bearer ${apiKey}`;
