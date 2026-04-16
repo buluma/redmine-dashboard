@@ -1,0 +1,106 @@
+{
+  "common": {
+    "backToDashboard": "Back to Dashboard",
+    "loading": "Loading...",
+    "error": "Error",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "refresh": "Refresh",
+    "reset": "Reset",
+    "apply": "Apply",
+    "close": "Close",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "heimdall": "Heimdall Logs",
+    "personalTickets": "Personal Tickets",
+    "reports": "Reports",
+    "aiSummaries": "AI Summaries",
+    "chat": "AI Chat",
+    "ops": "System Ops",
+    "slack": "Slack",
+    "wakatime": "WakaTime",
+    "webhooks": "Webhooks",
+    "apiDocs": "API Docs"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "openIssues": "Open Issues",
+    "closedIssues": "Closed Issues",
+    "inProgress": "In Progress",
+    "recentActivity": "Recent Activity",
+    "noResults": "No results found",
+    "forceRefresh": "Force Refresh",
+    "resetFilters": "Reset Filters",
+    "shortcuts": "Shortcuts",
+    "lastSync": "Last sync"
+  },
+  "issues": {
+    "subject": "Subject",
+    "description": "Description",
+    "status": "Status",
+    "priority": "Priority",
+    "assignee": "Assignee",
+    "dueDate": "Due Date",
+    "startDate": "Start Date",
+    "estimatedHours": "Estimated Hours",
+    "spentHours": "Spent Hours",
+    "project": "Project",
+    "tracker": "Tracker",
+    "author": "Author",
+    "created": "Created",
+    "updated": "Updated"
+  },
+  "status": {
+    "new": "New",
+    "inProgress": "In Progress",
+    "resolved": "Resolved",
+    "feedback": "Feedback",
+    "closed": "Closed",
+    "rejected": "Rejected"
+  },
+  "priority": {
+    "low": "Low",
+    "normal": "Normal",
+    "high": "High",
+    "urgent": "Urgent",
+    "immediate": "Immediate"
+  },
+  "ai": {
+    "summarize": "Summarize Issues",
+    "summarizing": "Summarizing...",
+    "summarized": "Summarized",
+    "noActivity": "No AI Activity Yet",
+    "askAI": "Ask AI",
+    "analyzing": "Analyzing issues...",
+    "staleIssues": "Stale Issues"
+  },
+  "sync": {
+    "syncing": "Syncing...",
+    "synced": "Synced",
+    "failed": "Failed",
+    "noChanges": "No changes detected",
+    "pulling": "Pulling from Redmine...",
+    "pushing": "Pushing to Redmine..."
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "unauthorized": "Unauthorized",
+    "sessionExpired": "Session expired"
+  },
+  "errors": {
+    "notFound": "Not found",
+    "serverError": "Server error",
+    "networkError": "Network error",
+    "rateLimited": "Rate limited"
+  }
+}

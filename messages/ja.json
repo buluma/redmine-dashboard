@@ -1,0 +1,106 @@
+{
+  "common": {
+    "backToDashboard": "ダッシュボードに戻る",
+    "loading": "読み込み中...",
+    "error": "エラー",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "edit": "編集",
+    "create": "作成",
+    "search": "検索",
+    "filter": "フィルター",
+    "refresh": "更新",
+    "reset": "リセット",
+    "apply": "適用",
+    "close": "閉じる",
+    "confirm": "確認",
+    "yes": "はい",
+    "no": "いいえ"
+  },
+  "nav": {
+    "dashboard": "ダッシュボード",
+    "heimdall": " Heimdallログ",
+    "personalTickets": "パーソナルチケット",
+    "reports": "レポート",
+    "aiSummaries": "AI要約",
+    "chat": "AIチャット",
+    "ops": "システム運用",
+    "slack": "Slack",
+    "wakatime": "WakaTime",
+    "webhooks": "Webhooks",
+    "apiDocs": "APIドキュメント"
+  },
+  "dashboard": {
+    "title": "ダッシュボード",
+    "openIssues": "未完了チケット",
+    "closedIssues": "完了チケット",
+    "inProgress": "進行中",
+    "recentActivity": "最近の活動",
+    "noResults": "結果が見つかりません",
+    "forceRefresh": "強制更新",
+    "resetFilters": "フィルター解除",
+    "shortcuts": "ショートカット",
+    "lastSync": "最終同期"
+  },
+  "issues": {
+    "subject": "件名",
+    "description": "説明",
+    "status": "ステータス",
+    "priority": "優先度",
+    "assignee": "担当者",
+    "dueDate": "期限",
+    "startDate": "開始日",
+    "estimatedHours": "予定時間",
+    "spentHours": "作業時間",
+    "project": "プロジェクト",
+    "tracker": "トラッカー",
+    "author": "作成者",
+    "created": "作成日",
+    "updated": "更新日"
+  },
+  "status": {
+    "new": "新規",
+    "inProgress": "進行中",
+    "resolved": "解決済み",
+    "feedback": "フィードバック",
+    "closed": "closed",
+    "rejected": "却下"
+  },
+  "priority": {
+    "low": "低",
+    "normal": "通常",
+    "high": "高",
+    "urgent": "緊急",
+    "immediate": "即時"
+  },
+  "ai": {
+    "summarize": "チケットを要約",
+    "summarizing": "要約中...",
+    "summarized": "要約完了",
+    "noActivity": "AI活動なし",
+    "askAI": "AIに質問",
+    "analyzing": "チケット分析中...",
+    "staleIssues": "古いチケット"
+  },
+  "sync": {
+    "syncing": "同期中...",
+    "synced": "同期済み",
+    "failed": "失敗",
+    "noChanges": "変更なし",
+    "pulling": "Redmineから取得...",
+    "pushing": "Redmineへ送信..."
+  },
+  "auth": {
+    "login": "ログイン",
+    "logout": "ログアウト",
+    "unauthorized": "未認証",
+    "sessionExpired": "セッショ��期限切れ"
+  },
+  "errors": {
+    "notFound": "見つかりません",
+    "serverError": "サーバーエラー",
+    "networkError": "ネットワークエラー",
+    "rateLimited": "レート制限"
+  }
+}
