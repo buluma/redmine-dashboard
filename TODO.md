@@ -7,7 +7,7 @@
 ### 🔌 Integrations
 - [ ] Wrap OpenRouter around Tailscale Aperture (private LLM gateway / private routing)
 - [ ] Create/update issues from `SLACK_DEFAULT_CHANNEL_ID` (Slack → Redmine issue creation)
-- [ ] AI tool calls — expose structured tool definitions so LLM can take in-app actions (e.g. update status, log time, close issue)
+- [x] AI tool calls — expose structured tool definitions so LLM can take in-app actions (e.g. update status, log time, close issue)
 
 ### 🏗️ Architecture / Code Health
 - [ ] **Split `app/page.tsx`** — the root page is 2,865 lines and holds all logic, state, and JSX in a single component. Extract into:

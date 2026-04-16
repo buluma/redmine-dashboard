@@ -25,6 +25,22 @@ The system works by syncing Redmine issues to a local database, providing fast l
 - **Heimdall (Streamline Logs):** Fetch and display Streamline application logs directly from the Streamline API. MBU logs, server-side rules, and traces with error filtering.
 - **Wakatime Integration:** Track coding time with Wakatime API for work-life balance monitoring.
 - **Reports V2:** Enhanced reporting with StatCard components, donut charts, and bar charts.
+- **Webhook Subscriptions:** Configure webhooks that fire on ticket events (created, updated, status_changed, assigned, completed) with HMAC signature verification and delivery logging.
+- **External API:** REST API for n8n/Zapier integrations to search and fetch tickets, with API key authentication.
+- **AI Chat:** Standalone chat interface at `/chat` for general AI assistance with access to system context (issues, sync jobs, errors).
+- **Persistent Sidebar:** Collapsible sidebar navigation across all pages with sticky headers.
+
+## Security
+
+Converge implements robust security measures:
+
+- **Session Management:** HMAC-signed session tokens with httpOnly, SameSite=strict cookies
+- **CSRF Protection:** Token-based validation on all mutating API endpoints
+- **RBAC:** Four role levels (Admin, Editor, User, Viewer) with permission-based access
+- **Rate Limiting:** Per-user limits on sync operations and mutations
+- **Encrypted Credentials:** AES-256-GCM encryption for Redmine API keys
+
+See [security.md](security.md) for detailed implementation.
 
 ## Local Data Model
 
