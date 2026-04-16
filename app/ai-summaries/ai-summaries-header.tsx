@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useI18n } from "@/src/components/I18nProvider";
 
 interface AiSummariesHeaderProps {
   totalSummaries: number;
@@ -16,6 +17,7 @@ export function AiSummariesHeader({
   totalChatMessages,
   issueCount,
 }: AiSummariesHeaderProps) {
+  const { t } = useI18n();
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
   const [nextRefreshIn, setNextRefreshIn] = useState(AUTO_REFRESH_INTERVAL_MS / 1000);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
@@ -58,9 +60,9 @@ export function AiSummariesHeader({
       <div className="hero-top">
         <div>
           <p className="kicker">AI Insights</p>
-          <h1>AI Summaries</h1>
+          <h1>{t('nav.aiSummaries')}</h1>
           <p className="muted">
-            {totalSummaries} summary{totalSummaries !== 1 ? "ies" : "y"} · {totalChatMessages} chat messages across {issueCount} issue{issueCount !== 1 ? "s" : ""}
+            {t('ai.summaryCount', { count: totalSummaries })} · {t('ai.chatMessages', { count: totalChatMessages, issueCount })}
           </p>
         </div>
         <div className="hero-actions" style={{ overflow: "visible" }}>
@@ -69,7 +71,7 @@ export function AiSummariesHeader({
             onClick={() => void handleRefresh()}
             disabled={isRefreshing}
           >
-            {isRefreshing ? "⟳ Refreshing…" : "⟳ Refresh"}
+            {isRefreshing ? t('slack.refreshing') : t('ai.refresh')}
           </button>
 
           {/* Auto-refresh toggle */}
@@ -77,10 +79,10 @@ export function AiSummariesHeader({
             type="button"
             className={`auto-refresh-toggle ${autoRefreshEnabled ? "active" : ""}`}
             onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
-            title={autoRefreshEnabled ? "Auto-refresh enabled (5 min)" : "Auto-refresh disabled"}
+            title={autoRefreshEnabled ? t('ai.autoRefreshTitle', { status: 'ON' }) : t('ai.autoRefreshTitle', { status: 'OFF' })}
           >
             <span className="toggle-indicator" />
-            Auto-refresh {autoRefreshEnabled ? "ON" : "OFF"}
+            {t('ai.autoRefresh', { status: autoRefreshEnabled ? 'ON' : 'OFF' })}
           </button>
 
           {autoRefreshEnabled && (

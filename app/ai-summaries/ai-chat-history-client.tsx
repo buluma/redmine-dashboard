@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useMemo } from "react";
+import { useI18n } from "@/src/components/I18nProvider";
 
 type AiChatMessageData = {
   id: string;
@@ -60,6 +61,7 @@ function getProviderIcon(model: string | null): string {
 }
 
 export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[] }) {
+  const { t } = useI18n();
   const [expandedIssues, setExpandedIssues] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grouped" | "flat">("grouped");
@@ -209,7 +211,7 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
           <>
             {paginatedGrouped.length === 0 ? (
               <p className="muted" style={{ padding: "1rem 0" }}>
-                {searchTerm ? "No messages match your search." : "No chat messages yet."}
+                {searchTerm ? "No messages match your search." : t('ai.noChatMessages')}
               </p>
             ) : (
               paginatedGrouped.map((chat) => {
@@ -342,7 +344,7 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
           <>
             {paginatedFlat.length === 0 ? (
               <p className="muted" style={{ padding: "1rem 0" }}>
-                {searchTerm ? "No messages match your search." : "No chat messages yet."}
+                {searchTerm ? "No messages match your search." : t('ai.noChatMessages')}
               </p>
             ) : (
               paginatedFlat.map((msg) => (

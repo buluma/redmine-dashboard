@@ -163,9 +163,16 @@
     "summarizing": "Summarizing...",
     "summarized": "Summarized",
     "noActivity": "No AI Activity Yet",
+    "noActivityDesc": "Summaries and chat history will appear here once you interact with AI features.",
     "askAI": "Ask AI",
     "analyzing": "Analyzing issues...",
-    "staleIssues": "Stale Issues"
+    "staleIssues": "Stale Issues",
+    "summaryCount": "{count} {count, plural, one {summary} other {summaries}}",
+    "chatMessages": "{count} chat messages across {issueCount} {issueCount, plural, one {issue} other {issues}}",
+    "noChatMessages": "No chat messages yet.",
+    "autoRefresh": "Auto-refresh {status}",
+    "autoRefreshTitle": "Auto-refresh {status, select, ON {enabled (5 min)} OFF {disabled}}",
+    "refresh": "Refresh"
   },
   "sync": {
     "syncing": "Syncing...",
