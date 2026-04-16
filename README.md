@@ -15,8 +15,9 @@ Originally built as a Redmine command center, Converge has evolved into a powerf
 - **Navigation Shortcuts** — High-efficiency shortcuts (e.g., `Alt+1-4` for panels, `a` for AI search)
 - **RBAC** — Role-based access control (Admin, Editor, User, Viewer)
 - **Audit Logging** — Track user actions, role changes, and internal notes
-- **Mobile Support** — Token-authenticated mobile API (v1)
-- **PWA / Offline** — Installable app with IndexedDB cache, offline viewing, and queued sync
+- **Mobile Support** — Token-authenticated mobile API (v1) with **Issue Creation** support
+- **PWA / Offline** — Installable app with IndexedDB cache, offline viewing, mutation queuing, and **Background Sync**
+- **Push Notifications** — Native OS alerts for issue assignments and critical updates
 - **Docker Production** — Multi-stage build, healthchecks, backup/restore scripts
 - **WakaTime Integration** — Coding time tracking with stats, charts, insights, goals, and daily heartbeat data
 - **Tailscale Aperture** — Private LLM gateway via Tailscale network for internal AI access
@@ -93,7 +94,8 @@ Roles are managed at `/ops/users` (Admin only).
 Converge is installable as a Progressive Web App. When offline:
 
 - Previously viewed issues are cached in IndexedDB and viewable
-- Status changes, comments, and time entries are queued and auto-synced on reconnect
+- Status changes, comments, and time entries are queued and synced automatically via **Background Sync API**
+- Native **Push Notifications** alert you to new assignments and high-priority changes
 - An offline banner appears at the top when both `navigator.onLine` and server ping fail
 
 Install from Chrome/Edge: click the install icon in the address bar, or "Add to Home Screen" on Android.

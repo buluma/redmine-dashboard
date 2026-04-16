@@ -1,6 +1,10 @@
 "use client";
 
+// Removed custom process declaration to avoid duplicate identifier error.
+// process.env is handled by Next.js at build time.
+
 import { useState, useEffect, useCallback } from "react";
+import { urlBase64ToUint8Array } from "@/src/lib/push-utils";
 
 interface Notification {
   id: string;
@@ -20,6 +24,9 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPushSupported, setIsPushSupported] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isPushLoading, setIsPushLoading] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
     setIsLoading(true);
@@ -49,6 +56,71 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
       window.clearInterval(interval);
     };
   }, [fetchNotifications, pollingInterval]);
+
+  // Check push subscription status
+  useEffect(() => {
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      setIsPushSupported(true);
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.pushManager.getSubscription().then((subscription) => {
+          setIsSubscribed(!!subscription);
+        });
+      });
+    }
+  }, []);
+
+  const subscribeToPush = async () => {
+    setIsPushLoading(true);
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+
+      if (!publicKey) {
+        throw new Error("VAPID public key not found");
+      }
+
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+
+      const res = await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(subscription),
+      });
+
+      if (res.ok) {
+        setIsSubscribed(true);
+      } else {
+        throw new Error("Failed to save subscription on server");
+      }
+    } catch (error) {
+      console.error("Push subscription failed:", error);
+      alert("Failed to enable push notifications. Please check your browser permissions.");
+    } finally {
+      setIsPushLoading(false);
+    }
+  };
+
+  const unsubscribeFromPush = async () => {
+    setIsPushLoading(true);
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        await subscription.unsubscribe();
+        await fetch(`/api/push/subscribe?endpoint=${encodeURIComponent(subscription.endpoint)}`, {
+          method: "DELETE",
+        });
+      }
+      setIsSubscribed(false);
+    } catch (error) {
+      console.error("Push unsubscription failed:", error);
+    } finally {
+      setIsPushLoading(false);
+    }
+  };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -144,6 +216,19 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
               ))
             )}
           </div>
+
+          {isPushSupported && (
+            <div className="notif-footer">
+              <button
+                type="button"
+                className={`push-toggle ${isSubscribed ? "active" : ""}`}
+                onClick={isSubscribed ? unsubscribeFromPush : subscribeToPush}
+                disabled={isPushLoading}
+              >
+                {isPushLoading ? "Working..." : isSubscribed ? "🔔 Push Notifications On" : "notifications_off Enable Push Notifications"}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

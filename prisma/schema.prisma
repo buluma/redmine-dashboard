@@ -28,6 +28,7 @@ model User {
   aiSummaries       AiSummary[]
   aiChatMessages    AiChatMessage[]
   internalNotes     InternalNote[]
+  pushSubscriptions PushSubscription[]
 }
 
 enum UserRole {
@@ -594,6 +595,18 @@ model CustomReport {
   config      Json     // Stores report configuration
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }

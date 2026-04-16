@@ -8,10 +8,6 @@
 ### 🏗️ Architecture / Code Health
 - [ ] **Drag-and-drop reorder** — Marked as TODO, needs priority-based API
 
-### 📱 Mobile / PWA
-- [ ] **Offline sync queue** — Implement offline-first mutation queuing so time logs and comments can be submitted offline.
-- [ ] **Mobile issue creation** — No mobile-specific issue-create endpoint yet.
-- [ ] **PWA push notifications** — Deliver push alerts for overdue issues or new Slack messages.
 
 ---
 
@@ -19,6 +15,7 @@
 
 | Feature | Status | Notes | Date |
 |---------|--------|-------|------|
+| Mobile / PWA | ✅ DONE | Offline sync queue, Mobile issue creation, Push Notifications | 2026-04-16 |
 | UX/UI Polish | ✅ DONE | Toasts, Issue Modal, Column Picker, Shortcuts, Accessibility | 2026-04-16 |
 | AI Tool Calls | ✅ DONE | Structured definitions for status, time log, comment actions | 2026-04-16 |
 | AI Chat | ✅ DONE | Streaming SSE responses for real-time interaction | 2026-04-16 |

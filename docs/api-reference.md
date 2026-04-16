@@ -245,6 +245,31 @@ Returns structured enumerations from the local catalog.
 Query params:
 - `kind`: `issue_priority` | `time_entry_activity` (default: `issue_priority`)
 
+## PWA & Push Notifications
+
+### POST /api/push/subscribe
+Stores or updates a Web Push subscription.
+
+Request body:
+```json
+{
+  "endpoint": "https://...",
+  "keys": {
+    "p256dh": "...",
+    "auth": "..."
+  }
+}
+```
+
+### DELETE /api/push/subscribe
+Removes a Web Push subscription.
+
+Query params:
+- `endpoint`: the subscription endpoint to remove
+
+### POST /api/internal/sync-queue/process
+Triggers background processing of the sync queue (internal use by SW).
+
 ## AI and Chat APIs
 
 ### POST /api/chat
@@ -299,6 +324,9 @@ Returns authenticated mobile user + token metadata.
 
 ### GET /api/mobile/v1/issues
 Same filtering and search options as `/api/issues`.
+
+### POST /api/mobile/v1/issues
+Creates a new issue in Redmine from a mobile device. Requires Bearer authentication. Same request body as `/api/issues`.
 
 ### GET /api/mobile/v1/issues/[id]
 Returns enriched issue detail including attachments, relations, allowed statuses, and children.
