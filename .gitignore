@@ -55,3 +55,6 @@ debugging/logs/*.json
 /logs
 
 /prisma/migrations
+/.openclaude
+/.gemini-tasks
+/.claude
