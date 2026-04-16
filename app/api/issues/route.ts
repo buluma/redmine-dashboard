@@ -225,20 +225,16 @@ export async function POST(request: Request) {
     }
 
     // Create in Redmine
-    const remote = await client.request<{ issue: { id: number } }>("/issues.json", {
-      method: "POST",
-      body: JSON.stringify({
-        issue: {
-          subject,
-          description,
-          project_id: projectId,
-          priority_id: priorityId,
-          assigned_to_id: assignedToId,
-          due_date: dueDate,
-          tracker_id: trackerId,
-        },
-      }),
+    const created = await client.createIssue({
+      subject,
+      description,
+      projectId,
+      priorityId,
+      assignedToId,
+      dueDate,
     });
+
+    const remote = { issue: { id: created.id } };
 
     // Sync back to local DB
     const issue = await syncSingleIssue(user.id, client, remote.issue.id, {

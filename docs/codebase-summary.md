@@ -15,12 +15,13 @@ This directory contains the core of the Next.js application, following the App R
 - **`app/layout.tsx` and `app/page.tsx`:** The main application layout and entry point.
 - **`app/globals.css` and `app/page.module.css`:** Global and page-specific styles.
 - **`app/api/`:** Contains all the backend API route handlers. Each subdirectory corresponds to an API endpoint.
-  - `app/api/issues/`: Issue CRUD, edit, assign, bulk-status, attachments, relations, timelog.
+  - `app/api/issues/`: Issue CRUD, creation, edit, assign, bulk-status, attachments, relations, timelog.
+  - `app/api/projects/`: Fetches available Redmine projects.
   - `app/api/redmine/`: Handles connection to Redmine.
   - `app/api/sync/`: Handles the data synchronization logic.
   - `app/api/session/`: Manages user sessions.
   - `app/api/time-entries/`: Time entry list/update/delete.
-  - `app/api/internal/`: Internal endpoints (`users`, `priorities`, `activities`).
+  - `app/api/internal/`: Internal endpoints (`users`, `priorities`, `activities`, `enumerations`).
   - `app/api/ai/`: AI-powered search, summarize, and categorize.
   - `app/api/mobile/v1/`: Mobile API routes (token-authenticated).
   - `app/api/sentry-*/`: Sentry test/smoke endpoints.
@@ -56,6 +57,9 @@ This directory contains reusable library code, components, and other source file
   - `ExportButton.tsx`: CSV/print export.
   - `DashboardWidgets.tsx`: Stats and metrics display.
   - `NotificationsPanel.tsx`: Notification management.
+  - `ToastProvider.tsx` / `Toast.tsx`: Global notification system.
+  - `IssueCreateModal.tsx`: New issue creation form.
+  - `ColumnPicker.tsx`: Table column visibility toggle.
   - `ai/`: AI-powered search bar and issue actions.
 
 ### `mobile/`
