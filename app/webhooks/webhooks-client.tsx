@@ -376,7 +376,7 @@ export function WebhooksClient({ subscriptions }: Props) {
                     <div className="event-badges">
                       {sub.events.map(event => (
                         <span key={event} className="event-badge">
-                          {EVENT_LABELS[event] || event}
+                          {eventLabels[event] || event}
                         </span>
                       ))}
                     </div>
