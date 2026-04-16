@@ -54,3 +54,4 @@ test.txt
 debugging/logs/*.json
 /logs
 
+/prisma/migrations
