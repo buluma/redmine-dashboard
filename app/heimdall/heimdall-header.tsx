@@ -16,7 +16,12 @@ export function HeimdallHeader({ totalLogs, errorCount, hostCount }: HeimdallHea
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
   const [nextRefreshIn, setNextRefreshIn] = useState(AUTO_REFRESH_INTERVAL_MS / 1000);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [mounted, setMounted] = useState(false);
   const { t } = useI18n();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleRefresh = useCallback(() => {
     setLastRefresh(new Date());
@@ -26,7 +31,7 @@ export function HeimdallHeader({ totalLogs, errorCount, hostCount }: HeimdallHea
 
   // Countdown timer
   useEffect(() => {
-    if (!autoRefreshEnabled) return;
+    if (!autoRefreshEnabled || !mounted) return;
 
     const interval = setInterval(() => {
       setNextRefreshIn((prev) => {
@@ -39,7 +44,7 @@ export function HeimdallHeader({ totalLogs, errorCount, hostCount }: HeimdallHea
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [autoRefreshEnabled, handleRefresh]);
+  }, [autoRefreshEnabled, handleRefresh, mounted]);
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString(undefined, {
@@ -74,10 +79,10 @@ export function HeimdallHeader({ totalLogs, errorCount, hostCount }: HeimdallHea
             title={autoRefreshEnabled ? t("heimdall.autoRefreshOn") : t("heimdall.autoRefreshOff")}
           >
             <span className="toggle-indicator" />
-            {autoRefreshEnabled ? t("common.on") : t("common.off")}
+            {mounted ? (autoRefreshEnabled ? t("common.on") : t("common.off")) : "..."}
           </button>
 
-          {autoRefreshEnabled && (
+          {mounted && autoRefreshEnabled && (
             <span className="refresh-timer" title={`Last refresh: ${formatTime(lastRefresh)}`}>
               ↻ {nextRefreshIn}s
             </span>
