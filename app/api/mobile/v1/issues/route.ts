@@ -194,3 +194,42 @@ export async function GET(request: Request) {
     return jsonError(message, status);
   }
 }
+export async function POST(request: Request) {
+  try {
+    assertMobileApiEnabled();
+    const { user } = await requireMobileUser(request);
+    const { client } = await requireRedmineClientForUser(user.id);
+    const body = await request.json();
+
+    const { subject, description, projectId, priorityId, assignedToId, dueDate } = body;
+
+    if (!subject || !projectId) {
+      return jsonError("Subject and Project are required", 400);
+    }
+
+    // Create in Redmine
+    const created = await client.createIssue({
+      subject,
+      description,
+      projectId,
+      priorityId: priorityId ? Number(priorityId) : undefined,
+      assignedToId: assignedToId ? Number(assignedToId) : undefined,
+      dueDate,
+    });
+
+    // Sync back to local DB
+    const issue = await syncSingleIssue(user.id, client, created.id, {
+      pruneAttachments: true,
+      pruneRelations: true,
+      pruneTimeEntries: false,
+    });
+
+    return Response.json({
+      issue: toIssueView(issue),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to create mobile issue";
+    const status = message === "Mobile API is disabled" ? 404 : message === "Unauthorized" ? 401 : 400;
+    return jsonError(message, status);
+  }
+}

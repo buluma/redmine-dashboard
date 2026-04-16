@@ -1,17 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { clearRateLimitState } from "@/src/lib/rate-limit";
 
-const mockConnectRedmineAccount = vi.fn();
-const mockCreateMobileToken = vi.fn();
-const mockRunSyncJob = vi.fn();
-const mockRequireMobileUser = vi.fn();
-const mockRevokeMobileToken = vi.fn();
-const mockRequireRedmineClientForUser = vi.fn();
-const mockSyncSingleIssue = vi.fn();
-const mockIssueCount = vi.fn();
-const mockIssueFindMany = vi.fn();
-const mockIssueFindFirst = vi.fn();
-const mockTokenFindUnique = vi.fn();
+const {
+  mockConnectRedmineAccount,
+  mockCreateMobileToken,
+  mockRunSyncJob,
+  mockRequireMobileUser,
+  mockRevokeMobileToken,
+  mockRequireRedmineClientForUser,
+  mockSyncSingleIssue,
+  mockIssueCount,
+  mockIssueFindMany,
+  mockIssueFindFirst,
+  mockTokenFindUnique,
+} = vi.hoisted(() => ({
+  mockConnectRedmineAccount: vi.fn(),
+  mockCreateMobileToken: vi.fn(),
+  mockRunSyncJob: vi.fn(),
+  mockRequireMobileUser: vi.fn(),
+  mockRevokeMobileToken: vi.fn(),
+  mockRequireRedmineClientForUser: vi.fn(),
+  mockSyncSingleIssue: vi.fn(),
+  mockIssueCount: vi.fn(),
+  mockIssueFindMany: vi.fn(),
+  mockIssueFindFirst: vi.fn(),
+  mockTokenFindUnique: vi.fn(),
+}));
 
 vi.mock("@/src/lib/mobile-api", () => ({
   assertMobileApiEnabled: vi.fn(),
@@ -123,6 +137,43 @@ describe("mobile v1 routes", () => {
     const body = await response.json();
     expect(body.total).toBe(1);
     expect(body.items[0].redmineIssueId).toBe(101);
+  });
+
+  it("creates issue via mobile route", async () => {
+    const client = {
+      createIssue: vi.fn().mockResolvedValue({ id: 999 }),
+    };
+    mockRequireMobileUser.mockResolvedValue({
+      user: { id: "u1", emailOrUsername: "alice", displayName: "Alice" },
+      tokenRecordId: "mt1",
+    });
+    mockRequireRedmineClientForUser.mockResolvedValue({ client });
+    mockSyncSingleIssue.mockResolvedValue({ id: "i999" });
+
+    const { POST } = await import("@/app/api/mobile/v1/issues/route");
+    const response = await POST(
+      new Request("http://localhost", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: "Mobile Bug",
+          projectId: 1,
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(client.createIssue).toHaveBeenCalledWith({
+      subject: "Mobile Bug",
+      projectId: 1,
+      description: undefined,
+      priorityId: undefined,
+      assignedToId: undefined,
+      dueDate: undefined,
+    });
+    expect(mockSyncSingleIssue).toHaveBeenCalledWith("u1", client, 999, expect.anything());
+    const body = await response.json();
+    expect(body.issue.id).toBe("i999");
   });
 
   it("uses remote totals and requested sort mode for mobile hybrid search", async () => {

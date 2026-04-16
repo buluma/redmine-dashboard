@@ -111,4 +111,8 @@ export const env = {
   slackNotifyOnInternalNote: boolFromEnv("SLACK_NOTIFY_ON_INTERNAL_NOTE", true),
   slackNotifyFormat: (process.env.SLACK_NOTIFY_FORMAT as "compact" | "detailed") || "compact",
   slackRefreshIntervalMs: numberFromEnv("SLACK_REFRESH_INTERVAL_MS", 30000),
+  // VAPID Configuration for Push Notifications
+  vapidPublicKey: process.env.VAPID_PUBLIC_KEY!,
+  vapidPrivateKey: process.env.VAPID_PRIVATE_KEY!,
+  pushContact: process.env.PUSH_CONTACT || "mailto:support@example.com",
 };

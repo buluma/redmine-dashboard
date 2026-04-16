@@ -12,6 +12,7 @@ import { AiIssueActions } from "@/src/components/ai/AiIssueActions";
 import { ChatFab } from "@/src/components/ai/ChatFab";
 import { TimeTrackingPanel } from "@/src/components/TimeTrackingPanel";
 import { QuickActionsPanel } from "@/src/components/QuickActionsPanel";
+import { useOfflineAction } from "@/src/hooks/useOfflineAction";
 
 type Journal = {
   id: string;
@@ -440,6 +441,7 @@ export default function IssueDetailPage() {
   const tabsRef = useRef<HTMLDivElement | null>(null);
   const prefetchedRelatedIdsRef = useRef<Set<number>>(new Set());
   const attachmentRefreshAttemptedRef = useRef<Set<number>>(new Set());
+  const { performAction } = useOfflineAction();
 
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
@@ -1194,55 +1196,35 @@ export default function IssueDetailPage() {
           onStatusChange={async (statusId) => {
           try {
             const res = await fetch(`/api/issues/${issueId}/status`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ statusId }),
+            await performAction({
+              type: "update_status",
+              issueId,
+              payload: { statusId },
+              onSuccess: reloadIssue,
+              successMessage: "Status updated in Redmine.",
             });
-            if (!res.ok) {
-              const data = await res.json();
-              throw new Error(data.error || "Failed to update status");
-            }
-            await reloadIssue();
-            setActionInfo("Status updated in Redmine.");
-          } catch (e) {
-            setActionError(e instanceof Error ? e.message : "Failed to update status");
-          }
-        }}
-        onAssign={async (userId) => {
-          try {
-            const res = await fetch(`/api/issues/${issueId}/assign`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ userId }),
+          }}
+          onAssign={async (userId) => {
+            await performAction({
+              type: "assign",
+              issueId,
+              payload: { userId },
+              onSuccess: reloadIssue,
+              successMessage: "Issue assigned.",
             });
-            if (!res.ok) {
-              const data = await res.json();
-              throw new Error(data.error || "Failed to assign issue");
-            }
-            await reloadIssue();
-          } catch (e) {
-            setActionError(e instanceof Error ? e.message : "Failed to assign issue");
-          }
-        }}
-        onAddTime={async (hours, comment) => {
-          try {
-            const res = await fetch(`/api/issues/${issueId}/timelog`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ hours, comments: comment }),
+          }}
+          onAddTime={async (hours, comment) => {
+            await performAction({
+              type: "log_time",
+              issueId,
+              payload: { hours, comments: comment },
+              onSuccess: reloadIssue,
+              successMessage: "Time entry logged.",
             });
-            if (!res.ok) {
-              const data = await res.json();
-              throw new Error(data.error || "Failed to add time entry");
-            }
-            await reloadIssue();
-          } catch (e) {
-            setActionError(e instanceof Error ? e.message : "Failed to add time entry");
-          }
-        }}
-        statuses={transitionStatuses}
-        users={users}
-      />
+          }}
+          statuses={transitionStatuses}
+          users={users}
+        />
       )}
 
       <section className="card reports-shell issue-detail-shell">
@@ -1733,7 +1715,22 @@ export default function IssueDetailPage() {
           </div>
           {actionError && <p className="error-banner">{actionError}</p>}
           {actionInfo && <p className="info-banner">{actionInfo}</p>}
-          <form className="form" onSubmit={submitComment}>
+          <form
+            className="form"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              await performAction({
+                type: "comment",
+                issueId,
+                payload: { notes: comment },
+                onSuccess: () => {
+                  setComment("");
+                  void reloadIssue();
+                },
+                successMessage: "Comment posted to Redmine.",
+              });
+            }}
+          >
             <label>
               Comment
               <textarea
@@ -1894,22 +1891,15 @@ export default function IssueDetailPage() {
                   spentOn: e.spentOn,
                   authorName: e.authorName || "Unknown",
                 }))}
-                onAddEntry={async (hours, activityId, comments, spentOn) => {
-                  try {
-                    const res = await fetch(`/api/issues/${issueId}/timelog`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ hours, activityId, comments, spentOn }),
-                    });
-                    if (!res.ok) {
-                      const data = await res.json();
-                      throw new Error(data.error || "Failed to add time entry");
-                    }
-                    await reloadIssue();
-                  } catch (e) {
-                    setActionError(e instanceof Error ? e.message : "Failed to add time entry");
-                  }
-                }}
+        onAddEntry={async (hours, activityId, comments, spentOn) => {
+          await performAction({
+            type: "log_time",
+            issueId,
+            payload: { hours, activityId, comments, spentOn },
+            onSuccess: reloadIssue,
+            successMessage: "Time entry logged.",
+          });
+        }}
                 activities={activities}
                 isLoading={false}
               />

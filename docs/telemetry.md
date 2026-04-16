@@ -114,6 +114,8 @@ These routes already follow this standard:
 - Manual sync mutation routes
 - Issue mutation routes (status, comment, timelog, bulk status)
 - Issue GitHub link mutation routes (web and mobile)
+- **Mobile Issue Creation** routes (`/api/mobile/v1/issues` POST)
+- **Push Notification** subscription routes (`/api/push/subscribe`)
 
 When adding a new mutation route, follow the same pattern from the start.
 

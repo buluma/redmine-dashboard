@@ -614,9 +614,38 @@ export async function syncSingleIssue(
   // Build breadcrumbs by fetching parent chain
   const breadcrumbs = await buildBreadcrumbChain(client, remoteIssueId);
 
-  // Send Slack notification if enabled
+  // Send PWA Push notifications
   let notificationResult = null;
   if (options?.sendNotifications) {
+    try {
+      const { sendPushNotification } = await import("@/src/lib/push");
+      
+      if (upsertResult.wasCreated) {
+        await sendPushNotification(userId, {
+          title: "New Issue Assigned",
+          body: `[#${issue.redmineIssueId}] ${issue.subject} in ${issue.projectName}`,
+          data: { url: `/issues/${issue.id}` },
+        });
+      } else if (upsertResult.oldState) {
+        const statusChanged = upsertResult.oldState.statusName !== issue.statusName;
+        const priorityImportant = (issue.priority || "").toLowerCase().includes("high") || (issue.priority || "").toLowerCase().includes("urgent");
+        const priorityChanged = upsertResult.oldState.priorityName !== issue.priority;
+
+        if (statusChanged || (priorityChanged && priorityImportant)) {
+          await sendPushNotification(userId, {
+            title: `Issue Update: #${issue.redmineIssueId}`,
+            body: statusChanged 
+              ? `Status changed from ${upsertResult.oldState.statusName} to ${issue.statusName}`
+              : `Priority updated to ${issue.priority}: ${issue.subject}`,
+            data: { url: `/issues/${issue.id}` },
+          });
+        }
+      }
+    } catch (pushError) {
+      console.error("[Sync] PWA Push notification failed:", pushError);
+    }
+
+    // Send Slack notification if enabled
     try {
       const { getSlackNotificationService } = await import("@/src/lib/slack-notification-service");
       const service = getSlackNotificationService();

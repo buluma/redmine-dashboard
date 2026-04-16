@@ -136,6 +136,16 @@ export async function enqueueSync(
     createdAt: new Date().toISOString(),
     retries: 0,
   });
+
+  // Try to trigger background sync if supported
+  if (typeof window !== "undefined" && "serviceWorker" in navigator && "SyncManager" in window) {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      await (registration as any).sync.register("sync-queue");
+    } catch (err) {
+      console.warn("[OfflineDB] Background sync registration failed:", err);
+    }
+  }
 }
 
 export async function getPendingSyncItems(): Promise<SyncQueueItem[]> {

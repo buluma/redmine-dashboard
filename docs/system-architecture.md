@@ -28,15 +28,19 @@ This document provides a high-level overview of the system architecture for Conv
 │ │  Web Frontend │◀───▶ │   API Routes     │ │
 │ │ (React Server │      │  (Next.js)       │ │
 │ │  Components)  │      └─────────┬────────┘ │
-│ └───────────────┘                │          │
-│                                  │ (Prisma) │
-│                                  ▼          │
-│ ┌──────────────────────────────────────────┐│
-│ │           Database (PostgreSQL)          ││
-│ │  ┌─────────────┐  ┌─────────────────┐   ││
-│ │  │ Issues Cache│  │ Streamline Logs │   ││
-│ │  └─────────────┘  └─────────────────┘   ││
-│ └──────────────────────────────────────────┘│
+│ └───────┬───────┘                │          │
+│         │                        │          │
+│         ▼                        │          │
+│ ┌────────────────┐               │ (Prisma) │
+│ │ Sync Queue     │               ▼          │
+│ │ (IndexedDB)    │◀──────┐ ┌────────────────┐│
+│ └───────┬────────┘       │ │ Push Subs      ││
+│         │                │ └────────────────┘│
+│         ▼                │ ┌────────────────┐│
+│ ┌────────────────┐       │ │ Issues Cache   ││
+│ │ Service Worker │───────┘ └────────────────┘│
+│ └────────────────┘                           │
+└─────────────────────────────────────────────┘
 │                                             │
 │  ┌───────────────┐      ┌────────────────┐  │
 │  │ Sync Poller   │      │ Log Poller     │  │
@@ -96,6 +100,19 @@ This document provides a high-level overview of the system architecture for Conv
 - **Upsert Behavior:** Records are upserted by `id + environment + host`, so duplicate records are automatically skipped.
 - **Tables populated:** `MbuLog`, `ServerSideRulesLog`, `Trace`.
 - **Viewing logs:** Available in the `/heimdall` dashboard.
+
+### 7. PWA Sync Queue
+
+- **Implementation:** Client-side persistence using IndexedDB (via `idb` library).
+- **Queuing:** All mutations (status, time, comments) check `navigator.onLine`. If offline, they are enqueued with type/payload/timestamp.
+- **Service Worker:** Listens for `sync` events (Background Sync API). When triggered, it flushes the IndexedDB queue to the backend.
+- **Fallbacks:** The UI also attempts to flush the queue on manual "online" events or periodic check intervals.
+
+### 8. Push Notification Service
+
+- **Lifecycle:** Users subscribe via browser prompts; VAPID tokens are stored in the `PushSubscription` table.
+- **Server:** A `web-push` utility handles payload encryption and delivery to browser push services (FCM, Autopush, etc.).
+- **Triggers:** Automated triggers in `sync.ts` fire notifications for new assignments or critical status changes.
 
 ## Technology Stack
 

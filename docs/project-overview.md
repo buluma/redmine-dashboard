@@ -30,8 +30,10 @@ The system works by syncing Redmine issues to a local database, providing fast l
 - **AI Chat:** Standalone chat interface at `/chat` for general AI assistance with access to system context (issues, sync jobs, errors) and **Redmine action support** (tool-calling).
 - **Persistent Sidebar:** Collapsible sidebar navigation across all pages with sticky headers.
 - **Webhook Delivery Logs:** Admin UI to view webhook delivery history, retry failed deliveries, and inspect response bodies.
-- **Analytics Reports:** Time-tracking export (CSV), burndown charts, custom report builder with persistence.
-- **Tailscale Aperture:** Private LLM gateway support for internal model access without exposing API keys.
+- [x] **Analytics Reports:** Time-tracking export (CSV), burndown charts, custom report builder with persistence.
+- [x] **Tailscale Aperture:** Private LLM gateway support for internal model access without exposing API keys.
+- [x] **Offline-First PWA:** Advanced mutation queuing for status updates, comments, and time logs. Changes are captured offline and synced automatically via the Background Sync API.
+- [x] **Push Notifications:** Native PWA push alerts for new issue assignments, status changes, and critical priority updates.
 
 ## LLM Providers
 
@@ -84,8 +86,10 @@ Converge provides support for mobile clients, allowing users to manage their Red
 
 - **Clients:** The project includes a ready-to-build [Flutter application](../mobile/flutter_nrcc) and provides guidance for creating a [native Android client](./mobile/android.md).
 - **Secure Pairing:** Mobile clients can be paired securely using a token-based authentication system, avoiding the need for browser cookies.
-- **Mobile-Specific API:** A dedicated set of endpoints under `/api/mobile/v1/` is available for mobile clients.
+- **Mobile-Specific API:** A dedicated set of endpoints under `/api/mobile/v1/` is available for mobile clients, now supporting **issue creation**.
 - **Core Functionality:** Mobile users can search, post comments, manage GitHub links, and use attachments/relations through token-authenticated APIs.
+- **Offline Experience:** Fully integrated Sync Queue captures actions while offline and flushes them when connectivity returns.
+- **Push Notifications:** Native OS notifications for important ticket events.
 
 ## Technology Stack
 

@@ -49,6 +49,9 @@ This directory contains reusable library code, components, and other source file
   - `ai-tools.ts`: Definitions and execution engine for Redmine AI tools.
   - `llm-provider.ts`: Multi-provider LLM manager with tool-calling support.
   - `ai-prompt.ts`: Prompt construction for AI features.
+  - `push.ts`: Server-side PWA push notification delivery (Web Push).
+- **`src/hooks/`:** Custom hooks for shared logic.
+  - `useOfflineAction.ts`: Handles mutation queuing for offline-first support.
 - **`src/components/`:** Reusable React components.
   - `QuickActionsPanel.tsx`: Status, assign, and time logging panel.
   - `TimeTrackingPanel.tsx`: Time entry display and creation.
