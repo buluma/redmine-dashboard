@@ -357,8 +357,8 @@ export default function OpsPage() {
               <div className="ops-kv">
                 <p><strong>{t("common.status")}:</strong> {syncState?.lastSyncStatus ?? t("ops.statusIdle")}</p>
                 <p><strong>Running Job:</strong> {syncState?.runningJobId ?? "-"}</p>
-                <p><strong>Last Incremental:</strong> {formatDate(syncState?.lastIncrementalSyncAt ?? null)}</p>
-                <p><strong>Last Full:</strong> {formatDate(syncState?.lastFullSyncAt ?? null)}</p>
+                <p><strong>Last Incremental:</strong> {formatDateTime(syncState?.lastIncrementalSyncAt ?? null)}</p>
+                <p><strong>Last Full:</strong> {formatDateTime(syncState?.lastFullSyncAt ?? null)}</p>
                 <p><strong>Last Error:</strong> {syncState?.lastError ?? "-"}</p>
               </div>
             </article>

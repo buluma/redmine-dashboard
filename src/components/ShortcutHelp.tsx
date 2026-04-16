@@ -82,10 +82,7 @@ export function ShortcutHelp({ isOpen, onClose }: ShortcutHelpProps) {
 
         <div className="shortcut-footer">
           <p>
-            {t("shortcuts.footerHelp", { 
-              key1: <kbd>?</kbd>, 
-              key2: <kbd>Escape</kbd> 
-            })}
+            Press <kbd>?</kbd> or <kbd>Escape</kbd> to close
           </p>
         </div>
       </div>
@@ -95,10 +92,9 @@ export function ShortcutHelp({ isOpen, onClose }: ShortcutHelpProps) {
 
 // Floating hint that shows on first load
 export function ShortcutHint() {
-  const { t } = useI18n();
   return (
     <div className="shortcut-hint">
-      {t("shortcuts.hint", { key: <kbd>?</kbd> })}
+      Press <kbd>?</kbd> to show shortcuts
     </div>
   );
 }

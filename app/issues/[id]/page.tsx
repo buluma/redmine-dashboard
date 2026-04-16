@@ -428,6 +428,13 @@ export default function IssueDetailPage() {
   const [activities, setActivities] = useState<Array<{ id: number; name: string }>>([]);
   const [users, setUsers] = useState<Array<{ id: number; name: string }>>([]);
   const [priorities, setPriorities] = useState<Array<{ id: number; name: string; isDefault: boolean }>>([]);
+  const [customFieldDefs, setCustomFieldDefs] = useState<Array<{
+    id: number;
+    name: string;
+    fieldFormat: string;
+    possibleValues: Array<{ value: string }> | null;
+    required: boolean;
+  }>>([]);
   const [internalNotes, setInternalNotes] = useState<Array<{
     id: string;
     issueId: string;
@@ -446,6 +453,7 @@ export default function IssueDetailPage() {
   const prefetchedRelatedIdsRef = useRef<Set<number>>(new Set());
   const attachmentRefreshAttemptedRef = useRef<Set<number>>(new Set());
   const { performAction } = useOfflineAction();
+  const { t } = useI18n();
 
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
@@ -690,10 +698,11 @@ export default function IssueDetailPage() {
   useEffect(() => {
     void (async () => {
       try {
-        const [activitiesRes, usersRes, prioritiesRes] = await Promise.all([
+        const [activitiesRes, usersRes, prioritiesRes, customFieldsRes] = await Promise.all([
           fetch("/api/internal/activities", { cache: "no-store" }),
           fetch("/api/internal/users", { cache: "no-store" }),
           fetch("/api/internal/priorities", { cache: "no-store" }),
+          fetch("/api/internal/custom-fields", { cache: "no-store" }),
         ]);
         if (activitiesRes.ok) {
           const data = await activitiesRes.json();
@@ -706,6 +715,10 @@ export default function IssueDetailPage() {
         if (prioritiesRes.ok) {
           const data = await prioritiesRes.json();
           setPriorities(data.priorities ?? []);
+        }
+        if (customFieldsRes.ok) {
+          const data = await customFieldsRes.json();
+          setCustomFieldDefs(data.customFields ?? []);
         }
       } catch {
         // Ignore errors
@@ -1467,18 +1480,59 @@ export default function IssueDetailPage() {
                       return null;
                     }
 
+                    // Get field definition for proper UI rendering
+                    const fieldDef = customFieldDefs.find(f => f.id === field.id);
+                    const fieldFormat = fieldDef?.fieldFormat ?? "string";
+                    const possibleValues = fieldDef?.possibleValues ?? [];
+                    const isRequired = fieldDef?.required ?? false;
+
                     // Editable custom field
                     if (editMode && editDraft) {
-                      const isDateField = /due\s*date|date|sd\s*due|temp\s*fix/i.test(field.name);
+                      const isDateField = fieldFormat === "date" || /due\s*date|date|sd\s*due|temp\s*fix/i.test(field.name);
+                      const isBoolField = fieldFormat === "bool" || fieldFormat === "checkbox";
+                      const isListField = fieldFormat === "list" || fieldFormat === "radio";
+
                       return (
                         <div key={field.id} className="metadata-item metadata-item-editable">
-                          <span className="metadata-label">{field.name}</span>
-                          {isDateField ? (
+                          <span className="metadata-label">
+                            {field.name}
+                            {isRequired && <span className="required-mark">*</span>}
+                          </span>
+                          {isBoolField ? (
+                            <label className="edit-checkbox-label">
+                              <input
+                                type="checkbox"
+                                className="edit-custom-checkbox"
+                                checked={editDraft.customFields[field.id] === "1" || editDraft.customFields[field.id] === "true"}
+                                onChange={(e) => updateCustomField(String(field.id), e.target.checked ? "1" : "0")}
+                              />
+                              <span className="checkbox-label-text">{editDraft.customFields[field.id] === "1" || editDraft.customFields[field.id] === "true" ? "Yes" : "No"}</span>
+                            </label>
+                          ) : isListField && possibleValues.length > 0 ? (
+                            <select
+                              className="edit-custom-select"
+                              value={editDraft.customFields[field.id] || ""}
+                              onChange={(e) => updateCustomField(String(field.id), e.target.value)}
+                            >
+                              <option value="">— {isRequired ? "Select..." : "Unset"} —</option>
+                              {possibleValues.map((pv) => (
+                                <option key={pv.value} value={pv.value}>{pv.value}</option>
+                              ))}
+                            </select>
+                          ) : isDateField ? (
                             <input
                               type="date"
                               className="edit-metadata-input edit-date-input"
                               value={editDraft.customFields[field.id] || ""}
                               onChange={(e) => updateCustomField(String(field.id), e.target.value)}
+                            />
+                          ) : fieldFormat === "int" || fieldFormat === "float" ? (
+                            <input
+                              type="number"
+                              className="edit-metadata-input edit-number-input"
+                              value={editDraft.customFields[field.id] || ""}
+                              onChange={(e) => updateCustomField(String(field.id), e.target.value)}
+                              step={fieldFormat === "float" ? "0.01" : "1"}
                             />
                           ) : (
                             <input
@@ -1493,12 +1547,25 @@ export default function IssueDetailPage() {
                       );
                     }
 
-                    // Display custom field
+                    // Display custom field - use field definition for proper rendering
                     if (field.value && field.value.trim().length > 0) {
+                      const isBoolField = fieldFormat === "bool" || fieldFormat === "checkbox";
+                      const isListField = fieldFormat === "list" || fieldFormat === "radio";
+
                       return (
                         <div key={field.id} className="metadata-item">
                           <span className="metadata-label">{field.name}</span>
-                          <span className="metadata-value">{field.value}</span>
+                          <span className="metadata-value">
+                            {isBoolField ? (
+                              <span className={`bool-value ${field.value === "1" || field.value === "true" ? "bool-true" : "bool-false"}`}>
+                                {field.value === "1" || field.value === "true" ? "✓ Yes" : "✗ No"}
+                              </span>
+                            ) : isListField ? (
+                              <span className="list-value">{field.value}</span>
+                            ) : (
+                              field.value
+                            )}
+                          </span>
                         </div>
                       );
                     }
