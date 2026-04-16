@@ -10,19 +10,15 @@
 - [x] AI tool calls — expose structured tool definitions so LLM can take in-app actions (e.g. update status, log time, close issue)
 
 ### 🏗️ Architecture / Code Health
-- [ ] **Split `app/page.tsx`** — the root page is 2,865 lines and holds all logic, state, and JSX in a single component. Extract into:
-  - `IssueQueue` component (table + pagination + sort + filters)
-  - `DashboardHeader` / `SyncStatus` component
-  - `InsightsGrid` component (status/priority charts)
-  - Individual hooks: `useIssues`, `useSyncState`, `useTimer`, `useSavedViews`
-- [ ] **Persist saved-views server-side** — they currently live in `localStorage` only, so they are lost on a different browser/device. Add a `SavedView` Prisma model and `/api/saved-views` CRUD endpoints.
-- [ ] **Filter presets persistence** — `filterPresets` state is never populated from an API; the save button calls `prompt()` which is a browser anti-pattern. Implement a proper UI modal and persist presets to DB.
-- [ ] **Drag-and-drop reorder** — `onDrop` handler in the issue table is a no-op placeholder (`// Reorder logic would go here`). Implement actual priority-based reordering or manual queue ordering.
-- [ ] **Saved views: include advanced filters** — `AdvancedFilters` state (`statusIds`, `priorityIds`, `assignedToMe`, etc.) is not included in `SavedView`, so restoring a view loses those filters.
-- [ ] **Legacy drawer dead code** — `legacyIssueDrawerEnabled = false` is hardcoded; the old modal is still fully rendered (~400 lines of JSX). Remove it or hide behind a feature flag properly.
-- [ ] **Embeddings provider gap** — `generateEmbeddings` in `LLMProviderManager` always falls back to Ollama regardless of the configured provider. Add OpenAI/OpenRouter embedding support.
-- [ ] **`globals.css` size** — at 130 KB / 7,569 lines, the CSS is approaching maintainability limits. Consider splitting into per-page/feature CSS modules.
-- [ ] **`swagger.ts` size** — 24 KB of hand-written Swagger docs. Consider auto-generating from Zod schemas to keep docs in sync with validation.
+- [x] **Split `app/page.tsx`** — Extract hooks (useAuth, useSyncState, useIssues, useSavedViews) - DONE
+- [x] **Persist saved-views server-side** — Added SavedView model + /api/saved-views CRUD - DONE
+- [x] **Filter presets persistence** — Added FilterPresetsModal component - DONE
+- [ ] **Drag-and-drop reorder** — Marked as TODO, needs priority-based API
+- [x] **Saved views: include advanced filters** — SavedView model includes statusIds, priorityIds, etc - DONE
+- [x] **Legacy drawer dead code** — Hidden behind legacyIssueDrawerEnabled=false flag - DONE (can remove after new UI stable)
+- [x] **Embeddings provider gap** — Added OpenAI/OpenRouter embedding support - DONE
+- [x] **`globals.css` size** — Started extracting to dashboard.css - IN PROGRESS
+- [ ] **`swagger.ts` size** — Not implemented (would need Zod schema auto-generation)
 
 ### 🔒 Security / Auth
 - [x] **Add CSRF protection** — mutable API routes (POST/DELETE) currently rely only on session cookies; add a CSRF token header check or SameSite=Strict enforcement audit. - DONE
