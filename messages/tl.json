@@ -1,0 +1,106 @@
+{
+  "common": {
+    "backToDashboard": "Bumalik sa Dashboard",
+    "loading": "Naglo-load...",
+    "error": "Error",
+    "save": "I-save",
+    "cancel": "Ikansela",
+    "delete": "Burahin",
+    "edit": "I-edit",
+    "create": "Gumawa",
+    "search": "Hanapin",
+    "filter": "I-filter",
+    "refresh": "I-refresh",
+    "reset": "I-reset",
+    "apply": "Ilapat",
+    "close": "Isara",
+    "confirm": "Kumpirmahin",
+    "yes": "Oo",
+    "no": "Hindi"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "heimdall": "Heimdall Logs",
+    "personalTickets": "Personal na Tickets",
+    "reports": "Mga Report",
+    "aiSummaries": "AI Summaries",
+    "chat": "AI Chat",
+    "ops": "System Ops",
+    "slack": "Slack",
+    "wakatime": "WakaTime",
+    "webhooks": "Webhooks",
+    "apiDocs": "API Docs"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "openIssues": "Bukas na Issues",
+    "closedIssues": "Saradong Issues",
+    "inProgress": "Sa Pagprogreso",
+    "recentActivity": "Kamakailang Aktibidad",
+    "noResults": "Walang results",
+    "forceRefresh": "Force Refresh",
+    "resetFilters": "I-reset ang Filters",
+    "shortcuts": "Shortcuts",
+    "lastSync": "Huling sync"
+  },
+  "issues": {
+    "subject": "Subject",
+    "description": "Deskripsyon",
+    "status": "Status",
+    "priority": "Priyoridad",
+    "assignee": "Assignee",
+    "dueDate": "Due Date",
+    "startDate": "Start Date",
+    "estimatedHours": "Estimated Hours",
+    "spentHours": "Spent Hours",
+    "project": "Project",
+    "tracker": "Tracker",
+    "author": "May-akda",
+    "created": "Ginawa",
+    "updated": "Na-update"
+  },
+  "status": {
+    "new": "Bago",
+    "inProgress": "Sa Pagprogreso",
+    "resolved": "Naresolba",
+    "feedback": "Feedback",
+    "closed": "Sarado",
+    "rejected": "Tinanggihan"
+  },
+  "priority": {
+    "low": "Mababa",
+    "normal": "Normal",
+    "high": "Mataas",
+    "urgent": "Urgent",
+    "immediate": "Agad"
+  },
+  "ai": {
+    "summarize": "Gumawa ng Summary",
+    "summarizing": "Gumagawa ng summary...",
+    "summarized": "Nagawa ang summary",
+    "noActivity": "Walang AI Activity",
+    "askAI": "Tanungin ang AI",
+    "analyzing": "Nirereview ang tickets...",
+    "staleIssues": "Stale na Issues"
+  },
+  "sync": {
+    "syncing": "Nagse-sync...",
+    "synced": "Naka-sync",
+    "failed": "Failed",
+    "noChanges": "Walang changes",
+    "pulling": "Kukuha mula sa Redmine...",
+    "pushing": "Ise-send sa Redmine..."
+  },
+  "auth": {
+    "login": "Mag-login",
+    "logout": "Mag-logout",
+    "unauthorized": "Hindi awtorisado",
+    "sessionExpired": "Expired na ang session"
+  },
+  "errors": {
+    "notFound": "Hindi nahanap",
+    "serverError": "Server error",
+    "networkError": "Network error",
+    "rateLimited": "Rate limited"
+  }
+}
