@@ -114,10 +114,122 @@ These routes already follow this standard:
 - Manual sync mutation routes
 - Issue mutation routes (status, comment, timelog, bulk status)
 - Issue GitHub link mutation routes (web and mobile)
-- **Mobile Issue Creation** routes (`/api/mobile/v1/issues` POST)
-- **Push Notification** subscription routes (`/api/push/subscribe`)
+- Mobile Issue Creation routes (`/api/mobile/v1/issues` POST)
+- Push Notification subscription routes (`/api/push/subscribe`)
+- **Offline Sync Queue** routes (`/api/internal/sync-queue/*`)
+- **Mobile Sync Queue** routes (`/api/mobile/v1/sync-queue/*`)
 
 When adding a new mutation route, follow the same pattern from the start.
+
+## PWA & Offline Sync Telemetry
+
+The offline sync system emits telemetry for:
+
+### Sync Queue Operations
+
+| Event | Description | Metric Suffix |
+|-------|-------------|---------------|
+| `sync.queue.enqueue` | Item added to queue | `sync_queue_enqueued` |
+| `sync.queue.flush` | Queue processing started | `sync_queue_flushed` |
+| `sync.queue.processed` | Items processed | `sync_queue_processed` |
+| `sync.queue.success` | Item processed successfully | `sync_queue_success` |
+| `sync.queue.failed` | Item processing failed | `sync_queue_failed` |
+| `sync.queue.retried` | Item scheduled for retry | `sync_queue_retried` |
+| `sync.queue.cleared` | Failed items cleared | `sync_queue_cleared` |
+
+### Sync Queue Tags
+
+- `type`: Operation type (`issue_status_update`, `issue_comment`, `issue_timelog`, etc.)
+- `status_class`: `2xx`, `4xx`, `5xx`
+- `reason`: `rate_limited`, `validation`, `upstream_error`, `network_error`
+
+### Offline Sync Example
+
+```typescript
+import { trackInfo, trackSuccess, trackFailure } from "@/src/lib/telemetry";
+
+export async function processSyncItem(item: SyncQueueItem) {
+  const startedAt = Date.now();
+
+  try {
+    trackInfo("sync.queue.processed", {
+      type: item.type,
+      itemId: item.id,
+    });
+
+    await executeSyncOperation(item);
+
+    trackSuccess({
+      event: "sync.queue.success",
+      data: { type: item.type },
+      metricName: "sync_queue_success",
+      durationMetricName: "sync_queue_duration",
+      durationMs: Date.now() - startedAt,
+    });
+  } catch (error) {
+    trackFailure({
+      event: "sync.queue.failed",
+      error,
+      metricName: "sync_queue_failed",
+      metricTags: { type: item.type, status_class: "5xx" },
+      durationMetricName: "sync_queue_duration",
+      durationMs: Date.now() - startedAt,
+    });
+    throw error;
+  }
+}
+```
+
+### Push Notification Telemetry
+
+| Event | Description | Metric Suffix |
+|-------|-------------|---------------|
+| `push.subscribe` | User subscribes to push | `push_subscribed` |
+| `push.unsubscribe` | User unsubscribes | `push_unsubscribed` |
+| `push.send` | Notification sent | `push_sent` |
+| `push.failed` | Notification delivery failed | `push_failed` |
+
+### Push Notification Example
+
+```typescript
+import { sendPushNotification } from "@/lib/push";
+import { trackInfo, trackSuccess, trackFailure } from "@/src/lib/telemetry";
+
+export async function notifyIssueAssignment(
+  userId: string,
+  issue: Issue
+) {
+  const startedAt = Date.now();
+
+  trackInfo("push.send", { userId, notificationType: "assignment" });
+
+  try {
+    await sendPushNotification(userId, {
+      title: "New Issue Assignment",
+      body: `You've been assigned to #${issue.redmineIssueId}`,
+    });
+
+    trackSuccess({
+      event: "push.sent",
+      data: { userId },
+      metricName: "push_sent",
+      durationMetricName: "push_send_duration",
+      durationMs: Date.now() - startedAt,
+    });
+  } catch (error) {
+    trackFailure({
+      event: "push.failed",
+      error,
+      metricName: "push_failed",
+      metricTags: { notificationType: "assignment", status_class: "5xx" },
+      durationMetricName: "push_send_duration",
+      durationMs: Date.now() - startedAt,
+    });
+  }
+}
+```
+
+## Sentry Runtime Controls
 
 ## Sentry Runtime Controls
 

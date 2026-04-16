@@ -20,6 +20,12 @@ Welcome to the documentation for Converge. This documentation is intended to hel
 - **[Codebase Summary](./codebase-summary.md):** A summary of the codebase structure.
 - **[Design Guidelines](./design-guidelines.md):** The design guidelines and UI/UX specifications.
 
+## Features & Components
+
+- **[Internationalization (i18n)](./i18n.md):** Multilingual support with 12 languages, translation usage, and how to add new languages.
+- **[Push Notifications](./push-notifications.md):** Browser push notification setup, VAPID configuration, and notification triggers.
+- **[Offline Sync Queue](./offline-sync.md):** IndexedDB-based offline-first architecture with Background Sync API.
+
 ## Security & Access
 
 - **[RBAC](./rbac.md):** Role-based access control — Admin, Editor, User, Viewer roles, permission matrix, and role management.

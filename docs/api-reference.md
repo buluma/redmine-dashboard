@@ -270,6 +270,38 @@ Query params:
 ### POST /api/internal/sync-queue/process
 Triggers background processing of the sync queue (internal use by SW).
 
+## Mobile Sync Queue APIs
+
+All mobile sync queue operations require authentication via `Authorization: Bearer <token>`.
+
+### GET /api/mobile/v1/sync-queue/pending
+Returns pending offline sync items for the mobile client.
+
+### POST /api/mobile/v1/sync-queue/process
+Process and flush the mobile sync queue.
+
+### POST /api/mobile/v1/sync-queue/clear
+Clear failed sync items.
+
+### POST /api/mobile/v1/sync-queue/flush
+Force flush all pending items to the server.
+
+Request body:
+```json
+{
+  "types": ["issue_status_update", "issue_comment", "issue_timelog"]
+}
+```
+
+Response:
+```json
+{
+  "flushed": 3,
+  "failed": 0,
+  "errors": []
+}
+```
+
 ## AI and Chat APIs
 
 ### POST /api/chat
@@ -522,6 +554,54 @@ Updates a custom report.
 
 ### DELETE /api/reports/custom/[id]
 Deletes a custom report.
+
+## Offline Sync APIs
+
+### GET /api/internal/sync-queue/pending
+Returns pending offline sync items for the current user.
+
+Query params:
+- `status`: filter by status (`pending`, `processing`, `completed`, `failed`)
+- `type`: filter by operation type
+- `limit`: max results (default 50, max 100)
+- `offset`: pagination offset
+
+Response:
+```json
+{
+  "items": [
+    {
+      "id": "clx...",
+      "type": "issue_status_update",
+      "payload": { "issueId": 123, "statusId": 4 },
+      "status": "pending",
+      "retries": 0,
+      "createdAt": "2026-04-16T10:30:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+### POST /api/internal/sync-queue/process
+Manually trigger processing of pending sync queue items. Internal use by service worker.
+
+Response:
+```json
+{
+  "processed": 5,
+  "success": 4,
+  "failed": 1
+}
+```
+
+### POST /api/internal/sync-queue/clear
+Clears failed sync queue items. Use with caution.
+
+Response:
+```json
+{ "cleared": 3 }
+```
 
 ## Webhook APIs
 
