@@ -22,6 +22,8 @@ import { SavedViewsPanel } from "@/src/components/SavedViewsPanel";
 import { useToast } from "@/src/components/ToastProvider";
 import { IssueCreateModal } from "@/src/components/IssueCreateModal";
 import { ColumnPicker, ColumnKey } from "@/src/components/ColumnPicker";
+import { KanbanBoard } from "@/src/components/KanbanBoard";
+import { GanttChart } from "@/src/components/GanttChart";
 
 type User = {
   id: string;
@@ -102,6 +104,9 @@ type Issue = {
   lastActivityAt: string | null;
   lastActivityType: string | null;
   dueDate: string | null;
+  startDate: string | null;
+  estimatedHours: number | null;
+  createdAt: string;
   doneRatio: number | null;
   githubLinks: GithubLink[];
   journals: Journal[];
@@ -542,6 +547,7 @@ export default function Home() {
   const [searchMode, setSearchMode] = useState<"local" | "hybrid" | "fts">("local");
   const [sort, setSort] = useState("updated_desc");
   const [advancedFilters, setAdvancedFilters] = useState<FilterState>(DEFAULT_ADVANCED_FILTERS);
+  const [viewMode, setViewMode] = useState<"list" | "board" | "gantt">("list");
 
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [viewDraftName, setViewDraftName] = useState("");
@@ -1299,6 +1305,34 @@ export default function Home() {
       toast.error(e instanceof Error ? e.message : "Bulk status update failed");
     } finally {
       setBulkUpdating(false);
+    }
+  }
+
+  async function handleBoardDrop(issueId: number, targetStatusId: number) {
+    try {
+      // Optimistically update the issue directly in the local array if possible, 
+      // but the KanbanBoard internally holds optimistic state, so we just run the mutation.
+      const res = await fetch("/api/issues/bulk-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          issueIds: [issueId],
+          statusId: targetStatusId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Status update failed");
+      }
+      if (data.failures?.length > 0) {
+         throw new Error(data.failures[0].error || "Action not permitted");
+      }
+      
+      toast.info("Status updated.");
+      await refreshAll();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Kanban drop failed. Reverting...");
+      await refreshAll(); // fetch reality from server to revert optimistic board
     }
   }
 
@@ -2252,6 +2286,37 @@ export default function Home() {
                   <ExportButton issues={visibleIssues} format="print" />
                 </div>
               </div>
+
+              <div className="view-mode-tabs" style={{ display: "flex", gap: "8px", marginBottom: "16px", marginTop: "8px", paddingBottom: "16px", borderBottom: "1px solid var(--border)" }}>
+                <button type="button" className={`secondary-button ${viewMode === "list" ? "active border-primary text-primary" : ""}`} onClick={() => setViewMode("list")}>
+                  📑 List
+                </button>
+                <button type="button" className={`secondary-button ${viewMode === "board" ? "active border-primary text-primary" : ""}`} onClick={() => setViewMode("board")}>
+                  🗂 Board
+                </button>
+                <button type="button" className={`secondary-button ${viewMode === "gantt" ? "active border-primary text-primary" : ""}`} onClick={() => setViewMode("gantt")}>
+                  📈 Gantt
+                </button>
+              </div>
+
+              {viewMode === "board" ? (
+                <KanbanBoard 
+                  issues={visibleIssues} 
+                  statuses={statuses} 
+                  onDrop={handleBoardDrop} 
+                  onClick={(issue) => { 
+                    if (issue.redmineIssueId) setSelectedIssueId(issue.redmineIssueId); 
+                  }} 
+                />
+              ) : viewMode === "gantt" ? (
+                <GanttChart 
+                  issues={visibleIssues} 
+                  onClick={(issue) => { 
+                    if (issue.redmineIssueId) setSelectedIssueId(issue.redmineIssueId); 
+                  }} 
+                />
+              ) : (
+                <>
                 <table className="issues-table">
                   <thead>
                   <tr>
@@ -2486,6 +2551,8 @@ export default function Home() {
                 </div>
               );
             })()}
+            </>
+            )}
             </div>
           ) : (
             <>

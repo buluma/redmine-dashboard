@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { dispatchWebhook, getActiveSubscriptions } from '../../src/lib/webhook-subscription';
-import type { WebhookPayload, WebhookEvent } from '../../src/lib/webhook-subscription';
+import { dispatchWebhook, getActiveSubscriptions } from '../webhook-subscription';
+import type { WebhookPayload, WebhookEvent } from '../webhook-subscription';
 
 vi.mock('../../src/lib/db', () => ({
   prisma: {
@@ -15,7 +15,7 @@ vi.mock('../../src/lib/db', () => ({
   },
 }));
 
-import { prisma } from '../../src/lib/webhook-subscription';
+import { prisma } from '../db';
 
 const mockPrisma = prisma as any;
 
