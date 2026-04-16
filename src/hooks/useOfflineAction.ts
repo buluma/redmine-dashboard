@@ -14,7 +14,7 @@ interface OfflineActionOptions {
 }
 
 export function useOfflineAction() {
-  const { showToast } = useToast();
+  const { show: showToast } = useToast();
   const [isBusy, setIsBusy] = useState(false);
 
   const performAction = useCallback(async (options: OfflineActionOptions) => {

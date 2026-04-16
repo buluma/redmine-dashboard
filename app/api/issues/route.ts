@@ -243,6 +243,10 @@ export async function POST(request: Request) {
       pruneTimeEntries: false,
     });
 
+    if (!issue) {
+      return Response.json({ error: "Failed to sync issue after creation" }, { status: 500 });
+    }
+
     return Response.json({
       issue: toIssueView(issue),
     });

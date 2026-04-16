@@ -366,3 +366,139 @@
     align-items: stretch;
   }
 }
+
+/* Saved Views Panel */
+.saved-view-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.saved-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.saved-view-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-soft);
+}
+
+.reorder-toggle {
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.reorder-toggle:hover {
+  background: var(--surface-3);
+}
+
+.reorder-toggle.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.saved-view-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.view-name-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-soft);
+}
+
+.view-name-field input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--surface-1);
+  min-width: 200px;
+}
+
+.chip-row.saved-view-chips {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.saved-view-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.saved-view-pill:hover {
+  background: var(--surface-3);
+}
+
+.saved-view-pill.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.saved-view-pill.dragging {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+}
+
+.saved-view-apply {
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--text);
+  padding: 0;
+}
+
+.saved-view-pill.active .saved-view-apply {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.saved-view-delete {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: var(--text-soft);
+  cursor: pointer;
+  padding: 0 0.25rem;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.saved-view-pill:hover .saved-view-delete {
+  opacity: 1;
+}
+
+.saved-view-delete:hover {
+  color: var(--signal);
+}
+
+.muted {
+  color: var(--text-soft);
+  font-size: 0.8rem;
+}

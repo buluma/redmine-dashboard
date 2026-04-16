@@ -4,8 +4,13 @@
 
 ## Pending
 
-### 🏗️ Architecture / Code Health
-- [ ] **Drag-and-drop reorder** — API added, needs frontend component to implement drag-and-drop in saved views
+### ✨ Future / Post-MVP Features
+- [ ] **Redmine Custom Fields Integration** — Support rendering and editing custom fields, which are core to Redmine enterprise workflows.
+- [ ] **Interactive Gantt Chart View** — A visual timeline view grouping tasks by project/epic and plotting them on a timeline.
+- [ ] **Command Palette (Cmd+K)** — Quick navigation launcher to instantly search for an issue, jump to a project, or trigger an action (keyboard-first workflow).
+- [ ] **Jira-Style Kanban Board** — A full agile board with drag-and-drop columns for statuses, allowing rapid triaging of issues.
+- [ ] **Real-Time WebSocket/SSE Updates Pipeline** — Pushing live atomic updates to clients via WebSockets / Server-Sent Events instead of relying purely on polling or background sync.
+- [ ] **Localization (i18n)** — Adding support for multiple languages using `next-intl` or similar to support global teams.
 
 ---
 
@@ -14,6 +19,7 @@
 | Feature | Status | Notes | Date |
 |---------|--------|-------|------|
 | All Features | ✅ DONE | See completed items below | 2026-04-16 |
+| Saved Views UX | ✅ DONE | Drag-and-drop reorder for saved views using @dnd-kit | 2026-04-16 |
 | Mobile / PWA | ✅ DONE | Offline sync queue, Mobile issue creation, Push Notifications | 2026-04-16 |
 | UX/UI Polish | ✅ DONE | Toasts, Issue Modal, Column Picker, Shortcuts, Accessibility | 2026-04-16 |
 | AI Tool Calls | ✅ DONE | Structured definitions for status, time log, comment actions | 2026-04-16 |
