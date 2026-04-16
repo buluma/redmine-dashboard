@@ -215,17 +215,17 @@ export function HeimdallLogsClient({ type, logs }: HeimdallLogsClientProps) {
                       )}
                       {log.extra.cpuUsage != null && (
                         <span className="ai-confidence" style={{ fontSize: "0.72rem" }}>
-                          {t("heimdall.cpu", { count: log.extra.cpuUsage })}
+                          {t("heimdall.cpu", { count: Number(log.extra.cpuUsage) })}
                         </span>
                       )}
                       {log.extra.ramUsage != null && (
                         <span className="ai-confidence" style={{ fontSize: "0.72rem" }}>
-                          {t("heimdall.ram", { size: formatBytes(log.extra.ramUsage as number) })}
+                          {t("heimdall.ram", { size: formatBytes(Number(log.extra.ramUsage)) })}
                         </span>
                       )}
                       {log.extra.resourceId != null && (
                         <span className="ai-confidence" style={{ fontSize: "0.72rem" }}>
-                          {t("heimdall.resource", { id: log.extra.resourceId })}
+                          {t("heimdall.resource", { id: String(log.extra.resourceId) })}
                         </span>
                       )}
                     </div>

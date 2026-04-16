@@ -1727,8 +1727,7 @@ export default function Home() {
               )}
               {bootstrapInfo?.configured && !bootstrapInfo.canBootstrap && (
                 <p className="muted">
-                  {t('login.envBootstrapHelp', { activeCredentials: String(authStore.getCredentials()?.type) })}:{" "}
-                  {bootstrapInfo.activeCredentials}).
+                  {t('login.envBootstrapHelp', { activeCredentials: bootstrapInfo.activeCredentials })}.
                 </p>
               )}
             </form>
@@ -2977,23 +2976,23 @@ export default function Home() {
 
               <div className="timeline">
                 {selectedIssue.timeEntries.length === 0 && <p className="muted">{t('drawer.noTimeLogs')}</p>}
-                {selectedIssue.timeEntries.map((t) => (
-                  <div key={t.id} className="timeline-item">
+                {selectedIssue.timeEntries.map((entry) => (
+                  <div key={entry.id} className="timeline-item">
                     <div className="entry-head">
                       <p className="muted">
-                        <strong>{t.hours}h</strong> • {new Date(t.spentOn).toLocaleDateString()}
+                        <strong>{entry.hours}h</strong> • {new Date(entry.spentOn).toLocaleDateString()}
                       </p>
-                      <span className={`entry-source ${t.redmineTimeEntryId ? "synced" : "local"}`}>
-                        {t.redmineTimeEntryId ? "{t('drawer.syncedFromRedmine')}" : "{t('drawer.localEntry')}"}
+                      <span className={`entry-source ${entry.redmineTimeEntryId ? "synced" : "local"}`}>
+                        {entry.redmineTimeEntryId ? "{t('drawer.syncedFromRedmine')}" : "{t('drawer.localEntry')}"}
                       </span>
                     </div>
                     <p className="muted entry-meta">
-                      {t.authorName ?? "Unknown author"}
-                      {t.activityName ? ` • ${t.activityName}` : ""}
+                      {entry.authorName ?? "Unknown author"}
+                      {entry.activityName ? ` • ${entry.activityName}` : ""}
                     </p>
-                    {t.comments ? (
+                    {entry.comments ? (
                       <MarkdownBlock
-                        content={t.comments}
+                        content={entry.comments}
                         attachments={selectedIssue.attachments}
                         issueId={selectedIssue.redmineIssueId}
                       />

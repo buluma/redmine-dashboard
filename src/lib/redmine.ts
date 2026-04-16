@@ -69,6 +69,17 @@ type RedmineRelationResponse = {
 
 export type SyncIssueScope = "assigned" | "open" | "all";
 
+export type RedmineCustomField = {
+  id: number;
+  name: string;
+  customized_type: string;
+  field_format: string;
+  possible_values: Array<{ value: string }> | null;
+  default_value: string | null;
+  editable: boolean;
+  required: boolean;
+};
+
 export class RedmineError extends Error {
   constructor(
     public readonly status: number,
@@ -311,6 +322,18 @@ export class RedmineClient {
     }
 
     return out;
+  }
+
+  async getCustomFields(): Promise<RedmineCustomField[]> {
+    const data = await this.request<{ custom_fields: RedmineCustomField[] }>("/custom_fields.json");
+    return data.custom_fields;
+  }
+
+  async getProjectCustomFields(projectId: number): Promise<RedmineCustomField[]> {
+    const data = await this.request<{ custom_fields: RedmineCustomField[] }>(
+      `/projects/${projectId}.json?include=custom_fields`,
+    );
+    return data.custom_fields ?? [];
   }
 
   async listIssues(

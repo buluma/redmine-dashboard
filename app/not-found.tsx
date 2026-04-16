@@ -32,9 +32,15 @@ export default function NotFound() {
             <strong>{t("notFound.helpTitle")}</strong> {t("notFound.helpHint")}
           </p>
           <ul>
-            <li>{t("notFound.searchDashboard", { link: <Link href="/">{t("notFound.dashboardLink")}</Link> })}</li>
-            <li>{t("notFound.checkReports", { link: <Link href="/reports">{t("notFound.reportsLink")}</Link> })}</li>
-            <li>{t("notFound.manualSync", { link: <Link href="/ops">{t("notFound.manualSyncLink")}</Link> })}</li>
+            <li>
+              <Link href="/">{t("notFound.dashboardLink")}</Link> - {t("notFound.searchDashboard")}
+            </li>
+            <li>
+              <Link href="/reports">{t("notFound.reportsLink")}</Link> - {t("notFound.checkReports")}
+            </li>
+            <li>
+              <Link href="/ops">{t("notFound.manualSyncLink")}</Link> - {t("notFound.manualSync")}
+            </li>
           </ul>
         </div>
       </div>
