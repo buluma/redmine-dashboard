@@ -3,6 +3,7 @@ import { prisma } from "@/src/lib/db";
 import { getSessionUserId } from "@/src/lib/session";
 import { requireRole, getRoleDisplayName } from "@/src/lib/rbac";
 import { UserManagementAccessDenied } from "./access-denied";
+import { UsersClient } from "./users-client";
 
 export const runtime = "nodejs";
 
