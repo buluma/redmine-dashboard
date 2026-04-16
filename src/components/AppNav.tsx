@@ -55,6 +55,15 @@ export function AppNav() {
     return acc;
   }, {} as Record<string, typeof navItems>);
 
+  const groupLabelKeys: Record<string, string> = {
+    "Personal": "nav.groups.personal",
+    "Team Ops": "nav.groups.teamOps",
+    "Reporting": "nav.groups.reporting",
+    "Integrations": "nav.groups.integrations",
+    "System": "nav.groups.system",
+    "Other": "nav.groups.other"
+  };
+
   return (
     <>
       <nav className={`app-nav ${mounted && collapsed ? "collapsed" : ""}`} aria-label="Primary navigation">
@@ -66,8 +75,8 @@ export function AppNav() {
             type="button"
             className="nav-toggle"
             onClick={() => setCollapsed((prev) => !prev)}
-            title={mounted && collapsed ? "Expand menu" : "Collapse menu"}
-            aria-label={mounted && collapsed ? "Expand menu" : "Collapse menu"}
+            title={mounted && collapsed ? t("nav.tooltips.expand") : t("nav.tooltips.collapse")}
+            aria-label={mounted && collapsed ? t("nav.tooltips.expand") : t("nav.tooltips.collapse")}
             aria-pressed={mounted ? collapsed : false}
           >
             {collapsed ? "›" : "‹"}
@@ -76,7 +85,7 @@ export function AppNav() {
         <div className="nav-links">
           {Object.entries(groupedItems).map(([group, items]) => (
             <div key={group} className="nav-group">
-              {mounted && !collapsed && <div className="nav-group-label">{group}</div>}
+              {mounted && !collapsed && <div className="nav-group-label">{t(groupLabelKeys[group] || "nav.groups.other")}</div>}
               {items.map((item) => (
                 <Link
                   key={item.href}

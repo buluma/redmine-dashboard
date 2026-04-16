@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useCallback } from "react";
+import { useI18n } from "./I18nProvider";
 
 interface ProjectFilterProps {
   issues: { projectName?: string | null }[];
@@ -9,6 +10,8 @@ interface ProjectFilterProps {
 }
 
 export function ProjectFilter({ issues, selectedProject, onChange }: ProjectFilterProps) {
+  const { t } = useI18n();
+  
   // Extract unique projects
   const projects = useMemo(() => {
     const projectSet = new Set<string>();
@@ -41,9 +44,9 @@ export function ProjectFilter({ issues, selectedProject, onChange }: ProjectFilt
   return (
     <div className="project-filter">
       <label className="project-filter-label">
-        <span>📁 Project</span>
+        <span>{t("projectFilter.label")}</span>
         <select value={selectedProject ?? ""} onChange={handleChange} className="project-filter-select">
-          <option value="">All Projects ({issues.length})</option>
+          <option value="">{t("projectFilter.allProjects", { count: issues.length })}</option>
           {projects.map((project) => (
             <option key={project} value={project}>
               {project} ({counts.get(project)})

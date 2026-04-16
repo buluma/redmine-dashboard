@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useI18n } from "./I18nProvider";
 
 interface BulkAction {
   label: string;
@@ -16,6 +17,7 @@ interface BulkActionBarProps {
 
 export function BulkActionBar({ selectedCount, actions, onAction, onClear }: BulkActionBarProps) {
   const [selectedAction, setSelectedAction] = useState("");
+  const { t } = useI18n();
 
   const handleApply = useCallback(() => {
     if (selectedAction) {
@@ -28,14 +30,14 @@ export function BulkActionBar({ selectedCount, actions, onAction, onClear }: Bul
 
   return (
     <div className="bulk-action-bar">
-      <span className="bulk-count">{selectedCount} selected</span>
+      <span className="bulk-count">{t("bulkActions.selectedCount", { count: selectedCount })}</span>
       
       <select
         value={selectedAction}
         onChange={(e) => setSelectedAction(e.target.value)}
         className="bulk-select"
       >
-        <option value="">Select action...</option>
+        <option value="">{t("bulkActions.selectAction")}</option>
         {actions.map((action) => (
           <option key={action.value} value={action.value}>
             {action.label}
@@ -49,7 +51,7 @@ export function BulkActionBar({ selectedCount, actions, onAction, onClear }: Bul
         onClick={handleApply}
         disabled={!selectedAction}
       >
-        Apply
+        {t("bulkActions.applyBtn")}
       </button>
       
       <button
@@ -57,7 +59,7 @@ export function BulkActionBar({ selectedCount, actions, onAction, onClear }: Bul
         className="bulk-clear"
         onClick={onClear}
       >
-        Clear
+        {t("bulkActions.clearBtn")}
       </button>
     </div>
   );

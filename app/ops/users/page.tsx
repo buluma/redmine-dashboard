@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/src/lib/db";
 import { getSessionUserId } from "@/src/lib/session";
 import { requireRole, getRoleDisplayName } from "@/src/lib/rbac";
-import { UsersClient } from "./users-client";
+import { UserManagementAccessDenied } from "./access-denied";
 
 export const runtime = "nodejs";
 
@@ -17,15 +17,7 @@ export default async function UsersPage() {
   try {
     await requireRole("ADMIN");
   } catch {
-    return (
-      <main className="dashboard">
-        <section className="card">
-          <h1>Access Denied</h1>
-          <p className="muted">Only administrators can manage users.</p>
-
-        </section>
-      </main>
-    );
+    return <UserManagementAccessDenied />;
   }
 
   const users = await prisma.user.findMany({

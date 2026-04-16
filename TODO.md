@@ -1,7 +1,7 @@
 # TODO
 
 ## In Progress
-
+- [ ] **Localization (i18n)** — Adding support for multiple languages using `next-intl` or similar to support global teams.
 ## Pending
 
 ### ✨ Future / Post-MVP Features
@@ -10,7 +10,6 @@
 - [ ] **Command Palette (Cmd+K)** — Quick navigation launcher to instantly search for an issue, jump to a project, or trigger an action (keyboard-first workflow).
 - [ ] **Jira-Style Kanban Board** — A full agile board with drag-and-drop columns for statuses, allowing rapid triaging of issues.
 - [ ] **Real-Time WebSocket/SSE Updates Pipeline** — Pushing live atomic updates to clients via WebSockets / Server-Sent Events instead of relying purely on polling or background sync.
-- [ ] **Localization (i18n)** — Adding support for multiple languages using `next-intl` or similar to support global teams.
 
 ---
 

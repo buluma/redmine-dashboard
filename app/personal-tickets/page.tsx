@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/src/lib/session";
 import { PersonalTicketsDashboard } from "../heimdall/personal-tickets-activity";
+import { PersonalTicketsHeader } from "./personal-tickets-header";
 
 export const runtime = "nodejs";
 
@@ -13,19 +13,7 @@ export default async function PersonalTicketsPage() {
 
   return (
     <main className="dashboard reports-v2">
-      <header className="card hero">
-        <div className="hero-top">
-          <div>
-            <p className="kicker">Tickets</p>
-            <h1>Personal Tickets</h1>
-            <p className="muted">Track personal work items locally.</p>
-          </div>
-          <div className="hero-actions">
-
-          </div>
-        </div>
-      </header>
-
+      <PersonalTicketsHeader />
       <PersonalTicketsDashboard />
     </main>
   );

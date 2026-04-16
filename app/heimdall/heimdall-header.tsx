@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { RefreshButton } from "./refresh-button";
+import { useI18n } from "@/src/components/I18nProvider";
 
 interface HeimdallHeaderProps {
   totalLogs: number;
@@ -16,6 +16,7 @@ export function HeimdallHeader({ totalLogs, errorCount, hostCount }: HeimdallHea
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
   const [nextRefreshIn, setNextRefreshIn] = useState(AUTO_REFRESH_INTERVAL_MS / 1000);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const { t } = useI18n();
 
   const handleRefresh = useCallback(() => {
     setLastRefresh(new Date());
@@ -41,7 +42,7 @@ export function HeimdallHeader({ totalLogs, errorCount, hostCount }: HeimdallHea
   }, [autoRefreshEnabled, handleRefresh]);
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString("en-US", {
+    return date.toLocaleTimeString(undefined, {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
@@ -52,10 +53,14 @@ export function HeimdallHeader({ totalLogs, errorCount, hostCount }: HeimdallHea
     <header className="card hero">
       <div className="hero-top">
         <div>
-          <p className="kicker">Streamline</p>
-          <h1>Heimdall</h1>
+          <p className="kicker">{t("heimdall.kicker")}</p>
+          <h1>{t("heimdall.title")}</h1>
           <p className="muted">
-            Streamline Application Logs — {totalLogs} records · {errorCount} errors/warnings · {hostCount} host{hostCount !== 1 ? "s" : ""}
+            {t("heimdall.summary", { 
+              total: totalLogs, 
+              errors: errorCount, 
+              hosts: hostCount 
+            })}
           </p>
         </div>
         <div className="hero-actions">
@@ -66,10 +71,10 @@ export function HeimdallHeader({ totalLogs, errorCount, hostCount }: HeimdallHea
             type="button"
             className={`auto-refresh-toggle ${autoRefreshEnabled ? "active" : ""}`}
             onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
-            title={autoRefreshEnabled ? "Auto-refresh enabled (5 min)" : "Auto-refresh disabled"}
+            title={autoRefreshEnabled ? t("heimdall.autoRefreshOn") : t("heimdall.autoRefreshOff")}
           >
             <span className="toggle-indicator" />
-            Auto-refresh {autoRefreshEnabled ? "ON" : "OFF"}
+            {autoRefreshEnabled ? t("common.on") : t("common.off")}
           </button>
 
           {autoRefreshEnabled && (
@@ -77,8 +82,6 @@ export function HeimdallHeader({ totalLogs, errorCount, hostCount }: HeimdallHea
               ↻ {nextRefreshIn}s
             </span>
           )}
-
-
         </div>
       </div>
 

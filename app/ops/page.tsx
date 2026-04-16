@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "@/src/components/I18nProvider";
 
 type User = {
   id: string;
@@ -102,13 +103,13 @@ function formatDateTime(value: string | null): string {
   return new Date(value).toLocaleString("en-GB");
 }
 
-function formatDuration(ms: number | null): string {
+function formatDuration(ms: number | null, t: any): string {
   if (ms === null) return "-";
   const sec = Math.floor(ms / 1000);
-  if (sec < 60) return `${sec}s`;
+  if (sec < 60) return t("ops.durationSec", { sec });
   const min = Math.floor(sec / 60);
   const rem = sec % 60;
-  return `${min}m ${rem}s`;
+  return t("ops.durationFormat", { min, rem });
 }
 
 function checkPill(ok: boolean): string {
@@ -116,6 +117,7 @@ function checkPill(ok: boolean): string {
 }
 
 export default function OpsPage() {
+  const { t, formatDate } = useI18n();
   const [user, setUser] = useState<User | null>(null);
   const [syncState, setSyncState] = useState<SyncState>(null);
   const [latestJob, setLatestJob] = useState<SyncJob | null>(null);
@@ -193,7 +195,7 @@ export default function OpsPage() {
       try {
         await loadData();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load ops data");
+        setError(e instanceof Error ? e.message : t("common.error"));
       } finally {
         setLoading(false);
       }
@@ -315,18 +317,18 @@ export default function OpsPage() {
       <header className="card hero">
         <div className="hero-top">
           <div>
-            <p className="kicker">Converge Operations</p>
-            <h1>Sync Ops Console</h1>
+            <p className="kicker">{t("ops.kicker")}</p>
+            <h1>{t("ops.title")}</h1>
             <p className="muted">
-              {user ? `Operator: ${user.displayName} (${user.username})` : "Not signed in"}
+              {user ? t("ops.operator", { name: user.displayName, user: user.username }) : t("ops.notSignedIn")}
             </p>
           </div>
           <div className="hero-actions">
             <button type="button" onClick={() => void loadData()} disabled={loading}>
-              {loading ? "Refreshing..." : "Refresh"}
+              {loading ? t("ops.refreshing") : t("ops.refresh")}
             </button>
-            <button type="button" onClick={retryFullSync} disabled={retrying || !user} title="Syncs issues updated in the last 24 hours">
-              {retrying ? "Enqueueing..." : "Sync Last 24h"}
+            <button type="button" onClick={retryFullSync} disabled={retrying || !user}>
+              {retrying ? t("ops.enqueueing") : t("ops.sync24h")}
             </button>
           </div>
         </div>
@@ -337,11 +339,11 @@ export default function OpsPage() {
 
       {!user && (
         <section className="card">
-          <h2>Session Required</h2>
-          <p className="muted">Connect Redmine first, then return to Sync Ops.</p>
+          <h2>{t("ops.sessionRequired")}</h2>
+          <p className="muted">{t("ops.sessionRequiredDesc")}</p>
           <div className="hero-actions">
             <Link href="/" className="primary-link nav-link">
-              Open Dashboard
+              {t("ops.openDashboard")}
             </Link>
           </div>
         </section>
@@ -351,56 +353,56 @@ export default function OpsPage() {
         <>
           <section className="ops-grid">
             <article className="card">
-              <h2>Sync State</h2>
+              <h2>{t("ops.syncState")}</h2>
               <div className="ops-kv">
-                <p><strong>Status:</strong> {syncState?.lastSyncStatus ?? "idle"}</p>
+                <p><strong>{t("common.status")}:</strong> {syncState?.lastSyncStatus ?? t("ops.statusIdle")}</p>
                 <p><strong>Running Job:</strong> {syncState?.runningJobId ?? "-"}</p>
-                <p><strong>Last Incremental:</strong> {formatDateTime(syncState?.lastIncrementalSyncAt ?? null)}</p>
-                <p><strong>Last Full:</strong> {formatDateTime(syncState?.lastFullSyncAt ?? null)}</p>
+                <p><strong>Last Incremental:</strong> {formatDate(syncState?.lastIncrementalSyncAt ?? null)}</p>
+                <p><strong>Last Full:</strong> {formatDate(syncState?.lastFullSyncAt ?? null)}</p>
                 <p><strong>Last Error:</strong> {syncState?.lastError ?? "-"}</p>
               </div>
             </article>
 
             <article className="card">
-              <h2>Job Snapshot</h2>
+              <h2>{t("ops.jobSnapshot")}</h2>
               <div className="ops-kv">
                 <p><strong>Running/Pending:</strong> {runningJobs}</p>
                 <p><strong>Failed (window):</strong> {failedJobs}</p>
                 <p><strong>Latest Job:</strong> {latestJob?.id ?? "-"}</p>
                 <p><strong>Latest Type:</strong> {latestJob?.jobType ?? "-"}</p>
                 <p><strong>Latest Status:</strong> {latestJob?.status ?? "-"}</p>
-                <p><strong>Latest Duration:</strong> {formatDuration(latestJob?.durationMs ?? null)}</p>
+                <p><strong>Latest Duration:</strong> {formatDuration(latestJob?.durationMs ?? null, t)}</p>
               </div>
             </article>
           </section>
 
           <section className="ops-grid">
             <article className="card">
-              <h2>Health Checks</h2>
+              <h2>{t("ops.healthChecks")}</h2>
               <div className="health-grid">
                 <div className="health-row">
-                  <span>Overall</span>
+                  <span>{t("ops.checkOverall")}</span>
                   <span className={`sync-pill ${checkPill(health?.status === "ok")}`}>{health?.status ?? "unknown"}</span>
                 </div>
                 <div className="health-row">
-                  <span>Database</span>
+                  <span>{t("ops.checkDatabase")}</span>
                   <span className={`sync-pill ${checkPill(Boolean(health?.checks?.database?.ok))}`}>
                     {health?.checks?.database?.ok ? "ok" : "failed"}
                   </span>
                 </div>
                 <div className="health-row">
-                  <span>Redmine Probe</span>
+                  <span>{t("ops.checkRedmine")}</span>
                   <span className={`sync-pill ${checkPill(Boolean(health?.checks?.redmine?.ok || health?.checks?.redmine?.mode === "skipped"))}`}>
                     {health?.checks?.redmine?.mode === "skipped" ? "skipped" : health?.checks?.redmine?.ok ? "ok" : "failed"}
                   </span>
                 </div>
                 <div className="health-row">
-                  <span>Stale Jobs</span>
+                  <span>{t("ops.checkStale")}</span>
                   <span>{health?.checks?.scheduler?.staleRunningJobs ?? "-"}</span>
                 </div>
               </div>
               <p className="muted ops-note">
-                Checked at {health?.timestamp ? new Date(health.timestamp).toLocaleString() : "-"}.
+                {t("ops.checkedAt", { date: health?.timestamp ? formatDate(health.timestamp) : "-" })}
                 {health?.checks?.redmine?.error ? ` Redmine error: ${health.checks.redmine.error}` : ""}
                 {health?.checks?.database?.error ? ` DB error: ${health.checks.database.error}` : ""}
               </p>
@@ -473,14 +475,14 @@ export default function OpsPage() {
               <table className="issues-table">
                 <thead>
                   <tr>
-                    <th>Job ID</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Started</th>
-                    <th>Ended</th>
-                    <th>Duration</th>
-                    <th>Error</th>
-                    <th>Actions</th>
+                    <th>{t("ops.colJobId")}</th>
+                    <th>{t("ops.colType")}</th>
+                    <th>{t("ops.colStatus")}</th>
+                    <th>{t("ops.colStarted")}</th>
+                    <th>{t("ops.colEnded")}</th>
+                    <th>{t("ops.colDuration")}</th>
+                    <th>{t("ops.colError")}</th>
+                    <th>{t("ops.colActions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -505,7 +507,7 @@ export default function OpsPage() {
                             onClick={() => cancelJob(job.id)}
                             disabled={cancelling === job.id}
                           >
-                            {cancelling === job.id ? 'Cancelling...' : 'Cancel'}
+                            {cancelling === job.id ? t("ops.cancelling") : t("ops.cancel")}
                           </button>
                         ) : job.status === 'failed' ? (
                           <button
@@ -513,7 +515,7 @@ export default function OpsPage() {
                             onClick={() => restartJob(job.id)}
                             disabled={restarting === job.id}
                           >
-                            {restarting === job.id ? 'Restarting...' : 'Restart'}
+                            {restarting === job.id ? t("ops.restarting") : t("ops.restart")}
                           </button>
                         ) : (
                           <span className="muted">-</span>
@@ -530,10 +532,10 @@ export default function OpsPage() {
             <div className="table-toolbar">
               <h2>Web Logs</h2>
               <div className="toolbar-right">
-                <span className="muted">{filteredLogs.length} of {logs.length} rows · {errorLogs} errors</span>
+                <span className="muted">{t("ops.rowsInfo", { filtered: filteredLogs.length, total: logs.length, errors: errorLogs })}</span>
                 <input
                   type="text"
-                  placeholder="Filter..."
+                  placeholder={t("ops.filterPlaceholder")}
                   value={logFilter}
                   onChange={(e) => setLogFilter(e.target.value)}
                   className="log-filter-input"
@@ -542,7 +544,7 @@ export default function OpsPage() {
             </div>
             <div className="logs-list">
               {filteredLogs.length === 0 && (
-                <p className="muted">No logs{logFilter ? " matching filter" : ""}.</p>
+                <p className="muted">{t(logFilter ? "ops.noLogsMatching" : "ops.noLogs")}.</p>
               )}
               {filteredLogs.map((log) => (
                 <article key={log.id} className={`log-entry log-${log.level}`}>
@@ -575,12 +577,12 @@ export default function OpsPage() {
               <table className="issues-table">
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Prefix</th>
-                    <th>Created</th>
-                    <th>Last Used</th>
-                    <th>Expires</th>
-                    <th>Action</th>
+                    <th>{t("ops.colName")}</th>
+                    <th>{t("ops.colPrefix")}</th>
+                    <th>{t("ops.colStarted")}</th>
+                    <th>{t("ops.colUpdated")}</th>
+                    <th>{t("ops.colDuration")}</th>
+                    <th>{t("ops.colActions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -603,7 +605,7 @@ export default function OpsPage() {
                           disabled={revokingTokenId === token.id}
                           onClick={() => void revokeToken(token.id)}
                         >
-                          {revokingTokenId === token.id ? "Revoking..." : "Revoke"}
+                          {revokingTokenId === token.id ? t("ops.revoking") : t("ops.revoke")}
                         </button>
                       </td>
                     </tr>

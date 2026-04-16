@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useI18n } from "./I18nProvider";
 
 type Locale = "en" | "es" | "de" | "fr" | "ja" | "zh" | "ru" | "uk" | "af" | "tl" | "pl" | "vi";
 
@@ -21,17 +21,10 @@ const languages = [
 ];
 
 export function LanguageSwitcher() {
-  const [locale, setLocale] = useState<Locale>("en");
-
-  useEffect(() => {
-    const stored = localStorage.getItem("converge-locale") as Locale;
-    if (stored) setLocale(stored);
-  }, []);
+  const { locale, setLocale } = useI18n();
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newLocale = e.target.value as Locale;
-    setLocale(newLocale);
-    localStorage.setItem("converge-locale", newLocale);
+    setLocale(e.target.value as Locale);
   };
 
   return (

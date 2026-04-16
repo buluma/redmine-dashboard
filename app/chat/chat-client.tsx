@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useI18n } from '@/src/components/I18nProvider';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -38,20 +39,6 @@ type ChatMessage = {
 // Constants
 // ---------------------------------------------------------------------------
 
-const WELCOME_CONTENT =
-  "Hello! I'm your AI assistant. I can help you with:\n\n" +
-  '• Searching and analyzing Redmine issues\n' +
-  '• Answering questions about your project logs\n' +
-  '• Finding information in system traces\n' +
-  '• Summarizing error patterns\n\n' +
-  '🛠️ I can also take **actions** on your behalf:\n' +
-  '• Update issue status\n' +
-  '• Log time entries\n' +
-  '• Add comments\n' +
-  '• Close issues\n\n' +
-  'Mutating actions always require your confirmation first.\n\n' +
-  'How can I help you today?';
-
 const TOOL_ICON_MAP: Record<string, string> = {
   update_status: '🔄',
   log_time: '⏱️',
@@ -69,14 +56,38 @@ const TOOL_ICON_MAP: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 export function ChatInterface() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: WELCOME_CONTENT,
-      createdAt: new Date(),
-    },
-  ]);
+  const { t } = useI18n();
+
+  const welcomeContent = useMemo(() => {
+    return (
+      `${t("chat.welcomeTitle")}\n\n` +
+      `• ${t("chat.welcomeItem1")}\n` +
+      `• ${t("chat.welcomeItem2")}\n` +
+      `• ${t("chat.welcomeItem3")}\n` +
+      `• ${t("chat.welcomeItem4")}\n\n` +
+      `${t("chat.welcomeActionsTitle")}\n` +
+      `• ${t("chat.welcomeAction1")}\n` +
+      `• ${t("chat.welcomeAction2")}\n` +
+      `• ${t("chat.welcomeAction3")}\n` +
+      `• ${t("chat.welcomeAction4")}\n\n` +
+      `${t("chat.welcomeFooter")}`
+    );
+  }, [t]);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  // Initialize welcome message once
+  useEffect(() => {
+    setMessages([
+      {
+        id: 'welcome',
+        role: 'assistant',
+        content: welcomeContent,
+        createdAt: new Date(),
+      },
+    ]);
+  }, [welcomeContent]);
+
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -130,8 +141,7 @@ export function ChatInterface() {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content:
-          data.message?.content ||
-          "I couldn't get a response. Please try again.",
+          data.message?.content || t("chat.errorResponse"),
         createdAt: new Date(),
         pendingToolCalls: data.pendingToolCalls ?? undefined,
         conversationContext: data.conversationContext ?? undefined,
@@ -143,7 +153,7 @@ export function ChatInterface() {
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
+        content: t("chat.errorGeneral"),
         createdAt: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -185,7 +195,7 @@ export function ChatInterface() {
       const resultMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.message?.content || 'Actions completed.',
+        content: data.message?.content || t("chat.actionsCompleted"),
         createdAt: new Date(),
         executedTools: data.executedTools ?? undefined,
       };
@@ -195,8 +205,7 @@ export function ChatInterface() {
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content:
-          'Sorry, there was an error executing the actions. Please try again.',
+        content: t("chat.errorExecuting"),
         createdAt: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -218,7 +227,7 @@ export function ChatInterface() {
     const cancelMessage: ChatMessage = {
       id: (Date.now() + 1).toString(),
       role: 'assistant',
-      content: 'No problem — I\'ve cancelled those actions. Let me know if you need anything else.',
+      content: t("chat.actionsCancelled"),
       createdAt: new Date(),
     };
     setMessages((prev) => [...prev, cancelMessage]);
@@ -232,7 +241,7 @@ export function ChatInterface() {
       {
         id: 'welcome',
         role: 'assistant',
-        content: WELCOME_CONTENT,
+        content: welcomeContent,
         createdAt: new Date(),
       },
     ]);
@@ -257,10 +266,10 @@ export function ChatInterface() {
               <div className="message-header">
                 <span className="message-role">
                   {msg.role === 'user'
-                    ? 'You'
+                    ? t("chat.roleYou")
                     : msg.role === 'assistant'
-                      ? 'AI'
-                      : 'System'}
+                      ? t("chat.roleAi")
+                      : t("chat.roleSystem")}
                 </span>
                 <span className="message-time">
                   {mounted ? msg.createdAt.toLocaleTimeString() : ''}
@@ -296,7 +305,7 @@ export function ChatInterface() {
                     <div className="tool-card-header">
                       <span className="tool-card-icon">🛠️</span>
                       <span className="tool-card-title">
-                        Proposed Actions
+                        {t("chat.proposedActions")}
                       </span>
                     </div>
                     <div className="tool-card-list">
@@ -317,14 +326,14 @@ export function ChatInterface() {
                         onClick={() => handleConfirmTools(msg.id)}
                         disabled={isLoading}
                       >
-                        ✅ Confirm
+                        ✅ {t("chat.confirm")}
                       </button>
                       <button
                         className="tool-btn reject"
                         onClick={() => handleRejectTools(msg.id)}
                         disabled={isLoading}
                       >
-                        ❌ Reject
+                        ❌ {t("chat.reject")}
                       </button>
                     </div>
                   </div>
@@ -338,7 +347,7 @@ export function ChatInterface() {
                     <div className="tool-card-header">
                       <span className="tool-card-icon">🛠️</span>
                       <span className="tool-card-title">
-                        Actions Processed
+                        {t("chat.actionsProcessed")}
                       </span>
                     </div>
                     <div className="tool-card-list">
@@ -364,8 +373,8 @@ export function ChatInterface() {
             <div className="message-avatar">🤖</div>
             <div className="message-content">
               <div className="message-header">
-                <span className="message-role">AI</span>
-                <span className="message-time">typing...</span>
+                <span className="message-role">{t("chat.roleAi")}</span>
+                <span className="message-time">{t("chat.typing")}</span>
               </div>
               <div className="message-body loading">
                 <span className="typing-indicator">
@@ -385,11 +394,11 @@ export function ChatInterface() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your message... (e.g. &quot;close issue #123&quot;)"
+          placeholder={t("chat.placeholder")}
           disabled={isLoading}
         />
         <button type="submit" disabled={isLoading || !input.trim()}>
-          {isLoading ? '...' : 'Send'}
+          {isLoading ? '...' : t("chat.send")}
         </button>
       </form>
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useI18n } from "@/src/components/I18nProvider";
 
 interface WebhookSubscription {
   id: string;
@@ -20,19 +21,20 @@ interface Props {
   subscriptions: WebhookSubscription[];
 }
 
-const EVENT_LABELS: Record<string, string> = {
-  "ticket.created": "🎫 Created",
-  "ticket.updated": "📝 Updated",
-  "ticket.status_changed": "🔄 Status",
-  "ticket.assigned": "👤 Assigned",
-  "ticket.completed": "✅ Completed",
-  "ticket.deleted": "🗑️ Deleted",
-};
-
-const ALL_EVENTS = Object.keys(EVENT_LABELS);
-
 export function WebhooksClient({ subscriptions }: Props) {
+  const { t } = useI18n();
   const [subs, setSubs] = useState(subscriptions);
+
+  const eventLabels: Record<string, string> = useMemo(() => ({
+    "ticket.created": t("webhooks.eventTicketCreated"),
+    "ticket.updated": t("webhooks.eventTicketUpdated"),
+    "ticket.status_changed": t("webhooks.eventTicketStatus"),
+    "ticket.assigned": t("webhooks.eventTicketAssigned"),
+    "ticket.completed": t("webhooks.eventTicketCompleted"),
+    "ticket.deleted": t("webhooks.eventTicketDeleted"),
+  }), [t]);
+
+  const allEvents = useMemo(() => Object.keys(eventLabels), [eventLabels]);
   const [showForm, setShowForm] = useState(false);
   const [editingSub, setEditingSub] = useState<WebhookSubscription | null>(null);
   const [formData, setFormData] = useState({
@@ -76,11 +78,11 @@ export function WebhooksClient({ subscriptions }: Props) {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.events.length === 0) {
-      alert("Select at least one event");
+      alert(t("webhooks.selectOneEvent"));
       return;
     }
     if (!formData.name.trim() || !formData.url) {
-      alert("Name and URL are required");
+      alert(t("webhooks.nameUrlRequired"));
       return;
     }
 
@@ -98,7 +100,7 @@ export function WebhooksClient({ subscriptions }: Props) {
         fetchSubscriptions();
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to update webhook");
+        alert(data.error || t("webhooks.updateFailed"));
       }
     } finally {
       setSubmitting(false);
@@ -111,7 +113,7 @@ export function WebhooksClient({ subscriptions }: Props) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this webhook subscription?")) return;
+    if (!confirm(t("webhooks.confirmDelete"))) return;
     const res = await fetch(`/api/webhooks/subscriptions/${id}`, {
       method: "DELETE",
     });
@@ -123,7 +125,7 @@ export function WebhooksClient({ subscriptions }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.events.length === 0) {
-      alert("Select at least one event");
+      alert(t("webhooks.selectOneEvent"));
       return;
     }
 
@@ -141,7 +143,7 @@ export function WebhooksClient({ subscriptions }: Props) {
         fetchSubscriptions();
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to create webhook");
+        alert(data.error || t("webhooks.createFailed"));
       }
     } finally {
       setSubmitting(false);
@@ -149,15 +151,15 @@ export function WebhooksClient({ subscriptions }: Props) {
   };
 
   const handleTest = async () => {
-    if (!confirm("Send test webhook to all active subscribers?")) return;
+    if (!confirm(t("webhooks.confirmTest"))) return;
     setTesting(true);
     try {
       const res = await fetch("/api/webhooks/test", { method: "POST" });
       if (res.ok) {
-        alert("Test webhook sent! Check your endpoint logs.");
+        alert(t("webhooks.testSent"));
         fetchSubscriptions();
       } else {
-        alert("Failed to send test webhook");
+        alert(t("webhooks.testFailed"));
       }
     } finally {
       setTesting(false);
@@ -178,25 +180,25 @@ export function WebhooksClient({ subscriptions }: Props) {
       {/* Subscriptions Table */}
       <section className="card">
         <div className="table-toolbar">
-          <h2>Subscriptions</h2>
+          <h2>{t("webhooks.title")}</h2>
           <div className="toolbar-actions">
             <button
               onClick={handleTest}
               disabled={testing || subs.filter(s => s.active).length === 0}
               className="secondary-button"
             >
-              {testing ? "Sending..." : "🧪 Test All"}
+              {testing ? t("webhooks.sending") : t("webhooks.testAll")}
             </button>
             {editingSub ? (
               <button onClick={handleCancelEdit} className="secondary-button">
-                ✕ Cancel Edit
+                {t("webhooks.cancelEdit")}
               </button>
             ) : (
               <button
                 onClick={() => setShowForm(!showForm)}
                 className="primary-button"
               >
-                {showForm ? "✕ Cancel" : "+ Add Subscription"}
+                {showForm ? t("webhooks.cancel") : t("webhooks.addSubscription")}
               </button>
             )}
           </div>
@@ -205,53 +207,53 @@ export function WebhooksClient({ subscriptions }: Props) {
         {/* Create Form */}
         {showForm && (
           <div className="webhook-form">
-            <h3>New Webhook Subscription</h3>
+            <h3>{t("webhooks.newWebhook")}</h3>
             <form onSubmit={handleSubmit}>
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="name">Name *</label>
+                  <label htmlFor="name">{t("webhooks.nameLabel")}</label>
                   <input
                     id="name"
                     type="text"
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="My External System"
+                    placeholder={t("webhooks.namePlaceholder")}
                     required
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="url">Webhook URL *</label>
+                  <label htmlFor="url">{t("webhooks.urlLabel")}</label>
                   <input
                     id="url"
                     type="url"
                     value={formData.url}
                     onChange={e => setFormData({ ...formData, url: e.target.value })}
-                    placeholder="https://my-system.com/webhook"
+                    placeholder={t("webhooks.urlPlaceholder")}
                     required
                   />
                 </div>
               </div>
               <div className="form-group">
-                <label htmlFor="secret">Secret (optional, for HMAC signing)</label>
+                <label htmlFor="secret">{t("webhooks.secretLabel")}</label>
                 <input
                   id="secret"
                   type="password"
                   value={formData.secret}
                   onChange={e => setFormData({ ...formData, secret: e.target.value })}
-                  placeholder="Leave empty for no signing"
+                  placeholder={t("webhooks.secretPlaceholder")}
                 />
               </div>
               <div className="form-group">
-                <label>Events to Subscribe *</label>
+                <label>{t("webhooks.eventsLabel")}</label>
                 <div className="event-checkboxes">
-                  {ALL_EVENTS.map(event => (
+                  {allEvents.map(event => (
                     <label key={event} className="event-checkbox">
                       <input
                         type="checkbox"
                         checked={formData.events.includes(event)}
                         onChange={() => toggleEvent(event)}
                       />
-                      <span>{EVENT_LABELS[event]}</span>
+                      <span>{eventLabels[event]}</span>
                     </label>
                   ))}
                 </div>
@@ -262,14 +264,14 @@ export function WebhooksClient({ subscriptions }: Props) {
                   onClick={() => setShowForm(false)}
                   className="secondary-button"
                 >
-                  Cancel
+                  {t("webhooks.cancel")}
                 </button>
                 <button
                   type="submit"
                   className="primary-button"
                   disabled={submitting}
                 >
-                  {submitting ? "Creating..." : "Create Subscription"}
+                  {submitting ? t("webhooks.creatingBtn") : t("webhooks.createBtn")}
                 </button>
               </div>
             </form>
@@ -279,63 +281,63 @@ export function WebhooksClient({ subscriptions }: Props) {
         {/* Edit Form */}
         {editingSub && (
           <div className="webhook-form">
-            <h3>Edit: {editingSub.name}</h3>
+            <h3>{t("webhooks.editWebhook", { name: editingSub.name })}</h3>
             <form onSubmit={handleEditSubmit}>
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="edit-name">Name *</label>
+                  <label htmlFor="edit-name">{t("webhooks.nameLabel")}</label>
                   <input
                     id="edit-name"
                     type="text"
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Subscription name"
+                    placeholder={t("webhooks.namePlaceholder")}
                     required
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="edit-url">Webhook URL *</label>
+                  <label htmlFor="edit-url">{t("webhooks.urlLabel")}</label>
                   <input
                     id="edit-url"
                     type="url"
                     value={formData.url}
                     onChange={e => setFormData({ ...formData, url: e.target.value })}
-                    placeholder="https://..."
+                    placeholder={t("webhooks.urlPlaceholder")}
                     required
                   />
                 </div>
               </div>
               <div className="form-group">
-                <label htmlFor="edit-secret">Secret (leave empty to keep current)</label>
+                <label htmlFor="edit-secret">{t("webhooks.secretEditLabel")}</label>
                 <input
                   id="edit-secret"
                   type="password"
                   value={formData.secret}
                   onChange={e => setFormData({ ...formData, secret: e.target.value })}
-                  placeholder="New secret (optional)"
+                  placeholder={t("webhooks.secretEditPlaceholder")}
                 />
               </div>
               <div className="form-group">
-                <label>Events *</label>
+                <label>{t("webhooks.eventsLabelShort")}</label>
                 <div className="event-checkboxes">
-                  {ALL_EVENTS.map(event => (
+                  {allEvents.map(event => (
                     <label key={event} className="event-checkbox">
                       <input
                         type="checkbox"
                         checked={formData.events.includes(event)}
                         onChange={() => toggleEvent(event)}
                       />
-                      <span>{EVENT_LABELS[event]}</span>
+                      <span>{eventLabels[event]}</span>
                     </label>
                   ))}
                 </div>
               </div>
               <div className="form-actions">
                 <button type="button" onClick={handleCancelEdit} className="secondary-button">
-                  Cancel
+                  {t("webhooks.cancel")}
                 </button>
                 <button type="submit" disabled={submitting} className="primary-button">
-                  {submitting ? "Saving..." : "Save Changes"}
+                  {submitting ? t("webhooks.savingBtn") : t("webhooks.saveBtn")}
                 </button>
               </div>
             </form>
@@ -346,19 +348,19 @@ export function WebhooksClient({ subscriptions }: Props) {
           <table className="issues-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>URL</th>
-                <th>Events</th>
-                <th>Status</th>
-                <th>Last Delivery</th>
-                <th>Actions</th>
+                <th>{t("webhooks.tableName")}</th>
+                <th>{t("webhooks.tableUrl")}</th>
+                <th>{t("webhooks.tableEvents")}</th>
+                <th>{t("webhooks.tableStatus")}</th>
+                <th>{t("webhooks.tableLast")}</th>
+                <th>{t("webhooks.tableActions")}</th>
               </tr>
             </thead>
             <tbody>
               {subs.length === 0 && (
                 <tr>
                   <td colSpan={6} className="muted">
-                    No webhook subscriptions yet. Click &quot;Add Subscription&quot; to create one.
+                    {t("webhooks.noSubscriptions")}
                   </td>
                 </tr>
               )}
@@ -395,7 +397,7 @@ export function WebhooksClient({ subscriptions }: Props) {
                         {sub.lastStatus || "-"}
                       </span>
                     ) : (
-                      "Never"
+                      t("webhooks.never")
                     )}
                   </td>
                   <td>
@@ -405,13 +407,13 @@ export function WebhooksClient({ subscriptions }: Props) {
                         className="secondary-button btn-sm"
                         disabled={editingSub !== null}
                       >
-                        Edit
+                        {t("webhooks.edit")}
                       </button>
                       <button
                         onClick={() => handleDelete(sub.id)}
                         className="danger-button btn-sm"
                       >
-                        Delete
+                        {t("webhooks.delete")}
                       </button>
                     </div>
                   </td>

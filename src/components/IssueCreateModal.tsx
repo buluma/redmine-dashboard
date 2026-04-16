@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useToast } from "./ToastProvider";
+import { useI18n } from "./I18nProvider";
 
 interface Project {
   id: number;
@@ -28,6 +29,7 @@ interface IssueCreateModalProps {
 
 export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorities }: IssueCreateModalProps) {
   const toast = useToast();
+  const { t } = useI18n();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -80,7 +82,7 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!subject || !projectId) {
-      toast.error("Subject and Project are required");
+      toast.error(t("createIssue.errorRequired"));
       return;
     }
 
@@ -101,17 +103,17 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Failed to create issue");
+        throw new Error(data.error || t("createIssue.errorFailed"));
       }
 
-      toast.success("Issue created successfully");
+      toast.success(t("createIssue.successToast"));
       onCreated(data.issue);
       onClose();
       // Reset form
       setSubject("");
       setDescription("");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Creation failed");
+      toast.error(error instanceof Error ? error.message : t("common.error"));
     } finally {
       setSubmitting(false);
     }
@@ -123,20 +125,20 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>🆕 Create New Issue</h2>
+          <h2>{t("createIssue.title")}</h2>
           <button type="button" className="close-btn" onClick={onClose}>✕</button>
         </div>
 
         <form onSubmit={handleSubmit} className="issue-form">
           <div className="form-group">
-            <label>Project *</label>
+            <label>{t("createIssue.projectLabel")}</label>
             <select 
               value={projectId} 
               onChange={(e) => setProjectId(Number(e.target.value))}
               disabled={loadingProjects}
               required
             >
-              <option value={0} disabled>Select a project...</option>
+              <option value={0} disabled>{t("createIssue.projectPlaceholder")}</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
@@ -144,29 +146,29 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
           </div>
 
           <div className="form-group">
-            <label>Subject *</label>
+            <label>{t("createIssue.subjectLabel")}</label>
             <input 
               type="text" 
               value={subject} 
               onChange={(e) => setSubject(e.target.value)} 
-              placeholder="Brief summary of the issue"
+              placeholder={t("createIssue.subjectPlaceholder")}
               required 
             />
           </div>
 
           <div className="form-group">
-            <label>Description</label>
+            <label>{t("createIssue.descriptionLabel")}</label>
             <textarea 
               value={description} 
               onChange={(e) => setDescription(e.target.value)} 
-              placeholder="Detailed explanation..."
+              placeholder={t("createIssue.descriptionPlaceholder")}
               rows={4}
             />
           </div>
 
           <div className="form-row">
             <div className="form-group">
-              <label>Status</label>
+              <label>{t("createIssue.statusLabel")}</label>
               <select value={statusId} onChange={(e) => setStatusId(Number(e.target.value))}>
                 {statuses.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
@@ -175,7 +177,7 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
             </div>
 
             <div className="form-group">
-              <label>Priority</label>
+              <label>{t("createIssue.priorityLabel")}</label>
               <select value={priorityId} onChange={(e) => setPriorityId(Number(e.target.value))}>
                 {priorities.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
@@ -185,7 +187,7 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
           </div>
 
           <div className="form-group">
-            <label>Due Date</label>
+            <label>{t("createIssue.dueDateLabel")}</label>
             <input 
               type="date" 
               value={dueDate} 
@@ -195,10 +197,10 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
 
           <div className="modal-actions">
             <button type="button" className="secondary-button" onClick={onClose} disabled={submitting}>
-              Cancel
+              {t("createIssue.cancelBtn")}
             </button>
             <button type="submit" className="primary-button" disabled={submitting || loadingProjects}>
-              {submitting ? "Creating..." : "Create Issue"}
+              {submitting ? t("createIssue.creatingBtn") : t("createIssue.createBtn")}
             </button>
           </div>
         </form>
