@@ -4,6 +4,7 @@
 // process.env is handled by Next.js at build time.
 
 import { useState, useEffect, useCallback } from "react";
+import { useI18n } from "@/src/components/I18nProvider";
 import { urlBase64ToUint8Array } from "@/src/lib/push-utils";
 
 interface Notification {
@@ -21,6 +22,7 @@ interface NotificationsPanelProps {
 }
 
 export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPanelProps) {
+  const { t } = useI18n();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -76,7 +78,7 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
       const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
       if (!publicKey) {
-        throw new Error("VAPID public key not found");
+        throw new Error(t('notifications.vapidNotFound'));
       }
 
       const subscription = await registration.pushManager.subscribe({
@@ -93,11 +95,11 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
       if (res.ok) {
         setIsSubscribed(true);
       } else {
-        throw new Error("Failed to save subscription on server");
+        throw new Error(t('notifications.saveSubFailed'));
       }
     } catch (error) {
-      console.error("Push subscription failed:", error);
-      alert("Failed to enable push notifications. Please check your browser permissions.");
+      console.error(t('notifications.subFailed'), error);
+      alert(t('notifications.pushPermissionFailed'));
     } finally {
       setIsPushLoading(false);
     }
@@ -139,10 +141,10 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "Just now";
-    if (mins < 60) return `${mins}m ago`;
+    if (mins < 1) return t('notifications.justNow');
+    if (mins < 60) return t('notifications.minsAgo', { mins });
     const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
+    if (hours < 24) return t('notifications.hoursAgo', { hours });
     const days = Math.floor(hours / 24);
     if (days < 7) return `${days}d ago`;
     return date.toLocaleDateString();
@@ -174,14 +176,14 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
       {isOpen && (
         <div className="notif-dropdown">
           <div className="notif-header">
-            <span>Notifications</span>
+            <span>{t('notifications.title')}</span>
             {isLoading ? (
-              <span className="notif-loading">Loading...</span>
+              <span className="notif-loading">{t('common.loading')}</span>
             ) : (
               <div className="notif-actions">
                 {unreadCount > 0 && (
                   <button type="button" onClick={markAllRead} className="notif-action">
-                    Mark all read
+                    {t('notifications.markAllRead')}
                   </button>
                 )}
               </div>
@@ -190,9 +192,9 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
 
           <div className="notif-list">
             {isLoading ? (
-              <p className="notif-empty">Loading...</p>
+              <p className="notif-empty">{t('common.loading')}</p>
             ) : notifications.length === 0 ? (
-              <p className="notif-empty">No notifications</p>
+              <p className="notif-empty">{t('notifications.noNotifications')}</p>
             ) : (
               notifications.map((notif) => (
                 <a
@@ -225,7 +227,7 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
                 onClick={isSubscribed ? unsubscribeFromPush : subscribeToPush}
                 disabled={isPushLoading}
               >
-                {isPushLoading ? "Working..." : isSubscribed ? "🔔 Push Notifications On" : "notifications_off Enable Push Notifications"}
+                {isPushLoading ? t('notifications.working') : isSubscribed ? t('notifications.pushOn') : t('notifications.pushOff')}
               </button>
             </div>
           )}

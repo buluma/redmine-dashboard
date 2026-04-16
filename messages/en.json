@@ -17,7 +17,9 @@
     "confirm": "Confirm",
     "yes": "Yes",
     "no": "No",
-    "action": "Action"
+    "action": "Action",
+    "updated": "Updated",
+    "status": "Status"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -59,6 +61,7 @@
   },
   "issues": {
     "subject": "Subject",
+    "colNumber": "#",
     "description": "Description",
     "status": "Status",
     "priority": "Priority",
@@ -74,6 +77,7 @@
     "updated": "Updated",
     "showCode": "Show code ({count} lines)",
     "notSet": "Not set",
+    "imageAlt": "[Image: {filename}]",
     "ago": {
       "s": "{count}s ago",
       "m": "{count}m ago",
@@ -93,7 +97,12 @@
       "redmineUpdated": "Issue updated in Redmine successfully.",
       "githubLinked": "GitHub link added.",
       "githubRemoved": "GitHub link removed.",
-      "noteFailed": "Failed to add note"
+      "noteFailed": "Failed to add note",
+      "statusUpdated": "Status updated in Redmine.",
+      "assigned": "Issue assigned.",
+      "timeLogged": "Time entry logged.",
+      "assignFailed": "Failed to assign",
+      "assignedTo": "Assigned to {name}"
     },
     "fields": {
       "author": "Author",
@@ -126,7 +135,8 @@
       "subtickets": "No subtickets",
       "github": "No GitHub references linked yet",
       "noCategory": "No Category",
-      "noPriority": "No Priority"
+      "noPriority": "No Priority",
+      "unset": "Unset"
     },
     "placeholders": {
       "comment": "Add a comment...",
@@ -138,7 +148,36 @@
       "edit": "Edit",
       "delete": "Delete",
       "refresh": "Refresh",
-      "linkGithub": "Link GitHub"
+      "linkGithub": "Link GitHub",
+      "addToFavorites": "Add to favorites",
+      "removeFromFavorites": "Remove from favorites",
+      "favorite": "☆ Favorite",
+      "favorited": "★ Favorited",
+      "assign": "Assign",
+      "assignTo": "Assign to {name}",
+      "select": "Select..."
+    },
+    "badges": {
+      "local": "🟢 Local"
+    },
+    "tooltips": {
+      "openInRedmineNotCached": "Open in Redmine (not cached locally)",
+      "notAvailableLocally": "Not available locally"
+    },
+    "redmineSource": "Redmine source:",
+    "values": {
+      "trueYes": "✓ Yes",
+      "falseNo": "✗ No"
+    },
+    "trackers": {
+      "issue": "Issue",
+      "ticket": "Ticket",
+      "bug": "Bug",
+      "bugs": "Bugs",
+      "feature": "Feature",
+      "features": "Features",
+      "activity": "Activity",
+      "activities": "Activities"
     }
   },
   "status": {
@@ -170,7 +209,28 @@
     "noChatMessages": "No chat messages yet.",
     "autoRefresh": "Auto-refresh {status}",
     "autoRefreshTitle": "Auto-refresh {status, select, ON {enabled (5 min)} OFF {disabled}}",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "statusLoading": "Loading AI status...",
+    "indicatorText": "AI",
+    "statusHealthy": "AI: {modelName}",
+    "statusUnhealthy": "AI: {error}",
+    "usingFallbackModel": "Using fallback model",
+    "statusTitle": "AI Status",
+    "statusOnline": "Online",
+    "statusOffline": "Offline",
+    "providerLabel": "Provider",
+    "modelLabel": "Model",
+    "fallbackLabel": "Fallback",
+    "featuresLabel": "Features",
+    "featureSummarize": "📝 Summarize",
+    "featureSearch": "🔍 Search",
+    "featureCategorize": "🏷️ Categorize",
+    "featureChat": "💬 Chat",
+    "availableModels": "Available Models ({count})",
+    "refreshButton": "🔄 Refresh",
+    "fetchStatusFailed": "Failed to fetch AI status",
+    "serviceUnavailable": "AI service unavailable",
+    "insightsCount": "{count, plural, =0 {No available AI insights.} one {1 AI insight generated} other {# AI insights generated}}"
   },
   "sync": {
     "syncing": "Syncing...",
@@ -178,7 +238,9 @@
     "failed": "Failed",
     "noChanges": "No changes detected",
     "pulling": "Pulling from Redmine...",
-    "pushing": "Pushing to Redmine..."
+    "pushing": "Pushing to Redmine...",
+    "noDetailError": "Sync failed with no detail from the server.",
+    "prismaOutdatedError": "Local Prisma client is outdated. Run `npm run prisma:generate` and restart the app."
   },
   "auth": {
     "login": "Login",
@@ -204,7 +266,8 @@
     "launchDashboard": "Launch Dashboard",
     "usingEnv": "Using .env...",
     "useEnvConfig": "Use .env Configuration",
-    "envBootstrapHelp": ".env bootstrap is available only on first run (active credentials: {activeCredentials})."
+    "envBootstrapHelp": ".env bootstrap is available only on first run (active credentials: {activeCredentials}).",
+    "connectionFailed": "Connection failed"
   },
   "hero": {
     "kicker": "Operations Hub",
@@ -250,7 +313,7 @@
     "sortPriority": "Priority",
     "sortDueDate": "Due Date",
     "search": "Search",
-    "searchPlaceholder": "Subject, description, assignee",
+    "searchPlaceholder": "Search messages...",
     "searchSource": "Search Source",
     "sourceLocal": "Local Cache",
     "sourceHybrid": "Hybrid (Redmine + Cache)",
@@ -332,7 +395,11 @@
     "pageInfo": "Page {current} of {max}",
     "showing": " · Showing {start}–{end} of {total}",
     "filtered": " (filtered from {unfilteredTotal})",
-    "queueHidden": "Queue hidden. {loadedCount} issue(s) loaded, {selectedCount} selected."
+    "queueHidden": {
+      "=0": "Queue hidden.",
+      "one": "Queue hidden. 1 issue loaded, {selectedCount} selected.",
+      "other": "Queue hidden. {loadedCount} issues loaded, {selectedCount} selected."
+    }
   },
   "preview": {
     "status": "Status: {name}",
@@ -403,6 +470,8 @@
     "bulkFailedLog": "Updated {updated} issue(s), {failed} failed. Open browser console for details.",
     "bulkSuccess": "Updated {updated} issue(s).",
     "bulkUpdateFailed": "Bulk status update failed",
+    "actionNotPermitted": "Action not permitted",
+    "statusUpdated": "Status updated.",
     "dropFailed": "Kanban drop failed. Reverting...",
     "commentFailed": "Comment failed",
     "timeLogAdded": "Time entry added.",
@@ -598,6 +667,29 @@
     "mobileTokens": "Active Mobile Tokens",
     "lastJobs": "Last {count} jobs",
     "statusIdle": "idle",
+    "unknown": "unknown",
+    "ok": "ok",
+    "failed": "failed",
+    "skipped": "skipped",
+    "runningJob": "Running Job",
+    "lastIncremental": "Last Incremental",
+    "lastFull": "Last Full",
+    "lastError": "Last Error",
+    "runningPending": "Running/Pending",
+    "failedWindow": "Failed (window)",
+    "latestJob": "Latest Job",
+    "latestType": "Latest Type",
+    "latestStatus": "Latest Status",
+    "latestDuration": "Latest Duration",
+    "version": "Version",
+    "environment": "Environment",
+    "uptime": "Uptime",
+    "stackTrace": "Stack trace",
+    "activeCount": "{count} active",
+    "noActiveMobileTokens": "No active mobile tokens.",
+    "tokenRevoked": "Mobile token revoked.",
+    "jobCancelled": "Job cancelled.",
+    "newIncrementalJob": "New incremental job created.",
     "checkOverall": "Overall",
     "checkDatabase": "Database",
     "checkRedmine": "Redmine Probe",
@@ -692,12 +784,12 @@
     "welcomeAction2": "Log time entries",
     "welcomeAction3": "Add comments",
     "welcomeAction4": "Close issues",
-    "welcomeFooter": "Mutating actions always require your confirmation first.\n\nHow can I help you today?",
+    "welcomeFooter": "Mutating actions always require your confirmation first.\\n\\nHow can I help you today?",
     "roleYou": "You",
     "roleAi": "AI",
     "roleSystem": "System",
     "typing": "typing...",
-    "placeholder": "Type your message... (e.g. \"close issue #123\")",
+    "placeholder": "Type your message... (e.g. \\\"close issue #123\\\")",
     "send": "Send",
     "proposedActions": "Proposed Actions",
     "actionsProcessed": "Actions Processed",
@@ -800,6 +892,25 @@
     "h": "{hours}h",
     "m": "{minutes}m",
     "hm": "{hours}h {minutes}m"
+  },
+  "notifications": {
+    "vapidNotFound": "VAPID public key not found",
+    "saveSubFailed": "Failed to save subscription on server",
+    "pushPermissionFailed": "Failed to enable push notifications. Please check your browser permissions.",
+    "subFailed": "Push subscription failed",
+    "unsubFailed": "Push unsubscription failed",
+    "justNow": "Just now",
+    "minsAgo": "{mins}m ago",
+    "hoursAgo": "{hours}h ago",
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "noNotifications": "No notifications",
+    "working": "Working...",
+    "pushOn": "🔔 Push Notifications On",
+    "pushOff": "notifications_off Enable Push Notifications"
+  },
+  "views": {
+    "defaultName": "View {count}"
   },
   "webhooks": {
     "kicker": "Integrations",
@@ -912,5 +1023,121 @@
     "cached": "Showing cached data. Some features may be limited.",
     "tip": "Tip: Visit issues while online to cache them for offline viewing.",
     "backToDashboard": "Back to Dashboard"
+  },
+  "offlineBanner": {
+    "message": "You're offline — showing cached data"
+  },
+  "ui": {
+    "searchPlaceholder": "Search messages...",
+    "searchNoMatch": "No messages match your search.",
+    "yourQuestion": "Your Question",
+    "aiResponse": "AI Response",
+    "copyToClipboard": "Copy to clipboard"
+  },
+  "columnPicker": {
+    "buttonLabel": "Columns",
+    "header": "Table Columns",
+    "count": "{current} of {total} selected",
+    "columns": {
+      "priority": "Priority",
+      "due": "Due Date",
+      "progress": "Progress",
+      "updated": "Activity"
+    }
+  },
+  "offlineBanner": {
+    "message": "You're offline — showing cached data"
+  },
+  "filterPresetsModal": {
+    "title": "Filter Presets",
+    "close": "Close",
+    "currentFilters": "Current Filters",
+    "status": "Status",
+    "priority": "Priority",
+    "search": "Search",
+    "favoritesOnly": "Favorites Only",
+    "noFilters": "No filters applied",
+    "placeholder": "Enter preset name...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saveCurrent": "+ Save Current Filters",
+    "savedPresets": "Saved Presets ({count})",
+    "noneSaved": "No saved presets yet.",
+    "delete": "Delete"
+  },
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "categories": {
+      "Navigation": "Navigation",
+      "Actions": "Actions",
+      "Selection": "Selection",
+      "Panels": "Panels",
+      "View": "View"
+    },
+    "keys": {
+      "j_desc": "Move cursor down",
+      "k_desc": "Move cursor up",
+      "Enter_desc": "Open selected item",
+      "Escape_desc": "Close modal / deselect",
+      "a_desc": "Assign to me",
+      "r_desc": "Reply to comment",
+      "f_desc": "Add favorite",
+      "slash_desc": "Focus search",
+      "g_desc": "Go to issue",
+      "x_desc": "Toggle selection",
+      "ShiftJ_desc": "Extend selection down",
+      "ShiftK_desc": "Extend selection up",
+      "Asterisk_desc": "Select all visible",
+      "Alt1_desc": "Show dashboard",
+      "Alt2_desc": "Show issues",
+      "Alt3_desc": "Show reports",
+      "Alt4_desc": "Show settings",
+      "Question_desc": "Show this help",
+      "t_desc": "Toggle theme",
+      "s_desc": "Sort by"
+    }
+  },
+  "createIssue": {
+    "title": "Create Issue",
+    "projectLabel": "Project",
+    "subjectLabel": "Subject",
+    "descriptionLabel": "Description",
+    "projectPlaceholder": "Select a project",
+    "subjectPlaceholder": "Enter subject",
+    "descriptionPlaceholder": "Enter description",
+    "statusLabel": "Status",
+    "priorityLabel": "Priority",
+    "dueDateLabel": "Due Date",
+    "cancelBtn": "Cancel",
+    "createBtn": "Create",
+    "creatingBtn": "Creating...",
+    "successToast": "Issue created successfully",
+    "errorRequired": "Please fill in required fields",
+    "errorFailed": "Failed to create issue"
+  },
+  "quickActions": {
+    "title": "Quick Actions",
+    "status": "Status",
+    "assignee": "Assignee",
+    "unassigned": "Unassigned",
+    "tabs": {
+      "status": "Status",
+      "assign": "Assign",
+      "time": "Time"
+    },
+    "current": "Current",
+    "selectStatus": "Select new status...",
+    "noStatusTransitions": "No allowed status transitions are available for this issue.",
+    "updateStatus": "Update Status",
+    "selectUser": "Select user...",
+    "searchUsers": "Search users...",
+    "noUsersMatch": "No users match \"{search}\"",
+    "noAssignableUsers": "No assignable Redmine users are available from the current cache.",
+    "usersLoaded": "{count} user(s) loaded{shown ? ' • {shown} shown' : ''}",
+    "assign": "Assign",
+    "logTime": "Log Time",
+    "hoursPlaceholder": "Hours",
+    "workDescription": "Work description",
+    "logTimeButton": "Log Time"
   }
 }

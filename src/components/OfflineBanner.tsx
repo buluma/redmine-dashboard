@@ -1,8 +1,10 @@
 "use client";
 
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useI18n } from "./I18nProvider";
 
 export function OfflineBanner() {
+  const { t } = useI18n();
   const online = useOnlineStatus();
 
   if (online) return null;
@@ -25,7 +27,7 @@ export function OfflineBanner() {
         boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
       }}
     >
-      📡 You're offline — showing cached data
+      📡 {t("offlineBanner.message")}
     </div>
   );
 }

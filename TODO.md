@@ -1,7 +1,18 @@
 # TODO
 
 ## In Progress
-- [ ] **Localization (i18n)** — Adding support for multiple languages using `next-intl` or similar to support global teams.
+# Translation Refactor TODO
+- [x] Audit all hardcoded English strings throughout the codebase
+- [x] Identify i18n keys needed for each UI component
+- [x] Replace hardcoded strings with `t('key')` calls or appropriate i18n placeholders
+- [x] Ensure all new strings are added to the correct JSON message files for each locale
+- [x] Complete missing translations for supported languages (es, de, fr, ja, zh, ru, uk, af, tl, pl, vi)
+- [x] Update component props to accept dynamic language props where necessary
+- [x] Implement proper pluralization and variable interpolation using i18n syntax
+- [x] Test language switching across all affected components
+- [x] Remove unused or orphaned strings after migration (Requires manual review of message files against codebase usage)
+- [ ] Verify that UI layouts and formatting remain intact in all languages
+- [x] Document the translation workflow and conventions for future contributors
 
 ## Pending
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useI18n } from "./I18nProvider";
 
 export type ColumnKey = "priority" | "due" | "progress" | "updated";
 
@@ -10,13 +11,14 @@ interface ColumnPickerProps {
 }
 
 export function ColumnPicker({ visibleColumns, onChange }: ColumnPickerProps) {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
 
   const columns: { key: ColumnKey; label: string }[] = [
-    { key: "priority", label: "Priority" },
-    { key: "due", label: "Due Date" },
-    { key: "progress", label: "Progress" },
-    { key: "updated", label: "Activity" },
+    { key: "priority", label: t('columnPicker.columns.priority') },
+    { key: "due", label: t('columnPicker.columns.due') },
+    { key: "progress", label: t('columnPicker.columns.progress') },
+    { key: "updated", label: t('columnPicker.columns.updated') },
   ];
 
   const toggleColumn = (key: ColumnKey) => {
@@ -37,9 +39,11 @@ export function ColumnPicker({ visibleColumns, onChange }: ColumnPickerProps) {
         onClick={() => setIsOpen(!isOpen)}
         aria-haspopup="true"
         aria-expanded={isOpen}
+        aria-label={t('columnPicker.buttonLabel')}
       >
-        <span>📊 Columns</span>
-        <span className="picker-count">{visibleColumns.size} / {columns.length}</span>
+        <span>📊</span>
+        <span>{t('columnPicker.buttonLabel')}</span>
+        <span className="picker-count">{t('columnPicker.count', { current: visibleColumns.size, total: columns.length })}</span>
       </button>
 
       {isOpen && (
@@ -47,7 +51,7 @@ export function ColumnPicker({ visibleColumns, onChange }: ColumnPickerProps) {
           <div className="picker-overlay" onClick={() => setIsOpen(false)} />
           <div className="picker-dropdown">
             <div className="picker-header">
-              <strong>Table Columns</strong>
+              <strong>{t('columnPicker.header')}</strong>
             </div>
             <div className="picker-list">
               {columns.map((col) => (

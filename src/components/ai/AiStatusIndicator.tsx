@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useI18n } from "@/src/components/I18nProvider";
 
 interface AiStatus {
   available: boolean;
@@ -24,6 +25,7 @@ interface AiStatusIndicatorProps {
 }
 
 export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
+  const { t } = useI18n();
   const [status, setStatus] = useState<AiStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,11 +40,11 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
         setError(null);
         onStatusChange?.(data.available);
       } else {
-        setError("Failed to fetch AI status");
+        setError(t('ai.fetchStatusFailed'));
         onStatusChange?.(false);
       }
     } catch {
-      setError("AI service unavailable");
+      setError(t('ai.serviceUnavailable'));
       onStatusChange?.(false);
     } finally {
       setLoading(false);
@@ -59,14 +61,13 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
   }, [fetchStatus]);
 
   if (loading) {
-    return (
-      <span className="ai-status-indicator ai-status-loading" title="Loading AI status...">
-        <span className="ai-status-dot ai-status-dot-loading" />
-        <span className="ai-status-text">AI</span>
-      </span>
-    );
+  return (
+    <span className="ai-status-indicator ai-status-loading" title={t('ai.statusLoading')}>
+      <span className="ai-status-dot ai-status-dot-loading" />
+      <span className="ai-status-text">{t('ai.indicatorText')}</span>
+    </span>
+  );
   }
-
   const isHealthy = status?.available ?? false;
 
   return (
@@ -75,11 +76,11 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
         type="button"
         className={`ai-status-indicator ${isHealthy ? "ai-status-healthy" : "ai-status-unhealthy"}`}
         onClick={() => setShowDropdown(!showDropdown)}
-        title={isHealthy ? `AI: ${status?.primaryModel}` : `AI: ${status?.error || "Unavailable"}`}
+        title={isHealthy ? t('ai.statusHealthy', { modelName: status?.primaryModel }) : t('ai.statusUnhealthy', { error: status?.error || "Unavailable" })}
       >
         <span className={`ai-status-dot ${isHealthy ? "ai-status-dot-healthy" : "ai-status-dot-unhealthy"}`} />
-        <span className="ai-status-text">AI</span>
-        {status?.usingFallback && <span className="ai-status-fallback" title="Using fallback model">⚠️</span>}
+        <span className="ai-status-text">{t('ai.indicatorText')}</span>
+        {status?.usingFallback && <span className="ai-status-fallback" title={t('ai.usingFallbackModel')}>⚠️</span>}
       </button>
 
       {showDropdown && status && (
@@ -87,50 +88,50 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
           <div className="ai-status-backdrop" onClick={() => setShowDropdown(false)} />
           <div className="ai-status-dropdown">
             <div className="ai-status-header">
-              <h4>AI Status</h4>
+              <h4>{t('ai.statusTitle')}</h4>
               <span className={`ai-status-badge ${isHealthy ? "badge-success" : "badge-error"}`}>
-                {isHealthy ? "Online" : "Offline"}
+                {isHealthy ? t('ai.statusOnline') : t('ai.statusOffline')}
               </span>
             </div>
 
             <div className="ai-status-info">
               <div className="ai-status-row">
-                <span className="ai-status-label">Provider</span>
+                <span className="ai-status-label">{t('ai.providerLabel')}</span>
                 <span className="ai-status-value">{status.provider}</span>
               </div>
               <div className="ai-status-row">
-                <span className="ai-status-label">Model</span>
+                <span className="ai-status-label">{t('ai.modelLabel')}</span>
                 <span className="ai-status-value">{status.primaryModel}</span>
               </div>
               {status.usingFallback && (
                 <div className="ai-status-row ai-status-warning">
-                  <span className="ai-status-label">Fallback</span>
-                  <span className="ai-status-value">Using fallback model</span>
+                  <span className="ai-status-label">{t('ai.fallbackLabel')}</span>
+                  <span className="ai-status-value">{t('ai.usingFallbackModel')}</span>
                 </div>
               )}
             </div>
 
             <div className="ai-status-section">
-              <h5>Features</h5>
+              <h5>{t('ai.featuresLabel')}</h5>
               <div className="ai-status-features">
                 {status.config?.features?.summarize && (
-                  <span className="ai-feature-badge">📝 Summarize</span>
+                  <span className="ai-feature-badge">{t('ai.featureSummarize')}</span>
                 )}
                 {status.config?.features?.search && (
-                  <span className="ai-feature-badge">🔍 Search</span>
+                  <span className="ai-feature-badge">{t('ai.featureSearch')}</span>
                 )}
                 {status.config?.features?.categorize && (
-                  <span className="ai-feature-badge">🏷️ Categorize</span>
+                  <span className="ai-feature-badge">{t('ai.featureCategorize')}</span>
                 )}
                 {status.config?.features?.chat && (
-                  <span className="ai-feature-badge">💬 Chat</span>
+                  <span className="ai-feature-badge">{t('ai.featureChat')}</span>
                 )}
               </div>
             </div>
 
             {status.models && status.models.length > 0 && (
               <div className="ai-status-section">
-                <h5>Available Models ({status.models.length})</h5>
+                <h5>{t('ai.availableModels', { count: status.models.length })}</h5>
                 <div className="ai-model-list">
                   {status.models.map((model) => (
                     <div key={model.id} className="ai-model-item">
@@ -153,7 +154,7 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
                   void fetchStatus();
                 }}
               >
-                🔄 Refresh
+                {t('ai.refreshButton')}
               </button>
             </div>
 
