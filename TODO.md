@@ -1,13 +1,11 @@
 # TODO
 
 ## In Progress
-- [ ] **`globals.css` size** — Started extracting to dashboard.css (70% complete)
 
 ## Pending
 
 ### 🏗️ Architecture / Code Health
-- [ ] **Drag-and-drop reorder** — Marked as TODO, needs priority-based API
-
+- [ ] **Drag-and-drop reorder** — API added, needs frontend component to implement drag-and-drop in saved views
 
 ---
 
@@ -15,6 +13,7 @@
 
 | Feature | Status | Notes | Date |
 |---------|--------|-------|------|
+| All Features | ✅ DONE | See completed items below | 2026-04-16 |
 | Mobile / PWA | ✅ DONE | Offline sync queue, Mobile issue creation, Push Notifications | 2026-04-16 |
 | UX/UI Polish | ✅ DONE | Toasts, Issue Modal, Column Picker, Shortcuts, Accessibility | 2026-04-16 |
 | AI Tool Calls | ✅ DONE | Structured definitions for status, time log, comment actions | 2026-04-16 |
@@ -26,6 +25,7 @@
 | Reporting | ✅ DONE | Velocity/Burndown charts, Time-tracking exports, Webhook logs | 2026-04-15 |
 | Testing | ✅ DONE | Vitest unit tests (198+), Playwright E2E smoke tests | 2026-04-15 |
 | DevOps | ✅ DONE | GH Actions CI, Structured logging, Redis health checks | 2026-04-15 |
+| Tailscale Aperture | ✅ DONE | Private LLM gateway support | 2026-04-15 |
 | External Tickets API | ✅ DONE | REST API for n8n/Zapier integrations | 2026-04-14 |
 | Webhook system | ✅ DONE | DB-backed subscriptions and delivery history | 2026-04-14 |
 | WakaTime | ✅ DONE | Full time tracking and analytics integration | 2026-04-14 |
