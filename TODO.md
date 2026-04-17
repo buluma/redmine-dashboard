@@ -1,19 +1,5 @@
 # TODO
 
-## In Progress
-# Translation Refactor TODO
-- [x] Audit all hardcoded English strings throughout the codebase
-- [x] Identify i18n keys needed for each UI component
-- [x] Replace hardcoded strings with `t('key')` calls or appropriate i18n placeholders
-- [x] Ensure all new strings are added to the correct JSON message files for each locale
-- [x] Complete missing translations for supported languages (es, de, fr, ja, zh, ru, uk, af, tl, pl, vi)
-- [x] Update component props to accept dynamic language props where necessary
-- [x] Implement proper pluralization and variable interpolation using i18n syntax
-- [x] Test language switching across all affected components
-- [x] Remove unused or orphaned strings after migration (Requires manual review of message files against codebase usage)
-- [ ] Verify that UI layouts and formatting remain intact in all languages
-- [x] Document the translation workflow and conventions for future contributors
-
 ## Pending
 
 ### ✨ Future / Post-MVP Features
@@ -30,6 +16,7 @@
 | Feature | Status | Notes | Date |
 |---------|--------|-------|------|
 | All Features | ✅ DONE | See completed items below | 2026-04-16 |
+| Translation Refactor | ✅ DONE | i18n for filters, queue stats, sync status, ops alerts, activity feed, saved views | 2026-04-17 |
 | Saved Views UX | ✅ DONE | Drag-and-drop reorder for saved views using @dnd-kit | 2026-04-16 |
 | Mobile / PWA | ✅ DONE | Offline sync queue, Mobile issue creation, Push Notifications | 2026-04-16 |
 | UX/UI Polish | ✅ DONE | Toasts, Issue Modal, Column Picker, Shortcuts, Accessibility | 2026-04-16 |
