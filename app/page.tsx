@@ -1920,7 +1920,7 @@ export default function Home() {
             onClick={() => setAiSearchOpen(!aiSearchOpen)}
             disabled={!aiStatus?.available}
           >
-            🤖 {t('ai.askAI')} {aiStatus?.available ? "" : "(" + t('ai.statusOffline') + ")"}}
+            🤖 {t('ai.askAI')} {aiStatus?.available ? "" : `(${t('ai.statusOffline')})`}
           </button>
           <button
             type="button"
