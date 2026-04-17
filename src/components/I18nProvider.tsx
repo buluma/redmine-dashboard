@@ -14,7 +14,7 @@ const translations: Messages = {
 
 // Preload all other messages
 const loadAllMessages = async () => {
-  const locales = ["es", "de", "fr", "ja", "zh", "ru", "uk", "af", "tl", "pl", "vi"];
+  const locales = ["ru", "uk", "af"];
   for (const locale of locales) {
     try {
       const msg = await import(`../../messages/${locale}.json`);
