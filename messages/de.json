@@ -19,7 +19,9 @@
     "no": "Nein",
     "action": "Aktion",
     "updated": "Aktualisiert",
-    "status": "Status"
+    "status": "Status",
+    "on": "Auto-Aktualisierung AN",
+    "off": "Auto-Aktualisierung AUS"
   },
   "nav": {
     "dashboard": "Dashboard",

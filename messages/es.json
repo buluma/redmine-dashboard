@@ -17,9 +17,11 @@
     "confirm": "Confirmar",
     "yes": "Sí",
     "no": "No",
-    "action": "Action",
-    "updated": "Updated",
-    "status": "Status"
+    "action": "Acción",
+    "updated": "Actualizado",
+    "status": "Estado",
+    "on": "Auto-actualización ACTIVADA",
+    "off": "Auto-actualización DESACTIVADA"
   },
   "nav": {
     "dashboard": "Tablero",
@@ -74,13 +76,13 @@
     "author": "Autor",
     "created": "Creado",
     "updated": "Actualizado",
-    "showCode": "Show code ({count} lines)",
-    "notSet": "Not set",
+    "showCode": "Mostrar código ({count} líneas)",
+    "notSet": "No establecido",
     "ago": {
-      "s": "{count}s ago",
-      "m": "{count}m ago",
-      "h": "{count}h ago",
-      "d": "{count}d ago"
+      "s": "hace {count}s",
+      "m": "hace {count}m",
+      "h": "hace {count}h",
+      "d": "hace {count}d"
     },
     "tabs": {
       "history": "History",
@@ -128,9 +130,9 @@
       "metadata": "Metadata"
     },
     "empty": {
-      "attachments": "No attachments",
-      "relations": "No relations",
-      "subtickets": "No subtickets",
+      "attachments": "Sin archivos adjuntos",
+      "relations": "Sin relaciones",
+      "subtickets": "Sin subtickets",
       "github": "No GitHub references linked yet",
       "noCategory": "No Category",
       "noPriority": "No Priority",

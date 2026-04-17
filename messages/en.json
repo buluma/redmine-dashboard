@@ -1,5 +1,7 @@
 {
   "common": {
+    "on": "Auto-Refresh ON",
+    "off": "Auto-Refresh OFF",
     "backToDashboard": "Back to Dashboard",
     "loading": "Loading...",
     "error": "Error",
