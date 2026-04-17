@@ -298,7 +298,11 @@
     "refreshing": "Оновлення...",
     "forceRefresh": "Примусово оновити",
     "resetFilters": "Скинути фільтри",
-    "shortcutsBtn": "Ярлики"
+    "shortcutsBtn": "Ярлики",
+    "syncStatusRunning": "Виконується",
+    "syncStatusSuccess": "Успішно",
+    "syncStatusFailed": "Помилка",
+    "syncStatusIdle": "Очікування"
   },
   "metrics": {
     "visibleTotalLabel": "Видимий / Загальний",

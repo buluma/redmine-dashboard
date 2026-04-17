@@ -292,7 +292,11 @@
     "refreshing": "Verfris tans …",
     "forceRefresh": "Verfris dwarsdeur",
     "resetFilters": "Herstel filters",
-    "shortcutsBtn": "Kortpaaie"
+    "shortcutsBtn": "Kortpaaie",
+    "syncStatusRunning": "Loop",
+    "syncStatusSuccess": "Sukses",
+    "syncStatusFailed": "Misluk",
+    "syncStatusIdle": "Onaktief"
   },
   "metrics": {
     "visibleTotalLabel": "Sigbaar / Totaal",

@@ -295,7 +295,11 @@
     "refreshing": "Освежающий...",
     "forceRefresh": "Принудительное обновление",
     "resetFilters": "Сбросить фильтры",
-    "shortcutsBtn": "Ярлыки"
+    "shortcutsBtn": "Ярлыки",
+    "syncStatusRunning": "Выполняется",
+    "syncStatusSuccess": "Успешно",
+    "syncStatusFailed": "Ошибка",
+    "syncStatusIdle": "Ожидание"
   },
   "metrics": {
     "visibleTotalLabel": "Видимый / Всего",
