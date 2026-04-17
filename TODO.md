@@ -3,9 +3,7 @@
 ## Pending
 
 ### ✨ Future / Post-MVP Features
-- [ ] **Redmine Custom Fields Integration** — Support rendering and editing custom fields, which are core to Redmine enterprise workflows.
 - [ ] **Interactive Gantt Chart View** — A visual timeline view grouping tasks by project/epic and plotting them on a timeline.
-- [ ] **Command Palette (Cmd+K)** — Quick navigation launcher to instantly search for an issue, jump to a project, or trigger an action (keyboard-first workflow).
 - [ ] **Jira-Style Kanban Board** — A full agile board with drag-and-drop columns for statuses, allowing rapid triaging of issues.
 - [ ] **Real-Time WebSocket/SSE Updates Pipeline** — Pushing live atomic updates to clients via WebSockets / Server-Sent Events instead of relying purely on polling or background sync.
 
@@ -16,6 +14,7 @@
 | Feature | Status | Notes | Date |
 |---------|--------|-------|------|
 | All Features | ✅ DONE | See completed items below | 2026-04-16 |
+| Redmine Custom Fields Integration | ✅ DONE | Render/edit custom fields on issue detail, API for fetching, local storage in JSON | 2026-04-17 |
 | Translation Refactor | ✅ DONE | i18n for filters, queue stats, sync status, ops alerts, activity feed, saved views | 2026-04-17 |
 | Saved Views UX | ✅ DONE | Drag-and-drop reorder for saved views using @dnd-kit | 2026-04-16 |
 | Mobile / PWA | ✅ DONE | Offline sync queue, Mobile issue creation, Push Notifications | 2026-04-16 |
