@@ -242,8 +242,8 @@ model AiChatMessage {
   id                String   @id @default(cuid())
   userId            String
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  issueId           String
-  issue             Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  issueId           String?
+  issue             Issue?   @relation(fields: [issueId], references: [id], onDelete: Cascade)
   role              String   // "user" or "assistant"
   content           String
   model             String?
