@@ -96,7 +96,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         // Pluralization logic
         const count = Number(vars.count);
         if (typeof count === "number") {
-          if (count === 1 && res.one !== undefined) {
+          // Handle =0 case
+          if (count === 0 && res.zero !== undefined) {
+            res = res.zero;
+          } else if (count === 1 && res.one !== undefined) {
             res = res.one;
           } else if (res.other !== undefined) {
             res = res.other;

@@ -206,8 +206,18 @@
     "analyzing": "Аналіз тикетів...",
     "staleIssues": "Застарілі тикети",
     "noActivityDesc": "Підсумки та історія чату з’являться тут після взаємодії з функціями ІІ.",
-    "summaryCount": "{count} {count, plural, one {підсумок} few {підсумки} many {підсумків} other {підсумки}}",
-    "chatMessages": "{count} повідомлень чату у {issueCount} {issueCount, plural, one {тикеті} few {тикетах} many {тикетах} other {тикетах}}",
+    "summaryCount": {
+      "one": "{count} підсумок",
+      "few": "{count} підсумки",
+      "many": "{count} підсумків",
+      "other": "{count} підсумків"
+    },
+    "chatMessages": {
+      "one": "{count} повідомлення чату по {issueCount} задачі",
+      "few": "{count} повідомлення чату по {issueCount} задачах",
+      "many": "{count} повідомлень чату по {issueCount} задачах",
+      "other": "{count} повідомлень чату по {issueCount} задачах"
+    },
     "noChatMessages": "Ще немає повідомлень чату.",
     "autoRefresh": "Автооновлення {status}",
     "autoRefreshTitle": "Автооновлення {status, select, ON {увімкнено (5 хв)} OFF {вимкнено}}",
@@ -232,7 +242,12 @@
     "refreshButton": "🔄 Оновити",
     "fetchStatusFailed": "Не вдалося отримати статус ІІ",
     "serviceUnavailable": "Сервіс ІІ недоступний",
-    "insightsCount": "{count, plural, =0 {Немає доступних ІІ-інсайтів.} one {Згенеровано 1 інсайт ІІ} few {Згенеровано # інсайти ІІ} many {Згенеровано # інсайтів ІІ} other {Згенеровано # інсайтів ІІ}}"
+    "insightsCount": {
+      "one": "Згенеровано 1 інсайт ІІ",
+      "few": "Згенеровано # інсайти ІІ",
+      "many": "Згенеровано # інсайтів ІІ",
+      "other": "Згенеровано # інсайтів ІІ"
+    }
   },
   "sync": {
     "syncing": "Синхронізація...",
@@ -882,7 +897,12 @@
     "activeBadge": "активні: {count}",
     "topCodingDays": "Найактивніші дні",
     "entriesBadge": "{count} записів",
-    "events": "{count} подій",
+    "events": {
+      "one": "{count} подія",
+      "few": "{count} події",
+      "many": "{count} подій",
+      "other": "{count} подій"
+    },
     "noActivityMix": "Немає даних",
     "noHeartbeatsScope": "Heartbeats недоступні. Додайте доступ read_heartbeats для отримання детальної активності.",
     "noGoalsAvailable": "Цілі недоступні. Підтвердіть доступ read_goals та наявність плану WakaTime premium.",

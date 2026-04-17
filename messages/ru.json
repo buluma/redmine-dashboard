@@ -206,8 +206,16 @@
     "analyzing": "Анализ тикетов...",
     "staleIssues": "Устаревшие тикеты",
     "noActivityDesc": "Summaries and chat history will appear here once you interact with AI features.",
-    "summaryCount": "{count} {count, plural, one {summary} other {summaries}}",
-    "chatMessages": "{count} chat messages across {issueCount} {issueCount, plural, one {issue} other {issues}}",
+    "summaryCount": {
+      "one": "{count} сводка",
+      "few": "{count} сводки",
+      "other": "{count} сводок"
+    },
+    "chatMessages": {
+      "one": "{count} сообщение чата по {issueCount} задаче",
+      "few": "{count} сообщения чата по {issueCount} задачам",
+      "other": "{count} сообщений чата по {issueCount} задачам"
+    },
     "noChatMessages": "No chat messages yet.",
     "autoRefresh": "Auto-refresh {status}",
     "autoRefreshTitle": "Auto-refresh {status, select, ON {enabled (5 min)} OFF {disabled}}",
@@ -232,7 +240,11 @@
     "refreshButton": "🔄 Refresh",
     "fetchStatusFailed": "Failed to fetch AI status",
     "serviceUnavailable": "AI service unavailable",
-    "insightsCount": "{count, plural, =0 {No available AI insights.} one {1 AI insight generated} other {# AI insights generated}}"
+    "insightsCount": {
+      "one": "Сгенерирован 1 ИИ-инсайт",
+      "few": "Сгенерировано # ИИ-инсайта",
+      "other": "Сгенерировано # ИИ-инсайтов"
+    }
   },
   "sync": {
     "syncing": "Синхронизация...",
@@ -1076,7 +1088,11 @@
     "activeBadge": "{count} активно",
     "topCodingDays": "Лучшие дни кодинга",
     "entriesBadge": "{count} записей",
-    "events": "{count} {count, plural, one {событие} few {события} other {событий}}",
+    "events": {
+      "one": "{count} событие",
+      "few": "{count} события",
+      "other": "{count} событий"
+    },
     "noActivityMix": "Нет данных о распределении активности.",
     "noHeartbeatsScope": "Heartbeats недоступны. Добавьте доступ read_heartbeats.",
     "noGoalsAvailable": "Цели недоступны. Подтвердите доступ read_goals и план WakaTime premium.",

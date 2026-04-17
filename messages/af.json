@@ -206,8 +206,14 @@
     "analyzing": "Besig om kaartjies te ontleed...",
     "staleIssues": "Verouderde kaartjies",
     "noActivityDesc": "Opsommings en kletsgeskiedenis sal hier verskyn sodra jy met KI-funksies interaksie het.",
-    "summaryCount": "{count} {count, plural, one {opsomming} other {opsommings}}",
-    "chatMessages": "{count} kletsboodskappe oor {issueCount} {issueCount, plural, one {kwessie} other {kwessies}}",
+    "summaryCount": {
+      "one": "{count} opsomming",
+      "other": "{count} opsommings"
+    },
+    "chatMessages": {
+      "one": "{count} kletsboodskap oor {issueCount} kwessie",
+      "other": "{count} kletsboodskappe oor {issueCount} kwessies"
+    },
     "noChatMessages": "Nog geen kletsboodskappe nie.",
     "autoRefresh": "Outo-ververs {status}",
     "autoRefreshTitle": "Outo-ververs {status, select, ON {geaktiveer (5 min)} OFF {gedeaktiveer}}",
@@ -232,7 +238,10 @@
     "refreshButton": "🔄 Ververs",
     "fetchStatusFailed": "Kon nie KI-status ophaal nie",
     "serviceUnavailable": "KI-diens nie beskikbaar nie",
-    "insightsCount": "{count, plural, =0 {Geen beskikbare KI-insigte nie.} one {1 KI-insig gegenereer} other {# KI-insigte gegenereer}}"
+    "insightsCount": {
+      "one": "1 KI-insig gegenereer",
+      "other": "# KI-insigte gegenereer"
+    }
   },
   "sync": {
     "syncing": "Sinkroniseer...",
@@ -496,22 +505,22 @@
     "statusUpdated": "Status updated."
   },
   "createIssue": {
-    "title": "🆕 Skep nuwe kwessie",
-    "projectLabel": "Projek *",
-    "projectPlaceholder": "Kies 'n projek...",
-    "subjectLabel": "Onderwerp *",
-    "subjectPlaceholder": "Kort opsomming van die kwessie",
+    "title": "Skep insident",
+    "projectLabel": "Projek",
+    "subjectLabel": "Onderwerp",
     "descriptionLabel": "Beskrywing",
-    "descriptionPlaceholder": "Gedetailleerde verduideliking...",
+    "projectPlaceholder": "Kies projek",
+    "subjectPlaceholder": "Tik onderwerp",
+    "descriptionPlaceholder": "Tik beskrywing",
     "statusLabel": "Status",
     "priorityLabel": "Prioriteit",
-    "dueDateLabel": "Sperdatum",
+    "dueDateLabel": "Vervaldatum",
     "cancelBtn": "Kanselleer",
-    "createBtn": "Skep kwessie",
-    "creatingBtn": "Besig om te skep...",
-    "successToast": "Kwessie suksesvol geskep",
-    "errorRequired": "Onderwerp en projek is verpligtend",
-    "errorFailed": "Kon nie kwessie skep nie"
+    "createBtn": "Skep",
+    "creatingBtn": "Skep...",
+    "successToast": "Insident suksesvol geskep",
+    "errorRequired": "Vul asseblief die vereiste velde in",
+    "errorFailed": "Kon nie insident skep nie"
   },
   "advancedFilters": {
     "toggleBtn": "⚙️ Filters",
@@ -556,38 +565,36 @@
     "colUpdated": "Opgedateer"
   },
   "shortcuts": {
-    "title": "⌨️ Sleutelbordkortpaaie",
+    "title": "Sleutelbordnеполе",
     "categories": {
       "Navigation": "Navigasie",
       "Actions": "Aksies",
-      "Selection": "Seleksie",
-      "Panels": "Panele",
+      "Selection": "Selektering",
+      "Panels": "Paneel",
       "View": "Aansig"
     },
     "keys": {
-      "j_desc": "Kies volgende kwessie",
-      "k_desc": "Kies vorige kwessie",
-      "Enter_desc": "Maak geselekteerde kwessie oop",
-      "Escape_desc": "Sluit modaal / ontkies",
-      "a_desc": "Skakel KI-soekpaneel",
-      "r_desc": "Dwing verversing van data",
-      "f_desc": "Stel alle filters terug",
-      "slash_desc": "Fokus soekveld",
-      "g_desc": "Gaan na bokant van lys",
-      "x_desc": "Skakel seleksie op gefokusde kwessie",
-      "ShiftJ_desc": "Voeg volgende by seleksie",
-      "ShiftK_desc": "Voeg vorige by seleksie",
-      "Asterisk_desc": "Kies alle sigbare kwessies",
-      "Alt1_desc": "Gaan na Insigte",
-      "Alt2_desc": "Gaan na Waarskuwings",
-      "Alt3_desc": "Gaan na Voer",
-      "Alt4_desc": "Gaan na Kwessie-ry",
+      "j_desc": "Beweeg kurser af",
+      "k_desc": "Beweeg kurser op",
+      "Enter_desc": "Open geselekteerde item",
+      "Escape_desc": "Maak modal toe / deselekteer",
+      "a_desc": "Wys my",
+      "r_desc": "Antwoord op kommentaar",
+      "f_desc": "Voeg by gunstelinge",
+      "slash_desc": "Fokus soek",
+      "g_desc": "Gaan na insident",
+      "x_desc": "Skakel selektering",
+      "ShiftJ_desc": "Verleng selektering af",
+      "ShiftK_desc": "Verleng selektering op",
+      "Asterisk_desc": "Kies al sigbare",
+      "Alt1_desc": "Wys dashboard",
+      "Alt2_desc": "Wys insidente",
+      "Alt3_desc": "Wys verslae",
+      "Alt4_desc": "Wys instellings",
       "Question_desc": "Wys hierdie hulp",
-      "t_desc": "Skakel tema (donker/lig)",
-      "s_desc": "Skakel sinchronisasiestatus"
-    },
-    "footerHelp": "Druk {key1} of {key2} om te sluit",
-    "hint": "Druk {key} vir sleutelbordkortpaaie"
+      "t_desc": "Skakel tema",
+      "s_desc": "Sorteer volgens"
+    }
   },
   "personalTickets": {
     "kicker": "Kaartjies",
@@ -884,7 +891,10 @@
     "activeBadge": "{count} aktief",
     "topCodingDays": "Top koderingsdae",
     "entriesBadge": "{count} inskrywings",
-    "events": "{count} {count, plural, one {gebeurtenis} other {gebeurtenisse}}",
+    "events": {
+      "one": "{count} gebeurtenis",
+      "other": "{count} gebeurtenisse"
+    },
     "noActivityMix": "Geen aktiwiteitsdata beskikbaar nie.",
     "noHeartbeatsScope": "Geen heartbeats beskikbaar nie. Voeg read_heartbeats-toegang by.",
     "noGoalsAvailable": "Geen doelwitte beskikbaar nie. Bevestig read_goals-toegang.",
@@ -1044,56 +1054,6 @@
     "savedPresets": "Gestoorde Voorstelle ({count})",
     "noneSaved": "Nog geen gestoorde voorstelle nie.",
     "delete": "Skrap"
-  },
-  "shortcuts": {
-    "title": "Sleutelbordnеполе",
-    "categories": {
-      "Navigation": "Navigasie",
-      "Actions": "Aksies",
-      "Selection": "Selektering",
-      "Panels": "Paneel",
-      "View": "Aansig"
-    },
-    "keys": {
-      "j_desc": "Beweeg kurser af",
-      "k_desc": "Beweeg kurser op",
-      "Enter_desc": "Open geselekteerde item",
-      "Escape_desc": "Maak modal toe / deselekteer",
-      "a_desc": "Wys my",
-      "r_desc": "Antwoord op kommentaar",
-      "f_desc": "Voeg by gunstelinge",
-      "slash_desc": "Fokus soek",
-      "g_desc": "Gaan na insident",
-      "x_desc": "Skakel selektering",
-      "ShiftJ_desc": "Verleng selektering af",
-      "ShiftK_desc": "Verleng selektering op",
-      "Asterisk_desc": "Kies al sigbare",
-      "Alt1_desc": "Wys dashboard",
-      "Alt2_desc": "Wys insidente",
-      "Alt3_desc": "Wys verslae",
-      "Alt4_desc": "Wys instellings",
-      "Question_desc": "Wys hierdie hulp",
-      "t_desc": "Skakel tema",
-      "s_desc": "Sorteer volgens"
-    }
-  },
-  "createIssue": {
-    "title": "Skep insident",
-    "projectLabel": "Projek",
-    "subjectLabel": "Onderwerp",
-    "descriptionLabel": "Beskrywing",
-    "projectPlaceholder": "Kies projek",
-    "subjectPlaceholder": "Tik onderwerp",
-    "descriptionPlaceholder": "Tik beskrywing",
-    "statusLabel": "Status",
-    "priorityLabel": "Prioriteit",
-    "dueDateLabel": "Vervaldatum",
-    "cancelBtn": "Kanselleer",
-    "createBtn": "Skep",
-    "creatingBtn": "Skep...",
-    "successToast": "Insident suksesvol geskep",
-    "errorRequired": "Vul asseblief die vereiste velde in",
-    "errorFailed": "Kon nie insident skep nie"
   },
   "quickActions": {
     "title": "Vinnige Aksies",
