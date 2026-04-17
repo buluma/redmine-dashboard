@@ -1102,5 +1102,14 @@
   },
   "views": {
     "defaultName": "Aansig {count}"
+  },
+  "savedViews": {
+    "title": "Gestoorde Aansigte",
+    "saveCurrent": "Stoor Huidige Filterstel",
+    "saveView": "Stoor Aansig",
+    "placeholder": "bv. Geblokkeer + Hoë Prioriteit",
+    "noViews": "Nog geen gestoorde aansigte nie.",
+    "reorder": "Herorganiseer",
+    "done": "Klaar"
   }
 }

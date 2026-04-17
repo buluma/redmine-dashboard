@@ -1845,7 +1845,7 @@ export default function Home() {
       <section className="card filters-panel">
         <div className="filters-grid home-filters-grid">
           <label className="filter-field">
-            Status
+            {t('filters.status')}
             <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); resetPage(); }}>
               <option value="">{t('filters.allStatuses')}</option>
               {statuses.map((s) => (
@@ -1857,7 +1857,7 @@ export default function Home() {
           </label>
 
           <label className="filter-field">
-            Priority
+            {t('filters.priority')}
             <select value={priorityFilter} onChange={(e) => { setPriorityFilter(e.target.value); resetPage(); }}>
               <option value="">{t('filters.allPriorities')}</option>
               {priorities.map((p) => (
@@ -1869,7 +1869,7 @@ export default function Home() {
           </label>
 
           <label className="filter-field">
-            Sort
+            {t('filters.sort')}
             <select value={sort} onChange={(e) => setSort(e.target.value)}>
               <option value="updated_desc">{t('filters.sortNewest')}</option>
               <option value="updated_asc">{t('filters.sortOldest')}</option>
@@ -1879,7 +1879,7 @@ export default function Home() {
           </label>
 
           <label className="filter-field search-field">
-            Search
+            {t('filters.search')}
             <input
               ref={searchInputRef}
               placeholder={t('filters.searchPlaceholder')}
@@ -1889,13 +1889,13 @@ export default function Home() {
           </label>
 
           <label className="filter-field">
-            Search Source
+            {t('filters.searchSource')}
             <select value={searchMode} onChange={(e) => setSearchMode((e.target.value as "local" | "hybrid" | "fts"))}>
-              <option value="local">Local Cache</option>
+              <option value="local">{t('filters.sourceLocal')}</option>
               <option value="hybrid">{t('filters.sourceHybrid')}</option>
               <option value="fts">{t('filters.sourceFts')}</option>
             </select>
-            <span className="muted">Mode: {searchSource === "local_cache" ? "Local cache" : searchMode === "fts" ? "Full-text Search" : "Hybrid"}</span>
+            <span className="muted">{t('filters.mode' + (searchMode === "local" ? "Local" : searchMode === "fts" ? "Fts" : "Hybrid"))}</span>
           </label>
         </div>
 
@@ -1920,14 +1920,14 @@ export default function Home() {
             onClick={() => setAiSearchOpen(!aiSearchOpen)}
             disabled={!aiStatus?.available}
           >
-            🤖 AI Search {aiStatus?.available ? "" : "(offline)"}
+            🤖 {t('ai.askAI')} {aiStatus?.available ? "" : "(" + t('ai.statusOffline') + ")"}}
           </button>
           <button
             type="button"
             className="secondary-button"
             onClick={() => setFtsSearchOpen(true)}
           >
-            🔍 Full-text Search
+            🔍 {t('filters.sourceFts')}
           </button>
         </div>
       </section>
