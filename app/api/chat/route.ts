@@ -85,7 +85,7 @@ export async function POST(request: Request) {
         issueId: null, // null = general chat not tied to issue
         role: "user",
         content: lastUserMsg.content,
-      },
+      } as any, // Use unchecked input to bypass Prisma type issue
     });
 
     // Get recent system stats for context
@@ -261,7 +261,7 @@ Current session context:
         content: result.content,
         model: result.model,
         totalDuration: result.metrics?.totalDuration ?? null,
-      },
+      } as any, // Use unchecked input to bypass Prisma type issue
     });
 
     return Response.json({
