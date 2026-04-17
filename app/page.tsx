@@ -1996,7 +1996,7 @@ export default function Home() {
           <div className="collapsible-head">
             <div>
               <h2>{t('opsAlerts.title')}</h2>
-              <p className="muted">Highest risk issues based on overdue, blocked, and stale signals.</p>
+              <p className="muted">{t('opsAlerts.desc')}</p>
             </div>
             <button 
               type="button" 
@@ -2005,7 +2005,7 @@ export default function Home() {
               aria-expanded={opsAlertsOpen}
               aria-controls="ops-alerts-content"
             >
-              {opsAlertsOpen ? "Collapse" : "Expand"}
+              {opsAlertsOpen ? t('collapsible.collapse') : t('collapsible.expand')}
             </button>
           </div>
 
@@ -2031,15 +2031,15 @@ export default function Home() {
               ))}
             </div>
           ) : (
-            <p className="muted collapsible-meta">{summary.atRisk.length} alert item(s).</p>
+            <p className="muted collapsible-meta">{t('opsAlerts.itemCount', { count: summary.atRisk.length })}</p>
           )}
         </article>
 
         <article id="activity-feed" className="card activity-card">
           <div className="collapsible-head">
             <div>
-              <h2>Recent Activity Feed</h2>
-              <p className="muted">Last {summary.recentActivity.length} events from updates, comments, and timelogs.</p>
+              <h2>{t('activityFeed.title')}</h2>
+              <p className="muted">{t('activityFeed.desc', { count: summary.recentActivity.length })}</p>
             </div>
             <button 
               type="button" 
@@ -2048,7 +2048,7 @@ export default function Home() {
               aria-expanded={activityFeedOpen}
               aria-controls="activity-feed-content"
             >
-              {activityFeedOpen ? "Collapse" : "Expand"}
+              {activityFeedOpen ? t('collapsible.collapse') : t('collapsible.expand')}
             </button>
           </div>
 
@@ -2074,7 +2074,7 @@ export default function Home() {
               ))}
             </div>
           ) : (
-            <p className="muted collapsible-meta">Hidden feed. {summary.recentActivity.length} event(s) available.</p>
+            <p className="muted collapsible-meta">{t('activityFeed.hiddenFeed', { count: summary.recentActivity.length })}</p>
           )}
         </article>
 
