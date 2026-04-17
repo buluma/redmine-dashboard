@@ -2099,11 +2099,11 @@ export default function Home() {
             <div>
               <h2>{t('queue.title')}</h2>
               <p className="muted">
-                {loading ? t('hero.refreshing') : `${visibleIssues.length} loaded`}
-                {summary.open > 0 && <span> · Open: {summary.open}</span>}
-                {summary.inProgress > 0 && <span> · In Progress: {summary.inProgress}</span>}
-                {summary.blocked > 0 && <span> · Blocked: {summary.blocked}</span>}
-                {summary.overdue > 0 && <span> · Overdue: {summary.overdue}</span>}
+                {loading ? t('hero.refreshing') : t('queue.loaded', { count: visibleIssues.length })}
+                {summary.open > 0 && <span>{t('queue.openStats', { count: summary.open })}</span>}
+                {summary.inProgress > 0 && <span>{t('queue.inProgressStats', { count: summary.inProgress })}</span>}
+                {summary.blocked > 0 && <span>{t('queue.blockedStats', { count: summary.blocked })}</span>}
+                {summary.overdue > 0 && <span>{t('queue.overdueStats', { count: summary.overdue })}</span>}
               </p>
             </div>
             <div className="queue-actions">
