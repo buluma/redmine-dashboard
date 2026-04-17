@@ -18,6 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useState, useEffect, useCallback } from "react";
+import { useI18n } from "./I18nProvider";
 
 interface SavedViewsPanelProps {
   savedViews: unknown[];
@@ -94,6 +95,7 @@ export function SavedViewsPanel({
   viewDraftName,
   setViewDraftName,
 }: SavedViewsPanelProps) {
+  const { t } = useI18n();
   const [localViews, setLocalViews] = useState<SavedViewItem[]>([]);
   const [isReorderMode, setIsReorderMode] = useState(false);
 
@@ -154,31 +156,31 @@ export function SavedViewsPanel({
   return (
     <div className="saved-view-panel">
       <div className="saved-view-header">
-        <span className="saved-view-title">Saved Views</span>
+        <span className="saved-view-title">{t('savedViews.title')}</span>
         {savedViews.length > 1 && (
           <button
             type="button"
             className={`reorder-toggle ${isReorderMode ? "active" : ""}`}
             onClick={() => setIsReorderMode(!isReorderMode)}
-            aria-label={isReorderMode ? "Exit reorder mode" : "Reorder views"}
+            aria-label={isReorderMode ? t('savedViews.done') : t('savedViews.reorder')}
           >
-            {isReorderMode ? "✓ Done" : "↔ Reorder"}
+            {isReorderMode ? t('savedViews.done') : t('savedViews.reorder')}
           </button>
         )}
       </div>
 
       <div className="saved-view-row">
         <label className="view-name-field">
-          Save Current Filter Set
+          {t('savedViews.saveCurrent')}
           <input
-            placeholder="e.g. Blocked + High Priority"
+            placeholder={t('savedViews.placeholder')}
             value={viewDraftName}
             onChange={(e) => setViewDraftName(e.target.value)}
             onKeyDown={handleKeyDown}
           />
         </label>
         <button type="button" className="secondary-button" onClick={handleSave} disabled={!viewDraftName.trim()}>
-          Save View
+          {t('savedViews.saveView')}
         </button>
 
         {savedViews.length > 0 ? (
@@ -202,7 +204,7 @@ export function SavedViewsPanel({
           </DndContext>
         ) : (
           <div className="chip-row saved-view-chips">
-            <span className="muted">No saved views yet.</span>
+            <span className="muted">{t('savedViews.noViews')}</span>
           </div>
         )}
       </div>

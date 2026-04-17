@@ -1103,5 +1103,14 @@
     "hoursPlaceholder": "Hours",
     "workDescription": "Work description",
     "logTimeButton": "Log Time"
+  },
+  "savedViews": {
+    "title": "Saved Views",
+    "saveCurrent": "Save Current Filter Set",
+    "saveView": "Save View",
+    "placeholder": "e.g. Blocked + High Priority",
+    "noViews": "No saved views yet.",
+    "reorder": "Reorder",
+    "done": "Done"
   }
 }
