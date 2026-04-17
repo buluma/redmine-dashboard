@@ -2286,15 +2286,18 @@ export default function Home() {
                 <button type="button" className={`secondary-button ${viewMode === "list" ? "active border-primary text-primary" : ""}`} onClick={() => setViewMode("list")}>
                   {t('queue.viewList')}
                 </button>
+                {/* Kanban Board temporarily disabled
                 <button type="button" className={`secondary-button ${viewMode === "board" ? "active border-primary text-primary" : ""}`} onClick={() => setViewMode("board")}>
                   {t('queue.viewBoard')}
                 </button>
                 <button type="button" className={`secondary-button ${viewMode === "gantt" ? "active border-primary text-primary" : ""}`} onClick={() => setViewMode("gantt")}>
                   {t('queue.viewGantt')}
                 </button>
+                */}
               </div>
 
               {viewMode === "board" ? (
+                /* KanbanBoard temporarily disabled
                 <KanbanBoard 
                   issues={visibleIssues} 
                   statuses={statuses} 
@@ -2303,13 +2306,18 @@ export default function Home() {
                     if (issue.redmineIssueId) setSelectedIssueId(issue.redmineIssueId); 
                   }} 
                 />
+                */
+                null
               ) : viewMode === "gantt" ? (
+                /* GanttChart temporarily disabled
                 <GanttChart 
                   issues={visibleIssues} 
                   onClick={(issue) => { 
                     if (issue.redmineIssueId) setSelectedIssueId(issue.redmineIssueId); 
                   }} 
                 />
+                */
+                null
               ) : (
                 <>
                 <table className="issues-table">
