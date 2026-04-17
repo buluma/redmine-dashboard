@@ -111,7 +111,11 @@ export function I18nProvider({ children }: { children: ReactNode }) {
           // Interpolate remaining variables after selecting plural form
           if (typeof res === "string") {
             for (const [k, v] of Object.entries(vars)) {
-              if (k !== 'count') { // Avoid re-interpolating count if it's a variable itself
+              // Replace both {count} and # placeholders with the actual count
+              if (k === 'count') {
+                res = res.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+                res = res.replace(/#/g, String(v));
+              } else {
                 res = res.replace(new RegExp(`{${k}}`, "g"), String(v));
               }
             }
