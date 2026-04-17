@@ -206,8 +206,14 @@
     "askAI": "Ask AI",
     "analyzing": "Analyzing issues...",
     "staleIssues": "Stale Issues",
-    "summaryCount": "{count} {count, plural, one {summary} other {summaries}}",
-    "chatMessages": "{count} chat messages across {issueCount} {issueCount, plural, one {issue} other {issues}}",
+    "summaryCount": {
+      "one": "{count} summary",
+      "other": "{count} summaries"
+    },
+    "chatMessages": {
+      "one": "{count} chat message across {issueCount} issue",
+      "other": "{count} chat messages across {issueCount} issues"
+    },
     "noChatMessages": "No chat messages yet.",
     "autoRefresh": "Auto-refresh {status}",
     "autoRefreshTitle": "Auto-refresh {status, select, ON {enabled (5 min)} OFF {disabled}}",
@@ -232,7 +238,11 @@
     "refreshButton": "🔄 Refresh",
     "fetchStatusFailed": "Failed to fetch AI status",
     "serviceUnavailable": "AI service unavailable",
-    "insightsCount": "{count, plural, =0 {No available AI insights.} one {1 AI insight generated} other {# AI insights generated}}"
+    "insightsCount": {
+      "one": "1 AI insight generated",
+      "other": "{count} AI insights generated"
+    },
+    "insightsCount_zero": "No available AI insights."
   },
   "sync": {
     "syncing": "Syncing...",
@@ -496,21 +506,21 @@
     "viewRemoved": "Removed view \"{name}\"."
   },
   "createIssue": {
-    "title": "🆕 Create New Issue",
-    "projectLabel": "Project *",
-    "projectPlaceholder": "Select a project...",
-    "subjectLabel": "Subject *",
-    "subjectPlaceholder": "Brief summary of the issue",
+    "title": "Create Issue",
+    "projectLabel": "Project",
+    "subjectLabel": "Subject",
     "descriptionLabel": "Description",
-    "descriptionPlaceholder": "Detailed explanation...",
+    "projectPlaceholder": "Select a project",
+    "subjectPlaceholder": "Enter subject",
+    "descriptionPlaceholder": "Enter description",
     "statusLabel": "Status",
     "priorityLabel": "Priority",
     "dueDateLabel": "Due Date",
     "cancelBtn": "Cancel",
-    "createBtn": "Create Issue",
+    "createBtn": "Create",
     "creatingBtn": "Creating...",
     "successToast": "Issue created successfully",
-    "errorRequired": "Subject and Project are required",
+    "errorRequired": "Please fill in required fields",
     "errorFailed": "Failed to create issue"
   },
   "advancedFilters": {
@@ -556,7 +566,7 @@
     "colUpdated": "Updated"
   },
   "shortcuts": {
-    "title": "⌨️ Keyboard Shortcuts",
+    "title": "Keyboard Shortcuts",
     "categories": {
       "Navigation": "Navigation",
       "Actions": "Actions",
@@ -565,29 +575,27 @@
       "View": "View"
     },
     "keys": {
-      "j_desc": "Select next issue",
-      "k_desc": "Select previous issue",
-      "Enter_desc": "Open selected issue",
+      "j_desc": "Move cursor down",
+      "k_desc": "Move cursor up",
+      "Enter_desc": "Open selected item",
       "Escape_desc": "Close modal / deselect",
-      "a_desc": "Toggle AI search panel",
-      "r_desc": "Force refresh data",
-      "f_desc": "Reset all filters",
-      "slash_desc": "Focus search input",
-      "g_desc": "Go to top of list",
-      "x_desc": "Toggle selection on focused issue",
-      "ShiftJ_desc": "Add next to selection",
-      "ShiftK_desc": "Add previous to selection",
-      "Asterisk_desc": "Select all visible issues",
-      "Alt1_desc": "Jump to Insights",
-      "Alt2_desc": "Jump to Alerts",
-      "Alt3_desc": "Jump to Feed",
-      "Alt4_desc": "Jump to Issue Queue",
+      "a_desc": "Assign to me",
+      "r_desc": "Reply to comment",
+      "f_desc": "Add favorite",
+      "slash_desc": "Focus search",
+      "g_desc": "Go to issue",
+      "x_desc": "Toggle selection",
+      "ShiftJ_desc": "Extend selection down",
+      "ShiftK_desc": "Extend selection up",
+      "Asterisk_desc": "Select all visible",
+      "Alt1_desc": "Show dashboard",
+      "Alt2_desc": "Show issues",
+      "Alt3_desc": "Show reports",
+      "Alt4_desc": "Show settings",
       "Question_desc": "Show this help",
-      "t_desc": "Toggle theme (dark/light)",
-      "s_desc": "Toggle sync status"
-    },
-    "footerHelp": "Press {key1} or {key2} to close",
-    "hint": "Press {key} for keyboard shortcuts"
+      "t_desc": "Toggle theme",
+      "s_desc": "Sort by"
+    }
   },
   "personalTickets": {
     "kicker": "Tickets",
@@ -884,7 +892,10 @@
     "activeBadge": "{count} active",
     "topCodingDays": "Top Coding Days",
     "entriesBadge": "{count} entries",
-    "events": "{count} {count, plural, one {event} other {events}}",
+    "events": {
+      "one": "{count} event",
+      "other": "{count} events"
+    },
     "noActivityMix": "No activity mix data available.",
     "noHeartbeatsScope": "Heartbeats unavailable. Add read_heartbeats scope effectively power this with raw activity.",
     "noGoalsAvailable": "Goals unavailable. Confirm your key has read_goals access and a WakaTime premium plan.",
@@ -1047,9 +1058,6 @@
       "updated": "Activity"
     }
   },
-  "offlineBanner": {
-    "message": "You're offline — showing cached data"
-  },
   "filterPresetsModal": {
     "title": "Filter Presets",
     "close": "Close",
@@ -1066,56 +1074,6 @@
     "savedPresets": "Saved Presets ({count})",
     "noneSaved": "No saved presets yet.",
     "delete": "Delete"
-  },
-  "shortcuts": {
-    "title": "Keyboard Shortcuts",
-    "categories": {
-      "Navigation": "Navigation",
-      "Actions": "Actions",
-      "Selection": "Selection",
-      "Panels": "Panels",
-      "View": "View"
-    },
-    "keys": {
-      "j_desc": "Move cursor down",
-      "k_desc": "Move cursor up",
-      "Enter_desc": "Open selected item",
-      "Escape_desc": "Close modal / deselect",
-      "a_desc": "Assign to me",
-      "r_desc": "Reply to comment",
-      "f_desc": "Add favorite",
-      "slash_desc": "Focus search",
-      "g_desc": "Go to issue",
-      "x_desc": "Toggle selection",
-      "ShiftJ_desc": "Extend selection down",
-      "ShiftK_desc": "Extend selection up",
-      "Asterisk_desc": "Select all visible",
-      "Alt1_desc": "Show dashboard",
-      "Alt2_desc": "Show issues",
-      "Alt3_desc": "Show reports",
-      "Alt4_desc": "Show settings",
-      "Question_desc": "Show this help",
-      "t_desc": "Toggle theme",
-      "s_desc": "Sort by"
-    }
-  },
-  "createIssue": {
-    "title": "Create Issue",
-    "projectLabel": "Project",
-    "subjectLabel": "Subject",
-    "descriptionLabel": "Description",
-    "projectPlaceholder": "Select a project",
-    "subjectPlaceholder": "Enter subject",
-    "descriptionPlaceholder": "Enter description",
-    "statusLabel": "Status",
-    "priorityLabel": "Priority",
-    "dueDateLabel": "Due Date",
-    "cancelBtn": "Cancel",
-    "createBtn": "Create",
-    "creatingBtn": "Creating...",
-    "successToast": "Issue created successfully",
-    "errorRequired": "Please fill in required fields",
-    "errorFailed": "Failed to create issue"
   },
   "quickActions": {
     "title": "Quick Actions",
