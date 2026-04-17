@@ -4,17 +4,9 @@ import { useI18n } from "./I18nProvider";
 
 const langNames: Record<string, string> = {
   en: "English",
-  es: "Español",
-  de: "Deutsch", 
-  fr: "Français",
-  ja: "日本語",
-  zh: "中文",
   ru: "Русский",
   uk: "Українська",
   af: "Afrikaans",
-  tl: "Tagalog",
-  pl: "Polski",
-  vi: "Tiếng Việt",
 };
 
 export function LocaleIndicator() {
