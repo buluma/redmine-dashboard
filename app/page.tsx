@@ -1753,7 +1753,7 @@ export default function Home() {
           </div>
           <div className="hero-status-rail">
             <div className={`sync-pill sync-${syncStateTone}`}>
-              {t('hero.syncStatus', { status: syncState?.lastSyncStatus ?? "idle" })}
+              {t('hero.syncStatus', { status: t(`hero.syncStatus${(syncState?.lastSyncStatus ?? 'idle').charAt(0).toUpperCase() + (syncState?.lastSyncStatus ?? 'idle').slice(1)}`) })}
               {lastSyncAt
                 ? ` • ${new Date(lastSyncAt).toLocaleString()}`
                 : ` • ${t('hero.syncWaiting')}`}

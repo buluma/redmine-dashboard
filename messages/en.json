@@ -293,7 +293,11 @@
     "refreshing": "Refreshing...",
     "forceRefresh": "Force Refresh",
     "resetFilters": "Reset Filters",
-    "shortcutsBtn": "Shortcuts"
+    "shortcutsBtn": "Shortcuts",
+    "syncStatusRunning": "Running",
+    "syncStatusSuccess": "Success",
+    "syncStatusFailed": "Failed",
+    "syncStatusIdle": "Idle"
   },
   "metrics": {
     "visibleTotalLabel": "Visible / Total",
