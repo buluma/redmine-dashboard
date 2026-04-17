@@ -1094,7 +1094,7 @@
     "noNotifications": "Geen kennisgewings nie",
     "working": "Werk...",
     "pushOn": "🔔 Push-Kennisgewings Aan",
-    "pushOff": "notifications_off Aktiveer Push-Kennisgewings"
+    "pushOff": "🔔 Aktiveer Push-Kennisgewings"
   },
   "views": {
     "defaultName": "Aansig {count}"

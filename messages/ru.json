@@ -971,7 +971,7 @@
     "noNotifications": "Нет уведомлений",
     "working": "Работа...",
     "pushOn": "🔔 Push-уведомления включены",
-    "pushOff": "notifications_off Включить push-уведомления"
+    "pushOff": "🔔 Включить push-уведомления"
   },
   "views": {
     "defaultName": "Вид {count}"
