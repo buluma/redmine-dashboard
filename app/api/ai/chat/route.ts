@@ -152,7 +152,7 @@ export async function POST(request: Request) {
             issueId: issue.id,
             role: "user",
             content: lastUserMsg.content,
-          },
+          } as any,
         });
       }
     }
@@ -217,7 +217,7 @@ export async function POST(request: Request) {
           promptEvalDuration: toBigInt(metrics?.promptEvalDuration ?? null),
           evalCount: metrics?.evalCount ?? usage?.totalTokens ?? null,
           evalDuration: toBigInt(metrics?.evalDuration ?? null),
-        },
+        } as any,
       });
     }
 
