@@ -1060,64 +1060,64 @@
     "pushOff": "notifications_off Activer les Notifications Push"
   },
   "notFound": {
-    "title": "Page Not Found",
-    "description": "The page you're looking for doesn't exist or has been moved.",
-    "goBack": "Go Back",
-    "backToDashboard": "Back to Dashboard",
-    "helpTitle": "Need help?",
-    "helpHint": "Try these:",
-    "searchDashboard": "Search for your issue on the {link}",
-    "checkReports": "Check the {link} for filtered views",
-    "manualSync": "Run a {link} if data seems stale",
-    "dashboardLink": "dashboard",
-    "reportsLink": "reports page",
-    "manualSyncLink": "manual sync"
+    "title": "Page introuvable",
+    "description": "La page que vous recherchez n'existe pas ou a été déplacée.",
+    "goBack": "Retour",
+    "backToDashboard": "Retour au tableau de bord",
+    "helpTitle": "Besoin d’aide ?",
+    "helpHint": "Essayez ceci :",
+    "searchDashboard": "Recherchez votre problème sur le {link}",
+    "checkReports": "Consultez la {link} pour des vues filtrées",
+    "manualSync": "Lancez une {link} si les données semblent obsolètes",
+    "dashboardLink": "tableau de bord",
+    "reportsLink": "page des rapports",
+    "manualSyncLink": "synchronisation manuelle"
   },
   "offline": {
-    "restored": "Connection Restored",
-    "redirecting": "You're back online. Redirecting...",
-    "title": "You're Offline",
-    "cached": "Showing cached data. Some features may be limited.",
-    "tip": "Tip: Visit issues while online to cache them for offline viewing.",
-    "backToDashboard": "Back to Dashboard"
+    "restored": "Connexion rétablie",
+    "redirecting": "Vous êtes de nouveau en ligne. Redirection...",
+    "title": "Vous êtes hors ligne",
+    "cached": "Affichage des données en cache. Certaines fonctionnalités peuvent être limitées.",
+    "tip": "Astuce : consultez les tickets en ligne pour les mettre en cache hors ligne.",
+    "backToDashboard": "Retour au tableau de bord"
   },
   "ui": {
-    "searchPlaceholder": "Search messages...",
-    "searchNoMatch": "No messages match your search.",
-    "yourQuestion": "Your Question",
-    "aiResponse": "AI Response",
-    "copyToClipboard": "Copy to clipboard"
+    "searchPlaceholder": "Rechercher des messages...",
+    "searchNoMatch": "Aucun message ne correspond à votre recherche.",
+    "yourQuestion": "Votre question",
+    "aiResponse": "Réponse de l’IA",
+    "copyToClipboard": "Copier dans le presse-papiers"
   },
   "columnPicker": {
-    "buttonLabel": "Columns",
-    "header": "Table Columns",
-    "count": "{current} of {total} selected",
+    "buttonLabel": "Colonnes",
+    "header": "Colonnes du tableau",
+    "count": "{current} sur {total} sélectionnées",
     "columns": {
-      "priority": "Priority",
-      "due": "Due Date",
-      "progress": "Progress",
-      "updated": "Activity"
+      "priority": "Priorité",
+      "due": "Date d’échéance",
+      "progress": "Avancement",
+      "updated": "Activité"
     }
   },
   "offlineBanner": {
-    "message": "You're offline — showing cached data"
+    "message": "Vous êtes hors ligne — affichage des données en cache"
   },
   "filterPresetsModal": {
-    "title": "Filter Presets",
-    "close": "Close",
-    "currentFilters": "Current Filters",
-    "status": "Status",
-    "priority": "Priority",
-    "search": "Search",
-    "favoritesOnly": "Favorites Only",
-    "noFilters": "No filters applied",
-    "placeholder": "Enter preset name...",
-    "save": "Save",
-    "cancel": "Cancel",
-    "saveCurrent": "+ Save Current Filters",
-    "savedPresets": "Saved Presets ({count})",
-    "noneSaved": "No saved presets yet.",
-    "delete": "Delete"
+    "title": "Préréglages de filtres",
+    "close": "Fermer",
+    "currentFilters": "Filtres actuels",
+    "status": "Statut",
+    "priority": "Priorité",
+    "search": "Recherche",
+    "favoritesOnly": "Uniquement favoris",
+    "noFilters": "Aucun filtre appliqué",
+    "placeholder": "Saisir le nom du préréglage...",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "saveCurrent": "+ Enregistrer les filtres actuels",
+    "savedPresets": "Préréglages enregistrés ({count})",
+    "noneSaved": "Aucun préréglage enregistré pour le moment.",
+    "delete": "Supprimer"
   },
   "shortcuts": {
     "title": "Raccourcis clavier",
@@ -1195,20 +1195,20 @@
     "logTimeButton": "Enregistrer le temps"
   },
   "notifications": {
-    "vapidNotFound": "VAPID public key not found",
-    "saveSubFailed": "Failed to save subscription on server",
-    "pushPermissionFailed": "Failed to enable push notifications. Please check your browser permissions.",
-    "subFailed": "Push subscription failed",
-    "unsubFailed": "Push unsubscription failed",
-    "justNow": "Just now",
-    "minsAgo": "{mins}m ago",
-    "hoursAgo": "{hours}h ago",
+    "vapidNotFound": "Clé publique VAPID introuvable",
+    "saveSubFailed": "Échec de l’enregistrement de l’abonnement sur le serveur",
+    "pushPermissionFailed": "Impossible d’activer les notifications push. Veuillez vérifier les permissions de votre navigateur.",
+    "subFailed": "Échec de l’abonnement aux notifications push",
+    "unsubFailed": "Échec de la désinscription aux notifications push",
+    "justNow": "À l’instant",
+    "minsAgo": "il y a {mins} min",
+    "hoursAgo": "il y a {hours} h",
     "title": "Notifications",
-    "markAllRead": "Mark all read",
-    "noNotifications": "No notifications",
-    "working": "Working...",
-    "pushOn": "🔔 Push Notifications On",
-    "pushOff": "notifications_off Enable Push Notifications"
+    "markAllRead": "Tout marquer comme lu",
+    "noNotifications": "Aucune notification",
+    "working": "Traitement en cours...",
+    "pushOn": "🔔 Notifications push activées",
+    "pushOff": "notifications_off Activer les notifications push"
   },
   "views": {
     "defaultName": "Vue {count}"
