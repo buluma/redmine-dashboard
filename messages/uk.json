@@ -496,22 +496,22 @@
     "statusUpdated": "Status updated."
   },
   "createIssue": {
-    "title": "🆕 Створити нову проблему",
-    "projectLabel": "Проєкт *",
-    "projectPlaceholder": "Оберіть проєкт...",
-    "subjectLabel": "Тема *",
-    "subjectPlaceholder": "Короткий опис проблеми",
+    "title": "Створити завдання",
+    "projectLabel": "Проект",
+    "subjectLabel": "Тема",
     "descriptionLabel": "Опис",
-    "descriptionPlaceholder": "Детальний опис...",
+    "projectPlaceholder": "Вибрати проект",
+    "subjectPlaceholder": "Ввести тему",
+    "descriptionPlaceholder": "Ввести опис",
     "statusLabel": "Статус",
     "priorityLabel": "Пріоритет",
-    "dueDateLabel": "Термін виконання",
+    "dueDateLabel": "Термін",
     "cancelBtn": "Скасувати",
-    "createBtn": "Створити проблему",
+    "createBtn": "Створити",
     "creatingBtn": "Створення...",
-    "successToast": "Проблему успішно створено",
-    "errorRequired": "Потрібно вказати тему та проєкт",
-    "errorFailed": "Не вдалося створити проблему"
+    "successToast": "Завдання успішно створено",
+    "errorRequired": "Будь ласка, заповніть обов'язкові поля",
+    "errorFailed": "Не вдалося створити завдання"
   },
   "advancedFilters": {
     "toggleBtn": "⚙️ Фільтри",
@@ -556,7 +556,7 @@
     "colUpdated": "Оновлено"
   },
   "shortcuts": {
-    "title": "⌨️ Гарячі клавіші",
+    "title": "Клавіатурні скорочення",
     "categories": {
       "Navigation": "Навігація",
       "Actions": "Дії",
@@ -565,29 +565,27 @@
       "View": "Вигляд"
     },
     "keys": {
-      "j_desc": "Наступна проблема",
-      "k_desc": "Попередня проблема",
-      "Enter_desc": "Відкрити вибрану проблему",
-      "Escape_desc": "Закрити / скасувати вибір",
-      "a_desc": "Перемкнути AI-панель",
-      "r_desc": "Примусове оновлення даних",
-      "f_desc": "Скинути фільтри",
+      "j_desc": "Перемістити курсор вниз",
+      "k_desc": "Перемістити курсор вгору",
+      "Enter_desc": "Відкрити вибраний елемент",
+      "Escape_desc": "Закрити модальне вікно / скасувати вибір",
+      "a_desc": "Призначити мені",
+      "r_desc": "Відповісти на коментар",
+      "f_desc": "Додати до улюблених",
       "slash_desc": "Фокус пошуку",
-      "g_desc": "Перейти на початок списку",
-      "x_desc": "Перемкнути вибір",
-      "ShiftJ_desc": "Додати наступну",
-      "ShiftK_desc": "Додати попередню",
+      "g_desc": "Перейти до завдання",
+      "x_desc": "Переключити вибір",
+      "ShiftJ_desc": "Розширити вибір вниз",
+      "ShiftK_desc": "Розширити вибір вгору",
       "Asterisk_desc": "Вибрати всі видимі",
-      "Alt1_desc": "Перейти до Insights",
-      "Alt2_desc": "Перейти до Alerts",
-      "Alt3_desc": "Перейти до Feed",
-      "Alt4_desc": "Перейти до черги проблем",
-      "Question_desc": "Показати довідку",
-      "t_desc": "Перемкнути тему (світла/темна)",
-      "s_desc": "Перемкнути синхронізацію"
-    },
-    "footerHelp": "Натисніть {key1} або {key2} для закриття",
-    "hint": "Натисніть {key} для гарячих клавіш"
+      "Alt1_desc": "Показати панель",
+      "Alt2_desc": "Показати завдання",
+      "Alt3_desc": "Показати звіти",
+      "Alt4_desc": "Показати налаштування",
+      "Question_desc": "Показати цю довідку",
+      "t_desc": "Переключити тему",
+      "s_desc": "Сортувати за"
+    }
   },
   "personalTickets": {
     "kicker": "Тікети",
@@ -801,7 +799,7 @@
     "errorGeneral": "Сталася помилка.",
     "errorExecuting": "Помилка виконання.",
     "actionsCompleted": "Готово.",
-    "actionsCancelled": "Скасовано."
+    "actionsCancelled": "Не проблема — я скасував ці дії. Дайте знати, якщо потрібна ще допомога."
   },
   "slack": {
     "kicker": "Slack",
@@ -847,7 +845,7 @@
     "errorLoading": "Помилка",
     "invalidKey": "Невірний ключ",
     "rateLimit": "Ліміт перевищено",
-    "calculating": "Обробка...",
+    "calculating": "WakaTime все ще обробляє вашу статистику. Спробуйте ще раз через мить.",
     "reportWindow": "Період",
     "viewLabel": "{range}",
     "loading": "Завантаження...",
@@ -886,8 +884,8 @@
     "entriesBadge": "{count} записів",
     "events": "{count} подій",
     "noActivityMix": "Немає даних",
-    "noHeartbeatsScope": "Немає доступу",
-    "noGoalsAvailable": "Немає цілей",
+    "noHeartbeatsScope": "Heartbeats недоступні. Додайте доступ read_heartbeats для отримання детальної активності.",
+    "noGoalsAvailable": "Цілі недоступні. Підтвердіть доступ read_goals та наявність плану WakaTime premium.",
     "noCodingDays": "Немає даних",
     "tryLast30Days": "Останні 30 днів",
     "vsEarlierPeriod": "{prefix}{percent}% порівняно",
@@ -1044,56 +1042,6 @@
     "savedPresets": "Збережені пресети ({count})",
     "noneSaved": "Збережених пресетів ще немає.",
     "delete": "Видалити"
-  },
-  "shortcuts": {
-    "title": "Клавіатурні скорочення",
-    "categories": {
-      "Navigation": "Навігація",
-      "Actions": "Дії",
-      "Selection": "Вибір",
-      "Panels": "Панелі",
-      "View": "Вигляд"
-    },
-    "keys": {
-      "j_desc": "Перемістити курсор вниз",
-      "k_desc": "Перемістити курсор вгору",
-      "Enter_desc": "Відкрити вибраний елемент",
-      "Escape_desc": "Закрити модальне вікно / скасувати вибір",
-      "a_desc": "Призначити мені",
-      "r_desc": "Відповісти на коментар",
-      "f_desc": "Додати до улюблених",
-      "slash_desc": "Фокус пошуку",
-      "g_desc": "Перейти до завдання",
-      "x_desc": "Переключити вибір",
-      "ShiftJ_desc": "Розширити вибір вниз",
-      "ShiftK_desc": "Розширити вибір вгору",
-      "Asterisk_desc": "Вибрати всі видимі",
-      "Alt1_desc": "Показати панель",
-      "Alt2_desc": "Показати завдання",
-      "Alt3_desc": "Показати звіти",
-      "Alt4_desc": "Показати налаштування",
-      "Question_desc": "Показати цю довідку",
-      "t_desc": "Переключити тему",
-      "s_desc": "Сортувати за"
-    }
-  },
-  "createIssue": {
-    "title": "Створити завдання",
-    "projectLabel": "Проект",
-    "subjectLabel": "Тема",
-    "descriptionLabel": "Опис",
-    "projectPlaceholder": "Вибрати проект",
-    "subjectPlaceholder": "Ввести тему",
-    "descriptionPlaceholder": "Ввести опис",
-    "statusLabel": "Статус",
-    "priorityLabel": "Пріоритет",
-    "dueDateLabel": "Термін",
-    "cancelBtn": "Скасувати",
-    "createBtn": "Створити",
-    "creatingBtn": "Створення...",
-    "successToast": "Завдання успішно створено",
-    "errorRequired": "Будь ласка, заповніть обов'язкові поля",
-    "errorFailed": "Не вдалося створити завдання"
   },
   "quickActions": {
     "title": "Швидкі дії",
