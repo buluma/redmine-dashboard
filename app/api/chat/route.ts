@@ -42,7 +42,7 @@ export async function GET() {
 
     // Get recent general chat messages (not tied to specific issues)
     const chatHistory = await prisma.aiChatMessage.findMany({
-      where: { userId: user.id, issueId: { equals: "" } }, // empty string = not tied to issue
+      where: { userId: user.id, issueId: { equals: null } }, // null = not tied to issue
       orderBy: { createdAt: "desc" },
       take: 50,
     });
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     await prisma.aiChatMessage.create({
       data: {
         userId: user.id,
-        issueId: "", // empty = general chat not tied to issue
+        issueId: null, // null = general chat not tied to issue
         role: "user",
         content: lastUserMsg.content,
       },
@@ -256,7 +256,7 @@ Current session context:
     await prisma.aiChatMessage.create({
       data: {
         userId: user.id,
-        issueId: "", // empty = general chat
+        issueId: null, // null = general chat
         role: "assistant",
         content: result.content,
         model: result.model,
