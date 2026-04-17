@@ -1102,7 +1102,7 @@
     "noNotifications": "Немає сповіщень",
     "working": "Робота...",
     "pushOn": "🔔 Push-сповіщення увімкнено",
-    "pushOff": "notifications_off Увімкнути Push-сповіщення"
+    "pushOff": "🔔 Увімкнути Push-сповіщення"
   },
   "views": {
     "defaultName": "Перегляд {count}"

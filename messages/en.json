@@ -920,7 +920,7 @@
     "noNotifications": "No notifications",
     "working": "Working...",
     "pushOn": "🔔 Push Notifications On",
-    "pushOff": "notifications_off Enable Push Notifications"
+    "pushOff": "🔔 Enable Push Notifications"
   },
   "views": {
     "defaultName": "View {count}"
