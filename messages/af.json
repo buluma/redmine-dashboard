@@ -83,11 +83,11 @@
       "d": "{count}d ago"
     },
     "tabs": {
-      "history": "History",
-      "notes": "Notes",
-      "internalNotes": "Internal Notes",
-      "properties": "Properties",
-      "timeEntries": "Time Entries"
+      "history": "Geskiedenis",
+      "notes": "Notas",
+      "internalNotes": "Interne Notas",
+      "properties": "Eienskappe",
+      "timeEntries": "Tydinskrywings"
     },
     "messages": {
       "refreshed": "Issue refreshed from Redmine.",
