@@ -19,7 +19,9 @@
     "no": "Nie",
     "action": "Akcja",
     "updated": "Zaktualizowano",
-    "status": "Status"
+    "status": "Status",
+    "on": "Auto-odświeżanie WŁĄCZONE",
+    "off": "Auto-odświeżanie WYŁĄCZONE"
   },
   "nav": {
     "dashboard": "Panel",
@@ -34,13 +36,13 @@
     "webhooks": "Webhooki",
     "apiDocs": "Dokumentacja API",
     "groups": {
-      "personal": "Personnel",
-      "teamOps": "Opérations d’équipe",
-      "reporting": "Rapports",
-      "integrations": "Intégrations",
-      "system": "Système",
-      "other": "Autre",
-      "activity": "Activité"
+      "personal": "Osobiste",
+      "teamOps": "Operacje zespołu",
+      "reporting": "Raportowanie",
+      "integrations": "Integracje",
+      "system": "System",
+      "other": "Inne",
+      "activity": "Aktywność"
     },
     "tooltips": {
       "expand": "Développer le menu",
@@ -74,48 +76,48 @@
     "author": "Autor",
     "created": "Utworzono",
     "updated": "Zaktualizowano",
-    "showCode": "Show code ({count} lines)",
-    "notSet": "Not set",
+    "showCode": "Pokaż kod ({count} wierszy)",
+    "notSet": "Nie ustawiono",
     "ago": {
-      "s": "{count}s ago",
-      "m": "{count}m ago",
-      "h": "{count}h ago",
-      "d": "{count}d ago"
+      "s": "{count}s temu",
+      "m": "{count}m temu",
+      "h": "{count}h temu",
+      "d": "{count}d temu"
     },
     "tabs": {
       "history": "Historique",
       "notes": "Notes",
-      "internalNotes": "Notes internes",
-      "properties": "Propriétés",
-      "timeEntries": "Saisies de temps"
+      "internalNotes": "Notatki wewnętrzne",
+      "properties": "Właściwości",
+      "timeEntries": "Wpisy czasu"
     },
     "messages": {
-      "refreshed": "Ticket actualisé depuis Redmine.",
-      "personalUpdated": "Ticket personnel mis à jour.",
-      "redmineUpdated": "Ticket mis à jour avec succès dans Redmine.",
-      "githubLinked": "Lien GitHub ajouté.",
-      "githubRemoved": "Lien GitHub supprimé.",
-      "noteFailed": "Échec de l’ajout de la note",
-      "statusUpdated": "Statut mis à jour dans Redmine.",
-      "assigned": "Ticket assigné.",
-      "timeLogged": "Temps enregistré.",
-      "assignFailed": "Échec de l’assignation",
-      "assignedTo": "Assigné à {name}"
+      "refreshed": "Zadanie zaktualizowane z Redmine.",
+      "personalUpdated": "Zadanie osobiste zaktualizowane.",
+      "redmineUpdated": "Zadanie pomyślnie zaktualizowane w Redmine.",
+      "githubLinked": "Link GitHub dodany.",
+      "githubRemoved": "Link GitHub usunięty.",
+      "noteFailed": "Nie udało się dodać notatki",
+      "statusUpdated": "Status zaktualizowany w Redmine.",
+      "assigned": "Zadanie przypisane.",
+      "timeLogged": "Czas zarejestrowany.",
+      "assignFailed": "Nie udało się przypisać",
+      "assignedTo": "Przypisano do {name}"
     },
     "fields": {
-      "author": "Auteur",
-      "created": "Créé",
-      "updated": "Mis à jour",
-      "priority": "Priorité",
-      "status": "Statut",
-      "assignee": "Assigné à",
-      "dueDate": "Date d’échéance",
-      "estimatedHours": "Heures estimées",
-      "spentHours": "Heures consommées",
-      "done": "Terminé",
-      "description": "Description",
-      "category": "Catégorie",
-      "titleLabel": "Titre"
+      "author": "Autor",
+      "created": "Utworzono",
+      "updated": "Zaktualizowano",
+      "priority": "Priorytet",
+      "status": "Status",
+      "assignee": "Przypisano do",
+      "dueDate": "Termin",
+      "estimatedHours": "Szacowane godziny",
+      "spentHours": "Spędzone godziny",
+      "done": "Zakończono",
+      "description": "Opis",
+      "category": "Kategoria",
+      "titleLabel": "Tytuł"
     },
     "sections": {
       "overview": "Aperçu",
@@ -128,9 +130,9 @@
       "metadata": "Métadonnées"
     },
     "empty": {
-      "attachments": "Aucune pièce jointe",
-      "relations": "Aucune relation",
-      "subtickets": "Aucun sous-ticket",
+      "attachments": "Brak załączników",
+      "relations": "Brak relacji",
+      "subtickets": "Brak podzadań",
       "github": "Aucune référence GitHub liée pour le moment",
       "noCategory": "Aucune catégorie",
       "noPriority": "Aucune priorité",
@@ -200,10 +202,10 @@
     "summarizing": "Résumé en cours...",
     "summarized": "Résumé terminé",
     "noActivity": "Aucune activité IA",
-    "askAI": "Demander à l’IA",
+    "askAI": "Demander à l'IA",
     "analyzing": "Analyse des tickets en cours...",
-    "staleIssues": "Tickets inactifs",
-    "noActivityDesc": "Les résumés et l’historique des conversations apparaîtront ici une fois que vous utiliserez les fonctionnalités IA.",
+    "staleIssues": "Nieaktywne zadania",
+    "noActivityDesc": "Les résumés et l'historique des conversations apparaîtront ici une fois que vous utiliserez les fonctionnalités IA.",
     "summaryCount": "{count} {count, plural, one {résumé} other {résumés}}",
     "chatMessages": "{count} messages de chat sur {issueCount} {issueCount, plural, one {ticket} other {tickets}}",
     "noChatMessages": "Aucun message de chat pour le moment.",
@@ -215,9 +217,9 @@
     "statusHealthy": "IA : {modelName}",
     "statusUnhealthy": "IA : {error}",
     "usingFallbackModel": "Utilisation du modèle de secours",
-    "statusTitle": "État de l’IA",
-    "statusOnline": "En ligne",
-    "statusOffline": "Hors ligne",
+    "statusTitle": "État de l'IA",
+    "statusOnline": "Online",
+    "statusOffline": "Offline",
     "providerLabel": "Fournisseur",
     "modelLabel": "Modèle",
     "fallbackLabel": "Secours",
@@ -228,7 +230,7 @@
     "featureChat": "💬 Chat",
     "availableModels": "Modèles disponibles ({count})",
     "refreshButton": "🔄 Actualiser",
-    "fetchStatusFailed": "Échec de la récupération du statut IA",
+    "fetchStatusFailed": "Nie udało się pobrać statusu AI",
     "serviceUnavailable": "Service IA indisponible",
     "insightsCount": "{count, plural, =0 {Aucune analyse IA disponible.} one {1 analyse IA générée} other {# analyses IA générées}}"
   },
@@ -267,7 +269,7 @@
     "usingEnv": "Używanie .env...",
     "useEnvConfig": "Użyj konfiguracji .env",
     "envBootstrapHelp": "Bootstrap .env jest dostępny tylko przy pierwszym uruchomieniu (aktywne dane uwierzytelniające: {activeCredentials}).",
-    "connectionFailed": "Connection failed"
+    "connectionFailed": "Połączenie nie powiodło się"
   },
   "hero": {
     "kicker": "Centrum operacyjne",
@@ -393,7 +395,7 @@
   },
   "pagination": {
     "pageInfo": "Strona {current} z {max}",
-    "showing": "· Wyświetlanie {start}–{end} z {total}",
+    "showing": "· Wyświetlanie {start}-{end} z {total}",
     "filtered": "(odfiltrowano z {unfilteredTotal})",
     "queueHidden": {
       "=0": "File masquée.",
@@ -414,7 +416,7 @@
     "children": "Dzieci: {ids}",
     "close": "Zamknąć",
     "ghLinksTitle": "Linki do GitHuba",
-    "ghRepo": "Repozytorium („właściciel/repo”)",
+    "ghRepo": "Repozytorium ('właściciel/repo')",
     "ghIssueNum": "Numer problemu z GitHubem",
     "ghPrNum": "PR # GitHuba",
     "ghUrl": "Bezpośredni adres URL (opcjonalnie)",
@@ -487,9 +489,9 @@
     "timerStarted": "Uruchomiono licznik czasu dla problemu #{id}.",
     "timerStopped": "Timer zatrzymany. Godziny wstępnie wypełnione do {hours}.",
     "invalidRelId": "Wprowadź prawidłowy identyfikator powiązanego problemu.",
-    "viewSavedChanges": "Zapisano zmiany w widoku „{name}”.",
-    "viewSaved": "Zapisany widok „{name}”.",
-    "viewRemoved": "Usunięto widok „{name}”.",
+    "viewSavedChanges": "Zapisano zmiany w widoku \"{name}\".",
+    "viewSaved": "Zapisany widok \"{name}\".",
+    "viewRemoved": "Usunięto widok \"{name}\".",
     "actionNotPermitted": "Action not permitted",
     "statusUpdated": "Status updated."
   },
@@ -718,7 +720,7 @@
     }
   },
   "offlineBanner": {
-    "message": "Jesteś offline — wyświetlane dane z pamięci podręcznej"
+    "message": "Jesteś offline - wyświetlane dane z pamięci podręcznej"
   },
   "filterPresetsModal": {
     "title": "Presety filtrów",

@@ -17,9 +17,11 @@
     "confirm": "确认",
     "yes": "是",
     "no": "否",
-    "action": "Action",
-    "updated": "Updated",
-    "status": "Status"
+    "action": "操作",
+    "updated": "已更新",
+    "status": "状态",
+    "on": "自动刷新 已开启",
+    "off": "自动刷新 已关闭"
   },
   "nav": {
     "dashboard": "仪表板",
@@ -74,13 +76,13 @@
     "author": "创建者",
     "created": "创建于",
     "updated": "更新于",
-    "showCode": "Show code ({count} lines)",
-    "notSet": "Not set",
+    "showCode": "显示代码 ({count} 行)",
+    "notSet": "未设置",
     "ago": {
-      "s": "{count}s ago",
-      "m": "{count}m ago",
-      "h": "{count}h ago",
-      "d": "{count}d ago"
+      "s": "{count}秒前",
+      "m": "{count}分钟前",
+      "h": "{count}小时前",
+      "d": "{count}天前"
     },
     "tabs": {
       "history": "History",
@@ -90,32 +92,32 @@
       "timeEntries": "Time Entries"
     },
     "messages": {
-      "refreshed": "Issue refreshed from Redmine.",
-      "personalUpdated": "Personal ticket updated.",
-      "redmineUpdated": "Issue updated in Redmine successfully.",
-      "githubLinked": "GitHub link added.",
-      "githubRemoved": "GitHub link removed.",
-      "noteFailed": "Failed to add note",
-      "statusUpdated": "Status updated in Redmine.",
-      "assigned": "Issue assigned.",
-      "timeLogged": "Time entry logged.",
-      "assignFailed": "Failed to assign",
-      "assignedTo": "Assigned to {name}"
+      "refreshed": "问题已从 Redmine 刷新。",
+      "personalUpdated": "个人工单已更新。",
+      "redmineUpdated": "问题已在 Redmine 中成功更新。",
+      "githubLinked": "GitHub 链接已添加。",
+      "githubRemoved": "GitHub 链接已移除。",
+      "noteFailed": "添加备注失败",
+      "statusUpdated": "状态已在 Redmine 中更新。",
+      "assigned": "问题已分配。",
+      "timeLogged": "时间条目已记录。",
+      "assignFailed": "分配失败",
+      "assignedTo": "已分配给 {name}"
     },
     "fields": {
-      "author": "Author",
-      "created": "Created",
-      "updated": "Updated",
-      "priority": "Priority",
-      "status": "Status",
-      "assignee": "Assignee",
-      "dueDate": "Due Date",
-      "estimatedHours": "Estimated Hours",
-      "spentHours": "Spent Hours",
-      "done": "Done",
-      "description": "Description",
-      "category": "Category",
-      "titleLabel": "Title"
+      "author": "作者",
+      "created": "创建时间",
+      "updated": "更新时间",
+      "priority": "优先级",
+      "status": "状态",
+      "assignee": "指派给",
+      "dueDate": "截止日期",
+      "estimatedHours": "预计工时",
+      "spentHours": "已用工时",
+      "done": "完成",
+      "description": "描述",
+      "category": "类别",
+      "titleLabel": "标题"
     },
     "sections": {
       "overview": "Overview",
@@ -128,9 +130,9 @@
       "metadata": "Metadata"
     },
     "empty": {
-      "attachments": "No attachments",
-      "relations": "No relations",
-      "subtickets": "No subtickets",
+      "attachments": "无附件",
+      "relations": "无关联",
+      "subtickets": "无子工单",
       "github": "No GitHub references linked yet",
       "noCategory": "No Category",
       "noPriority": "No Priority",
@@ -268,7 +270,7 @@
     "usingEnv": "使用.env...",
     "useEnvConfig": "使用 .env 配置",
     "envBootstrapHelp": ".env bootstrap 仅在首次运行时可用（活动凭据：{activeCredentials}）。",
-    "connectionFailed": "Connection failed"
+    "connectionFailed": "连接失败"
   },
   "hero": {
     "kicker": "运营中心",

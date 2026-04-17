@@ -17,9 +17,11 @@
     "confirm": "Подтвердить",
     "yes": "Да",
     "no": "Нет",
-    "action": "Action",
-    "updated": "Updated",
-    "status": "Status"
+    "action": "Действие",
+    "updated": "Обновлено",
+    "status": "Статус",
+    "on": "Автообновление ВКЛ",
+    "off": "Автообновление ВЫКЛ"
   },
   "nav": {
     "dashboard": "Панель",

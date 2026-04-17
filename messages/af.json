@@ -17,38 +17,40 @@
     "confirm": "Bevestig",
     "yes": "Ja",
     "no": "Nee",
-    "action": "Action",
-    "updated": "Updated",
-    "status": "Status"
+    "action": "Aksie",
+    "updated": "Opgedateer",
+    "status": "Status",
+    "on": "Auto-verfrissing AAN",
+    "off": "Auto-verfrissing AF"
   },
   "nav": {
-    "dashboard": "Dashboard",
-    "heimdall": "Heimdall-logs",
+    "dashboard": "Paneel",
+    "heimdall": "Heimdall-logboeke",
     "personalTickets": "Persoonlike kaartjies",
     "reports": "Verslae",
     "aiSummaries": "KI-opsommings",
     "chat": "KI-klets",
     "ops": "Stelsel-ops",
-    "slack": "Slap",
+    "slack": "Slack",
     "wakatime": "WakaTime",
     "webhooks": "Webhooks",
     "apiDocs": "API-dokumentasie",
     "groups": {
-      "personal": "Personal",
-      "teamOps": "Team Ops",
-      "reporting": "Reporting",
-      "integrations": "Integrations",
-      "system": "System",
-      "other": "Other",
-      "activity": "Activity"
+      "personal": "Persoonlik",
+      "teamOps": "Span-ops",
+      "reporting": "Verslagdoening",
+      "integrations": "Integrasies",
+      "system": "Stelsel",
+      "other": "Ander",
+      "activity": "Aktiwiteit"
     },
     "tooltips": {
-      "expand": "Expand menu",
-      "collapse": "Collapse menu"
+      "expand": "Menu uitbrei",
+      "collapse": "Menu saamtrek"
     }
   },
   "dashboard": {
-    "title": "Dashboard",
+    "title": "Paneel",
     "openIssues": "Oop kaartjies",
     "closedIssues": "Geslote kaartjies",
     "inProgress": "In behandeling",
@@ -74,13 +76,13 @@
     "author": "Skrywer",
     "created": "Geskep",
     "updated": "Opgedateer",
-    "showCode": "Show code ({count} lines)",
-    "notSet": "Not set",
+    "showCode": "Wys kode ({count} reëls)",
+    "notSet": "Nie gestel nie",
     "ago": {
-      "s": "{count}s ago",
-      "m": "{count}m ago",
-      "h": "{count}h ago",
-      "d": "{count}d ago"
+      "s": "{count}s gelede",
+      "m": "{count}m gelede",
+      "h": "{count}h gelede",
+      "d": "{count}d gelede"
     },
     "tabs": {
       "history": "Geskiedenis",
@@ -90,32 +92,32 @@
       "timeEntries": "Tydinskrywings"
     },
     "messages": {
-      "refreshed": "Issue refreshed from Redmine.",
-      "personalUpdated": "Personal ticket updated.",
-      "redmineUpdated": "Issue updated in Redmine successfully.",
-      "githubLinked": "GitHub link added.",
-      "githubRemoved": "GitHub link removed.",
-      "noteFailed": "Failed to add note",
-      "statusUpdated": "Status updated in Redmine.",
-      "assigned": "Issue assigned.",
-      "timeLogged": "Time entry logged.",
-      "assignFailed": "Failed to assign",
-      "assignedTo": "Assigned to {name}"
+      "refreshed": "Issue verfris vanaf Redmine.",
+      "personalUpdated": "Persoonlike kaartjie opgedateer.",
+      "redmineUpdated": "Issue suksesvol opgedateer in Redmine.",
+      "githubLinked": "GitHub-skakel bygevoeg.",
+      "githubRemoved": "GitHub-skakel verwyder.",
+      "noteFailed": "Kon nie nota byvoeg nie",
+      "statusUpdated": "Status opgedateer in Redmine.",
+      "assigned": "Issue toegewys.",
+      "timeLogged": "Tydvermelding aangeteken.",
+      "assignFailed": "Kon nie toewys nie",
+      "assignedTo": "Toegewys aan {name}"
     },
     "fields": {
-      "author": "Author",
-      "created": "Created",
-      "updated": "Updated",
-      "priority": "Priority",
+      "author": "Outeur",
+      "created": "Geskep",
+      "updated": "Opgedateer",
+      "priority": "Prioriteit",
       "status": "Status",
-      "assignee": "Assignee",
-      "dueDate": "Due Date",
-      "estimatedHours": "Estimated Hours",
-      "spentHours": "Spent Hours",
-      "done": "Done",
-      "description": "Description",
-      "category": "Category",
-      "titleLabel": "Title"
+      "assignee": "Toegewys aan",
+      "dueDate": "Vervaldatum",
+      "estimatedHours": "Geskatte ure",
+      "spentHours": "Bestede ure",
+      "done": "Klaar",
+      "description": "Beskrywing",
+      "category": "Kategorie",
+      "titleLabel": "Titel"
     },
     "sections": {
       "overview": "Overview",
@@ -128,9 +130,9 @@
       "metadata": "Metadata"
     },
     "empty": {
-      "attachments": "No attachments",
-      "relations": "No relations",
-      "subtickets": "No subtickets",
+      "attachments": "Geen aanhangsels",
+      "relations": "Geen verhoudings",
+      "subtickets": "Geen subtickets",
       "github": "No GitHub references linked yet",
       "noCategory": "No Category",
       "noPriority": "No Priority",
@@ -267,7 +269,7 @@
     "usingEnv": "Gebruik .env...",
     "useEnvConfig": "Gebruik .env-konfigurasie",
     "envBootstrapHelp": ".env-bootstrap is slegs beskikbaar met die eerste keer (aktiewe geloofsbriewe: {activeCredentials}).",
-    "connectionFailed": "Connection failed"
+    "connectionFailed": "Verbinding gefaal"
   },
   "hero": {
     "kicker": "Bedryfshub",
@@ -279,8 +281,8 @@
     "aiCloud": "🤖 KI: Wolk",
     "aiFallback": "🤖 KI: Terugval",
     "refreshing": "Verfris tans …",
-    "forceRefresh": "Force Refresh",
-    "resetFilters": "Stel filters terug",
+    "forceRefresh": "Verfris dwarsdeur",
+    "resetFilters": "Herstel filters",
     "shortcutsBtn": "Kortpaaie"
   },
   "metrics": {

@@ -17,9 +17,11 @@
     "confirm": "Xác nhận",
     "yes": "Có",
     "no": "Không",
-    "action": "Action",
-    "updated": "Updated",
-    "status": "Status"
+    "action": "Hành động",
+    "updated": "Đã cập nhật",
+    "status": "Trạng thái",
+    "on": "Tự động làm mới BẬT",
+    "off": "Tự động làm mới TẮT"
   },
   "nav": {
     "dashboard": "Bảng điều khiển",

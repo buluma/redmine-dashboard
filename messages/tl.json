@@ -17,9 +17,11 @@
     "confirm": "Kumpirmahin",
     "yes": "Oo",
     "no": "Hindi",
-    "action": "Action",
-    "updated": "Updated",
-    "status": "Status"
+    "action": "Aksyon",
+    "updated": "Na-update",
+    "status": "Katayuan",
+    "on": "Auto-refresh NAKA-ON",
+    "off": "Auto-refresh NAKA-OFF"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -43,8 +45,8 @@
       "activity": "Activity"
     },
     "tooltips": {
-      "expand": "Expand menu",
-      "collapse": "Collapse menu"
+      "expand": "I-expand ang menu",
+      "collapse": "I-collapse ang menu"
     }
   },
   "dashboard": {
@@ -53,11 +55,11 @@
     "closedIssues": "Saradong Issues",
     "inProgress": "Sa Pagprogreso",
     "recentActivity": "Kamakailang Aktibidad",
-    "noResults": "Walang results",
+    "noResults": "Walang mga resulta",
     "forceRefresh": "Force Refresh",
     "resetFilters": "I-reset ang Filters",
-    "shortcuts": "Mga shortcut",
-    "lastSync": "Huling sync"
+    "shortcuts": "Mga Shortcut",
+    "lastSync": "Huling pag-sync"
   },
   "issues": {
     "subject": "Paksa",
@@ -74,13 +76,13 @@
     "author": "May-akda",
     "created": "Ginawa",
     "updated": "Na-update",
-    "showCode": "Show code ({count} lines)",
-    "notSet": "Not set",
+    "showCode": "Ipakita ang code ({count} lines)",
+    "notSet": "Hindi naka-set",
     "ago": {
-      "s": "{count}s ago",
-      "m": "{count}m ago",
-      "h": "{count}h ago",
-      "d": "{count}d ago"
+      "s": "{count}s ang nakalipas",
+      "m": "{count}m ang nakalipas",
+      "h": "{count}h ang nakalipas",
+      "d": "{count}d ang nakalipas"
     },
     "tabs": {
       "history": "History",
@@ -90,32 +92,32 @@
       "timeEntries": "Time Entries"
     },
     "messages": {
-      "refreshed": "Issue refreshed from Redmine.",
-      "personalUpdated": "Personal ticket updated.",
-      "redmineUpdated": "Issue updated in Redmine successfully.",
-      "githubLinked": "GitHub link added.",
-      "githubRemoved": "GitHub link removed.",
-      "noteFailed": "Failed to add note",
-      "statusUpdated": "Status updated in Redmine.",
-      "assigned": "Issue assigned.",
-      "timeLogged": "Time entry logged.",
-      "assignFailed": "Failed to assign",
-      "assignedTo": "Assigned to {name}"
+      "refreshed": "Ang issue ay na-refresh mula sa Redmine.",
+      "personalUpdated": "Ang personal ticket ay na-update.",
+      "redmineUpdated": "Ang issue ay successfully na-update sa Redmine.",
+      "githubLinked": "Idinagdag ang GitHub link.",
+      "githubRemoved": "Inalis ang GitHub link.",
+      "noteFailed": "Nabigo ang pagdagdag ng tala",
+      "statusUpdated": "Ang status ay na-update sa Redmine.",
+      "assigned": "Ang issue ay na-assign.",
+      "timeLogged": "Ang time entry ay na-log.",
+      "assignFailed": "Nabigo ang pag-assign",
+      "assignedTo": "I-assign kay {name}"
     },
     "fields": {
-      "author": "Author",
-      "created": "Created",
-      "updated": "Updated",
-      "priority": "Priority",
-      "status": "Status",
-      "assignee": "Assignee",
-      "dueDate": "Due Date",
-      "estimatedHours": "Estimated Hours",
-      "spentHours": "Spent Hours",
-      "done": "Done",
-      "description": "Description",
-      "category": "Category",
-      "titleLabel": "Title"
+      "author": "May-akda",
+      "created": "Ginawa",
+      "updated": "Na-update",
+      "priority": "Priyoridad",
+      "status": "Katayuan",
+      "assignee": "Naka-assign",
+      "dueDate": "Takdang petsa",
+      "estimatedHours": "Tinantiang oras",
+      "spentHours": "Ginagamit na oras",
+      "done": "Tapos na",
+      "description": "Deskripsyon",
+      "category": "Kategorya",
+      "titleLabel": "Titulo"
     },
     "sections": {
       "overview": "Overview",
@@ -128,9 +130,9 @@
       "metadata": "Metadata"
     },
     "empty": {
-      "attachments": "No attachments",
-      "relations": "No relations",
-      "subtickets": "No subtickets",
+      "attachments": "Walang attachment",
+      "relations": "Walang relations",
+      "subtickets": "Walang subtickets",
       "github": "No GitHub references linked yet",
       "noCategory": "No Category",
       "noPriority": "No Priority",
@@ -258,7 +260,7 @@
     "kickerOps": "Mga operasyon",
     "missionControl": "Mission Control Dashboard",
     "connectDesc": "Ikonekta ang iyong Redmine account at pamahalaan ang mga isyu mula sa isang pinag-isang dashboard.",
-    "baseUrlLabel": "Base URL",
+    "baseUrlLabel": "URL ng Base",
     "apiKeyLabel": "API Key",
     "baseUrlPlaceholder": "https://redmine.example.com",
     "apiKeyPlaceholder": "iyong-redmine-api-key",
@@ -267,7 +269,7 @@
     "usingEnv": "Gamit ang .env...",
     "useEnvConfig": "Gamitin ang .env Configuration",
     "envBootstrapHelp": "Available lang ang .env bootstrap sa unang pagtakbo (mga aktibong kredensyal: {activeCredentials}).",
-    "connectionFailed": "Connection failed"
+    "connectionFailed": "Nabigo ang koneksyon"
   },
   "hero": {
     "kicker": "Operations Hub",
@@ -279,7 +281,7 @@
     "aiCloud": "🤖 AI: Ulap",
     "aiFallback": "🤖 AI: Fallback",
     "refreshing": "Nire-refresh...",
-    "forceRefresh": "Force Refresh",
+    "forceRefresh": "I-refresh ng force",
     "resetFilters": "I-reset ang Mga Filter",
     "shortcutsBtn": "Mga shortcut"
   },
@@ -295,9 +297,9 @@
     "deliveryHealthFoot": "Tapos na: {done} • Avg tapos na ratio: {ratio}%",
     "blockedLabel": "Naka-block",
     "blockedFoot": "Ang katayuan ay naglalaman ng naka-block/hold/waiting",
-    "staleQueueLabel": "Stale Queue",
+    "staleQueueLabel": "Hindi aktibong pila",
     "staleQueueFoot": "Walang nakikitang aktibidad sa loob ng 3+ araw • Avg mula noong aktibidad: {days}d",
-    "aiInsightsLabel": "AI Insights",
+    "aiInsightsLabel": "Mga AI Insight",
     "aiInsightsNone": "Walang available na AI insight. Suriin muli mamaya!",
     "aiInsightsOne": "1 AI insight ang nabuo",
     "aiInsightsMany": "{count} AI insights nabuo"
@@ -329,7 +331,7 @@
     "statusMixTitle": "Halo ng Katayuan",
     "statusMixDesc": "Mag-click ng status para mabilis na mag-filter.",
     "noStatusData": "Wala pang status data.",
-    "priorityMixTitle": "Priority Mix",
+    "priorityMixTitle": "Halo ng Priyoridad",
     "noPriorityData": "Wala pang priority data."
   },
   "collapsible": {
@@ -500,22 +502,22 @@
     "subjectLabel": "Subject *",
     "subjectPlaceholder": "Brief summary of the issue",
     "descriptionLabel": "Description",
-    "descriptionPlaceholder": "Detailed explanation...",
-    "statusLabel": "Status",
-    "priorityLabel": "Priority",
-    "dueDateLabel": "Due Date",
-    "cancelBtn": "Cancel",
-    "createBtn": "Create Issue",
-    "creatingBtn": "Creating...",
-    "successToast": "Issue created successfully",
-    "errorRequired": "Subject and Project are required",
-    "errorFailed": "Failed to create issue"
+    "descriptionPlaceholder": "Detalyadong paglalarawan...",
+    "statusLabel": "Katayuan",
+    "priorityLabel": "Priyoridad",
+    "dueDateLabel": "Takdang Petsa",
+    "cancelBtn": "Kanselahin",
+    "createBtn": "Gumawang Issue",
+    "creatingBtn": "Gumagawa...",
+    "successToast": "Matagumpay na nagawang issue",
+    "errorRequired": "Kailangan ang Subject at Project",
+    "errorFailed": "Nabigo sa paggawa ng issue"
   },
   "advancedFilters": {
-    "toggleBtn": "⚙️ Filters",
-    "statusLabel": "Status",
-    "priorityLabel": "Priority",
-    "flagsLabel": "Flags",
+    "toggleBtn": "⚙️ Mga Filter",
+    "statusLabel": "Katayuan",
+    "priorityLabel": "Priyoridad",
+    "flagsLabel": "Mga Flag",
     "hasGhLinks": "Has GitHub Links",
     "hasAttachments": "Has Attachments",
     "dueDateLabel": "Due Date",
@@ -525,7 +527,7 @@
     "within30Days": "Due within 30 days",
     "overdueOption": "Overdue",
     "updatedAfterLabel": "Updated After",
-    "clearAllBtn": "Clear All",
+    "clearAllBtn": "I-clear Lahat",
     "doneBtn": "Done"
   },
   "projectFilter": {
@@ -869,18 +871,18 @@
     "vsAverageDown": "↓ {percent}% vs daily average",
     "dailyAvgLabel": "Daily avg:",
     "mostActiveLabel": "Most active:",
-    "languages": "Languages",
-    "projects": "Projects",
-    "editors": "Editors",
-    "top8": "top 8",
-    "hours": "Hours",
+    "languages": "Mga wika",
+    "projects": "Mga proyekto",
+    "editors": "Mga editor",
+    "top8": "nangungunang 8",
+    "hours": "Mga oras",
     "top": "Top",
-    "weekdayMix": "Weekday Activity Mix",
+    "weekdayMix": "Halo ng Aktibidad sa Weekday",
     "heartbeatsLabel": "heartbeats (7d)",
     "summariesLabel": "summaries fallback",
-    "goalsProgress": "Goals Progress",
+    "goalsProgress": "Pag-unlad ng Mga Layunin",
     "activeBadge": "{count} active",
-    "topCodingDays": "Top Coding Days",
+    "topCodingDays": "Nangungunang mga Coding Days",
     "entriesBadge": "{count} entries",
     "events": "{count} {count, plural, one {event} other {events}}",
     "noActivityMix": "No activity mix data available.",

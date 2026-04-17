@@ -19,7 +19,9 @@
     "no": "Non",
     "action": "Action",
     "updated": "Mis à jour",
-    "status": "Statut"
+    "status": "Statut",
+    "on": "Auto-rafraîchissement ACTIVÉ",
+    "off": "Auto-rafraîchissement DÉSACTIVÉ"
   },
   "nav": {
     "dashboard": "Tableau de Bord",
