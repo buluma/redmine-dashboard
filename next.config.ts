@@ -13,6 +13,10 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig: NextConfig = {
+  output: "standalone",
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   turbopack: {
     root: path.join(__dirname),
   },

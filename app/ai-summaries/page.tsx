@@ -68,7 +68,7 @@ export default async function AiSummariesPage() {
 
   // Unique issues count
   const uniqueIssueIds = new Set(summaries.map((s) => s.issue.id));
-  const chatUniqueIssueIds = new Set(chatMessages.map((m) => m.issue.redmineIssueId));
+  const chatUniqueIssueIds = new Set(chatMessages.map((m) => m.issue?.redmineIssueId).filter(Boolean));
   const totalIssueCount = new Set([...uniqueIssueIds, ...chatUniqueIssueIds]).size;
 
   for (const s of summaries) {
@@ -99,8 +99,8 @@ export default async function AiSummariesPage() {
         outputTokens: existing.outputTokens + (m.evalCount ?? 0),
       });
     }
-    if (m.issue.redmineIssueId) {
-      chatIssues.set(m.issue.redmineIssueId, (chatIssues.get(m.issue.redmineIssueId) ?? 0) + 1);
+    if (m.issue && m.issue.redmineIssueId) {
+      chatIssues.set(m.issue.redmineIssueId as number, (chatIssues.get(m.issue.redmineIssueId as number) ?? 0) + 1);
     }
   }
 
