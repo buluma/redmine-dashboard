@@ -21,7 +21,7 @@ type AiChatMessageData = {
     redmineBaseUrl: string | null;
     subject: string;
     statusName: string;
-  };
+  } | null;
 };
 
 interface GroupedChat {
@@ -73,7 +73,8 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
     const groups = new Map<number, GroupedChat>();
 
     for (const msg of messages) {
-      const issueId = msg.issue.redmineIssueId;
+      if (!msg.issue) continue;
+      const issueId = msg.issue!.redmineIssueId;
       if (!issueId) continue;
       const existing = groups.get(issueId);
 
@@ -85,9 +86,9 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
       } else {
         groups.set(issueId, {
           issueId,
-          subject: msg.issue.subject,
-          statusName: msg.issue.statusName,
-          baseUrl: msg.issue.redmineBaseUrl,
+          subject: msg.issue!.subject,
+          statusName: msg.issue!.statusName,
+          baseUrl: msg.issue!.redmineBaseUrl,
           messages: [msg],
           lastMessage: new Date(msg.createdAt),
         });
@@ -117,8 +118,8 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
     const term = searchTerm.toLowerCase();
     return messages.filter(
       (msg) =>
-        msg.issue.subject.toLowerCase().includes(term) ||
-        (msg.issue.redmineIssueId?.toString() ?? "").includes(term) ||
+        msg.issue!.subject.toLowerCase().includes(term) ||
+        (msg.issue!.redmineIssueId?.toString() ?? "").includes(term) ||
         msg.content.toLowerCase().includes(term)
     );
   }, [messages, searchTerm]);
@@ -352,18 +353,18 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
                   <div className="summary-header">
                     <div className="summary-issue-info">
                       <Link
-                        href={`/issues/${msg.issue.redmineIssueId}`}
+                        href={`/issues/${msg.issue!.redmineIssueId}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="summary-issue-link"
                       >
-                        #{msg.issue.redmineIssueId} - {msg.issue.subject}
+                        #{msg.issue!.redmineIssueId} - {msg.issue!.subject}
                       </Link>
                       <div className="summary-meta">
                         <span className={`chat-role-badge chat-role-${msg.role}`}>
                           {msg.role === "user" ? "👤 You" : "🤖 AI"}
                         </span>
-                        <span className="chat-status-badge">{msg.issue.statusName}</span>
+                        <span className="chat-status-badge">{msg.issue!.statusName}</span>
                       </div>
                     </div>
                     <div className="summary-side">
