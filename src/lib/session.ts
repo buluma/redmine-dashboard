@@ -22,10 +22,11 @@ export async function getCsrfToken(): Promise<string> {
   
   if (!token) {
     token = generateCsrfToken();
+    const useSecureCookies = process.env.NODE_ENV === "production" && process.env.SECURE_COOKIES !== "false";
     store.set(CSRF_COOKIE, token, {
       httpOnly: true,
       sameSite: "strict",
-      secure: process.env.NODE_ENV === "production",
+      secure: useSecureCookies,
       path: "/",
       maxAge: 60 * 60 * 24, // 24 hours
     });
@@ -114,10 +115,11 @@ export function verifySessionToken(token: string): string | null {
 
 export async function setSessionCookie(userId: string): Promise<void> {
   const store = await cookies();
+  const useSecureCookies = process.env.NODE_ENV === "production" && process.env.SECURE_COOKIES !== "false";
   store.set(SESSION_COOKIE, createSessionToken(userId), {
     httpOnly: true,
     sameSite: "strict", // Changed from "lax" to "strict" for CSRF protection
-    secure: process.env.NODE_ENV === "production",
+    secure: useSecureCookies,
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
   });
