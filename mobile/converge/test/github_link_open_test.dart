@@ -4,11 +4,11 @@ import "package:plugin_platform_interface/plugin_platform_interface.dart";
 import "package:url_launcher_platform_interface/link.dart";
 import "package:url_launcher_platform_interface/url_launcher_platform_interface.dart";
 
-import "package:flutter_converge/src/models.dart";
-import "package:flutter_converge/src/converge_api_client.dart";
-import "package:flutter_converge/src/repositories.dart";
-import "package:flutter_converge/src/screens.dart";
-import "package:flutter_converge/src/token_store.dart";
+import "package:converge/src/models.dart";
+import "package:converge/src/converge_api_client.dart";
+import "package:converge/src/repositories.dart";
+import "package:converge/src/screens.dart";
+import "package:converge/src/token_store.dart";
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
