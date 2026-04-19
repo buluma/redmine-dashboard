@@ -2,7 +2,7 @@ import "package:flutter/material.dart";
 import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:sentry_flutter/sentry_flutter.dart";
 
-import "src/nrcc_api_client.dart";
+import "src/converge_api_client.dart";
 import "src/repositories.dart";
 import "src/screens.dart";
 import "src/token_store.dart";
@@ -183,7 +183,7 @@ Future<void> main() async {
     options.tracesSampleRate = tracesSampleRate;
     options.profilesSampleRate = profilesSampleRate;
     options.enableLogs = enableLogs;
-  }, appRunner: () => runApp(SentryWidget(child: const NrccApp())));
+  }, appRunner: () => runApp(SentryWidget(child: const ConvergeApp())));
 }
 
 String _env(String key, [String fallback = ""]) {
@@ -202,28 +202,30 @@ bool _envBool(String key, bool fallback) {
   return fallback;
 }
 
-class NrccApp extends StatefulWidget {
-  const NrccApp({super.key});
+class ConvergeApp extends StatefulWidget {
+  const ConvergeApp({super.key});
 
   @override
-  State<NrccApp> createState() => _NrccAppState();
+  State<ConvergeApp> createState() => _ConvergeAppState();
 }
 
-class _NrccAppState extends State<NrccApp> {
+class _ConvergeAppState extends State<ConvergeApp> {
   late final TokenStore _tokenStore;
-  late final NrccApiClient _apiClient;
+  late final ConvergeApiClient _apiClient;
   late final AuthRepository _authRepository;
   late final IssuesRepository _issuesRepository;
   late final IssueActionsRepository _actionsRepository;
   bool _paired = false;
   bool _bootstrapping = true;
+  bool _unlocked = false;
+  bool _biometricAvailable = false;
 
   @override
   void initState() {
     super.initState();
     _tokenStore = TokenStore();
-    _apiClient = NrccApiClient(
-      baseUrl: _env("NRCC_BASE_URL", "http://100.110.136.4:3001"),
+    _apiClient = ConvergeApiClient(
+      baseUrl: _env("CONVERGE_BASE_URL", "http://100.110.136.4:3001"),
       tokenStore: _tokenStore,
       onUnauthorized: () {
         if (!mounted) return;
@@ -240,34 +242,83 @@ class _NrccAppState extends State<NrccApp> {
   }
 
   Future<void> _checkExistingToken() async {
+    // Check if biometric is available on device
+    final biometricAvailable = await _tokenStore.isBiometricAvailable();
+    
+    // Check if user has token (already paired)
     final token = await _tokenStore.getToken();
+    
+    if (!mounted) return;
+    
+    // Check if biometric is enabled and we have a token
+    final biometricEnabled = await _tokenStore.isBiometricEnabled();
+    final hasToken = token != null && token.isNotEmpty;
+    
+    bool unlocked = false;
+    
+    // If biometric is enabled and we have a token, require biometric to unlock
+    if (biometricEnabled && hasToken) {
+      unlocked = await _tokenStore.getToken(requireBiometric: true) != null;
+    } else if (hasToken) {
+      // No biometric, just use the token
+      unlocked = true;
+    }
+    
+    setState(() {
+      _paired = hasToken;
+      _unlocked = unlocked;
+      _biometricAvailable = biometricAvailable;
+      _bootstrapping = false;
+    });
+  }
+
+  /// Toggle biometric lock
+  Future<void> _toggleBiometricLock(bool enabled) async {
+    await _tokenStore.setBiometricEnabled(enabled);
     if (!mounted) return;
     setState(() {
-      _paired = token != null && token.isNotEmpty;
-      _bootstrapping = false;
+      _paired = true;
+      _unlocked = enabled ? false : true;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: "NRCC",
+      title: "Converge",
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       home: _bootstrapping
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+          // Biometric locked - show unlock screen
+          : _paired && !_unlocked
+          ? _BiometricUnlockScreen(
+              onUnlock: () async {
+                final token = await _tokenStore.getToken(requireBiometric: true);
+                if (!mounted) return;
+                setState(() {
+                  _unlocked = token != null;
+                });
+              },
+              biometricType: _biometricAvailable ? "fingerprint" : "biometric",
+            )
+          // Paired and unlocked - show issues
           : _paired
           ? IssueListScreen(
               issuesRepository: _issuesRepository,
               actionsRepository: _actionsRepository,
+              biometricEnabled: _biometricAvailable,
+              onBiometricToggle: _toggleBiometricLock,
               onLogout: () async {
                 await _authRepository.logout();
                 if (!mounted) return;
                 setState(() {
                   _paired = false;
+                  _unlocked = false;
                 });
               },
             )
+          // Not paired - show pair screen
           : PairScreen(
               authRepository: _authRepository,
               onPaired: () {
@@ -276,6 +327,56 @@ class _NrccAppState extends State<NrccApp> {
                 });
               },
             ),
+    );
+  }
+}
+
+/// Biometric unlock screen
+class _BiometricUnlockScreen extends StatelessWidget {
+  final VoidCallback onUnlock;
+  final String biometricType;
+
+  const _BiometricUnlockScreen({
+    required this.onUnlock,
+    required this.biometricType,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.fingerprint,
+                size: 80,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                "Unlock Streamline",
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Use $biometricType to unlock the app",
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 32),
+              FilledButton.icon(
+                onPressed: onUnlock,
+                icon: const Icon(Icons.fingerprint),
+                label: const Text("Unlock"),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
