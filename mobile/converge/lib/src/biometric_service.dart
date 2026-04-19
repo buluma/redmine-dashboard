@@ -8,7 +8,7 @@ class BiometricService {
   BiometricService({LocalAuthentication? localAuth})
       : _localAuth = localAuth ?? LocalAuthentication();
 
-  /// Check if device supports biometric authentication
+  // Check if device supports biometric authentication
   Future<bool> isAvailable() async {
     try {
       final canCheck = await _localAuth.canCheckBiometrics;
@@ -19,7 +19,7 @@ class BiometricService {
     }
   }
 
-  /// Get the type of biometric available
+  // Get the type of biometric available
   Future<String> getBiometricType() async {
     try {
       final availableBiometrics = await _localAuth.getAvailableBiometrics();
@@ -41,8 +41,8 @@ class BiometricService {
     }
   }
 
-  /// Authenticate the user
-  /// Returns true if successful, false if failed/cancelled
+  // Authenticate the user
+  // Returns true if successful, false if failed/cancelled
   Future<bool> authenticate() async {
     try {
       final canAuth = await isAvailable();
@@ -62,7 +62,7 @@ class BiometricService {
     }
   }
 
-  /// Cancel any ongoing authentication
+  // Cancel any ongoing authentication
   Future<void> cancel() async {
     try {
       await _localAuth.stopAuthentication();

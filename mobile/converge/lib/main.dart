@@ -244,18 +244,18 @@ class _ConvergeAppState extends State<ConvergeApp> {
   Future<void> _checkExistingToken() async {
     // Check if biometric is available on device
     final biometricAvailable = await _tokenStore.isBiometricAvailable();
-    
+
     // Check if user has token (already paired)
     final token = await _tokenStore.getToken();
-    
+
     if (!mounted) return;
-    
+
     // Check if biometric is enabled and we have a token
     final biometricEnabled = await _tokenStore.isBiometricEnabled();
     final hasToken = token != null && token.isNotEmpty;
-    
+
     bool unlocked = false;
-    
+
     // If biometric is enabled and we have a token, require biometric to unlock
     if (biometricEnabled && hasToken) {
       unlocked = await _tokenStore.getToken(requireBiometric: true) != null;
@@ -263,7 +263,7 @@ class _ConvergeAppState extends State<ConvergeApp> {
       // No biometric, just use the token
       unlocked = true;
     }
-    
+
     setState(() {
       _paired = hasToken;
       _unlocked = unlocked;
@@ -272,7 +272,7 @@ class _ConvergeAppState extends State<ConvergeApp> {
     });
   }
 
-  /// Toggle biometric lock
+  // Toggle biometric lock
   Future<void> _toggleBiometricLock(bool enabled) async {
     await _tokenStore.setBiometricEnabled(enabled);
     if (!mounted) return;
@@ -331,7 +331,7 @@ class _ConvergeAppState extends State<ConvergeApp> {
   }
 }
 
-/// Biometric unlock screen
+// Biometric unlock screen
 class _BiometricUnlockScreen extends StatelessWidget {
   final VoidCallback onUnlock;
   final String biometricType;
