@@ -32,7 +32,6 @@ dependencies:
     sdk: flutter
   dio: ^5.8.0+1
   flutter_secure_storage: ^9.2.2
-  local_auth: ^2.3.0
   flutter_dotenv: ^5.2.1
   flutter_markdown: ^0.7.7+1
   flutter_highlight: ^0.7.0
