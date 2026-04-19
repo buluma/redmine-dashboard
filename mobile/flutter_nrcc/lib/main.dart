@@ -223,7 +223,7 @@ class _NrccAppState extends State<NrccApp> {
     super.initState();
     _tokenStore = TokenStore();
     _apiClient = NrccApiClient(
-      baseUrl: _env("NRCC_BASE_URL", "http://100.100.245.3:3000"),
+      baseUrl: _env("NRCC_BASE_URL", "http://100.110.136.4:3001"),
       tokenStore: _tokenStore,
       onUnauthorized: () {
         if (!mounted) return;

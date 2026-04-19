@@ -19,7 +19,7 @@ Set `Converge_BASE_URL` in `.env`.
 
 Default value in this project (Tailscale / physical phone):
 
-- `http://100.100.245.3:3000`
+- `http://100.110.136.4:3001`
 
 Android emulator alternative:
 
