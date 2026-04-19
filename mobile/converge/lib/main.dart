@@ -217,8 +217,6 @@ class _ConvergeAppState extends State<ConvergeApp> {
   late final IssueActionsRepository _actionsRepository;
   bool _paired = false;
   bool _bootstrapping = true;
-  bool _unlocked = false;
-  bool _biometricAvailable = false;
 
   @override
   void initState() {
@@ -242,63 +240,11 @@ class _ConvergeAppState extends State<ConvergeApp> {
   }
 
   Future<void> _checkExistingToken() async {
-    // Check if biometric is available on device
-    bool biometricAvailable = false;
-    try {
-      biometricAvailable = await _tokenStore.isBiometricAvailable();
-    } catch (e) {
-      // Ignore biometric errors - app should work without it
-    }
-
-    // Check if user has token (already paired)
-    String? token;
-    try {
-      token = await _tokenStore.getToken();
-    } catch (e) {
-      token = null;
-    }
-
+    final token = await _tokenStore.getToken();
     if (!mounted) return;
-
-    // Check if biometric is enabled and we have a token
-    bool biometricEnabled = false;
-    try {
-      biometricEnabled = await _tokenStore.isBiometricEnabled();
-    } catch (e) {
-      // Ignore
-    }
-    final hasToken = token != null && token.isNotEmpty;
-
-
-    bool unlocked = false;
-
-    // If biometric is enabled and we have a token, require biometric to unlock
-    if (biometricEnabled && hasToken) {
-      try {
-        unlocked = await _tokenStore.getToken(requireBiometric: true) != null;
-      } catch (e) {
-        unlocked = false;
-      }
-    } else if (hasToken) {
-      // No biometric, just use the token
-      unlocked = true;
-    }
-
     setState(() {
-      _paired = hasToken;
-      _unlocked = unlocked;
-      _biometricAvailable = biometricAvailable;
+      _paired = token != null && token.isNotEmpty;
       _bootstrapping = false;
-    });
-  }
-
-  // Toggle biometric lock
-  Future<void> _toggleBiometricLock(bool enabled) async {
-    await _tokenStore.setBiometricEnabled(enabled);
-    if (!mounted) return;
-    setState(() {
-      _paired = true;
-      _unlocked = enabled ? false : true;
     });
   }
 
@@ -310,35 +256,18 @@ class _ConvergeAppState extends State<ConvergeApp> {
       darkTheme: _buildTheme(Brightness.dark),
       home: _bootstrapping
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
-          // Biometric locked - show unlock screen
-          : _paired && !_unlocked
-          ? _BiometricUnlockScreen(
-              onUnlock: () async {
-                final token = await _tokenStore.getToken(requireBiometric: true);
-                if (!mounted) return;
-                setState(() {
-                  _unlocked = token != null;
-                });
-              },
-              biometricType: _biometricAvailable ? "fingerprint" : "biometric",
-            )
-          // Paired and unlocked - show issues
           : _paired
           ? IssueListScreen(
               issuesRepository: _issuesRepository,
               actionsRepository: _actionsRepository,
-              biometricEnabled: _biometricAvailable,
-              onBiometricToggle: _toggleBiometricLock,
               onLogout: () async {
                 await _authRepository.logout();
                 if (!mounted) return;
                 setState(() {
                   _paired = false;
-                  _unlocked = false;
                 });
               },
             )
-          // Not paired - show pair screen
           : PairScreen(
               authRepository: _authRepository,
               onPaired: () {
@@ -347,56 +276,6 @@ class _ConvergeAppState extends State<ConvergeApp> {
                 });
               },
             ),
-    );
-  }
-}
-
-// Biometric unlock screen
-class _BiometricUnlockScreen extends StatelessWidget {
-  final VoidCallback onUnlock;
-  final String biometricType;
-
-  const _BiometricUnlockScreen({
-    required this.onUnlock,
-    required this.biometricType,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.fingerprint,
-                size: 80,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                "Unlock Streamline",
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "Use $biometricType to unlock the app",
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-              const SizedBox(height: 32),
-              FilledButton.icon(
-                onPressed: onUnlock,
-                icon: const Icon(Icons.fingerprint),
-                label: const Text("Unlock"),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
