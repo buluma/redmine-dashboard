@@ -243,22 +243,42 @@ class _ConvergeAppState extends State<ConvergeApp> {
 
   Future<void> _checkExistingToken() async {
     // Check if biometric is available on device
-    final biometricAvailable = await _tokenStore.isBiometricAvailable();
+    bool biometricAvailable = false;
+    try {
+      biometricAvailable = await _tokenStore.isBiometricAvailable();
+    } catch (e) {
+      // Ignore biometric errors - app should work without it
+    }
 
     // Check if user has token (already paired)
-    final token = await _tokenStore.getToken();
+    String? token;
+    try {
+      token = await _tokenStore.getToken();
+    } catch (e) {
+      token = null;
+    }
 
     if (!mounted) return;
 
     // Check if biometric is enabled and we have a token
-    final biometricEnabled = await _tokenStore.isBiometricEnabled();
+    bool biometricEnabled = false;
+    try {
+      biometricEnabled = await _tokenStore.isBiometricEnabled();
+    } catch (e) {
+      // Ignore
+    }
     final hasToken = token != null && token.isNotEmpty;
+
 
     bool unlocked = false;
 
     // If biometric is enabled and we have a token, require biometric to unlock
     if (biometricEnabled && hasToken) {
-      unlocked = await _tokenStore.getToken(requireBiometric: true) != null;
+      try {
+        unlocked = await _tokenStore.getToken(requireBiometric: true) != null;
+      } catch (e) {
+        unlocked = false;
+      }
     } else if (hasToken) {
       // No biometric, just use the token
       unlocked = true;
