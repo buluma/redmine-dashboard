@@ -1,9 +1,9 @@
 import "models.dart";
-import "nrcc_api_client.dart";
+import "converge_api_client.dart";
 import "token_store.dart";
 
 class AuthRepository {
-  final NrccApiClient _api;
+  final ConvergeApiClient _api;
   final TokenStore _tokenStore;
 
   AuthRepository(this._api, this._tokenStore);
@@ -35,7 +35,7 @@ class AuthRepository {
 }
 
 class IssuesRepository {
-  final NrccApiClient _api;
+  final ConvergeApiClient _api;
 
   IssuesRepository(this._api);
 
@@ -65,7 +65,7 @@ class IssuesRepository {
 }
 
 class IssueActionsRepository {
-  final NrccApiClient _api;
+  final ConvergeApiClient _api;
 
   IssueActionsRepository(this._api);
 

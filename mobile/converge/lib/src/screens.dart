@@ -134,7 +134,7 @@ class _PairScreenState extends State<PairScreen> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text("Pair with NRCC")),
+      appBar: AppBar(title: const Text("Pair with Converge")),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -285,12 +285,16 @@ class IssueListScreen extends StatefulWidget {
   final IssuesRepository issuesRepository;
   final IssueActionsRepository actionsRepository;
   final VoidCallback onLogout;
+  final bool biometricEnabled;
+  final Future<void> Function(bool)? onBiometricToggle;
 
   const IssueListScreen({
     super.key,
     required this.issuesRepository,
     required this.actionsRepository,
     required this.onLogout,
+    this.biometricEnabled = false,
+    this.onBiometricToggle,
   });
 
   @override
@@ -361,6 +365,32 @@ class _IssueListScreenState extends State<IssueListScreen> {
     _load();
   }
 
+  Future<void> _showBiometricSettings(BuildContext context) async {
+    showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Biometric Lock"),
+        content: const Text(
+          "Enable biometric authentication to protect access to this app?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Enable"),
+          ),
+        ],
+      ),
+    ).then((enabled) async {
+      if (enabled == true && widget.onBiometricToggle != null) {
+        await widget.onBiometricToggle!(true);
+      }
+    });
+  }
+
   void _onScroll() {
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - 300) {
@@ -409,6 +439,12 @@ class _IssueListScreenState extends State<IssueListScreen> {
       appBar: AppBar(
         title: const Text("My Issues"),
         actions: <Widget>[
+          if (widget.biometricEnabled && widget.onBiometricToggle != null)
+            IconButton(
+              onPressed: () => _showBiometricSettings(context),
+              icon: const Icon(Icons.fingerprint),
+              tooltip: "Biometric Lock",
+            ),
           IconButton(
             onPressed: () =>
                 setState(() => _showFavoritesOnly = !_showFavoritesOnly),

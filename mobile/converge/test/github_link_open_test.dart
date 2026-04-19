@@ -4,11 +4,11 @@ import "package:plugin_platform_interface/plugin_platform_interface.dart";
 import "package:url_launcher_platform_interface/link.dart";
 import "package:url_launcher_platform_interface/url_launcher_platform_interface.dart";
 
-import "package:flutter_nrcc/src/models.dart";
-import "package:flutter_nrcc/src/nrcc_api_client.dart";
-import "package:flutter_nrcc/src/repositories.dart";
-import "package:flutter_nrcc/src/screens.dart";
-import "package:flutter_nrcc/src/token_store.dart";
+import "package:flutter_converge/src/models.dart";
+import "package:flutter_converge/src/converge_api_client.dart";
+import "package:flutter_converge/src/repositories.dart";
+import "package:flutter_converge/src/screens.dart";
+import "package:flutter_converge/src/token_store.dart";
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -205,8 +205,8 @@ class _FakeIssueActionsRepository extends IssueActionsRepository {
   Future<void> removeRelation({required String issueId, required int relationId}) async {}
 }
 
-NrccApiClient _dummyApiClient() {
-  return NrccApiClient(
+ConvergeApiClient _dummyApiClient() {
+  return ConvergeApiClient(
     baseUrl: "http://localhost:3000",
     tokenStore: TokenStore(),
   );
