@@ -59,3 +59,4 @@ debugging/logs/*.json
 /.gemini-tasks
 /.claude
 /backups
+/briefing
