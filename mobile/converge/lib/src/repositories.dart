@@ -69,17 +69,11 @@ class IssueActionsRepository {
 
   IssueActionsRepository(this._api);
 
-  Future<void> updateStatus({
-    required String issueId,
-    required int statusId,
-  }) {
+  Future<void> updateStatus({required String issueId, required int statusId}) {
     return _api.updateStatus(issueId: issueId, statusId: statusId);
   }
 
-  Future<void> assignIssue({
-    required String issueId,
-    required int userId,
-  }) {
+  Future<void> assignIssue({required String issueId, required int userId}) {
     return _api.assignIssue(issueId: issueId, userId: userId);
   }
 
@@ -120,7 +114,9 @@ class IssueActionsRepository {
     return AiSummaryResponse.fromJson(json);
   }
 
-  Future<AiCategorizeResponse> categorizeIssue({required String issueId}) async {
+  Future<AiCategorizeResponse> categorizeIssue({
+    required String issueId,
+  }) async {
     final json = await _api.categorizeIssue(issueId: issueId);
     return AiCategorizeResponse.fromJson(json);
   }
@@ -153,7 +149,10 @@ class IssueActionsRepository {
     return _api.listInternalNotes(issueId: issueId);
   }
 
-  Future<InternalNote> createInternalNote({required String issueId, required String content}) {
+  Future<InternalNote> createInternalNote({
+    required String issueId,
+    required String content,
+  }) {
     return _api.createInternalNote(issueId: issueId, content: content);
   }
 
@@ -165,14 +164,8 @@ class IssueActionsRepository {
     return _api.isFavorited(issueId: issueId);
   }
 
-  Future<void> postComment({
-    required String issueId,
-    required String comment,
-  }) {
-    return _api.postComment(
-      issueId: issueId,
-      comment: comment,
-    );
+  Future<void> postComment({required String issueId, required String comment}) {
+    return _api.postComment(issueId: issueId, comment: comment);
   }
 
   Future<void> addGithubLink({
@@ -197,15 +190,10 @@ class IssueActionsRepository {
     required String issueId,
     required String linkId,
   }) {
-    return _api.removeGithubLink(
-      issueId: issueId,
-      linkId: linkId,
-    );
+    return _api.removeGithubLink(issueId: issueId, linkId: linkId);
   }
 
-  Future<List<IssueAttachment>> listAttachments({
-    required String issueId,
-  }) {
+  Future<List<IssueAttachment>> listAttachments({required String issueId}) {
     return _api.listAttachments(issueId: issueId);
   }
 
@@ -239,10 +227,7 @@ class IssueActionsRepository {
     required String issueId,
     required int relationId,
   }) {
-    return _api.removeRelation(
-      issueId: issueId,
-      relationId: relationId,
-    );
+    return _api.removeRelation(issueId: issueId, relationId: relationId);
   }
 
   Future<void> updateTimeEntry({
@@ -261,12 +246,8 @@ class IssueActionsRepository {
     );
   }
 
-  Future<void> deleteTimeEntry({
-    required int redmineTimeEntryId,
-  }) {
-    return _api.deleteTimeEntry(
-      redmineTimeEntryId: redmineTimeEntryId,
-    );
+  Future<void> deleteTimeEntry({required int redmineTimeEntryId}) {
+    return _api.deleteTimeEntry(redmineTimeEntryId: redmineTimeEntryId);
   }
 
   String attachmentPreviewUrl({

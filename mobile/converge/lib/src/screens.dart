@@ -493,7 +493,9 @@ class _IssueListScreenState extends State<IssueListScreen> {
                         selected: _searchMode == "hybrid",
                         onSelected: (_) {
                           setState(() {
-                            _searchMode = _searchMode == "hybrid" ? "local" : "hybrid";
+                            _searchMode = _searchMode == "hybrid"
+                                ? "local"
+                                : "hybrid";
                           });
                           _load(reset: true);
                         },
@@ -566,201 +568,211 @@ class _IssueListScreenState extends State<IssueListScreen> {
                           itemBuilder: (context, index) {
                             if (index >= visibleIssues.length) {
                               return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                                 child: Center(
                                   child: SizedBox(
                                     width: 24,
                                     height: 24,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   ),
                                 ),
                               );
                             }
                             final issue = visibleIssues[index];
-                          final isDone = _isDoneStatus(issue.statusName);
-                          final priorityColor = _isHighPriority(issue.priority)
-                              ? scheme.error
-                              : scheme.onSurfaceVariant;
+                            final isDone = _isDoneStatus(issue.statusName);
+                            final priorityColor =
+                                _isHighPriority(issue.priority)
+                                ? scheme.error
+                                : scheme.onSurfaceVariant;
 
-                          final isLocal = issue.source == "local";
+                            final isLocal = issue.source == "local";
 
-                          return Card(
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 4,
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            shape: isLocal
-                                ? RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    side: BorderSide(
-                                      color: scheme.tertiary.withValues(alpha: 0.3),
-                                      width: 1,
-                                    ),
-                                  )
-                                : null,
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
+                            return Card(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 4,
                               ),
-                              leading: Stack(
-                                clipBehavior: Clip.none,
-                                children: <Widget>[
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: isDone
-                                          ? scheme.tertiaryContainer
-                                          : _isHighPriority(issue.priority)
-                                              ? scheme.errorContainer
-                                              : scheme.primaryContainer,
+                              clipBehavior: Clip.antiAlias,
+                              shape: isLocal
+                                  ? RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
+                                      side: BorderSide(
+                                        color: scheme.tertiary.withValues(
+                                          alpha: 0.3,
+                                        ),
+                                        width: 1,
+                                      ),
+                                    )
+                                  : null,
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
+                                leading: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: <Widget>[
+                                    Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        color: isDone
+                                            ? scheme.tertiaryContainer
+                                            : _isHighPriority(issue.priority)
+                                            ? scheme.errorContainer
+                                            : scheme.primaryContainer,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          isLocal
+                                              ? "L${issue.localIssueNumber ?? "?"}"
+                                              : "#${issue.redmineIssueId ?? "?"}",
+                                          style: theme.textTheme.labelMedium
+                                              ?.copyWith(
+                                                color: isDone
+                                                    ? scheme.onTertiaryContainer
+                                                    : _isHighPriority(
+                                                        issue.priority,
+                                                      )
+                                                    ? scheme.onErrorContainer
+                                                    : scheme.onPrimaryContainer,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                        ),
+                                      ),
                                     ),
-                                    alignment: Alignment.center,
-                                    child: FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(
-                                        isLocal
-                                            ? "L${issue.localIssueNumber ?? "?"}"
-                                            : "#${issue.redmineIssueId ?? "?"}",
-                                        style: theme.textTheme.labelMedium
+                                    if (isLocal)
+                                      Positioned(
+                                        right: -4,
+                                        top: -4,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(2),
+                                          decoration: BoxDecoration(
+                                            color: scheme.tertiary,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.person,
+                                            size: 8,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                title: Text(
+                                  issue.subject,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    if (issue.projectName != null &&
+                                        issue.projectName!.trim().isNotEmpty)
+                                      Text(
+                                        issue.projectName!,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.bodySmall
                                             ?.copyWith(
-                                              color: isDone
-                                                  ? scheme.onTertiaryContainer
-                                                  : _isHighPriority(issue.priority)
-                                                      ? scheme.onErrorContainer
-                                                      : scheme.onPrimaryContainer,
-                                              fontWeight: FontWeight.w700,
+                                              color: scheme.onSurfaceVariant,
                                             ),
                                       ),
-                                    ),
-                                  ),
-                                  if (isLocal)
-                                    Positioned(
-                                      right: -4,
-                                      top: -4,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(2),
-                                        decoration: BoxDecoration(
-                                          color: scheme.tertiary,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.person,
-                                          size: 8,
-                                          color: Colors.white,
-                                        ),
+                                    if (issue.assignedToName != null)
+                                      Text(
+                                        issue.assignedToName!,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: scheme.onSurfaceVariant,
+                                            ),
                                       ),
-                                    ),
-                                ],
-                              ),
-                              title: Text(
-                                issue.subject,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
+                                  ],
                                 ),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  if (issue.projectName != null &&
-                                      issue.projectName!.trim().isNotEmpty)
-                                    Text(
-                                      issue.projectName!,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            color: scheme.onSurfaceVariant,
-                                          ),
-                                    ),
-                                  if (issue.assignedToName != null)
-                                    Text(
-                                      issue.assignedToName!,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            color: scheme.onSurfaceVariant,
-                                          ),
-                                    ),
-                                ],
-                              ),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isDone
-                                          ? scheme.tertiaryContainer
-                                          : scheme.primaryContainer,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      issue.statusName,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
                                         color: isDone
-                                            ? scheme.onTertiaryContainer
-                                            : scheme.onPrimaryContainer,
+                                            ? scheme.tertiaryContainer
+                                            : scheme.primaryContainer,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        issue.statusName,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: isDone
+                                              ? scheme.onTertiaryContainer
+                                              : scheme.onPrimaryContainer,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  if (issue.priority != null) ...<Widget>[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      issue.priority!,
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: priorityColor,
-                                          ),
+                                    if (issue.priority != null) ...<Widget>[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        issue.priority!,
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: priorityColor,
+                                            ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 2),
+                                    Icon(
+                                      issue.isFavorited
+                                          ? Icons.star
+                                          : Icons.chevron_right,
+                                      color: issue.isFavorited
+                                          ? scheme.secondary
+                                          : scheme.outline,
+                                      size: 18,
                                     ),
                                   ],
-                                  const SizedBox(height: 2),
-                                  Icon(
-                                    issue.isFavorited
-                                        ? Icons.star
-                                        : Icons.chevron_right,
-                                    color: issue.isFavorited
-                                        ? scheme.secondary
-                                        : scheme.outline,
-                                    size: 18,
-                                  ),
-                                ],
-                              ),
-                              onTap: () async {
-                                await Navigator.of(context).push(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => IssueDetailScreen(
-                                      issueId: issue.id,
-                                      redmineIssueId: issue.redmineIssueId,
-                                      issuesRepository: widget.issuesRepository,
-                                      actionsRepository:
-                                          widget.actionsRepository,
+                                ),
+                                onTap: () async {
+                                  await Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => IssueDetailScreen(
+                                        issueId: issue.id,
+                                        redmineIssueId: issue.redmineIssueId,
+                                        issuesRepository:
+                                            widget.issuesRepository,
+                                        actionsRepository:
+                                            widget.actionsRepository,
+                                      ),
                                     ),
-                                  ),
-                                );
-                                if (mounted) {
-                                  await _load();
-                                }
-                              },
-                            ),
-                          );
-                        },
+                                  );
+                                  if (mounted) {
+                                    await _load();
+                                  }
+                                },
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                    ),
               ),
             ],
           ),
@@ -864,9 +876,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
             color: scheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(16),
           ),
-          child: const Center(
-            child: CircularProgressIndicator(),
-          ),
+          child: const Center(child: CircularProgressIndicator()),
         ),
         const SizedBox(height: 12),
         // Section skeletons
@@ -1028,7 +1038,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                   title,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: expanded ? scheme.onSurface : scheme.onSurfaceVariant,
+                    color: expanded
+                        ? scheme.onSurface
+                        : scheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -1671,8 +1683,8 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     final theme = Theme.of(context);
     final displayId = _issue != null
         ? (_issue!.source == "local"
-            ? "L${_issue!.localIssueNumber ?? "?"}"
-            : "#${_issue!.redmineIssueId ?? widget.issueId}")
+              ? "L${_issue!.localIssueNumber ?? "?"}"
+              : "#${_issue!.redmineIssueId ?? widget.issueId}")
         : "#${widget.issueId}";
     return Scaffold(
       appBar: AppBar(
@@ -1742,11 +1754,14 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                     _issue!.source == "local"
                                         ? "L${_issue!.localIssueNumber ?? "?"}"
                                         : "#${_issue!.redmineIssueId ?? "?"}",
-                                    style: theme.textTheme.labelMedium?.copyWith(
-                                      color: theme.colorScheme.onPrimaryContainer
-                                          .withValues(alpha: 0.7),
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                    style: theme.textTheme.labelMedium
+                                        ?.copyWith(
+                                          color: theme
+                                              .colorScheme
+                                              .onPrimaryContainer
+                                              .withValues(alpha: 0.7),
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
@@ -1759,10 +1774,13 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                       _issue!.projectName!.trim().isNotEmpty)
                                     Text(
                                       _issue!.projectName!,
-                                      style: theme.textTheme.bodyMedium?.copyWith(
-                                        color: theme.colorScheme.onSurfaceVariant
-                                            .withValues(alpha: 0.8),
-                                      ),
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant
+                                                .withValues(alpha: 0.8),
+                                          ),
                                     ),
                                 ],
                               ),
@@ -1805,7 +1823,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                 decoration: BoxDecoration(
                                   color: _isHighPriority(_issue!.priority)
                                       ? theme.colorScheme.errorContainer
-                                      : theme.colorScheme.surfaceContainerHighest,
+                                      : theme
+                                            .colorScheme
+                                            .surfaceContainerHighest,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -1835,7 +1855,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                     Icon(
                                       Icons.person_outline,
                                       size: 12,
-                                      color: theme.colorScheme.onSecondaryContainer,
+                                      color: theme
+                                          .colorScheme
+                                          .onSecondaryContainer,
                                     ),
                                     const SizedBox(width: 3),
                                     Text(
@@ -1843,7 +1865,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
-                                        color: theme.colorScheme.onSecondaryContainer,
+                                        color: theme
+                                            .colorScheme
+                                            .onSecondaryContainer,
                                       ),
                                     ),
                                   ],
@@ -1856,7 +1880,8 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                   vertical: 3,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: theme.colorScheme.surfaceContainerHighest,
+                                  color:
+                                      theme.colorScheme.surfaceContainerHighest,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Row(
@@ -1873,7 +1898,8 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
-                                        color: theme.colorScheme.onSurfaceVariant,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
                                       ),
                                     ),
                                   ],
@@ -1984,1050 +2010,1155 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                  _sectionCard(
-                    context: context,
-                    sectionId: "overview",
-                    title: "Overview",
-                    expanded: _expandOverview,
-                    onExpandedChanged: (value) =>
-                        setState(() => _expandOverview = value),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: <Widget>[
-                            Chip(
-                              label: Text(_issue!.statusName),
-                              backgroundColor:
-                                  theme.colorScheme.primaryContainer,
-                            ),
-                            Chip(
-                              label: Text(_issue!.priority ?? "No priority"),
-                              side: BorderSide(
-                                color: theme.colorScheme.outlineVariant,
-                              ),
-                            ),
-                            if (_issue!.children.isNotEmpty)
-                              Chip(
-                                label: Text(
-                                  "Children ${_issue!.children.length}",
-                                ),
-                                side: BorderSide(
-                                  color: theme.colorScheme.outlineVariant,
-                                ),
-                              ),
-                            if (_issue!.dueDate != null)
-                              Chip(
-                                label: Text("Due ${_issue!.dueDate!}"),
-                                side: BorderSide(
-                                  color: theme.colorScheme.outlineVariant,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (_breadcrumbs.isNotEmpty)
-                    Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              "Parent Issues",
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: _breadcrumbs.map((bc) {
-                                final id = bc["id"] as int;
-                                final subject = bc["subject"] as String;
-                                return ActionChip(
-                                  avatar: const Icon(
-                                    Icons.arrow_upward,
-                                    size: 14,
-                                  ),
-                                  label: Text(
-                                    "#$id $subject",
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute<void>(
-                                        builder: (_) => IssueDetailScreen(
-                                          issueId: "$id",
-                                          issuesRepository:
-                                              widget.issuesRepository,
-                                          actionsRepository:
-                                              widget.actionsRepository,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                );
-                              }).toList(),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  _sectionCard(
-                    context: context,
-                    sectionId: "description",
-                    title: "Description",
-                    expanded: _expandDescription,
-                    onExpandedChanged: (value) =>
-                        setState(() => _expandDescription = value),
-                    child: MarkdownBody(
-                      data: _normalizeIssueDescription(_issue!.description),
-                      selectable: true,
-                      extensionSet: md.ExtensionSet.gitHubWeb,
-                      styleSheet: _markdownStyle(context),
-                      builders: <String, MarkdownElementBuilder>{
-                        "pre": _CodeBlockBuilder(theme: theme),
-                      },
-                      onTapLink: (text, href, title) => _openMarkdownLink(href),
-                    ),
-                  ),
-                  _sectionCard(
-                    context: context,
-                    sectionId: "status",
-                    title: "Change Status",
-                    expanded: _expandStatus,
-                    onExpandedChanged: (value) =>
-                        setState(() => _expandStatus = value),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          "Current: ${_issue!.statusName}",
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        if (_statusError != null)
-                          Text(
-                            _statusError!,
-                            style: TextStyle(color: theme.colorScheme.error),
-                          ),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: _issue!.allowedStatuses.map((s) {
-                            final isCurrent = s.name == _issue!.statusName;
-                            return ChoiceChip(
-                              label: Text(s.name),
-                              selected: isCurrent,
-                              onSelected: isCurrent
-                                  ? null
-                                  : (_) => _updateStatus(s.id),
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _sectionCard(
-                    context: context,
-                    sectionId: "assign",
-                    title: "Assign",
-                    expanded: _expandAssign,
-                    onExpandedChanged: (value) =>
-                        setState(() => _expandAssign = value),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          "Current: ${_issue!.assignedToName ?? "Unassigned"}",
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        if (_assignError != null)
-                          Text(
-                            _assignError!,
-                            style: TextStyle(color: theme.colorScheme.error),
-                          ),
-                        if (_assignableUsers.isEmpty)
-                          const Text("No assignable users available.")
-                        else
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: _assignableUsers.map((u) {
-                              final isCurrent =
-                                  _issue!.assignedToName == u.name;
-                              return ChoiceChip(
-                                label: Text(u.name),
-                                selected: isCurrent,
-                                onSelected: isCurrent
-                                    ? null
-                                    : (_) => _assignUser(u.id),
-                              );
-                            }).toList(),
-                          ),
-                      ],
-                    ),
-                  ),
-                  _sectionCard(
-                    context: context,
-                    sectionId: "time",
-                    title: "Time Tracking",
-                    expanded: _expandTime,
-                    onExpandedChanged: (value) =>
-                        setState(() => _expandTime = value),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
+                        _sectionCard(
+                          context: context,
+                          sectionId: "overview",
+                          title: "Overview",
+                          expanded: _expandOverview,
+                          onExpandedChanged: (value) =>
+                              setState(() => _expandOverview = value),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              TextField(
-                                controller: _timeHours,
-                                decoration: const InputDecoration(
-                                  labelText: "Hours",
-                                  isDense: true,
-                                  prefixIcon: Icon(Icons.timer, size: 20),
-                                ),
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                              ),
-                              const SizedBox(height: 8),
-                              DropdownButtonFormField<int>(
-                                key: ValueKey<int?>(_timeActivityId),
-                                initialValue: _timeActivityId,
-                                isDense: true,
-                                decoration: const InputDecoration(
-                                  labelText: "Activity",
-                                  isDense: true,
-                                ),
-                                items: _activities
-                                    .map(
-                                      (a) => DropdownMenuItem<int>(
-                                        value: a["id"] as int,
-                                        child: Text(
-                                          a["name"] as String,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                                onChanged: (v) =>
-                                    setState(() => _timeActivityId = v),
-                              ),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: _timeComment,
-                                decoration: const InputDecoration(
-                                  labelText: "Comment (optional)",
-                                  isDense: true,
-                                ),
-                                maxLines: 2,
-                              ),
-                              const SizedBox(height: 10),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: _timeLoading ? null : _logTime,
-                                  icon: _timeLoading
-                                      ? const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : const Icon(Icons.add_circle, size: 18),
-                                  label: const Text("Log Time"),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (_timeEntries.isNotEmpty) ...<Widget>[
-                          const SizedBox(height: 12),
-                          Text(
-                            "Recent Entries (${_timeEntries.length})",
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          ..._timeEntries
-                              .take(10)
-                              .map(
-                                (entry) => Container(
-                                  margin: const EdgeInsets.only(bottom: 6),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    children: <Widget>[
-                                      Container(
-                                        padding: const EdgeInsets.all(6),
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.primaryContainer,
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          "${entry.hours}h",
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w700,
-                                            color: theme.colorScheme.onPrimaryContainer,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: <Widget>[
-                                            Text(
-                                              entry.activityName ?? "No activity",
-                                              style: theme.textTheme.bodySmall?.copyWith(
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            if (entry.comments != null)
-                                              Text(
-                                                entry.comments!,
-                                                style: theme.textTheme.bodySmall?.copyWith(
-                                                  color: theme.colorScheme.onSurfaceVariant,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            Text(
-                                              entry.spentOn,
-                                              style: theme.textTheme.bodySmall?.copyWith(
-                                                color: theme.colorScheme.onSurfaceVariant,
-                                                fontSize: 10,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      if (entry.redmineTimeEntryId != null)
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.delete_outline,
-                                            size: 18,
-                                          ),
-                                          onPressed: () => _deleteTimeEntry(
-                                            entry.redmineTimeEntryId!,
-                                          ),
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(
-                                            minWidth: 32,
-                                            minHeight: 32,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  _sectionCard(
-                    context: context,
-                    sectionId: "ai",
-                    title: "AI Insights",
-                    expanded: _expandAi,
-                    onExpandedChanged: (value) =>
-                        setState(() => _expandAi = value),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        if (_aiError != null)
-                          Text(
-                            _aiError!,
-                            style: TextStyle(color: theme.colorScheme.error),
-                          ),
-                        Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: _aiLoading ? null : _aiSummarize,
-                                icon: _aiLoading && _aiSummary == null
-                                    ? const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Icon(Icons.summarize, size: 18),
-                                label: const Text("Summarize"),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: _aiLoading ? null : _aiCategorize,
-                                icon: _aiLoading && _aiCategory == null
-                                    ? const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Icon(Icons.label, size: 18),
-                                label: const Text("Categorize"),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (_aiSummary != null) ...<Widget>[
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: theme.colorScheme.outlineVariant
-                                    .withValues(alpha: 0.3),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Row(
-                                  children: <Widget>[
-                                    Icon(
-                                      Icons.auto_awesome,
-                                      size: 16,
-                                      color: theme.colorScheme.primary,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      "Summary",
-                                      style: theme.textTheme.labelLarge?.copyWith(
-                                        color: theme.colorScheme.primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  _aiSummary!.summary,
-                                  style: theme.textTheme.bodyMedium,
-                                ),
-                                if (_aiSummary!.keyPoints.isNotEmpty) ...<Widget>[
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    "Key Points",
-                                    style: theme.textTheme.labelMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  ..._aiSummary!.keyPoints.map(
-                                    (p) => Padding(
-                                      padding: const EdgeInsets.only(
-                                        left: 12,
-                                        top: 2,
-                                      ),
-                                      child: Text(
-                                        "• $p",
-                                        style: theme.textTheme.bodySmall,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                if (_aiSummary!.actionItems.isNotEmpty) ...<Widget>[
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    "Action Items",
-                                    style: theme.textTheme.labelMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  ..._aiSummary!.actionItems.map(
-                                    (a) => Padding(
-                                      padding: const EdgeInsets.only(
-                                        left: 12,
-                                        top: 2,
-                                      ),
-                                      child: Text(
-                                        "□ $a",
-                                        style: theme.textTheme.bodySmall,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                const SizedBox(height: 8),
-                                Text(
-                                  "Confidence: ${(_aiSummary!.confidence * 100).toInt()}% • ${_aiSummary!.modelUsed}",
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        if (_aiCategory != null) ...<Widget>[
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: theme.colorScheme.outlineVariant
-                                    .withValues(alpha: 0.3),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Row(
-                                  children: <Widget>[
-                                    Icon(
-                                      Icons.label_outline,
-                                      size: 16,
-                                      color: theme.colorScheme.secondary,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      "Categories",
-                                      style: theme.textTheme.labelLarge?.copyWith(
-                                        color: theme.colorScheme.secondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                if (_aiCategory!.suggestedPriority != null)
-                                  Text(
-                                    "Priority: ${_aiCategory!.suggestedPriority!["name"]}",
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                if (_aiCategory!.suggestedCategory != null)
-                                  Text(
-                                    "Category: ${_aiCategory!.suggestedCategory!["name"]}",
-                                    style: theme.textTheme.bodyMedium,
-                                  ),
-                                if (_aiCategory!.reasoning.isNotEmpty) ...<Widget>[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    _aiCategory!.reasoning,
-                                    style: theme.textTheme.bodySmall,
-                                  ),
-                                ],
-                                const SizedBox(height: 6),
-                                Text(
-                                  _aiCategory!.modelUsed,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  _sectionCard(
-                    context: context,
-                    sectionId: "internal-notes",
-                    title: "Internal Notes",
-                    expanded: _expandInternalNotes,
-                    onExpandedChanged: (value) {
-                      setState(() => _expandInternalNotes = value);
-                      if (value && _internalNotes.isEmpty) {
-                        _loadInternalNotes();
-                      }
-                    },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        ElevatedButton.icon(
-                          onPressed: () => _showAddNoteDialog(context),
-                          icon: const Icon(Icons.add_comment, size: 18),
-                          label: const Text("Add Note"),
-                        ),
-                        if (_internalNotes.isNotEmpty) ...<Widget>[
-                          const SizedBox(height: 8),
-                          ..._internalNotes.map(
-                            (note) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
                                 children: <Widget>[
-                                  Row(
-                                    children: <Widget>[
-                                      Text(
-                                        note.authorName,
-                                        style: theme.textTheme.labelSmall
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        _formatRelative(note.createdAt),
-                                        style: theme.textTheme.labelSmall,
-                                      ),
-                                    ],
+                                  Chip(
+                                    label: Text(_issue!.statusName),
+                                    backgroundColor:
+                                        theme.colorScheme.primaryContainer,
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    note.content,
-                                    style: theme.textTheme.bodySmall,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  _sectionCard(
-                    context: context,
-                    sectionId: "allowed",
-                    title: "Allowed Statuses",
-                    expanded: _expandAllowed,
-                    onExpandedChanged: (value) =>
-                        setState(() => _expandAllowed = value),
-                    child: _issue!.allowedStatuses.isEmpty
-                        ? const Text("No transition data from server.")
-                        : Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: _issue!.allowedStatuses
-                                .map(
-                                  (s) => Chip(
-                                    label: Text(s.name),
-                                    visualDensity: VisualDensity.compact,
+                                  Chip(
+                                    label: Text(
+                                      _issue!.priority ?? "No priority",
+                                    ),
                                     side: BorderSide(
                                       color: theme.colorScheme.outlineVariant,
                                     ),
                                   ),
-                                )
-                                .toList(),
-                          ),
-                  ),
-                  _sectionCard(
-                    context: context,
-                    sectionId: "comment",
-                    title: "Add Comment",
-                    expanded: _expandComment,
-                    onExpandedChanged: (value) =>
-                        setState(() => _expandComment = value),
-                    child: Column(
-                      children: <Widget>[
-                        TextField(
-                          controller: _comment,
-                          decoration: const InputDecoration(
-                            labelText: "Comment",
-                          ),
-                          minLines: 2,
-                          maxLines: 4,
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _postComment,
-                            child: const Text("Post Comment"),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _sectionCard(
-                    context: context,
-                    sectionId: "github",
-                    title: "GitHub Links",
-                    expanded: _expandGithub,
-                    onExpandedChanged: (value) =>
-                        setState(() => _expandGithub = value),
-                    child: Column(
-                      children: <Widget>[
-                        TextField(
-                          controller: _repo,
-                          decoration: const InputDecoration(
-                            labelText: "Repository (owner/repo)",
-                          ),
-                        ),
-                        TextField(
-                          controller: _ghIssue,
-                          decoration: const InputDecoration(
-                            labelText: "GitHub Issue #",
-                          ),
-                          keyboardType: TextInputType.number,
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _addGithubLink,
-                            child: const Text("Add GitHub Link"),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        if (_issue!.githubLinks.isEmpty)
-                          const Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text("No GitHub links."),
-                          )
-                        else
-                          ..._issue!.githubLinks.map(
-                            (link) => ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              onTap: () => _openGithubLink(link),
-                              leading: const Icon(Icons.open_in_new),
-                              title: Text(
-                                _githubLinkDisplayTitle(link),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                  if (_issue!.children.isNotEmpty)
+                                    Chip(
+                                      label: Text(
+                                        "Children ${_issue!.children.length}",
+                                      ),
+                                      side: BorderSide(
+                                        color: theme.colorScheme.outlineVariant,
+                                      ),
+                                    ),
+                                  if (_issue!.dueDate != null)
+                                    Chip(
+                                      label: Text("Due ${_issue!.dueDate!}"),
+                                      side: BorderSide(
+                                        color: theme.colorScheme.outlineVariant,
+                                      ),
+                                    ),
+                                ],
                               ),
-                              subtitle: Text(
-                                link.url.trim().isNotEmpty
-                                    ? link.url
-                                    : link.repositoryFullName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                onPressed: () async {
-                                  await widget.actionsRepository
-                                      .removeGithubLink(
-                                        issueId: widget.issueId,
-                                        linkId: link.id,
+                            ],
+                          ),
+                        ),
+                        if (_breadcrumbs.isNotEmpty)
+                          Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text(
+                                    "Parent Issues",
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: _breadcrumbs.map((bc) {
+                                      final id = bc["id"] as int;
+                                      final subject = bc["subject"] as String;
+                                      return ActionChip(
+                                        avatar: const Icon(
+                                          Icons.arrow_upward,
+                                          size: 14,
+                                        ),
+                                        label: Text(
+                                          "#$id $subject",
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        onPressed: () {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute<void>(
+                                              builder: (_) => IssueDetailScreen(
+                                                issueId: "$id",
+                                                issuesRepository:
+                                                    widget.issuesRepository,
+                                                actionsRepository:
+                                                    widget.actionsRepository,
+                                              ),
+                                            ),
+                                          );
+                                        },
                                       );
-                                  await _load();
-                                },
+                                    }).toList(),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                      ],
-                    ),
-                  ),
-                  _sectionCard(
-                    context: context,
-                    sectionId: "attachments",
-                    title: "Attachments",
-                    expanded: _expandAttachments,
-                    onExpandedChanged: (value) {
-                      setState(() => _expandAttachments = value);
-                      if (value &&
-                          !_attachmentHeaders.containsKey("Authorization")) {
-                        _loadAttachmentHeaders();
-                      }
-                    },
-                    child: _issue!.attachments.isEmpty
-                        ? const Text("No attachments.")
-                        : Column(
-                            children: _issue!.attachments
-                                .map(
-                                  (attachment) => ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    title: Column(
+                        _sectionCard(
+                          context: context,
+                          sectionId: "description",
+                          title: "Description",
+                          expanded: _expandDescription,
+                          onExpandedChanged: (value) =>
+                              setState(() => _expandDescription = value),
+                          child: MarkdownBody(
+                            data: _normalizeIssueDescription(
+                              _issue!.description,
+                            ),
+                            selectable: true,
+                            extensionSet: md.ExtensionSet.gitHubWeb,
+                            styleSheet: _markdownStyle(context),
+                            builders: <String, MarkdownElementBuilder>{
+                              "pre": _CodeBlockBuilder(theme: theme),
+                            },
+                            onTapLink: (text, href, title) =>
+                                _openMarkdownLink(href),
+                          ),
+                        ),
+                        _sectionCard(
+                          context: context,
+                          sectionId: "status",
+                          title: "Change Status",
+                          expanded: _expandStatus,
+                          onExpandedChanged: (value) =>
+                              setState(() => _expandStatus = value),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                "Current: ${_issue!.statusName}",
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              if (_statusError != null)
+                                Text(
+                                  _statusError!,
+                                  style: TextStyle(
+                                    color: theme.colorScheme.error,
+                                  ),
+                                ),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: _issue!.allowedStatuses.map((s) {
+                                  final isCurrent =
+                                      s.name == _issue!.statusName;
+                                  return ChoiceChip(
+                                    label: Text(s.name),
+                                    selected: isCurrent,
+                                    onSelected: isCurrent
+                                        ? null
+                                        : (_) => _updateStatus(s.id),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        _sectionCard(
+                          context: context,
+                          sectionId: "assign",
+                          title: "Assign",
+                          expanded: _expandAssign,
+                          onExpandedChanged: (value) =>
+                              setState(() => _expandAssign = value),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                "Current: ${_issue!.assignedToName ?? "Unassigned"}",
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              if (_assignError != null)
+                                Text(
+                                  _assignError!,
+                                  style: TextStyle(
+                                    color: theme.colorScheme.error,
+                                  ),
+                                ),
+                              if (_assignableUsers.isEmpty)
+                                const Text("No assignable users available.")
+                              else
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: _assignableUsers.map((u) {
+                                    final isCurrent =
+                                        _issue!.assignedToName == u.name;
+                                    return ChoiceChip(
+                                      label: Text(u.name),
+                                      selected: isCurrent,
+                                      onSelected: isCurrent
+                                          ? null
+                                          : (_) => _assignUser(u.id),
+                                    );
+                                  }).toList(),
+                                ),
+                            ],
+                          ),
+                        ),
+                        _sectionCard(
+                          context: context,
+                          sectionId: "time",
+                          title: "Time Tracking",
+                          expanded: _expandTime,
+                          onExpandedChanged: (value) =>
+                              setState(() => _expandTime = value),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surfaceContainerLow,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Column(
+                                  children: <Widget>[
+                                    TextField(
+                                      controller: _timeHours,
+                                      decoration: const InputDecoration(
+                                        labelText: "Hours",
+                                        isDense: true,
+                                        prefixIcon: Icon(Icons.timer, size: 20),
+                                      ),
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                            decimal: true,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    DropdownButtonFormField<int>(
+                                      key: ValueKey<int?>(_timeActivityId),
+                                      initialValue: _timeActivityId,
+                                      isDense: true,
+                                      decoration: const InputDecoration(
+                                        labelText: "Activity",
+                                        isDense: true,
+                                      ),
+                                      items: _activities
+                                          .map(
+                                            (a) => DropdownMenuItem<int>(
+                                              value: a["id"] as int,
+                                              child: Text(
+                                                a["name"] as String,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                      onChanged: (v) =>
+                                          setState(() => _timeActivityId = v),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextField(
+                                      controller: _timeComment,
+                                      decoration: const InputDecoration(
+                                        labelText: "Comment (optional)",
+                                        isDense: true,
+                                      ),
+                                      maxLines: 2,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton.icon(
+                                        onPressed: _timeLoading
+                                            ? null
+                                            : _logTime,
+                                        icon: _timeLoading
+                                            ? const SizedBox(
+                                                width: 16,
+                                                height: 16,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                              )
+                                            : const Icon(
+                                                Icons.add_circle,
+                                                size: 18,
+                                              ),
+                                        label: const Text("Log Time"),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (_timeEntries.isNotEmpty) ...<Widget>[
+                                const SizedBox(height: 12),
+                                Text(
+                                  "Recent Entries (${_timeEntries.length})",
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                ..._timeEntries
+                                    .take(10)
+                                    .map(
+                                      (entry) => Container(
+                                        margin: const EdgeInsets.only(
+                                          bottom: 6,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: theme
+                                              .colorScheme
+                                              .surfaceContainerHighest,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: <Widget>[
+                                            Container(
+                                              padding: const EdgeInsets.all(6),
+                                              decoration: BoxDecoration(
+                                                color: theme
+                                                    .colorScheme
+                                                    .primaryContainer,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                "${entry.hours}h",
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onPrimaryContainer,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: <Widget>[
+                                                  Text(
+                                                    entry.activityName ??
+                                                        "No activity",
+                                                    style: theme
+                                                        .textTheme
+                                                        .bodySmall
+                                                        ?.copyWith(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                  if (entry.comments != null)
+                                                    Text(
+                                                      entry.comments!,
+                                                      style: theme
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            color: theme
+                                                                .colorScheme
+                                                                .onSurfaceVariant,
+                                                          ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  Text(
+                                                    entry.spentOn,
+                                                    style: theme
+                                                        .textTheme
+                                                        .bodySmall
+                                                        ?.copyWith(
+                                                          color: theme
+                                                              .colorScheme
+                                                              .onSurfaceVariant,
+                                                          fontSize: 10,
+                                                        ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            if (entry.redmineTimeEntryId !=
+                                                null)
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.delete_outline,
+                                                  size: 18,
+                                                ),
+                                                onPressed: () =>
+                                                    _deleteTimeEntry(
+                                                      entry.redmineTimeEntryId!,
+                                                    ),
+                                                padding: EdgeInsets.zero,
+                                                constraints:
+                                                    const BoxConstraints(
+                                                      minWidth: 32,
+                                                      minHeight: 32,
+                                                    ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        _sectionCard(
+                          context: context,
+                          sectionId: "ai",
+                          title: "AI Insights",
+                          expanded: _expandAi,
+                          onExpandedChanged: (value) =>
+                              setState(() => _expandAi = value),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              if (_aiError != null)
+                                Text(
+                                  _aiError!,
+                                  style: TextStyle(
+                                    color: theme.colorScheme.error,
+                                  ),
+                                ),
+                              Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: _aiLoading
+                                          ? null
+                                          : _aiSummarize,
+                                      icon: _aiLoading && _aiSummary == null
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.summarize,
+                                              size: 18,
+                                            ),
+                                      label: const Text("Summarize"),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: _aiLoading
+                                          ? null
+                                          : _aiCategorize,
+                                      icon: _aiLoading && _aiCategory == null
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(Icons.label, size: 18),
+                                      label: const Text("Categorize"),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (_aiSummary != null) ...<Widget>[
+                                const SizedBox(height: 12),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        theme.colorScheme.surfaceContainerLow,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: theme.colorScheme.outlineVariant
+                                          .withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Row(
+                                        children: <Widget>[
+                                          Icon(
+                                            Icons.auto_awesome,
+                                            size: 16,
+                                            color: theme.colorScheme.primary,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            "Summary",
+                                            style: theme.textTheme.labelLarge
+                                                ?.copyWith(
+                                                  color:
+                                                      theme.colorScheme.primary,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        _aiSummary!.summary,
+                                        style: theme.textTheme.bodyMedium,
+                                      ),
+                                      if (_aiSummary!
+                                          .keyPoints
+                                          .isNotEmpty) ...<Widget>[
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          "Key Points",
+                                          style: theme.textTheme.labelMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                        ..._aiSummary!.keyPoints.map(
+                                          (p) => Padding(
+                                            padding: const EdgeInsets.only(
+                                              left: 12,
+                                              top: 2,
+                                            ),
+                                            child: Text(
+                                              "• $p",
+                                              style: theme.textTheme.bodySmall,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      if (_aiSummary!
+                                          .actionItems
+                                          .isNotEmpty) ...<Widget>[
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          "Action Items",
+                                          style: theme.textTheme.labelMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                        ..._aiSummary!.actionItems.map(
+                                          (a) => Padding(
+                                            padding: const EdgeInsets.only(
+                                              left: 12,
+                                              top: 2,
+                                            ),
+                                            child: Text(
+                                              "□ $a",
+                                              style: theme.textTheme.bodySmall,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        "Confidence: ${(_aiSummary!.confidence * 100).toInt()}% • ${_aiSummary!.modelUsed}",
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              if (_aiCategory != null) ...<Widget>[
+                                const SizedBox(height: 12),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        theme.colorScheme.surfaceContainerLow,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: theme.colorScheme.outlineVariant
+                                          .withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Row(
+                                        children: <Widget>[
+                                          Icon(
+                                            Icons.label_outline,
+                                            size: 16,
+                                            color: theme.colorScheme.secondary,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            "Categories",
+                                            style: theme.textTheme.labelLarge
+                                                ?.copyWith(
+                                                  color: theme
+                                                      .colorScheme
+                                                      .secondary,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      if (_aiCategory!.suggestedPriority !=
+                                          null)
+                                        Text(
+                                          "Priority: ${_aiCategory!.suggestedPriority!["name"]}",
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                      if (_aiCategory!.suggestedCategory !=
+                                          null)
+                                        Text(
+                                          "Category: ${_aiCategory!.suggestedCategory!["name"]}",
+                                          style: theme.textTheme.bodyMedium,
+                                        ),
+                                      if (_aiCategory!
+                                          .reasoning
+                                          .isNotEmpty) ...<Widget>[
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          _aiCategory!.reasoning,
+                                          style: theme.textTheme.bodySmall,
+                                        ),
+                                      ],
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        _aiCategory!.modelUsed,
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        _sectionCard(
+                          context: context,
+                          sectionId: "internal-notes",
+                          title: "Internal Notes",
+                          expanded: _expandInternalNotes,
+                          onExpandedChanged: (value) {
+                            setState(() => _expandInternalNotes = value);
+                            if (value && _internalNotes.isEmpty) {
+                              _loadInternalNotes();
+                            }
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              ElevatedButton.icon(
+                                onPressed: () => _showAddNoteDialog(context),
+                                icon: const Icon(Icons.add_comment, size: 18),
+                                label: const Text("Add Note"),
+                              ),
+                              if (_internalNotes.isNotEmpty) ...<Widget>[
+                                const SizedBox(height: 8),
+                                ..._internalNotes.map(
+                                  (note) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: <Widget>[
                                         Row(
                                           children: <Widget>[
-                                            const Icon(Icons.attach_file),
-                                            const SizedBox(width: 6),
-                                            Expanded(
-                                              child: Text(
-                                                attachment.filename,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
+                                            Text(
+                                              note.authorName,
+                                              style: theme.textTheme.labelSmall
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              _formatRelative(note.createdAt),
+                                              style: theme.textTheme.labelSmall,
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(height: 6),
+                                        const SizedBox(height: 2),
                                         Text(
-                                          "${(attachment.filesize / 1024).toStringAsFixed(1)} KB"
-                                          "${attachment.author != null ? " • ${attachment.author}" : ""}",
+                                          note.content,
+                                          style: theme.textTheme.bodySmall,
                                         ),
-                                        if (_isImageAttachment(
-                                          attachment,
-                                        )) ...<Widget>[
-                                          const SizedBox(height: 8),
-                                          if (!_attachmentHeaders.containsKey(
-                                            "Authorization",
-                                          ))
-                                            Container(
-                                              height: 80,
-                                              alignment: Alignment.center,
-                                              color: theme
-                                                  .colorScheme
-                                                  .surfaceContainerHighest,
-                                              child: const Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: <Widget>[
-                                                  SizedBox(
-                                                    width: 16,
-                                                    height: 16,
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                          strokeWidth: 2,
-                                                        ),
-                                                  ),
-                                                  SizedBox(width: 8),
-                                                  Text(
-                                                    "Loading image preview...",
-                                                  ),
-                                                ],
-                                              ),
-                                            )
-                                          else
-                                            ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              child: Image.network(
-                                                _attachmentUrl(attachment),
-                                                key: ValueKey<String>(
-                                                  "att-${attachment.redmineAttachmentId}-${_attachmentHeaders["Authorization"]}",
-                                                ),
-                                                headers: _attachmentHeaders,
-                                                height: 180,
-                                                width: double.infinity,
-                                                fit: BoxFit.cover,
-                                                errorBuilder:
-                                                    (
-                                                      context,
-                                                      error,
-                                                      stackTrace,
-                                                    ) {
-                                                      return Container(
-                                                        height: 80,
-                                                        alignment:
-                                                            Alignment.center,
-                                                        color: theme
-                                                            .colorScheme
-                                                            .surfaceContainerHighest,
-                                                        child: const Text(
-                                                          "Image preview unavailable",
-                                                        ),
-                                                      );
-                                                    },
-                                              ),
-                                            ),
-                                        ],
-                                        if (_isTextDocAttachment(
-                                          attachment,
-                                        )) ...<Widget>[
-                                          const SizedBox(height: 8),
-                                          FutureBuilder<String?>(
-                                            future: widget.actionsRepository
-                                                .attachmentTextPreview(
-                                                  issueId:
-                                                      widget.issueId,
-                                                  redmineAttachmentId:
-                                                      attachment
-                                                          .redmineAttachmentId,
-                                                  maxChars: 420,
-                                                ),
-                                            builder: (context, snapshot) {
-                                              if (snapshot.connectionState ==
-                                                  ConnectionState.waiting) {
-                                                return const SizedBox(
-                                                  height: 28,
-                                                  child: Align(
-                                                    alignment:
-                                                        Alignment.centerLeft,
-                                                    child: Text(
-                                                      "Loading text preview...",
-                                                    ),
-                                                  ),
-                                                );
-                                              }
-                                              final preview = snapshot.data
-                                                  ?.trim();
-                                              if (preview == null ||
-                                                  preview.isEmpty) {
-                                                return const Text(
-                                                  "Text preview unavailable",
-                                                );
-                                              }
-                                              return Container(
-                                                width: double.infinity,
-                                                padding: const EdgeInsets.all(
-                                                  10,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: theme
-                                                      .colorScheme
-                                                      .surfaceContainerHighest,
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  border: Border.all(
-                                                    color: theme
-                                                        .colorScheme
-                                                        .outlineVariant,
-                                                  ),
-                                                ),
-                                                child: Text(
-                                                  preview,
-                                                  maxLines: 7,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: theme
-                                                      .textTheme
-                                                      .bodySmall
-                                                      ?.copyWith(
-                                                        fontFamily: "monospace",
-                                                        height: 1.3,
-                                                      ),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ],
                                       ],
                                     ),
                                   ),
-                                )
-                                .toList(),
+                                ),
+                              ],
+                            ],
                           ),
-                  ),
-                  _sectionCard(
-                    context: context,
-                    sectionId: "relations",
-                    title: "Relations",
-                    expanded: _expandRelations,
-                    onExpandedChanged: (value) =>
-                        setState(() => _expandRelations = value),
-                    child: Column(
-                      children: <Widget>[
-                        TextField(
-                          controller: _relationIssue,
-                          decoration: const InputDecoration(
-                            labelText: "Related issue #",
-                          ),
-                          keyboardType: TextInputType.number,
                         ),
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: DropdownButton<String>(
-                            value: _relationType,
-                            items: const <DropdownMenuItem<String>>[
-                              DropdownMenuItem<String>(
-                                value: "relates",
-                                child: Text("relates"),
+                        _sectionCard(
+                          context: context,
+                          sectionId: "allowed",
+                          title: "Allowed Statuses",
+                          expanded: _expandAllowed,
+                          onExpandedChanged: (value) =>
+                              setState(() => _expandAllowed = value),
+                          child: _issue!.allowedStatuses.isEmpty
+                              ? const Text("No transition data from server.")
+                              : Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: _issue!.allowedStatuses
+                                      .map(
+                                        (s) => Chip(
+                                          label: Text(s.name),
+                                          visualDensity: VisualDensity.compact,
+                                          side: BorderSide(
+                                            color: theme
+                                                .colorScheme
+                                                .outlineVariant,
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                        ),
+                        _sectionCard(
+                          context: context,
+                          sectionId: "comment",
+                          title: "Add Comment",
+                          expanded: _expandComment,
+                          onExpandedChanged: (value) =>
+                              setState(() => _expandComment = value),
+                          child: Column(
+                            children: <Widget>[
+                              TextField(
+                                controller: _comment,
+                                decoration: const InputDecoration(
+                                  labelText: "Comment",
+                                ),
+                                minLines: 2,
+                                maxLines: 4,
                               ),
-                              DropdownMenuItem<String>(
-                                value: "duplicated",
-                                child: Text("duplicated"),
-                              ),
-                              DropdownMenuItem<String>(
-                                value: "blocks",
-                                child: Text("blocks"),
-                              ),
-                              DropdownMenuItem<String>(
-                                value: "blocked",
-                                child: Text("blocked"),
-                              ),
-                              DropdownMenuItem<String>(
-                                value: "precedes",
-                                child: Text("precedes"),
-                              ),
-                              DropdownMenuItem<String>(
-                                value: "follows",
-                                child: Text("follows"),
-                              ),
-                              DropdownMenuItem<String>(
-                                value: "duplicates",
-                                child: Text("duplicates"),
-                              ),
-                              DropdownMenuItem<String>(
-                                value: "copied_to",
-                                child: Text("copied_to"),
-                              ),
-                              DropdownMenuItem<String>(
-                                value: "copied_from",
-                                child: Text("copied_from"),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: _postComment,
+                                  child: const Text("Post Comment"),
+                                ),
                               ),
                             ],
-                            onChanged: (value) {
-                              if (value == null) return;
-                              setState(() => _relationType = value);
-                            },
                           ),
                         ),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _addRelation,
-                            child: const Text("Add Relation"),
+                        _sectionCard(
+                          context: context,
+                          sectionId: "github",
+                          title: "GitHub Links",
+                          expanded: _expandGithub,
+                          onExpandedChanged: (value) =>
+                              setState(() => _expandGithub = value),
+                          child: Column(
+                            children: <Widget>[
+                              TextField(
+                                controller: _repo,
+                                decoration: const InputDecoration(
+                                  labelText: "Repository (owner/repo)",
+                                ),
+                              ),
+                              TextField(
+                                controller: _ghIssue,
+                                decoration: const InputDecoration(
+                                  labelText: "GitHub Issue #",
+                                ),
+                                keyboardType: TextInputType.number,
+                              ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: _addGithubLink,
+                                  child: const Text("Add GitHub Link"),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (_issue!.githubLinks.isEmpty)
+                                const Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text("No GitHub links."),
+                                )
+                              else
+                                ..._issue!.githubLinks.map(
+                                  (link) => ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    onTap: () => _openGithubLink(link),
+                                    leading: const Icon(Icons.open_in_new),
+                                    title: Text(
+                                      _githubLinkDisplayTitle(link),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    subtitle: Text(
+                                      link.url.trim().isNotEmpty
+                                          ? link.url
+                                          : link.repositoryFullName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.delete_outline),
+                                      onPressed: () async {
+                                        await widget.actionsRepository
+                                            .removeGithubLink(
+                                              issueId: widget.issueId,
+                                              linkId: link.id,
+                                            );
+                                        await _load();
+                                      },
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        if (_issue!.relations.isEmpty)
-                          const Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text("No relations."),
-                          )
-                        else
-                          ..._issue!.relations.map(
-                            (relation) => ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(
-                                "${relation.relationType} #${relation.targetIssueId}",
+                        _sectionCard(
+                          context: context,
+                          sectionId: "attachments",
+                          title: "Attachments",
+                          expanded: _expandAttachments,
+                          onExpandedChanged: (value) {
+                            setState(() => _expandAttachments = value);
+                            if (value &&
+                                !_attachmentHeaders.containsKey(
+                                  "Authorization",
+                                )) {
+                              _loadAttachmentHeaders();
+                            }
+                          },
+                          child: _issue!.attachments.isEmpty
+                              ? const Text("No attachments.")
+                              : Column(
+                                  children: _issue!.attachments
+                                      .map(
+                                        (attachment) => ListTile(
+                                          contentPadding: EdgeInsets.zero,
+                                          title: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: <Widget>[
+                                              Row(
+                                                children: <Widget>[
+                                                  const Icon(Icons.attach_file),
+                                                  const SizedBox(width: 6),
+                                                  Expanded(
+                                                    child: Text(
+                                                      attachment.filename,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                "${(attachment.filesize / 1024).toStringAsFixed(1)} KB"
+                                                "${attachment.author != null ? " • ${attachment.author}" : ""}",
+                                              ),
+                                              if (_isImageAttachment(
+                                                attachment,
+                                              )) ...<Widget>[
+                                                const SizedBox(height: 8),
+                                                if (!_attachmentHeaders
+                                                    .containsKey(
+                                                      "Authorization",
+                                                    ))
+                                                  Container(
+                                                    height: 80,
+                                                    alignment: Alignment.center,
+                                                    color: theme
+                                                        .colorScheme
+                                                        .surfaceContainerHighest,
+                                                    child: const Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: <Widget>[
+                                                        SizedBox(
+                                                          width: 16,
+                                                          height: 16,
+                                                          child:
+                                                              CircularProgressIndicator(
+                                                                strokeWidth: 2,
+                                                              ),
+                                                        ),
+                                                        SizedBox(width: 8),
+                                                        Text(
+                                                          "Loading image preview...",
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  )
+                                                else
+                                                  ClipRRect(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                    child: Image.network(
+                                                      _attachmentUrl(
+                                                        attachment,
+                                                      ),
+                                                      key: ValueKey<String>(
+                                                        "att-${attachment.redmineAttachmentId}-${_attachmentHeaders["Authorization"]}",
+                                                      ),
+                                                      headers:
+                                                          _attachmentHeaders,
+                                                      height: 180,
+                                                      width: double.infinity,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder:
+                                                          (
+                                                            context,
+                                                            error,
+                                                            stackTrace,
+                                                          ) {
+                                                            return Container(
+                                                              height: 80,
+                                                              alignment:
+                                                                  Alignment
+                                                                      .center,
+                                                              color: theme
+                                                                  .colorScheme
+                                                                  .surfaceContainerHighest,
+                                                              child: const Text(
+                                                                "Image preview unavailable",
+                                                              ),
+                                                            );
+                                                          },
+                                                    ),
+                                                  ),
+                                              ],
+                                              if (_isTextDocAttachment(
+                                                attachment,
+                                              )) ...<Widget>[
+                                                const SizedBox(height: 8),
+                                                FutureBuilder<String?>(
+                                                  future: widget
+                                                      .actionsRepository
+                                                      .attachmentTextPreview(
+                                                        issueId: widget.issueId,
+                                                        redmineAttachmentId:
+                                                            attachment
+                                                                .redmineAttachmentId,
+                                                        maxChars: 420,
+                                                      ),
+                                                  builder: (context, snapshot) {
+                                                    if (snapshot
+                                                            .connectionState ==
+                                                        ConnectionState
+                                                            .waiting) {
+                                                      return const SizedBox(
+                                                        height: 28,
+                                                        child: Align(
+                                                          alignment: Alignment
+                                                              .centerLeft,
+                                                          child: Text(
+                                                            "Loading text preview...",
+                                                          ),
+                                                        ),
+                                                      );
+                                                    }
+                                                    final preview = snapshot
+                                                        .data
+                                                        ?.trim();
+                                                    if (preview == null ||
+                                                        preview.isEmpty) {
+                                                      return const Text(
+                                                        "Text preview unavailable",
+                                                      );
+                                                    }
+                                                    return Container(
+                                                      width: double.infinity,
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            10,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: theme
+                                                            .colorScheme
+                                                            .surfaceContainerHighest,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                        border: Border.all(
+                                                          color: theme
+                                                              .colorScheme
+                                                              .outlineVariant,
+                                                        ),
+                                                      ),
+                                                      child: Text(
+                                                        preview,
+                                                        maxLines: 7,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: theme
+                                                            .textTheme
+                                                            .bodySmall
+                                                            ?.copyWith(
+                                                              fontFamily:
+                                                                  "monospace",
+                                                              height: 1.3,
+                                                            ),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                        ),
+                        _sectionCard(
+                          context: context,
+                          sectionId: "relations",
+                          title: "Relations",
+                          expanded: _expandRelations,
+                          onExpandedChanged: (value) =>
+                              setState(() => _expandRelations = value),
+                          child: Column(
+                            children: <Widget>[
+                              TextField(
+                                controller: _relationIssue,
+                                decoration: const InputDecoration(
+                                  labelText: "Related issue #",
+                                ),
+                                keyboardType: TextInputType.number,
                               ),
-                              subtitle: relation.delay == null
-                                  ? null
-                                  : Text("Delay: ${relation.delay}"),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                onPressed: () async {
-                                  await widget.actionsRepository.removeRelation(
-                                    issueId: widget.issueId,
-                                    relationId: relation.redmineRelationId,
-                                  );
-                                  await _load();
-                                },
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: DropdownButton<String>(
+                                  value: _relationType,
+                                  items: const <DropdownMenuItem<String>>[
+                                    DropdownMenuItem<String>(
+                                      value: "relates",
+                                      child: Text("relates"),
+                                    ),
+                                    DropdownMenuItem<String>(
+                                      value: "duplicated",
+                                      child: Text("duplicated"),
+                                    ),
+                                    DropdownMenuItem<String>(
+                                      value: "blocks",
+                                      child: Text("blocks"),
+                                    ),
+                                    DropdownMenuItem<String>(
+                                      value: "blocked",
+                                      child: Text("blocked"),
+                                    ),
+                                    DropdownMenuItem<String>(
+                                      value: "precedes",
+                                      child: Text("precedes"),
+                                    ),
+                                    DropdownMenuItem<String>(
+                                      value: "follows",
+                                      child: Text("follows"),
+                                    ),
+                                    DropdownMenuItem<String>(
+                                      value: "duplicates",
+                                      child: Text("duplicates"),
+                                    ),
+                                    DropdownMenuItem<String>(
+                                      value: "copied_to",
+                                      child: Text("copied_to"),
+                                    ),
+                                    DropdownMenuItem<String>(
+                                      value: "copied_from",
+                                      child: Text("copied_from"),
+                                    ),
+                                  ],
+                                  onChanged: (value) {
+                                    if (value == null) return;
+                                    setState(() => _relationType = value);
+                                  },
+                                ),
                               ),
-                            ),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: _addRelation,
+                                  child: const Text("Add Relation"),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (_issue!.relations.isEmpty)
+                                const Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text("No relations."),
+                                )
+                              else
+                                ..._issue!.relations.map(
+                                  (relation) => ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    title: Text(
+                                      "${relation.relationType} #${relation.targetIssueId}",
+                                    ),
+                                    subtitle: relation.delay == null
+                                        ? null
+                                        : Text("Delay: ${relation.delay}"),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.delete_outline),
+                                      onPressed: () async {
+                                        await widget.actionsRepository
+                                            .removeRelation(
+                                              issueId: widget.issueId,
+                                              relationId:
+                                                  relation.redmineRelationId,
+                                            );
+                                        await _load();
+                                      },
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
+                        ),
                       ],
                     ),
                   ),
-                  ],
-                ),
-              ),
                 ],
               ),
             ),

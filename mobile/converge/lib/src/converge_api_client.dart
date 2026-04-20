@@ -14,10 +14,10 @@ class ConvergeApiClient {
     required String baseUrl,
     required TokenStore tokenStore,
     void Function()? onUnauthorized,
-  })  : _tokenStore = tokenStore,
-        _baseUrl = baseUrl,
-        _onUnauthorized = onUnauthorized,
-        _dio = Dio(BaseOptions(baseUrl: baseUrl)) {
+  }) : _tokenStore = tokenStore,
+       _baseUrl = baseUrl,
+       _onUnauthorized = onUnauthorized,
+       _dio = Dio(BaseOptions(baseUrl: baseUrl)) {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -53,7 +53,8 @@ class ConvergeApiClient {
       );
     }
 
-    if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout) {
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout) {
       throw ApiError(
         "Request timed out when contacting Converge at $_baseUrl. "
         "Verify network path and server availability.",
@@ -107,8 +108,11 @@ class ConvergeApiClient {
           "pageSize": pageSize,
         },
       );
-      final items = (response.data?["items"] as List<dynamic>?) ?? const <dynamic>[];
-      return items.map((e) => Issue.fromJson(e as Map<String, dynamic>)).toList();
+      final items =
+          (response.data?["items"] as List<dynamic>?) ?? const <dynamic>[];
+      return items
+          .map((e) => Issue.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       _throwApiError(e);
     }
@@ -116,8 +120,12 @@ class ConvergeApiClient {
 
   Future<Issue> getIssue(String issueId) async {
     try {
-      final response = await _dio.get<Map<String, dynamic>>("/api/mobile/v1/issues/$issueId");
-      final issue = response.data?["issue"] as Map<String, dynamic>? ?? <String, dynamic>{};
+      final response = await _dio.get<Map<String, dynamic>>(
+        "/api/mobile/v1/issues/$issueId",
+      );
+      final issue =
+          response.data?["issue"] as Map<String, dynamic>? ??
+          <String, dynamic>{};
       return Issue.fromJson(issue);
     } on DioException catch (e) {
       _throwApiError(e);
@@ -168,9 +176,14 @@ class ConvergeApiClient {
 
   Future<List<AssignableUser>> listAssignableUsers() async {
     try {
-      final response = await _dio.get<Map<String, dynamic>>("/api/mobile/v1/issues/assignable-users");
-      final items = (response.data?["users"] as List<dynamic>?) ?? const <dynamic>[];
-      return items.map((e) => AssignableUser.fromJson(e as Map<String, dynamic>)).toList();
+      final response = await _dio.get<Map<String, dynamic>>(
+        "/api/mobile/v1/issues/assignable-users",
+      );
+      final items =
+          (response.data?["users"] as List<dynamic>?) ?? const <dynamic>[];
+      return items
+          .map((e) => AssignableUser.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       _throwApiError(e);
     }
@@ -181,8 +194,11 @@ class ConvergeApiClient {
       final response = await _dio.get<Map<String, dynamic>>(
         "/api/mobile/v1/issues/$issueId/time-entries",
       );
-      final items = (response.data?["items"] as List<dynamic>?) ?? const <dynamic>[];
-      return items.map((e) => TimeEntry.fromJson(e as Map<String, dynamic>)).toList();
+      final items =
+          (response.data?["items"] as List<dynamic>?) ?? const <dynamic>[];
+      return items
+          .map((e) => TimeEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       _throwApiError(e);
     }
@@ -212,20 +228,27 @@ class ConvergeApiClient {
 
   Future<List<Map<String, dynamic>>> listActivities() async {
     try {
-      final response = await _dio.get<Map<String, dynamic>>("/api/mobile/v1/activities");
-      final items = (response.data?["activities"] as List<dynamic>?) ?? const <dynamic>[];
+      final response = await _dio.get<Map<String, dynamic>>(
+        "/api/mobile/v1/activities",
+      );
+      final items =
+          (response.data?["activities"] as List<dynamic>?) ?? const <dynamic>[];
       return items.cast<Map<String, dynamic>>();
     } on DioException catch (e) {
       _throwApiError(e);
     }
   }
 
-  Future<List<Map<String, dynamic>>> getBreadcrumbs({required String issueId}) async {
+  Future<List<Map<String, dynamic>>> getBreadcrumbs({
+    required String issueId,
+  }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         "/api/mobile/v1/issues/$issueId/breadcrumbs",
       );
-      final items = (response.data?["breadcrumbs"] as List<dynamic>?) ?? const <dynamic>[];
+      final items =
+          (response.data?["breadcrumbs"] as List<dynamic>?) ??
+          const <dynamic>[];
       return items.cast<Map<String, dynamic>>();
     } on DioException catch (e) {
       _throwApiError(e);
@@ -236,7 +259,7 @@ class ConvergeApiClient {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         "/api/ai/summarize",
-        data: <String, dynamic>{"issueId": "$issueId"},
+        data: <String, dynamic>{"issueId": issueId},
       );
       return response.data ?? <String, dynamic>{};
     } on DioException catch (e) {
@@ -244,11 +267,13 @@ class ConvergeApiClient {
     }
   }
 
-  Future<Map<String, dynamic>> categorizeIssue({required String issueId}) async {
+  Future<Map<String, dynamic>> categorizeIssue({
+    required String issueId,
+  }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         "/api/ai/categorize",
-        data: <String, dynamic>{"issueId": "$issueId"},
+        data: <String, dynamic>{"issueId": issueId},
       );
       return response.data ?? <String, dynamic>{};
     } on DioException catch (e) {
@@ -293,13 +318,18 @@ class ConvergeApiClient {
     }
   }
 
-  Future<List<InternalNote>> listInternalNotes({required String issueId}) async {
+  Future<List<InternalNote>> listInternalNotes({
+    required String issueId,
+  }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         "/api/mobile/v1/issues/$issueId/internal-notes",
       );
-      final items = (response.data?["notes"] as List<dynamic>?) ?? const <dynamic>[];
-      return items.map((e) => InternalNote.fromJson(e as Map<String, dynamic>)).toList();
+      final items =
+          (response.data?["notes"] as List<dynamic>?) ?? const <dynamic>[];
+      return items
+          .map((e) => InternalNote.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       _throwApiError(e);
     }
@@ -314,7 +344,9 @@ class ConvergeApiClient {
         "/api/mobile/v1/issues/$issueId/internal-notes",
         data: <String, dynamic>{"content": content},
       );
-      return InternalNote.fromJson(response.data?["note"] as Map<String, dynamic>);
+      return InternalNote.fromJson(
+        response.data?["note"] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       _throwApiError(e);
     }
@@ -401,8 +433,11 @@ class ConvergeApiClient {
       final response = await _dio.get<Map<String, dynamic>>(
         "/api/mobile/v1/issues/$issueId/attachments",
       );
-      final items = (response.data?["items"] as List<dynamic>?) ?? const <dynamic>[];
-      return items.map((e) => IssueAttachment.fromJson(e as Map<String, dynamic>)).toList();
+      final items =
+          (response.data?["items"] as List<dynamic>?) ?? const <dynamic>[];
+      return items
+          .map((e) => IssueAttachment.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       _throwApiError(e);
     }
@@ -483,11 +518,11 @@ class ConvergeApiClient {
     }
   }
 
-  Future<void> deleteTimeEntry({
-    required int redmineTimeEntryId,
-  }) async {
+  Future<void> deleteTimeEntry({required int redmineTimeEntryId}) async {
     try {
-      await _dio.delete<Map<String, dynamic>>("/api/mobile/v1/time-entries/$redmineTimeEntryId");
+      await _dio.delete<Map<String, dynamic>>(
+        "/api/mobile/v1/time-entries/$redmineTimeEntryId",
+      );
     } on DioException catch (e) {
       _throwApiError(e);
     }
@@ -495,7 +530,9 @@ class ConvergeApiClient {
 
   Future<String> rotateToken() async {
     try {
-      final response = await _dio.post<Map<String, dynamic>>("/api/mobile/v1/tokens/rotate");
+      final response = await _dio.post<Map<String, dynamic>>(
+        "/api/mobile/v1/tokens/rotate",
+      );
       return (response.data?["token"] as String?) ?? "";
     } on DioException catch (e) {
       _throwApiError(e);
@@ -537,7 +574,8 @@ class ConvergeApiClient {
         options: Options(
           responseType: ResponseType.plain,
           headers: const <String, String>{"Range": "bytes=0-4095"},
-          validateStatus: (status) => status != null && status >= 200 && status < 400,
+          validateStatus: (status) =>
+              status != null && status >= 200 && status < 400,
         ),
       );
       final raw = (response.data ?? "").trim();

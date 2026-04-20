@@ -46,33 +46,44 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(testLauncher.launchedUrls, hasLength(1));
-    expect(testLauncher.launchedUrls.single, "https://github.com/acme/platform/issues/999");
+    expect(
+      testLauncher.launchedUrls.single,
+      "https://github.com/acme/platform/issues/999",
+    );
   });
 
-  testWidgets("tapping link falls back to constructed issue URL when raw URL is missing", (tester) async {
-    final issue = _issueWithLinks(<GithubLink>[
-      GithubLink(
-        id: "l2",
-        repositoryFullName: "acme/platform",
-        githubIssueNumber: 42,
-        githubPrNumber: null,
-        url: "",
-        title: null,
-      ),
-    ]);
+  testWidgets(
+    "tapping link falls back to constructed issue URL when raw URL is missing",
+    (tester) async {
+      final issue = _issueWithLinks(<GithubLink>[
+        GithubLink(
+          id: "l2",
+          repositoryFullName: "acme/platform",
+          githubIssueNumber: 42,
+          githubPrNumber: null,
+          url: "",
+          title: null,
+        ),
+      ]);
 
-    await _pumpIssueDetail(tester, issue: issue);
-    await _tapVisible(tester, find.text("GitHub Links"));
-    await tester.pumpAndSettle();
+      await _pumpIssueDetail(tester, issue: issue);
+      await _tapVisible(tester, find.text("GitHub Links"));
+      await tester.pumpAndSettle();
 
-    await _tapText(tester, "acme/platform#42");
-    await tester.pumpAndSettle();
+      await _tapText(tester, "acme/platform#42");
+      await tester.pumpAndSettle();
 
-    expect(testLauncher.launchedUrls, hasLength(1));
-    expect(testLauncher.launchedUrls.single, "https://github.com/acme/platform/issues/42");
-  });
+      expect(testLauncher.launchedUrls, hasLength(1));
+      expect(
+        testLauncher.launchedUrls.single,
+        "https://github.com/acme/platform/issues/42",
+      );
+    },
+  );
 
-  testWidgets("shows snackbar when GitHub link cannot be resolved", (tester) async {
+  testWidgets("shows snackbar when GitHub link cannot be resolved", (
+    tester,
+  ) async {
     final issue = _issueWithLinks(<GithubLink>[
       GithubLink(
         id: "l3",
@@ -157,28 +168,39 @@ class _FakeIssueActionsRepository extends IssueActionsRepository {
   _FakeIssueActionsRepository() : super(_dummyApiClient());
 
   @override
-  Future<Map<String, String>> attachmentPreviewHeaders() async => const <String, String>{};
+  Future<Map<String, String>> attachmentPreviewHeaders() async =>
+      const <String, String>{};
 
   @override
-  Future<List<TimeEntry>> listTimeEntries({required String issueId}) async => const <TimeEntry>[];
+  Future<List<TimeEntry>> listTimeEntries({required String issueId}) async =>
+      const <TimeEntry>[];
 
   @override
-  Future<List<Map<String, dynamic>>> listActivities() async => const <Map<String, dynamic>>[];
+  Future<List<Map<String, dynamic>>> listActivities() async =>
+      const <Map<String, dynamic>>[];
 
   @override
-  Future<List<AssignableUser>> listAssignableUsers() async => const <AssignableUser>[];
+  Future<List<AssignableUser>> listAssignableUsers() async =>
+      const <AssignableUser>[];
 
   @override
-  Future<List<Map<String, dynamic>>> getBreadcrumbs({required String issueId}) async => const <Map<String, dynamic>>[];
+  Future<List<Map<String, dynamic>>> getBreadcrumbs({
+    required String issueId,
+  }) async => const <Map<String, dynamic>>[];
 
   @override
   Future<bool> isFavorited({required String issueId}) async => false;
 
   @override
-  Future<List<InternalNote>> listInternalNotes({required String issueId}) async => const <InternalNote>[];
+  Future<List<InternalNote>> listInternalNotes({
+    required String issueId,
+  }) async => const <InternalNote>[];
 
   @override
-  Future<void> postComment({required String issueId, required String comment}) async {}
+  Future<void> postComment({
+    required String issueId,
+    required String comment,
+  }) async {}
 
   @override
   Future<void> addGithubLink({
@@ -191,7 +213,10 @@ class _FakeIssueActionsRepository extends IssueActionsRepository {
   }) async {}
 
   @override
-  Future<void> removeGithubLink({required String issueId, required String linkId}) async {}
+  Future<void> removeGithubLink({
+    required String issueId,
+    required String linkId,
+  }) async {}
 
   @override
   Future<void> addRelation({
@@ -202,7 +227,10 @@ class _FakeIssueActionsRepository extends IssueActionsRepository {
   }) async {}
 
   @override
-  Future<void> removeRelation({required String issueId, required int relationId}) async {}
+  Future<void> removeRelation({
+    required String issueId,
+    required int relationId,
+  }) async {}
 }
 
 ConvergeApiClient _dummyApiClient() {
@@ -212,7 +240,8 @@ ConvergeApiClient _dummyApiClient() {
   );
 }
 
-class _TestUrlLauncher extends UrlLauncherPlatform with MockPlatformInterfaceMixin {
+class _TestUrlLauncher extends UrlLauncherPlatform
+    with MockPlatformInterfaceMixin {
   final List<String> launchedUrls = <String>[];
 
   @override
