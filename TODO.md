@@ -1,6 +1,7 @@
 # TODO
 
 ## Pending
+- [ ] **Mobile Application** — Broken, explore alternative approaches using Electron, Ionic framework or Apache Cordova
 
 ### ✨ Future / Post-MVP Features
 - [ ] **Interactive Gantt Chart View** — A visual timeline view grouping tasks by project/epic and plotting them on a timeline.

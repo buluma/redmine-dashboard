@@ -183,7 +183,9 @@ Future<void> main() async {
     options.tracesSampleRate = tracesSampleRate;
     options.profilesSampleRate = profilesSampleRate;
     options.enableLogs = enableLogs;
-  }, appRunner: () => runApp(SentryWidget(child: const ConvergeApp())));
+  });
+
+  runApp(SentryWidget(child: const ConvergeApp()));
 }
 
 String _env(String key, [String fallback = ""]) {
@@ -217,39 +219,72 @@ class _ConvergeAppState extends State<ConvergeApp> {
   late final IssueActionsRepository _actionsRepository;
   bool _paired = false;
   bool _bootstrapping = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _tokenStore = TokenStore();
-    _apiClient = ConvergeApiClient(
-      baseUrl: _env("CONVERGE_BASE_URL", "http://100.110.136.4:3001"),
-      tokenStore: _tokenStore,
-      onUnauthorized: () {
-        if (!mounted) return;
-        setState(() {
-          _paired = false;
-          _bootstrapping = false;
-        });
-      },
-    );
-    _authRepository = AuthRepository(_apiClient, _tokenStore);
-    _issuesRepository = IssuesRepository(_apiClient);
-    _actionsRepository = IssueActionsRepository(_apiClient);
-    _checkExistingToken();
+    try {
+      _tokenStore = TokenStore();
+      _apiClient = ConvergeApiClient(
+        // TODO: Change this to your machine's IP address when running on a real device.
+        baseUrl: _env("CONVERGE_BASE_URL", "http://localhost:3001"),
+        tokenStore: _tokenStore,
+        onUnauthorized: () {
+          if (!mounted) return;
+          setState(() {
+            _paired = false;
+            _bootstrapping = false;
+          });
+        },
+      );
+      _authRepository = AuthRepository(_apiClient, _tokenStore);
+      _issuesRepository = IssuesRepository(_apiClient);
+      _actionsRepository = IssueActionsRepository(_apiClient);
+      _checkExistingToken();
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    }
   }
 
   Future<void> _checkExistingToken() async {
-    final token = await _tokenStore.getToken();
-    if (!mounted) return;
-    setState(() {
-      _paired = token != null && token.isNotEmpty;
-      _bootstrapping = false;
-    });
+    try {
+      final token = await _tokenStore.getToken();
+      if (!mounted) return;
+      setState(() {
+        _paired = token != null && token.isNotEmpty;
+        _bootstrapping = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_error != null) {
+      return MaterialApp(
+        title: "Converge",
+        theme: _buildTheme(Brightness.light),
+        darkTheme: _buildTheme(Brightness.dark),
+        home: Scaffold(
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                "An error occurred during startup:\n\n$_error",
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return MaterialApp(
       title: "Converge",
       theme: _buildTheme(Brightness.light),
