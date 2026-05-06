@@ -20,6 +20,8 @@ import { IssueCreateModal } from "@/src/components/IssueCreateModal";
 import { ColumnPicker, ColumnKey } from "@/src/components/ColumnPicker";
 import { KanbanBoard } from "@/src/components/KanbanBoard";
 import { GanttChart } from "@/src/components/GanttChart";
+import { IssueQuickPeek } from "@/src/components/IssueQuickPeek";
+import { SkeletonTable } from "@/src/components/SkeletonTable";
 import type {
   User,
   Journal,
@@ -144,6 +146,7 @@ export default function Home() {
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const prefetchedIssueIdsRef = useRef<Set<string>>(new Set());
+  const heroRef = useRef<HTMLElement>(null);
 
   const prefetchIssueDetail = useCallback((targetIssueId: number | string | null | undefined) => {
     const routeId = normalizeIssueRouteId(targetIssueId);
@@ -355,6 +358,18 @@ export default function Home() {
     params.set("page", "1");
     return params.toString();
   }, [priorityFilter, search, searchMode, sort, statusFilter]);
+
+  useEffect(() => {
+    if (!heroRef.current) return;
+    const el = heroRef.current;
+    const update = () => {
+      document.documentElement.style.setProperty("--hero-height", `${el.offsetHeight}px`);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     try {
@@ -1046,7 +1061,7 @@ export default function Home() {
 
   return (
     <main className="dashboard">
-      <header className="card hero">
+      <header className="card hero" ref={heroRef}>
         <div className="hero-top">
           <div className="hero-heading">
             <p className="kicker">{t('hero.kicker')}</p>
@@ -1094,7 +1109,7 @@ export default function Home() {
           </button>
         </div>
 
-        <section className="metrics-grid">
+        <section className={`metrics-grid${loading ? " metrics-loading" : ""}`}>
           <article className="card metric-card metric-primary">
             <p className="metric-label">{t('metrics.visibleTotalLabel')}</p>
             <p className="metric-value">
@@ -1673,7 +1688,8 @@ export default function Home() {
                   </tr>
                   </thead>
                   <tbody>
-                  {(() => {
+                  {loading && <SkeletonTable rows={8} columns={6} />}
+                  {!loading && (() => {
                     const filtered = visibleIssues;
                     const start = (page - 1) * pageSize;
                     const paged = filtered.slice(start, start + pageSize);
@@ -1692,7 +1708,7 @@ export default function Home() {
                         className={`issue-row ${selectedIssueId === issue.redmineIssueId ? "selected" : ""}`}
                         onMouseEnter={() => prefetchIssueDetail(issueRouteId(issue))}
                         onClick={() => {
-                          openIssueInNewTab(issue);
+                          setSelectedIssueId(issue.redmineIssueId);
                         }}
                       >
                         <td onClick={(e) => e.stopPropagation()}>
@@ -1920,6 +1936,12 @@ export default function Home() {
         }}
         statuses={statuses}
         priorities={computedPriorityOptions}
+      />
+
+      <IssueQuickPeek
+        issueId={selectedIssueId}
+        onClose={() => setSelectedIssueId(null)}
+        onOpenFullPage={(issue) => openIssueInNewTab(issue)}
       />
     </main>
   );
