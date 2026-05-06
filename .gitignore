@@ -60,3 +60,4 @@ debugging/logs/*.json
 /.claude
 /backups
 /briefing
+CLAUDE.md
