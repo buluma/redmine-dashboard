@@ -110,6 +110,7 @@
       "updated": "Обновлено",
       "priority": "Приоритет",
       "status": "Статус",
+      "startDate": "Дата начала",
       "assignee": "Исполнитель",
       "dueDate": "Срок",
       "estimatedHours": "Оценка времени",
@@ -155,7 +156,8 @@
       "favorited": "★ В избранном",
       "assign": "Назначить",
       "assignTo": "Назначить на {name}",
-      "select": "Выбрать..."
+      "select": "Выбрать...",
+      "postToRedmine": "Отправить в Redmine"
     },
     "badges": {
       "local": "🟢 Локально"

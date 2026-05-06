@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Sora, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import "./styles/components.css";
 import "./styles/dashboard-detail.css";
 import "./styles/reports-ai.css";
 import "./styles/issue-ui.css";
+import "./styles/theme-dark.css";
 import { ErrorLoggerProvider } from "@/src/components/ErrorLoggerProvider";
 import { OfflineBanner } from "@/src/components/OfflineBanner";
 import { SyncQueueInitializer } from "@/src/components/SyncQueueInitializer";
@@ -63,7 +65,7 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* Runs before paint — prevents flash of wrong theme */}
-        <script dangerouslySetInnerHTML={{ __html: `
+        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `
           try {
             var t = localStorage.getItem('theme');
             if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';

@@ -454,7 +454,7 @@ export function StackedBarChart({
             {series.map((serie, serieIndex) => {
               const item = serie.data.find(d => d.label === label);
               const value = item?.value ?? 0;
-              const percentage = totals[label] > 0 ? (value / totals[label]) * 100 : 0;
+              const percentage = maxTotal > 0 ? (value / maxTotal) * 100 : 0;
               
               return (
                 <div

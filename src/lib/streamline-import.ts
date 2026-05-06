@@ -92,7 +92,7 @@ function transformServerSideRulesLog(record: Record<string, unknown>, env: strin
     ramUsage: parseInt(record.ram_usage as string, 10) || 0,
     cpuUsage: parseInt(record.cpu_usage as string, 10) || 0,
     host,
-    isError: Boolean(record.is_error),
+    isError: Boolean(record.is_error) || /error|fail/i.test(String(record.status ?? "")),
     errorDescr: (record.error_descr as string) || null,
     processId: record.process_id ? Number(record.process_id) : null,
     requestId: (record.request_id as string) || null,

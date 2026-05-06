@@ -1,0 +1,753 @@
+/* Final dark-theme pass. Imported last so it wins over legacy page CSS. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #141210;
+  --bg-soft: #1c1a17;
+  --ink: #e8e3da;
+  --ink-soft: #8a8278;
+  --card: #221f1b;
+  --line: #2e2a24;
+  --accent: #5aada9;
+  --accent-strong: #7dc8c5;
+  --accent-soft: #1a302e;
+  --signal: #d97d45;
+  --signal-soft: #2a1a0c;
+  --danger: #d96b6b;
+  --danger-soft: #2a1212;
+  --ok: #4bb87a;
+  --ok-soft: #102a1c;
+  --warn: #c47c32;
+  --warn-soft: #271a0c;
+  --warn-strong: #e09a50;
+  --shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  --surface-1: var(--card);
+  --surface-2: var(--bg-soft);
+  --surface-3: #2b2620;
+  --text: var(--ink);
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-soft);
+  --text-soft: var(--ink-soft);
+  --text-muted: var(--ink-soft);
+  --muted: var(--ink-soft);
+  --border: var(--line);
+  --border-color: var(--line);
+  --accent-light: var(--accent-soft);
+  --error: var(--danger);
+}
+
+[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at 8% 12%, rgba(90, 50, 20, 0.1) 0%, transparent 22%),
+    radial-gradient(circle at 85% 10%, rgba(20, 65, 70, 0.12) 0%, transparent 30%),
+    radial-gradient(circle at 76% 88%, rgba(65, 50, 20, 0.08) 0%, transparent 25%),
+    var(--bg);
+}
+
+[data-theme="dark"] .card,
+[data-theme="dark"] .quick-actions-panel,
+[data-theme="dark"] .widget-card,
+[data-theme="dark"] .metric-card,
+[data-theme="dark"] .report-card,
+[data-theme="dark"] .report-panel,
+[data-theme="dark"] .health-card,
+[data-theme="dark"] .reports-v2 .stat-card,
+[data-theme="dark"] .summary-card,
+[data-theme="dark"] .ai-result,
+[data-theme="dark"] .filters-panel,
+[data-theme="dark"] .quick-filters,
+[data-theme="dark"] .advanced-filters,
+[data-theme="dark"] .saved-views-panel,
+[data-theme="dark"] .notifications-panel,
+[data-theme="dark"] .issues-table-wrap,
+[data-theme="dark"] .chat-container,
+[data-theme="dark"] .chat-messages,
+[data-theme="dark"] .chat-panel,
+[data-theme="dark"] .chat-search,
+[data-theme="dark"] .chat-issue-group,
+[data-theme="dark"] .chat-issue-messages,
+[data-theme="dark"] .chat-log-entry,
+[data-theme="dark"] .reports-v2-loading .reports-hero-loading,
+[data-theme="dark"] .reports-v2-loading .stat-skeleton,
+[data-theme="dark"] .reports-v2-loading .report-panel-skeleton,
+[data-theme="dark"] .issue-preview-tooltip,
+[data-theme="dark"] .internal-notes-section .form,
+[data-theme="dark"] .activity-item,
+[data-theme="dark"] .activity-row {
+  background: linear-gradient(180deg, var(--bg-soft) 0%, var(--card) 100%);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .dashboard-widgets .stat-card,
+[data-theme="dark"] .dashboard-widgets .stat-card.open,
+[data-theme="dark"] .dashboard-widgets .stat-card.closed,
+[data-theme="dark"] .dashboard-widgets .widget-card {
+  background: linear-gradient(180deg, var(--bg-soft) 0%, var(--card) 100%);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .metric-card,
+[data-theme="dark"] .metric-primary,
+[data-theme="dark"] .metric-open,
+[data-theme="dark"] .metric-risk,
+[data-theme="dark"] .metric-blocked,
+[data-theme="dark"] .metric-stale,
+[data-theme="dark"] .metric-ai-insights,
+[data-theme="dark"] .metric-health {
+  background: linear-gradient(180deg, var(--bg-soft) 0%, var(--card) 100%);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .metric-signal-row span {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+[data-theme="dark"] .hero-actions {
+  background: rgba(28, 26, 23, 0.86);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .hero {
+  background:
+    linear-gradient(90deg, rgba(90, 173, 169, 0.2) 0%, rgba(217, 125, 69, 0.18) 100%) top / 100% 4px no-repeat,
+    linear-gradient(180deg, rgba(34, 31, 27, 0.96) 0%, rgba(28, 26, 23, 0.96) 100%);
+}
+
+[data-theme="dark"] .reports-v2 .filter-field select,
+[data-theme="dark"] .reports-v2 .filter-field input,
+[data-theme="dark"] select,
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] .summaries-search,
+[data-theme="dark"] .summaries-search-input,
+[data-theme="dark"] .filter-toggle,
+[data-theme="dark"] .export-btn,
+[data-theme="dark"] .pagination-btn,
+[data-theme="dark"] .filter-group select,
+[data-theme="dark"] .chat-search-input,
+[data-theme="dark"] .view-toggle-btn,
+[data-theme="dark"] .preset-select,
+[data-theme="dark"] .preset-save-btn,
+[data-theme="dark"] .chat-input,
+[data-theme="dark"] .chat-input input,
+[data-theme="dark"] .chat-input-bar,
+[data-theme="dark"] .chat-input-bar input {
+  background: var(--card) !important;
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .filters-bar,
+[data-theme="dark"] .filters-bar-compact {
+  background: linear-gradient(180deg, var(--bg-soft) 0%, var(--card) 100%);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: color-mix(in srgb, var(--ink-soft), transparent 18%);
+}
+
+[data-theme="dark"] .filter-toggle:hover,
+[data-theme="dark"] .export-btn:hover:not(:disabled),
+[data-theme="dark"] .pagination-btn:hover:not(:disabled),
+[data-theme="dark"] .view-toggle-btn:hover,
+[data-theme="dark"] .preset-save-btn:hover,
+[data-theme="dark"] .secondary-button:hover,
+[data-theme="dark"] .report-btn:hover,
+[data-theme="dark"] .window-btn:hover,
+[data-theme="dark"] .qa-tabs button:hover,
+[data-theme="dark"] .chat-issue-header:hover,
+[data-theme="dark"] .collapsible-summary:hover,
+[data-theme="dark"] .reports-v2 .activity-item:hover,
+[data-theme="dark"] .chat-input-bar input:disabled {
+  background: var(--bg-soft);
+}
+
+[data-theme="dark"] .issues-table th {
+  background: #24211d;
+  color: var(--accent-strong);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .issues-table td {
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .issue-row,
+[data-theme="dark"] .issue-row td {
+  background: var(--card);
+}
+
+[data-theme="dark"] .issue-row:nth-child(even),
+[data-theme="dark"] .issue-row:nth-child(even) td {
+  background: #1e1b18;
+}
+
+[data-theme="dark"] .issue-row:hover,
+[data-theme="dark"] .issue-row:hover td {
+  background: #29251f;
+}
+
+[data-theme="dark"] .issue-row.selected,
+[data-theme="dark"] .issue-row.selected td {
+  background: var(--accent-soft);
+}
+
+[data-theme="dark"] .toolbar,
+[data-theme="dark"] .toolbar-actions,
+[data-theme="dark"] .view-mode-tabs,
+[data-theme="dark"] .qa-tabs,
+[data-theme="dark"] .status-chip,
+[data-theme="dark"] .saved-view-pill,
+[data-theme="dark"] .favorite-btn,
+[data-theme="dark"] .favorite-filter,
+[data-theme="dark"] .report-list-row,
+[data-theme="dark"] .secondary-button,
+[data-theme="dark"] .report-btn,
+[data-theme="dark"] .window-btn,
+[data-theme="dark"] .tool-card-item,
+[data-theme="dark"] .chat-issue-header,
+[data-theme="dark"] .ai-perf-badge,
+[data-theme="dark"] .chat-log-duration,
+[data-theme="dark"] .chat-log-tokens,
+[data-theme="dark"] .chat-status-badge {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .quick-filter-btn,
+[data-theme="dark"] .subject-meta,
+[data-theme="dark"] .notif-shell,
+[data-theme="dark"] .notif-trigger,
+[data-theme="dark"] .sync-pill {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .sync-running,
+[data-theme="dark"] .sync-success {
+  background: var(--ok-soft);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+[data-theme="dark"] .sync-failed {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+[data-theme="dark"] .collapsible-summary {
+  background: linear-gradient(180deg, #24211d, #1d1a17);
+  border-bottom-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .collapsible-head h2 {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .message-content {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .chat-message.user .message-content,
+[data-theme="dark"] .filter-toggle.active,
+[data-theme="dark"] .saved-view-pill.active,
+[data-theme="dark"] .window-btn.active,
+[data-theme="dark"] .status-chip.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+[data-theme="dark"] .tool-confirmation-card,
+[data-theme="dark"] .bulk-action-bar {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .summary-status {
+  background: #1d2450;
+  color: #aebcff;
+}
+
+[data-theme="dark"] .summary-priority,
+[data-theme="dark"] .summary-model {
+  background: var(--warn-soft);
+  color: var(--warn-strong);
+}
+
+[data-theme="dark"] .summary-project {
+  background: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .chat-role-user,
+[data-theme="dark"] .chat-log-entry.chat-log-user {
+  background: color-mix(in srgb, var(--accent-soft), #1d2450 35%);
+  color: #aebcff;
+}
+
+[data-theme="dark"] .chat-role-assistant,
+[data-theme="dark"] .chat-log-entry.chat-log-assistant {
+  background: color-mix(in srgb, var(--ok-soft), var(--card) 45%);
+  color: #8ee0ad;
+}
+
+[data-theme="dark"] .chat-log-model {
+  background: var(--warn-soft);
+  color: var(--warn-strong);
+}
+
+[data-theme="dark"] .chat-log-content,
+[data-theme="dark"] .chat-log-issue-subject,
+[data-theme="dark"] .chat-issue-subject,
+[data-theme="dark"] .ai-result-header h5,
+[data-theme="dark"] .ai-section h6,
+[data-theme="dark"] .ai-section p,
+[data-theme="dark"] .ai-section ul {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .summary-copy-btn,
+[data-theme="dark"] .ai-confidence {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .summary-copy-btn:hover {
+  background: var(--bg-soft);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .confidence-bar-bg,
+[data-theme="dark"] .progress-track,
+[data-theme="dark"] .bar-track,
+[data-theme="dark"] .stacked-bar-track {
+  background: var(--line);
+}
+
+[data-theme="dark"] .stacked-bar-label,
+[data-theme="dark"] .stacked-bar-total {
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .auto-refresh-toggle.active {
+  background: var(--accent-soft) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent-strong) !important;
+}
+
+[data-theme="dark"] .refresh-timer,
+[data-theme="dark"] .pagination-info,
+[data-theme="dark"] .confidence-label,
+[data-theme="dark"] .filter-group label,
+[data-theme="dark"] .chat-issue-meta,
+[data-theme="dark"] .chat-issue-toggle,
+[data-theme="dark"] .chat-log-time {
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .chat-error {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+[data-theme="dark"] .reports-v2 .report-panel-head h3,
+[data-theme="dark"] .reports-v2 .donut-legend-name,
+[data-theme="dark"] .subject-cell p {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .redmine-issue-link {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+[data-theme="dark"] .reports-v2 .report-panel-badge {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+[data-theme="dark"] .reports-v2 .donut-legend-item:hover,
+[data-theme="dark"] .reports-v2 .donut-legend-item.active {
+  background: var(--bg-soft);
+}
+
+[data-theme="dark"] .reports-v2 .activity-item {
+  border-bottom-color: var(--line);
+}
+
+[data-theme="dark"] .reports-v2 .activity-issue,
+[data-theme="dark"] .reports-v2 .activity-detail {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .reports-v2 .type-comment,
+[data-theme="dark"] .reports-v2 .type-time {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+[data-theme="dark"] .reports-v2-loading .skeleton-line {
+  background: linear-gradient(90deg, #25211d 25%, #332e27 50%, #25211d 75%);
+  background-size: 200% 100%;
+}
+
+[data-theme="dark"] .log-entry,
+[data-theme="dark"] .log-entry.log-info,
+[data-theme="dark"] .log-entry.log-warn,
+[data-theme="dark"] .log-entry.log-error {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .log-entry:hover {
+  background: var(--bg-soft);
+}
+
+[data-theme="dark"] .log-entry.log-error {
+  border-left-color: var(--danger);
+}
+
+[data-theme="dark"] .log-entry.log-warn {
+  border-left-color: var(--warn);
+}
+
+[data-theme="dark"] .log-message {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .log-source,
+[data-theme="dark"] .log-time,
+[data-theme="dark"] .log-stack summary {
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .log-level-badge.log-error {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+[data-theme="dark"] .log-level-badge.log-warn {
+  background: var(--warn-soft);
+  color: var(--warn-strong);
+}
+
+[data-theme="dark"] .log-level-badge.log-info {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+[data-theme="dark"] .swagger-ui,
+[data-theme="dark"] .swagger-ui .info,
+[data-theme="dark"] .swagger-ui .opblock,
+[data-theme="dark"] .swagger-ui .opblock-section-header,
+[data-theme="dark"] .swagger-ui .scheme-container,
+[data-theme="dark"] .swagger-ui section.models,
+[data-theme="dark"] .swagger-ui .model-box,
+[data-theme="dark"] .swagger-ui .responses-inner,
+[data-theme="dark"] .swagger-ui .parameters-container,
+[data-theme="dark"] .swagger-ui .opblock-body,
+[data-theme="dark"] .swagger-ui .opblock-description-wrapper,
+[data-theme="dark"] .swagger-ui .opblock-external-docs-wrapper,
+[data-theme="dark"] .swagger-ui .opblock-title_normal {
+  background: var(--card) !important;
+  border-color: var(--line) !important;
+  color: var(--ink) !important;
+}
+
+[data-theme="dark"] .swagger-ui .wrapper,
+[data-theme="dark"] .swagger-ui .information-container,
+[data-theme="dark"] .swagger-ui .block,
+[data-theme="dark"] .swagger-ui .opblock-tag {
+  background: transparent !important;
+  color: var(--ink) !important;
+}
+
+[data-theme="dark"] .swagger-ui input,
+[data-theme="dark"] .swagger-ui textarea,
+[data-theme="dark"] .swagger-ui select {
+  background: var(--bg-soft) !important;
+  border-color: var(--line) !important;
+  color: var(--ink) !important;
+}
+
+[data-theme="dark"] .swagger-ui,
+[data-theme="dark"] .swagger-ui p,
+[data-theme="dark"] .swagger-ui li,
+[data-theme="dark"] .swagger-ui table,
+[data-theme="dark"] .swagger-ui label,
+[data-theme="dark"] .swagger-ui .parameter__name,
+[data-theme="dark"] .swagger-ui .parameter__type,
+[data-theme="dark"] .swagger-ui .parameter__deprecated,
+[data-theme="dark"] .swagger-ui .opblock-summary-description,
+[data-theme="dark"] .swagger-ui .opblock-description-wrapper p,
+[data-theme="dark"] .swagger-ui .response-col_status,
+[data-theme="dark"] .swagger-ui .response-col_description,
+[data-theme="dark"] .swagger-ui .tab li,
+[data-theme="dark"] .swagger-ui .model,
+[data-theme="dark"] .swagger-ui .model-title,
+[data-theme="dark"] .swagger-ui .prop-type,
+[data-theme="dark"] .swagger-ui .prop-format {
+  color: var(--ink) !important;
+}
+
+[data-theme="dark"] .swagger-ui .scheme-container {
+  box-shadow: none !important;
+}
+
+[data-theme="dark"] .swagger-ui .btn,
+[data-theme="dark"] .swagger-ui .btn.authorize,
+[data-theme="dark"] .swagger-ui .try-out__btn {
+  background: var(--card) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent-strong) !important;
+}
+
+/* Issue detail page */
+[data-theme="dark"] .breadcrumb-nav,
+[data-theme="dark"] .breadcrumb-item,
+[data-theme="dark"] .breadcrumb-chain,
+[data-theme="dark"] .breadcrumb-current,
+[data-theme="dark"] .breadcrumb-external,
+[data-theme="dark"] .breadcrumb-tracker,
+[data-theme="dark"] .breadcrumb-sep {
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .issue-snapshot {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .issue-snapshot strong,
+[data-theme="dark"] .issue-title-line h1,
+[data-theme="dark"] .issue-title-line h2,
+[data-theme="dark"] .report-value,
+[data-theme="dark"] .metadata-value,
+[data-theme="dark"] .entry-head,
+[data-theme="dark"] .entry-head a,
+[data-theme="dark"] .child-subject a,
+[data-theme="dark"] .markdown,
+[data-theme="dark"] .markdown p,
+[data-theme="dark"] .markdown li,
+[data-theme="dark"] .markdown td,
+[data-theme="dark"] .markdown th,
+[data-theme="dark"] .markdown blockquote {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .quick-actions-panel,
+[data-theme="dark"] .issue-description-card,
+[data-theme="dark"] .issue-metadata-card,
+[data-theme="dark"] .comment-card,
+[data-theme="dark"] .time-tracking-panel,
+[data-theme="dark"] .internal-note-item {
+  background: linear-gradient(180deg, var(--bg-soft) 0%, var(--card) 100%);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .qa-header,
+[data-theme="dark"] .tt-form,
+[data-theme="dark"] .issue-collapsible > summary {
+  background: var(--bg-soft);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .qa-title,
+[data-theme="dark"] .qa-label,
+[data-theme="dark"] .tt-header,
+[data-theme="dark"] .tt-form h4,
+[data-theme="dark"] .tt-entries h4,
+[data-theme="dark"] .metadata-head-row h3,
+[data-theme="dark"] .issue-metadata-card h3,
+[data-theme="dark"] .issue-description-card > .report-label {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .qa-issue,
+[data-theme="dark"] .qa-meta-pill,
+[data-theme="dark"] .tab-count,
+[data-theme="dark"] .entry-source.local {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .qa-tabs button.active,
+[data-theme="dark"] .issue-tabs a.active,
+[data-theme="dark"] .issue-tabs a.active .tab-count {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+[data-theme="dark"] .issue-tabs {
+  border-top-color: var(--line);
+}
+
+[data-theme="dark"] .issue-tabs a {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .metadata-item,
+[data-theme="dark"] .issue-metadata-card .metadata-item {
+  background: linear-gradient(180deg, var(--bg-soft) 0%, var(--card) 100%);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .metadata-item-editable,
+[data-theme="dark"] .issue-metadata-card .metadata-item-editable {
+  background: linear-gradient(180deg, var(--accent-soft) 0%, color-mix(in srgb, var(--accent-soft), var(--card) 35%) 100%);
+  border-color: var(--accent);
+}
+
+[data-theme="dark"] .metadata-item-readonly,
+[data-theme="dark"] .issue-metadata-card .metadata-item-readonly {
+  background: var(--bg);
+  opacity: 0.75;
+}
+
+[data-theme="dark"] .children-table th,
+[data-theme="dark"] .tt-table th {
+  background: var(--bg-soft);
+  border-color: var(--line);
+  color: var(--accent-strong);
+}
+
+[data-theme="dark"] .children-table td,
+[data-theme="dark"] .tt-table td,
+[data-theme="dark"] .markdown th,
+[data-theme="dark"] .markdown td {
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .children-table tr:hover {
+  background: var(--bg-soft);
+}
+
+[data-theme="dark"] .timeline-item,
+[data-theme="dark"] .internal-note-item {
+  background: linear-gradient(180deg, var(--bg-soft) 0%, var(--card) 100%);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .markdown code,
+[data-theme="dark"] .markdown pre,
+[data-theme="dark"] .markdown .redmine-collapse {
+  background: var(--bg-soft);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .markdown .redmine-collapse > summary,
+[data-theme="dark"] .markdown .md-collapsible-code > summary {
+  background: var(--card);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .markdown blockquote {
+  border-left-color: var(--accent);
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .form,
+[data-theme="dark"] .comment-card .form textarea,
+[data-theme="dark"] .internal-notes-section .form {
+  background: var(--bg-soft);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .form label,
+[data-theme="dark"] .internal-notes-section .form label {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .info-banner {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+[data-theme="dark"] .error-banner,
+[data-theme="dark"] .ai-error {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+[data-theme="dark"] .ai-issue-actions {
+  background: linear-gradient(180deg, var(--bg-soft) 0%, var(--card) 100%) !important;
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .ai-powered-by,
+[data-theme="dark"] .ai-section h6,
+[data-theme="dark"] .ai-section p,
+[data-theme="dark"] .ai-section ul,
+[data-theme="dark"] .ai-result-header h5 {
+  color: var(--ink) !important;
+}
+
+[data-theme="dark"] .ai-result {
+  background: var(--card) !important;
+  border-color: var(--line) !important;
+  color: var(--ink) !important;
+}
+
+[data-theme="dark"] .heimdall-error-filters input,
+[data-theme="dark"] .heimdall-error-source-tabs button {
+  background: var(--card) !important;
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .heimdall-error-source-tabs button.active {
+  background: var(--accent) !important;
+  border-color: var(--accent);
+  color: #062422;
+}
+
+[data-theme="dark"] .heimdall-errors-list .ai-section {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .ai-confidence,
+[data-theme="dark"] .ai-perf-badge,
+[data-theme="dark"] .ai-copy-button {
+  background: var(--bg-soft) !important;
+  border: 1px solid var(--line);
+  color: var(--ink-soft) !important;
+}
+
+[data-theme="dark"] .ai-perf-metrics {
+  border-top-color: var(--line) !important;
+}
+
+[data-theme="dark"] .ai-link {
+  color: var(--accent-strong) !important;
+}
