@@ -11,6 +11,7 @@ import { I18nProvider, useI18n } from "@/src/components/I18nProvider";
 import { LocaleIndicator } from "@/src/components/LocaleIndicator";
 import React, { useContext } from 'react';
 import { LocaleSwitcherTest } from '@/src/components/LocaleSwitcherTest';
+import { getSessionUserId } from "@/src/lib/session";
 
 const sora = Sora({
   variable: "--font-geist-sans",
@@ -46,11 +47,14 @@ export const viewport: Viewport = {
   themeColor: "#006d77",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const userId = await getSessionUserId();
+  const isAuthenticated = !!userId;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${sora.variable} ${mono.variable} ${display.variable}`}>
@@ -61,8 +65,8 @@ export default function RootLayout({
               <OfflineBanner />
               <SyncQueueInitializer />
               <ServiceWorkerRegistrar />
-              <AppNav />
-              <div className="main-content">
+              {isAuthenticated && <AppNav />}
+              <div className={isAuthenticated ? "main-content" : "main-content main-content--full"}>
                 {children}
               </div>
             </I18nProvider>
@@ -82,6 +86,12 @@ export default function RootLayout({
             padding-top: 1rem;
             min-height: 100vh;
             transition: margin-left 0.2s;
+            min-width: 0;
+            overflow-x: hidden;
+          }
+
+          .main-content--full {
+            margin-left: 0;
           }
 
           @media (max-width: 768px) {

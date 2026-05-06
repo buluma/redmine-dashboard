@@ -642,7 +642,7 @@ label {
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 0.7rem;
 }
 
@@ -694,7 +694,7 @@ label {
 
 .filters-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 0.7rem;
 }
 
@@ -772,7 +772,7 @@ label {
 }
 
 .insights-grid-advanced {
-  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .collapsible-stack {
@@ -794,7 +794,7 @@ label {
 
 .ops-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 0.85rem;
 }
 
@@ -905,7 +905,7 @@ label {
 
 .reports-filter-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.65rem;
 }
 
@@ -967,7 +967,7 @@ label {
 
 .reports-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.7rem;
 }
 
@@ -1444,7 +1444,7 @@ label {
 }
 
 .issue-overview-grid {
-  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .issue-description-card {
