@@ -6,57 +6,54 @@ Scope:
 
 - Web routes under `app/`.
 - Native Android app under `mobile/android-native`.
-- Ionic app under `mobile/ionic`.
 - Mobile API routes under `app/api/mobile/v1`.
 
 ## Summary
 
-Native Android now covers the core Redmine issue workflow: pairing, issue list, issue detail, comments, status changes, assignment, favorites, basic create/edit, time logging, internal notes, GitHub links, AI summary/categorization, token rotation, and logout.
+Native Android covers the core Redmine issue workflow: pairing, issue list, issue detail, comments, status changes, assignment, favorites, basic create/edit, time logging, internal notes, GitHub links, AI summary/categorization, token rotation, and logout.
 
 It does not cover the broader web app product surface: dashboard widgets, saved views, board/Gantt modes, bulk actions, full reporting, AI chat/tool execution, personal/local tickets, ops/admin, Slack, WakaTime, webhooks, API docs, audit logs, push notifications, and offline sync queue UX.
 
-Ionic is much thinner than native Android. It has pairing, list, and detail screens, but most issue actions are read-only or absent. It also appears to depend on `VITE_API_URL` already pointing at `/api/mobile/v1`, because the client calls `/issues` and `/pair/connect` instead of full mobile paths.
-
 ## Surface Matrix
 
-| Web surface | Web capability | Native Android | Ionic | Gap |
-| --- | --- | --- | --- | --- |
-| Login / session | Browser session login, Redmine connect/bootstrap | Mobile pairing with Redmine URL/API key, secure token, rotate, revoke | Pairing form and token storage | Mobile has no server-side account login or bootstrap flow. Ionic pairing body uses `baseUrl`/`apiKey`; mobile API expects `redmineBaseUrl`/`redmineApiKey`. |
-| Main issue dashboard | Stats, filters, issue table, quick peek, charts, widgets, refresh state | Issue list with search, status chips, sort, pull refresh, pagination | Issue list with search and basic cards | Native lacks dashboard widgets, chart summary, quick peek, selectable rows, sync health detail. Ionic lacks filters, sorting, paging controls, status tabs. |
-| Search | Local, hybrid, FTS, AI search | Search query with local mode from repository defaults | Hybrid search param | Native has no explicit search mode selector, FTS, or AI search entry. |
-| Advanced filters | Status IDs, priority IDs, assigned-to-me, GitHub links, attachments, due date, updated-after | Coarse status chips only | Search only | Missing advanced mobile filters. |
-| Saved views | Save/apply/delete/reorder filter views | Not present | Not present | Requires mobile UX plus bearer-compatible saved-view API use. |
-| View modes | List, Kanban board, Gantt chart | List only | List only | Board and Gantt are web-only. |
-| Bulk actions | Multi-select and bulk status update | Not present | Not present | Needs selection model and mobile bulk-status endpoint/client. |
-| Issue create | Project picker, status picker, priority picker, due date | Create dialog with subject, numeric project ID, description, numeric priority ID, due date | Not present | Native should use project/priority/status catalogs instead of numeric fields. Ionic needs create flow. |
-| Issue detail overview | Hero, metadata, markdown, breadcrumbs, custom fields, parent/children, attachments, relations, GitHub links | Overview/Notes/Time/Links tabs with core metadata and markdown | Details/Comments/Time tabs | Native lacks full breadcrumbs/custom fields richness and attachment previews/actions. Ionic is mostly read-only and no markdown rendering. |
-| Markdown description | Redmine text normalization, GFM, code highlighting/collapse, attachment image resolution, external links | Custom Compose parser, improved but limited | Plain pre-wrap text | Native still lacks full Redmine collapse handling, code highlighting, tables/task lists, authenticated attachment image rendering. Ionic lacks markdown parsing. |
-| Status changes | Allowed statuses, transition UI, comments | Allowed-status bottom sheet | Not present | Native status flow works, but no transition comment/notes in same action. Ionic absent. |
-| Comments/journals | Journal display and comment posting | Journal-ish notes tab plus comment composer | Comments list only | Native should separate journals from internal notes more clearly. Ionic cannot post comments. |
-| Assignment | Assignable users and assign action | Assign sheet | Not present | Native works but lacks search/filter for large user lists. Ionic absent. |
-| Favorites | Favorite toggle and favorites endpoint | Toggle from detail; Favorites tab filters loaded issues | Star display only | Native Favorites tab is not independently loaded from `/api/issues/favorites` or a mobile favorite list, so it misses favorites outside current list page/filter. Ionic cannot toggle. |
-| Time tracking | List/create/update/delete time entries, activity catalog | List/create/delete time entries | Read-only list | Native lacks edit/update UI even though repository has update capability missing from ViewModel flow. Ionic cannot create/edit/delete. |
-| Internal notes | List/create/delete/edit internal notes on web/backend | List/create internal notes | Not present | Native lacks edit/delete. Ionic absent. |
-| GitHub links | List/add/remove/open issue/PR links | List/add/remove/open URL | Not present | Native works, but entry is manual. Could parse GitHub URLs and validate repo/issue/PR fields. Ionic absent. |
-| Attachments | List, upload, download, image/PDF previews, attachment-aware markdown | List only | Type includes attachments but UI does not expose them | Native has no upload/download/open action wired to authenticated mobile endpoint. Ionic absent. |
-| Relations | List, create, delete Redmine relations | Display only | Not present | Native Retrofit/repository/UI do not wire mobile relation endpoints. Ionic absent. |
-| Children / hierarchy | Children, parent, breadcrumbs, local/Redmine identifiers | Children list only | Not present | Native lacks navigable breadcrumbs/parent/child drilldown. |
-| Personal tickets | Local-only ticket board and create flow | Local issues can appear but create/edit/comment/status are blocked for local-only cases | Not present | No native personal-ticket surface or local issue creation/editing. |
-| AI issue actions | Summary, categorization, stale summaries, status indicator | Summary and categorization actions | Not present | Native lacks issue chat, stale summary queue, AI status, AI history. |
-| AI chat | Chat page with tool calls and confirmation before actions | Not present | Not present | No mobile chat/tool execution surface. |
-| Reports | Aggregate charts, trends, filters, drilldowns, time export/custom reports | Not present | Not present | Web-only. |
-| Notifications | Notifications panel, push subscribe API, sync notifications | Offline network banner only | Not present | Mobile has no push subscription, notification inbox, or background sync notification handling. |
-| Offline/PWA | Offline page, service worker, offline action queue hooks | Network callback banner only | Not present | Native has no cached issue DB or queued writes. |
-| Ops dashboard | Health, sync status/jobs, mobile token admin, logs, manual sync controls | Settings only has token rotate/logout/server info | Not present | Web-only admin/ops surface. |
-| Users/RBAC | Admin user management and role changes | Not present | Not present | Web-only. |
-| Audit logs | Audit log page | Not present | Not present | Web-only. |
-| Slack | Slack message browser, threads, test notification | Not present | Not present | Web-only. |
-| WakaTime | Coding stats dashboard | Not present | Not present | Web-only. |
-| Webhooks | Subscription management, test deliveries, delivery log | Not present | Not present | Web-only. |
-| Heimdall/logs | Log views, refresh, dashboard | Not present | Not present | Web-only. |
-| API docs/OpenAPI | API docs route and OpenAPI JSON | Not present | Not present | Web-only. |
-| Settings/theme/i18n | Theme, language, locale-aware formatting | Server/device/token/logout only | System Ionic dark palette | Native lacks theme/language/account preferences. Ionic lacks settings surface. |
-| Error telemetry | Sentry example pages/API and logging providers | Sentry configuration needs separate verification | Not present | Mobile runtime error reporting is not exposed in UX. |
+| Web surface | Web capability | Native Android | Gap |
+| --- | --- | --- | --- |
+| Login / session | Browser session login, Redmine connect/bootstrap | Mobile pairing with Redmine URL/API key, secure token, rotate, revoke | No server-side account login or bootstrap flow. |
+| Main issue dashboard | Stats, filters, issue table, quick peek, charts, widgets, refresh state | Issue list with search, status chips, sort, pull refresh, pagination | Lacks dashboard widgets, chart summary, quick peek, selectable rows, sync health detail. |
+| Search | Local, hybrid, FTS, AI search | Search query with local mode from repository defaults | No explicit search mode selector, FTS, or AI search entry. |
+| Advanced filters | Status IDs, priority IDs, assigned-to-me, GitHub links, attachments, due date, updated-after | Coarse status chips only | Missing advanced mobile filters. |
+| Saved views | Save/apply/delete/reorder filter views | Not present | Requires mobile UX plus bearer-compatible saved-view API use. |
+| View modes | List, Kanban board, Gantt chart | List only | Board and Gantt are web-only. |
+| Bulk actions | Multi-select and bulk status update | Not present | Needs selection model and mobile bulk-status endpoint/client. |
+| Issue create | Project picker, status picker, priority picker, due date | Create dialog with subject, numeric project ID, description, numeric priority ID, due date | Should use project/priority/status catalogs instead of numeric ID fields. |
+| Issue detail overview | Hero, metadata, markdown, breadcrumbs, custom fields, parent/children, attachments, relations, GitHub links | Overview/Notes/Time/Links tabs with core metadata and markdown | Lacks breadcrumbs, custom fields, done ratio, category, and attachment previews/actions. |
+| Markdown description | Redmine text normalization, GFM, code highlighting/collapse, attachment image resolution, external links | Custom Compose parser, textile sanitization | Still lacks code highlighting, GFM tables/task lists, and authenticated attachment image rendering. |
+| Status changes | Allowed statuses, transition UI, comments | Allowed-status bottom sheet | No transition comment/notes in same action. |
+| Comments/journals | Journal display and comment posting | Post-only; existing journals not shown | Cannot read existing comments or journal history. |
+| Assignment | Assignable users and assign action | Assign sheet | Lacks search/filter for large user lists. |
+| Favorites | Favorite toggle and favorites endpoint | Toggle from detail; Favorites tab filters loaded issues | Favorites tab not independently loaded — misses favorites outside current list page/filter. |
+| Time tracking | List/create/update/delete time entries, activity catalog | List/create/delete time entries | No edit/update UI. |
+| Internal notes | List/create/delete/edit internal notes | List/create internal notes | No delete or edit. |
+| GitHub links | List/add/remove/open issue/PR links | List/add/remove/open URL | Entry is manual; no URL parse/validate. |
+| Attachments | List, upload, download, image/PDF previews, attachment-aware markdown | Filename + size display only | No upload/download/open action wired to authenticated mobile endpoint. |
+| Relations | List, create, delete Redmine relations | Display only | Retrofit/repository/UI do not wire mobile relation endpoints. |
+| Children / hierarchy | Children, parent, breadcrumbs, local/Redmine identifiers | Children list only | No navigable breadcrumbs/parent/child drilldown. |
+| Personal tickets | Local-only ticket board and create flow | Local issues visible but create/edit/comment/status blocked | No personal-ticket surface or local issue creation/editing. |
+| AI issue actions | Summary, categorization, stale summaries, status indicator | Summary and categorization actions | No issue chat, stale summary queue, AI status, or AI history. |
+| AI chat | Chat page with tool calls and confirmation before actions | Not present | No mobile chat/tool execution surface. |
+| Reports | Aggregate charts, trends, filters, drilldowns, time export | Not present | Web-only. |
+| Notifications | Notifications panel, push subscribe API, sync notifications | Offline network banner only | No push subscription, notification inbox, or background sync notification handling. |
+| Offline/PWA | Offline page, service worker, offline action queue hooks | Network callback banner only | No cached issue DB or queued writes. |
+| Ops dashboard | Health, sync status/jobs, mobile token admin, logs, manual sync controls | Settings: token rotate/logout/server info only | Web-only admin/ops surface. |
+| Users/RBAC | Admin user management and role changes | Not present | Web-only. |
+| Audit logs | Audit log page | Not present | Web-only. |
+| Slack | Slack message browser, threads, test notification | Not present | Web-only. |
+| WakaTime | Coding stats dashboard | Not present | Web-only. |
+| Webhooks | Subscription management, test deliveries, delivery log | Not present | Web-only. |
+| Heimdall/logs | Log views, refresh, dashboard | Not present | Web-only. |
+| API docs/OpenAPI | API docs route and OpenAPI JSON | Not present | Web-only. |
+| Settings/theme/i18n | Theme, language, locale-aware formatting | Server/device/token/logout only | Lacks theme/language/account preferences. |
+| Error telemetry | Sentry pages/API and logging providers | Sentry configured, not exposed in UX | Mobile runtime error reporting not surfaced to user. |
 
 ## Field-Level Gaps (Android Native — May 2026)
 
@@ -139,24 +136,6 @@ P2:
 - Add admin/ops surfaces: health, sync jobs, token admin, logs, users/RBAC, audit logs.
 - Add integrations: Slack, WakaTime, webhooks, Heimdall.
 
-## Ionic Backlog
-
-P0:
-
-- Fix pairing/API contract: use `/api/mobile/v1/pair/connect` fields or set `VITE_API_URL` to the mobile API root and align request bodies.
-- Add missing actions: create issue, comment, status update, assignment, favorite toggle, time entry create/delete, logout.
-- Add markdown rendering instead of plain pre-wrapped descriptions.
-
-P1:
-
-- Add filters/sorting/pagination and pull-to-refresh parity with native Android.
-- Add attachments, relations, GitHub links, internal notes, and settings.
-- Remove the fixed debug banner from `App.tsx` for production builds.
-
-P2:
-
-- Decide whether Ionic remains a supported product. If native Android is the main mobile target, keep Ionic as a prototype only and document that status.
-
 ## API / Backend Gaps
 
 - Mobile has issue-focused endpoints but not mobile-specific saved views, reports, notifications, projects/catalog bootstrap, personal tickets, chat, ops, Slack, WakaTime, webhooks, or audit logs.
@@ -170,4 +149,3 @@ P2:
 1. Finish issue-workflow parity: catalogs, attachments, relations, favorite list, time edit, local tickets.
 2. Add mobile productivity parity: saved views, advanced filters, notifications, offline queue.
 3. Add high-value web-only modules: AI chat, reports, ops health.
-4. Decide Ionic support level and either bring it to native parity or mark it as legacy/prototype.
