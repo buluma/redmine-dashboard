@@ -1,5 +1,6 @@
 package com.converge.mobile.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -76,7 +77,9 @@ import com.converge.mobile.data.InternalNote
 import com.converge.mobile.data.Issue
 import com.converge.mobile.data.TimeEntry
 import com.converge.mobile.data.displayId
+import com.converge.mobile.data.DueUrgency
 import com.converge.mobile.data.formatDate
+import com.converge.mobile.data.parseDueUrgency
 import com.converge.mobile.ui.MainUiState
 import com.converge.mobile.ui.MainViewModel
 import com.converge.mobile.ui.MarkdownDescription
@@ -268,7 +271,7 @@ private fun NotesContent(state: MainUiState, viewModel: MainViewModel) {
             Text("No internal notes yet.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.align(Alignment.CenterHorizontally))
         } else {
             state.internalNotes.forEach { note ->
-                NoteCard(note)
+                NoteCard(note, onDelete = { viewModel.deleteInternalNote(note.id) })
             }
         }
         Spacer(Modifier.height(80.dp))
@@ -276,17 +279,26 @@ private fun NotesContent(state: MainUiState, viewModel: MainViewModel) {
 }
 
 @Composable
-private fun NoteCard(note: InternalNote) {
+private fun NoteCard(note: InternalNote, onDelete: (() -> Unit)? = null) {
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AssigneeAvatar(note.authorName)
-                Text(note.authorName, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                Text(note.createdAt.formatDate(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
+                    AssigneeAvatar(note.authorName)
+                    Text(note.authorName, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                    Text(note.createdAt.formatDate(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                onDelete?.let {
+                    TextButton(onClick = it) { Text("Delete", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall) }
+                }
             }
             Text(note.content, style = MaterialTheme.typography.bodyMedium)
         }
@@ -442,6 +454,11 @@ private fun GithubLinkRow(link: GithubLink, onOpen: () -> Unit, onRemove: () -> 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun IssueHero(issue: Issue) {
+    val uriHandler = LocalUriHandler.current
+    val redmineUrl = if (issue.redmineBaseUrl != null && issue.redmineIssueId != null)
+        "${issue.redmineBaseUrl.trimEnd('/')}/issues/${issue.redmineIssueId}"
+    else null
+
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -450,7 +467,12 @@ private fun IssueHero(issue: Issue) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(issue.displayId(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        issue.displayId(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = if (redmineUrl != null) Modifier.clickable { uriHandler.openUri(redmineUrl) } else Modifier,
+                    )
                     Text(issue.subject, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 }
                 if (issue.isFavorited) {
@@ -462,6 +484,15 @@ private fun IssueHero(issue: Issue) {
                 issue.priority?.takeIf { it.isNotBlank() }?.let { PriorityPill(it) }
                 issue.tracker?.takeIf { it.isNotBlank() }?.let { NeutralPill(it) }
                 NeutralPill(if (issue.source == "local") "Local" else "Redmine")
+            }
+            issue.doneRatio?.let { ratio ->
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    LinearProgressIndicator(
+                        progress = { ratio / 100f },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text("$ratio% complete", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
             issue.projectName?.takeIf { it.isNotBlank() }?.let { IconText(Icons.Default.Folder, it) }
         }
@@ -502,15 +533,25 @@ private fun IssueActionGrid(issue: Issue, state: MainUiState, viewModel: MainVie
 
 @Composable
 private fun IssueKeyFacts(issue: Issue) {
+    val dueDateColor = when (parseDueUrgency(issue.dueDate)) {
+        DueUrgency.OVERDUE -> MaterialTheme.colorScheme.error
+        DueUrgency.SOON -> Color(0xFFF59E0B)
+        DueUrgency.NORMAL -> Color.Unspecified
+    }
+
     Section("Key Facts") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             FactRow(Icons.Default.Person, "Assignee", issue.assignedToName ?: "Unassigned")
             FactRow(Icons.Default.Person, "Author", issue.authorName ?: "Unknown")
-            FactRow(Icons.Default.CalendarToday, "Due", issue.dueDate?.formatDate() ?: "No due date")
+            FactRow(Icons.Default.CalendarToday, "Due", issue.dueDate?.formatDate() ?: "No due date", valueColor = dueDateColor)
+            issue.startDate?.let { FactRow(Icons.Default.CalendarToday, "Start", it.formatDate()) }
             FactRow(Icons.Default.Refresh, "Updated", (issue.lastActivityAt ?: issue.updatedOnRemote)?.formatDate() ?: "Unknown")
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 SmallStat("Spent", issue.spentHours?.let { "${it}h" } ?: "—", modifier = Modifier.weight(1f))
                 SmallStat("Estimate", issue.estimatedHours?.let { "${it}h" } ?: "—", modifier = Modifier.weight(1f))
+                issue.doneRatio?.let { ratio ->
+                    SmallStat("Done", "$ratio%", modifier = Modifier.weight(1f))
+                }
             }
         }
     }

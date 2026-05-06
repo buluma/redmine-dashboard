@@ -410,6 +410,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun deleteInternalNote(noteId: String) {
+        val redmineIssueId = state.value.selectedIssue?.redmineIssueId ?: return
+        viewModelScope.launch {
+            runBusy {
+                repository.deleteInternalNote(state.value.serverUrl, redmineIssueId, noteId)
+                val notes = repository.listInternalNotes(state.value.serverUrl, redmineIssueId)
+                update { copy(internalNotes = notes, actionMessage = "Note deleted") }
+            }
+        }
+    }
+
     fun openGithubDialog() = update { copy(showGithubDialog = true) }
 
     fun addGithubLink() {

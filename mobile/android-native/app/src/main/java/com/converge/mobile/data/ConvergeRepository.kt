@@ -168,6 +168,10 @@ class ConvergeRepository(
         api(serverUrl).createInternalNote(redmineIssueId.toString(), InternalNoteRequest(content.trim())).note
     }
 
+    suspend fun deleteInternalNote(serverUrl: String, redmineIssueId: Int, noteId: String) = call {
+        api(serverUrl).deleteInternalNote(redmineIssueId.toString(), noteId)
+    }
+
     suspend fun listGithubLinks(serverUrl: String, redmineIssueId: Int): List<GithubLink> = call {
         api(serverUrl).listGithubLinks(redmineIssueId.toString()).items
     }

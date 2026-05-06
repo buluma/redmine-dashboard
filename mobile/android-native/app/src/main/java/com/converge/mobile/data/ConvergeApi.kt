@@ -91,6 +91,12 @@ interface ConvergeApi {
         @Body body: InternalNoteRequest,
     ): InternalNoteResponse
 
+    @DELETE("api/mobile/v1/issues/{id}/internal-notes/{noteId}")
+    suspend fun deleteInternalNote(
+        @Path("id") issueId: String,
+        @Path("noteId") noteId: String,
+    )
+
     @GET("api/mobile/v1/issues/{id}/github-links")
     suspend fun listGithubLinks(@Path("id") issueId: String): GithubLinksResponse
 
