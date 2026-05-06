@@ -8,7 +8,7 @@
 - [x] **Enable TypeScript strict build** — Fixed all 6 TS errors. `ignoreBuildErrors` still in place; remove flag as next step.
 - [x] **Resolve conflicting `.dashboard` CSS rules** — `dashboard.css` was never imported (dead file). Deleted.
 - [ ] **Split `globals.css`** — 7569 lines, unmaintainable. Co-locate styles with their components.
-- [ ] **Login page + auth redirect** — Nav hides when unauthenticated but pages are still accessible. Need a `/login` route and redirect middleware for protected pages.
+- [x] **Login page + auth redirect** — `/login` page with manual connect + env bootstrap. Middleware redirects unauthenticated requests.
 
 ### 🏗️ Infrastructure
 - [ ] **Migrate Pi from SQLite to PostgreSQL** — Architecture doc flags SQLite as MVP-only. Concurrent writes lock. Docker Compose Postgres config already exists (`docker-compose.postgres.yml`).
@@ -26,6 +26,7 @@
 
 | Feature | Status | Notes | Date |
 |---------|--------|-------|------|
+| Login Page + Auth Redirect | ✅ DONE | /login with manual connect + bootstrap, middleware guards all routes | 2026-05-06 |
 | Horizontal Overflow Fix | ✅ DONE | auto-fit grids, overflow-x: hidden on .main-content | 2026-05-06 |
 | Hide Nav When Unauthenticated | ✅ DONE | Server-side session check in layout, zero margin when no nav | 2026-05-06 |
 | TypeScript Errors | ✅ DONE | Fixed 6 TS errors in page.tsx and AiStatusIndicator | 2026-05-06 |
