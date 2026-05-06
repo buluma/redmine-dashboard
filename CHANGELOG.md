@@ -2,7 +2,138 @@
 
 All notable changes to this project are documented in this file.
 
-## 2026-04-16 (Today)
+## 2026-05-06 (Latest)
+
+### Added
+
+- **Dashboard interaction refinements**
+  - Added an issue quick-peek panel for faster issue review without leaving the dashboard.
+  - Added skeleton table loading states to reduce layout jumps while issue data is loading.
+  - Added a sticky filter bar so search, filters, and view controls stay available during long dashboard sessions.
+
+- **Dark mode**
+  - Added a theme toggle in the main app navigation.
+  - Added early theme initialization via `public/scripts/theme-init.js` to reduce first-paint theme flicker.
+  - Added a warm neutral dark palette with broad component coverage across dashboard, reports, AI, Heimdall, navigation, forms, tables, and issue detail surfaces.
+
+- **Login flow**
+  - Added a dedicated `/login` page.
+  - Added auth redirect handling through the new Next.js `proxy.ts` entry point.
+
+### Changed
+
+- **Dashboard refactor and CSS split**
+  - Extracted dashboard types, issue utility helpers, and `MarkdownBlock` into shared modules.
+  - Split the large global/dashboard stylesheet into focused files under `app/styles/`.
+  - Removed unused dashboard CSS and tightened TypeScript errors around AI status, sync error summaries, and Markdown rendering.
+
+- **Filter and view controls**
+  - Standardized filter-right bar button layout and sizing.
+  - Replaced the browser `prompt()` flow for saving presets with an inline input.
+  - Fixed `view-mode-tabs` styling and aligned secondary action buttons with Ops page button styling.
+
+- **Navigation and layout**
+  - Hid app navigation for unauthenticated users.
+  - Fixed horizontal overflow on narrower screens.
+  - Renamed legacy `middleware.ts` usage to `proxy.ts` for current Next.js routing conventions.
+
+### Fixed
+
+- **Heimdall trend accuracy** — corrected trend calculations and filled dark-mode gaps in Heimdall error views.
+- **CSS split boundary** — moved orphaned `@keyframes` lines into the correct stylesheet after the CSS split.
+
+### Security
+
+- **PostCSS advisory mitigation** — added a package override for `postcss >=8.5.10` to address `GHSA-qx2v-qp2m-jg93`.
+
+## 2026-05-03
+
+### Changed
+
+- **Dependency maintenance**
+  - Updated `@sentry/webpack-plugin` from 5.1.0 to 5.2.1.
+  - Removed the unused transitive `uuid` dependency through the Sentry webpack plugin update.
+
+## 2026-04-23
+
+### Changed
+
+- **Dependency maintenance** — updated transitive `@xmldom/xmldom` from 0.8.12 to 0.8.13.
+
+## 2026-04-20
+
+### Changed
+
+- **Mobile client direction**
+  - Explored alternative mobile packaging/runtime approaches across Electron, Ionic, and Apache Cordova.
+  - Updated Converge mobile API client, models, repositories, token storage, screens, and GitHub link tests as part of the mobile direction work.
+
+## 2026-04-19
+
+### Changed
+
+- **Mobile rebrand**
+  - Rebranded the Flutter mobile app from NRCC to Converge.
+  - Renamed the mobile package from `flutter_converge` to `converge`.
+  - Updated mobile docs and defaults to point at the Pi Server / homelab endpoint.
+
+- **Mobile auth simplification**
+  - Removed biometric login and the `local_auth` dependency.
+  - Cleaned up biometric leftovers from Android `MainActivity` and the manifest.
+  - Kept mobile authentication centered on simple token auth.
+
+### Fixed
+
+- **Mobile startup resilience** — added error handling around biometric startup paths before removing biometric auth entirely.
+
+## 2026-04-18
+
+### Added
+
+- **Local HTTP session support** — added `SECURE_COOKIES` so local or Pi-hosted HTTP deployments can opt out of secure-cookie-only sessions.
+
+### Fixed
+
+- **SQLite and production build compatibility**
+  - Fixed nullable issue relation handling for SQLite.
+  - Added temporary production `ignoreBuildErrors` handling in `next.config.ts`.
+
+## 2026-04-17
+
+### Added
+
+- **i18n coverage expansion**
+  - Added translation coverage for API docs, chat, Slack, WakaTime, ops alerts, activity feed, issue queue stats, sync status, filters, sorting, search source, and saved views.
+  - Added missing translation keys and support scripts for auditing/filling i18n files.
+
+### Changed
+
+- **Language support consolidation**
+  - Reduced active languages to English, Ukrainian, Russian, and Afrikaans.
+  - Improved Ukrainian translations for chat and WakaTime sections.
+  - Improved Russian coverage for chat, Slack, and WakaTime.
+
+- **Local development database**
+  - Switched the default Prisma database target to local SQLite (`file:./dev.db`) for easier development.
+
+- **Temporarily disabled unfinished board views**
+  - Disabled Jira-style Kanban Board and Gantt Chart views while the implementation remains incomplete.
+
+### Fixed
+
+- **i18n runtime correctness**
+  - Converted ICU plural strings to object-based pluralization for the app i18n provider.
+  - Fixed count interpolation in pluralized strings.
+  - Removed a Material icon name from the `notifications.pushOff` translation value.
+
+- **AI chat and search stability**
+  - Fixed the AI search button syntax error.
+  - Made `AiChatMessage.issueId` optional for general chat messages that are not tied to a specific issue.
+  - Fixed Prisma create typing for `AiChatMessage` by using unchecked input where needed.
+
+- **UI consistency** — matched export button height with primary button sizing.
+
+## 2026-04-16
 
 ### Added
 
@@ -13,7 +144,7 @@ All notable changes to this project are documented in this file.
   - New endpoint: `POST /api/chat/execute-tools` to execute confirmed actions and summarize results.
   - UI: Enhanced `ChatInterface` with action badges, confirmation cards, and `slideIn` animations.
 
-## 2026-04-14 (Latest)
+## 2026-04-14
 
 ### Added
 
