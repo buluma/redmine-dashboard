@@ -43,17 +43,14 @@ export function ProjectFilter({ issues, selectedProject, onChange }: ProjectFilt
 
   return (
     <div className="project-filter">
-      <label className="project-filter-label">
-        <span>{t("projectFilter.label")}</span>
-        <select value={selectedProject ?? ""} onChange={handleChange} className="project-filter-select">
-          <option value="">{t("projectFilter.allProjects", { count: issues.length })}</option>
-          {projects.map((project) => (
-            <option key={project} value={project}>
-              {project} ({counts.get(project)})
-            </option>
-          ))}
-        </select>
-      </label>
+      <select value={selectedProject ?? ""} onChange={handleChange} className="project-filter-select">
+        <option value="">{t("projectFilter.allProjects", { count: issues.length })}</option>
+        {projects.map((project) => (
+          <option key={project} value={project}>
+            {project} ({counts.get(project)})
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
