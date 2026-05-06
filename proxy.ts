@@ -6,7 +6,7 @@ const SESSION_COOKIE = "rd_session";
 const PUBLIC_PREFIXES = ["/login", "/api/", "/_next/", "/icons/", "/monitoring"];
 const PUBLIC_FILES = ["/favicon.ico", "/manifest.json", "/sw.js"];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (

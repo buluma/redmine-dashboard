@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { ThemeToggle } from "./ThemeToggle";
 import { useI18n } from "./I18nProvider";
 
 const navItems = [
@@ -101,6 +102,7 @@ export function AppNav() {
           ))}
         </div>
         <div className="nav-footer">
+          <ThemeToggle collapsed={mounted && collapsed} />
           <LanguageSwitcher />
         </div>
       </nav>
