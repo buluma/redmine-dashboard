@@ -65,13 +65,10 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* Runs before paint — prevents flash of wrong theme */}
-        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `
-          try {
-            var t = localStorage.getItem('theme');
-            if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            document.documentElement.setAttribute('data-theme', t);
-          } catch(e) {}
-        ` }} />
+        <Script
+          src="/scripts/theme-init.js"
+          strategy="beforeInteractive"
+        />
       </head>
       <body className={`${sora.variable} ${mono.variable} ${display.variable}`}>
         <ErrorLoggerProvider>
@@ -99,7 +96,6 @@ export default async function RootLayout({
 
           .main-content {
             margin-left: var(--sidebar-width);
-            padding-top: 1rem;
             min-height: 100vh;
             transition: margin-left 0.2s;
             min-width: 0;

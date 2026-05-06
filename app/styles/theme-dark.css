@@ -751,3 +751,30 @@
 [data-theme="dark"] .ai-link {
   color: var(--accent-strong) !important;
 }
+
+[data-theme="dark"] kbd {
+  background: var(--surface-3);
+  color: var(--ink);
+  border-color: var(--line);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .reports-v2 .wakatime-goal-row {
+  background: var(--card);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .reports-v2 .wakatime-weekday-tooltip {
+  background: var(--bg-soft);
+  border-color: var(--line);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .reports-v2 .wakatime-weekday-tooltip-head,
+[data-theme="dark"] .reports-v2 .wakatime-weekday-tooltip-value {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .reports-v2 .wakatime-weekday-tooltip-name {
+  color: var(--ink-soft);
+}

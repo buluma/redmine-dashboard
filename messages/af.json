@@ -20,6 +20,8 @@
     "action": "Aksie",
     "updated": "Opgedateer",
     "status": "Status",
+    "administration": "Administrasie",
+    "operations": "Bedrywighede",
     "on": "Auto-verfrissing AAN",
     "off": "Auto-verfrissing AF"
   },
