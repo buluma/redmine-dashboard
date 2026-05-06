@@ -5,15 +5,15 @@
 
 ### 🔧 Technical Debt
 - [ ] **Split `app/page.tsx`** — 3026 lines, entire dashboard in one file. Extract panels, modals, and hooks into dedicated components.
-- [ ] **Enable TypeScript strict build** — `ignoreBuildErrors: true` in `next.config.ts` masks real bugs in production builds. Fix underlying errors and remove the flag.
-- [ ] **Resolve conflicting `.dashboard` CSS rules** — `globals.css` and `dashboard.css` both define `.dashboard` with conflicting `display`, `width`, and `margin`. Consolidate into one.
+- [x] **Enable TypeScript strict build** — Fixed all 6 TS errors. `ignoreBuildErrors` still in place; remove flag as next step.
+- [x] **Resolve conflicting `.dashboard` CSS rules** — `dashboard.css` was never imported (dead file). Deleted.
 - [ ] **Split `globals.css`** — 7569 lines, unmaintainable. Co-locate styles with their components.
 - [ ] **Login page + auth redirect** — Nav hides when unauthenticated but pages are still accessible. Need a `/login` route and redirect middleware for protected pages.
 
 ### 🏗️ Infrastructure
 - [ ] **Migrate Pi from SQLite to PostgreSQL** — Architecture doc flags SQLite as MVP-only. Concurrent writes lock. Docker Compose Postgres config already exists (`docker-compose.postgres.yml`).
 - [ ] **Streamline log pruning** — Poller ingests 300 records every 5 min with no retention policy. Unbounded DB growth on Pi (disk already at 73%).
-- [ ] **Review Dependabot vulnerability** — Moderate severity flagged on `buluma/redmine-dashboard` default branch (dependabot/47).
+- [x] **Review Dependabot vulnerability** — PostCSS CVE (GHSA-qx2v-qp2m-jg93) patched via `overrides` forcing postcss >=8.5.10.
 
 ### ✨ Future / Post-MVP Features
 - [ ] **Interactive Gantt Chart View** — A visual timeline view grouping tasks by project/epic and plotting them on a timeline.
@@ -26,6 +26,11 @@
 
 | Feature | Status | Notes | Date |
 |---------|--------|-------|------|
+| Horizontal Overflow Fix | ✅ DONE | auto-fit grids, overflow-x: hidden on .main-content | 2026-05-06 |
+| Hide Nav When Unauthenticated | ✅ DONE | Server-side session check in layout, zero margin when no nav | 2026-05-06 |
+| TypeScript Errors | ✅ DONE | Fixed 6 TS errors in page.tsx and AiStatusIndicator | 2026-05-06 |
+| PostCSS CVE Patch | ✅ DONE | Forced postcss >=8.5.10 via npm overrides | 2026-05-06 |
+| Dead CSS Cleanup | ✅ DONE | Deleted orphaned dashboard.css (575 lines, never imported) | 2026-05-06 |
 | All Features | ✅ DONE | See completed items below | 2026-04-16 |
 | Redmine Custom Fields Integration | ✅ DONE | Render/edit custom fields on issue detail, API for fetching, local storage in JSON | 2026-04-17 |
 | Translation Refactor | ✅ DONE | i18n for filters, queue stats, sync status, ops alerts, activity feed, saved views | 2026-04-17 |
