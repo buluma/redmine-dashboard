@@ -184,6 +184,7 @@ function filenamesMatch(left: string, right: string): boolean {
 
 function MarkdownBlock({ content, attachments = [], issueId }: { content: string; attachments?: Attachment[]; issueId?: number }) {
   const segments = useMemo(() => splitRedmineCollapseSegments(content), [content]);
+  const { t } = useI18n();
 
   function textFromNode(node: ReactNode): string {
     if (typeof node === "string" || typeof node === "number") {
@@ -386,7 +387,7 @@ function syncTone(status: string | undefined): "idle" | "running" | "success" | 
   return "idle";
 }
 
-function summarizeSyncError(message: string | null | undefined): string {
+function summarizeSyncError(message: string | null | undefined, t: (key: string) => string): string {
   if (!message) {
     return t('sync.noDetailError');
   }
@@ -1770,7 +1771,7 @@ export default function Home() {
         </div>
         {syncState?.lastSyncStatus === "failed" && (
           <p className="sync-error-inline">
-            Last sync error: {summarizeSyncError(syncState.lastError)}
+            Last sync error: {summarizeSyncError(syncState.lastError, t)}
           </p>
         )}
       </header>
