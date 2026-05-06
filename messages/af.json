@@ -110,6 +110,7 @@
       "updated": "Opgedateer",
       "priority": "Prioriteit",
       "status": "Status",
+      "startDate": "Begindatum",
       "assignee": "Toegewys aan",
       "dueDate": "Vervaldatum",
       "estimatedHours": "Geskatte ure",
@@ -155,7 +156,8 @@
       "favorited": "★ Favorited",
       "assign": "Assign",
       "assignTo": "Assign to {name}",
-      "select": "Select..."
+      "select": "Select...",
+      "postToRedmine": "Post to Redmine"
     },
     "badges": {
       "local": "🟢 Local"

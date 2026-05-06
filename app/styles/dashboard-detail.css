@@ -1165,6 +1165,58 @@ textarea {
   padding-top: 0.75rem;
 }
 
+.heimdall-error-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0.8rem 0 0.25rem;
+}
+
+.heimdall-error-filters input {
+  flex: 1 1 300px;
+  min-width: 220px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink);
+  padding: 0.62rem 0.75rem;
+}
+
+.heimdall-error-source-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.heimdall-error-source-tabs button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink);
+  font-weight: 700;
+  padding: 0.46rem 0.72rem;
+  cursor: pointer;
+}
+
+.heimdall-error-source-tabs button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #062422;
+}
+
+.heimdall-error-count {
+  margin: 0.35rem 0 0.1rem;
+}
+
+.heimdall-errors-list .ai-section {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 .summary-card {
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -1496,4 +1548,3 @@ textarea {
     opacity: 0.56;
   }
 }
-

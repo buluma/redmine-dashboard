@@ -110,6 +110,7 @@
       "updated": "Оновлено",
       "priority": "Пріоритет",
       "status": "Статус",
+      "startDate": "Дата початку",
       "assignee": "Виконавець",
       "dueDate": "Термін",
       "estimatedHours": "Оцінка часу",
@@ -155,7 +156,8 @@
       "favorited": "★ В обраному",
       "assign": "Призначити",
       "assignTo": "Призначити {name}",
-      "select": "Вибрати..."
+      "select": "Вибрати...",
+      "postToRedmine": "Надіслати до Redmine"
     },
     "badges": {
       "local": "🟢 Локальне"

@@ -4,12 +4,19 @@ import React from "react";
 import { HeimdallHeader } from "./heimdall-header";
 import { StatCard, StackedBarChart } from "@/src/components/reports/charts";
 import { HeimdallLogsClient } from "./heimdall-logs-client";
+import { HeimdallErrorsList, type HeimdallErrorEntry } from "./heimdall-errors-list";
 import { useI18n } from "@/src/components/I18nProvider";
 
 interface HeimdallDashboardViewProps {
   totalLogs: number;
   errorCount: number;
   hostCount: number;
+  mbuLogCount: number;
+  ssrLogCount: number;
+  traceCount: number;
+  mbuErrorCount: number;
+  ssrErrorCount: number;
+  traceErrorCount: number;
   mbuLogs: any[];
   ssrLogs: any[];
   traces: any[];
@@ -21,13 +28,19 @@ interface HeimdallDashboardViewProps {
   ssrByStatus: [string, number][];
   traceByLevel: [string, number][];
   topScripts: [string, number][];
-  allErrors: any[];
+  allErrors: HeimdallErrorEntry[];
 }
 
 export function HeimdallDashboardView({
   totalLogs,
   errorCount,
   hostCount,
+  mbuLogCount,
+  ssrLogCount,
+  traceCount,
+  mbuErrorCount,
+  ssrErrorCount,
+  traceErrorCount,
   mbuLogs,
   ssrLogs,
   traces,
@@ -68,29 +81,29 @@ export function HeimdallDashboardView({
           <div className="reports-stats-grid reports-stats-grid--four">
             <StatCard
               label={t("heimdall.statMbu")}
-              value={mbuLogs.length}
-              foot={`${mbuLogs.filter((l: any) => l.logLevel === "ERROR" || l.logLevel === "WARN").length} errors/warnings · ${hostCount} hosts`}
+              value={mbuLogCount}
+              foot={`${mbuErrorCount} errors/warnings · ${hostCount} hosts`}
               icon="📋"
               tone="info"
             />
             <StatCard
               label={t("heimdall.statSsr")}
-              value={ssrLogs.length}
-              foot={`${ssrLogs.filter((l: any) => l.isError).length} failed jobs`}
+              value={ssrLogCount}
+              foot={`${ssrErrorCount} failed jobs`}
               icon="⚙️"
               tone="success"
             />
             <StatCard
               label={t("heimdall.statTraces")}
-              value={traces.length}
-              foot={`${traces.filter((l: any) => l.logLevel === "ERROR" || l.logLevel === "WARN").length} errors/warnings`}
+              value={traceCount}
+              foot={`${traceErrorCount} errors/warnings`}
               icon="📡"
               tone="success"
             />
             <StatCard
               label={t("heimdall.statErrors")}
               value={errorCount}
-              foot={`${allErrors.filter(e => e._source === 'mbu_logs').length} MBU · ${ssrLogs.filter((l: any) => l.isError).length} SSR · ${allErrors.filter(e => e._source === 'traces').length} Trace`}
+              foot={`${mbuErrorCount} MBU · ${ssrErrorCount} SSR · ${traceErrorCount} Trace`}
               icon="⚠️"
               tone="danger"
             />
@@ -213,33 +226,7 @@ export function HeimdallDashboardView({
                   </div>
                 </summary>
 
-                <div className="summaries-list">
-                  {allErrors.slice(0, 50).map((err) => (
-                    <article key={`${err._source}-${err.id}`} className="summary-card">
-                      <div className="summary-header">
-                        <div className="summary-header-left">
-                          <span className={`summary-status ${err.level === "ERROR" ? "summary-status--danger" : "summary-status--warning"}`}>
-                            {err.level}
-                          </span>
-                          <span className="summary-project">{err._source}</span>
-                        </div>
-                        <time className="muted">
-                          {new Date(err.createdAt).toLocaleString()}
-                        </time>
-                      </div>
-                      <div className="ai-result">
-                        <pre className="ai-section" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: "0.82rem" }}>
-                          {err.message.length > 500 ? err.message.slice(0, 500) + "…" : err.message}
-                        </pre>
-                      </div>
-                    </article>
-                  ))}
-                  {allErrors.length > 50 && (
-                    <p className="muted" style={{ padding: "0.5rem 0" }}>
-                      {t("heimdall.showingXofY", { count: 50, total: allErrors.length })}
-                    </p>
-                  )}
-                </div>
+                <HeimdallErrorsList errors={allErrors} />
               </details>
             </section>
           )}

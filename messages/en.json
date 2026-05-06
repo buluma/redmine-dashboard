@@ -112,6 +112,7 @@
       "updated": "Updated",
       "priority": "Priority",
       "status": "Status",
+      "startDate": "Start Date",
       "assignee": "Assignee",
       "dueDate": "Due Date",
       "estimatedHours": "Estimated Hours",
@@ -157,7 +158,8 @@
       "favorited": "★ Favorited",
       "assign": "Assign",
       "assignTo": "Assign to {name}",
-      "select": "Select..."
+      "select": "Select...",
+      "postToRedmine": "Post to Redmine"
     },
     "badges": {
       "local": "🟢 Local"

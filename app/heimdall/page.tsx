@@ -5,6 +5,36 @@ import { HeimdallDashboardView } from "./heimdall-dashboard-view";
 
 export const runtime = "nodejs";
 
+const ERROR_TEXT_TERMS = ["error", "exception", "failed", "warn"];
+
+const textErrorWhere = (field: "backtrace" | "errorDescr" | "scriptName") => ({
+  OR: ERROR_TEXT_TERMS.map((term) => ({ [field]: { contains: term } })),
+});
+
+const mbuErrorWhere = {
+  OR: [
+    { logLevel: { in: ["ERROR", "WARN"] } },
+    textErrorWhere("backtrace"),
+  ],
+};
+
+const traceErrorWhere = {
+  OR: [
+    { logLevel: { in: ["ERROR", "WARN"] } },
+    textErrorWhere("backtrace"),
+  ],
+};
+
+const ssrErrorWhere = {
+  OR: [
+    { isError: true },
+    { status: { contains: "error" } },
+    { status: { contains: "fail" } },
+    textErrorWhere("errorDescr"),
+    textErrorWhere("scriptName"),
+  ],
+};
+
 export default async function HeimdallPage() {
   const userId = await getSessionUserId();
   if (!userId) {
@@ -19,33 +49,135 @@ export default async function HeimdallPage() {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   
-  const mbuLogs = await prisma.mbuLog.findMany({
-    where: { createdAt: { gte: thirtyDaysAgo } },
-    orderBy: { createdAt: "desc" },
-    take: 1000,
-  });
+  const getDateKey = (date: Date) => date.toISOString().split("T")[0];
+  const trendDates: string[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    trendDates.push(getDateKey(date));
+  }
+  const trendStart = new Date(`${trendDates[0]}T00:00:00.000Z`);
 
-  const serverSideRulesLogs = await prisma.serverSideRulesLog.findMany({
-    where: { createdAt: { gte: thirtyDaysAgo } },
-    orderBy: { createdAt: "desc" },
-    take: 1000,
-  });
+  const [
+    mbuLogCount,
+    ssrLogCount,
+    traceCount,
+    mbuErrorCount,
+    ssrErrorCount,
+    traceErrorCount,
+    mbuHosts,
+    ssrHosts,
+    traceHosts,
+    mbuTrendRows,
+    ssrTrendRows,
+    traceTrendRows,
+    mbuByLevelRows,
+    ssrByStatusRows,
+    traceByLevelRows,
+    topScriptRows,
+    mbuErrorRows,
+    ssrErrorRows,
+    traceErrorRows,
+    mbuLogs,
+    serverSideRulesLogs,
+    traces,
+  ] = await Promise.all([
+    prisma.mbuLog.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+    prisma.serverSideRulesLog.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+    prisma.trace.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+    prisma.mbuLog.count({ where: { createdAt: { gte: thirtyDaysAgo }, ...mbuErrorWhere } }),
+    prisma.serverSideRulesLog.count({ where: { createdAt: { gte: thirtyDaysAgo }, ...ssrErrorWhere } }),
+    prisma.trace.count({ where: { createdAt: { gte: thirtyDaysAgo }, ...traceErrorWhere } }),
+    prisma.mbuLog.findMany({
+      where: { createdAt: { gte: thirtyDaysAgo } },
+      distinct: ["host"],
+      select: { host: true },
+    }),
+    prisma.serverSideRulesLog.findMany({
+      where: { createdAt: { gte: thirtyDaysAgo } },
+      distinct: ["host"],
+      select: { host: true },
+    }),
+    prisma.trace.findMany({
+      where: { createdAt: { gte: thirtyDaysAgo } },
+      distinct: ["host"],
+      select: { host: true },
+    }),
+    prisma.mbuLog.findMany({
+      where: { createdAt: { gte: trendStart } },
+      select: { createdAt: true },
+    }),
+    prisma.serverSideRulesLog.findMany({
+      where: { createdAt: { gte: trendStart } },
+      select: { createdAt: true },
+    }),
+    prisma.trace.findMany({
+      where: { createdAt: { gte: trendStart } },
+      select: { createdAt: true },
+    }),
+    prisma.mbuLog.groupBy({
+      by: ["logLevel"],
+      where: { createdAt: { gte: thirtyDaysAgo } },
+      _count: { _all: true },
+      orderBy: { _count: { logLevel: "desc" } },
+    }),
+    prisma.serverSideRulesLog.groupBy({
+      by: ["status"],
+      where: { createdAt: { gte: thirtyDaysAgo } },
+      _count: { _all: true },
+      orderBy: { _count: { status: "desc" } },
+    }),
+    prisma.trace.groupBy({
+      by: ["logLevel"],
+      where: { createdAt: { gte: thirtyDaysAgo } },
+      _count: { _all: true },
+      orderBy: { _count: { logLevel: "desc" } },
+    }),
+    prisma.serverSideRulesLog.groupBy({
+      by: ["scriptName"],
+      where: { createdAt: { gte: thirtyDaysAgo } },
+      _count: { _all: true },
+      orderBy: { _count: { scriptName: "desc" } },
+      take: 8,
+    }),
+    prisma.mbuLog.findMany({
+      where: { createdAt: { gte: thirtyDaysAgo }, ...mbuErrorWhere },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.serverSideRulesLog.findMany({
+      where: { createdAt: { gte: thirtyDaysAgo }, ...ssrErrorWhere },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.trace.findMany({
+      where: { createdAt: { gte: thirtyDaysAgo }, ...traceErrorWhere },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.mbuLog.findMany({
+      where: { createdAt: { gte: thirtyDaysAgo } },
+      orderBy: { createdAt: "desc" },
+      take: 1000,
+    }),
+    prisma.serverSideRulesLog.findMany({
+      where: { createdAt: { gte: thirtyDaysAgo } },
+      orderBy: { createdAt: "desc" },
+      take: 1000,
+    }),
+    prisma.trace.findMany({
+      where: { createdAt: { gte: thirtyDaysAgo } },
+      orderBy: { createdAt: "desc" },
+      take: 1000,
+    }),
+  ]);
 
-  const traces = await prisma.trace.findMany({
-    where: { createdAt: { gte: thirtyDaysAgo } },
-    orderBy: { createdAt: "desc" },
-    take: 1000,
-  });
-
-  const totalLogs = mbuLogs.length + serverSideRulesLogs.length + traces.length;
+  const totalLogs = mbuLogCount + ssrLogCount + traceCount;
+  const errorCount = mbuErrorCount + ssrErrorCount + traceErrorCount;
 
   const allHosts = Array.from(new Set([
-    ...mbuLogs.map((l) => l.host),
-    ...serverSideRulesLogs.map((l) => l.host),
-    ...traces.map((l) => l.host),
+    ...mbuHosts.map((l) => l.host),
+    ...ssrHosts.map((l) => l.host),
+    ...traceHosts.map((l) => l.host),
   ])).sort();
 
-  const getDateKey = (date: Date) => date.toISOString().split('T')[0];
   const mbuTrendMap = new Map<string, number>();
   const ssrTrendMap = new Map<string, number>();
   const traceTrendMap = new Map<string, number>();
@@ -57,57 +189,26 @@ export default async function HeimdallPage() {
     }
   };
   
-  addLogsToTrendMap(mbuLogs, mbuTrendMap);
-  addLogsToTrendMap(serverSideRulesLogs, ssrTrendMap);
-  addLogsToTrendMap(traces, traceTrendMap);
-  
-  const trendDates = [];
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    trendDates.push(getDateKey(date));
-  }
-
-  const mbuByLevel = new Map<string, number>();
-  for (const log of mbuLogs) {
-    mbuByLevel.set(log.logLevel, (mbuByLevel.get(log.logLevel) ?? 0) + 1);
-  }
-
-  const ssrByStatus = new Map<string, number>();
-  const ssrErrors = serverSideRulesLogs.filter((l) => l.isError);
-  const ssrByScript = new Map<string, number>();
-  for (const log of serverSideRulesLogs) {
-    ssrByStatus.set(log.status, (ssrByStatus.get(log.status) ?? 0) + 1);
-    ssrByScript.set(log.scriptName, (ssrByScript.get(log.scriptName) ?? 0) + 1);
-  }
-  const topScripts = Array.from(ssrByScript.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8);
-
-  const traceByLevel = new Map<string, number>();
-  for (const log of traces) {
-    traceByLevel.set(log.logLevel, (traceByLevel.get(log.logLevel) ?? 0) + 1);
-  }
-
-  const mbuErrors = mbuLogs.filter((l) => l.logLevel === "ERROR" || l.logLevel === "WARN");
-  const traceErrors = traces.filter((l) => l.logLevel === "ERROR" || l.logLevel === "WARN");
+  addLogsToTrendMap(mbuTrendRows, mbuTrendMap);
+  addLogsToTrendMap(ssrTrendRows, ssrTrendMap);
+  addLogsToTrendMap(traceTrendRows, traceTrendMap);
 
   const allErrors = [
-    ...mbuErrors.map((l) => ({
+    ...mbuErrorRows.map((l) => ({
       _source: "mbu_logs",
       id: l.id.toString(),
       level: l.logLevel,
       message: l.backtrace,
       createdAt: l.createdAt.toISOString(),
     })),
-    ...ssrErrors.map((l) => ({
+    ...ssrErrorRows.map((l) => ({
       _source: "server_side_rules_log",
       id: l.id.toString(),
       level: "ERROR",
       message: `${l.scriptName} — ${l.errorDescr || l.status}`,
       createdAt: l.createdAt.toISOString(),
     })),
-    ...traceErrors.map((l) => ({
+    ...traceErrorRows.map((l) => ({
       _source: "traces",
       id: l.id.toString(),
       level: l.logLevel,
@@ -119,8 +220,14 @@ export default async function HeimdallPage() {
   return (
     <HeimdallDashboardView
       totalLogs={totalLogs}
-      errorCount={allErrors.length}
+      errorCount={errorCount}
       hostCount={allHosts.length}
+      mbuLogCount={mbuLogCount}
+      ssrLogCount={ssrLogCount}
+      traceCount={traceCount}
+      mbuErrorCount={mbuErrorCount}
+      ssrErrorCount={ssrErrorCount}
+      traceErrorCount={traceErrorCount}
       mbuLogs={mbuLogs.map(l => ({ 
         ...l, 
         id: l.id.toString(), 
@@ -150,10 +257,10 @@ export default async function HeimdallPage() {
       mbuTrend={trendDates.map(d => mbuTrendMap.get(d) ?? 0)}
       ssrTrend={trendDates.map(d => ssrTrendMap.get(d) ?? 0)}
       traceTrend={trendDates.map(d => traceTrendMap.get(d) ?? 0)}
-      mbuByLevel={Array.from(mbuByLevel.entries()).sort((a,b) => b[1]-a[1])}
-      ssrByStatus={Array.from(ssrByStatus.entries()).sort((a,b) => b[1]-a[1])}
-      traceByLevel={Array.from(traceByLevel.entries()).sort((a,b) => b[1]-a[1])}
-      topScripts={topScripts}
+      mbuByLevel={mbuByLevelRows.map((row) => [row.logLevel, row._count._all])}
+      ssrByStatus={ssrByStatusRows.map((row) => [row.status, row._count._all])}
+      traceByLevel={traceByLevelRows.map((row) => [row.logLevel, row._count._all])}
+      topScripts={topScriptRows.map((row) => [row.scriptName, row._count._all])}
       allErrors={allErrors}
     />
   );
