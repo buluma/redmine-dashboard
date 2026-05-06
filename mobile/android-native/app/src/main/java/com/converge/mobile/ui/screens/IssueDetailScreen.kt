@@ -76,6 +76,7 @@ import com.converge.mobile.data.InternalNote
 import com.converge.mobile.data.Issue
 import com.converge.mobile.data.TimeEntry
 import com.converge.mobile.data.displayId
+import com.converge.mobile.data.formatDate
 import com.converge.mobile.ui.MainUiState
 import com.converge.mobile.ui.MainViewModel
 import com.converge.mobile.ui.MarkdownDescription
@@ -285,7 +286,7 @@ private fun NoteCard(note: InternalNote) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AssigneeAvatar(note.authorName)
                 Text(note.authorName, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                Text(note.createdAt.take(10), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(note.createdAt.formatDate(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text(note.content, style = MaterialTheme.typography.bodyMedium)
         }
@@ -505,8 +506,8 @@ private fun IssueKeyFacts(issue: Issue) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             FactRow(Icons.Default.Person, "Assignee", issue.assignedToName ?: "Unassigned")
             FactRow(Icons.Default.Person, "Author", issue.authorName ?: "Unknown")
-            FactRow(Icons.Default.CalendarToday, "Due", issue.dueDate ?: "No due date")
-            FactRow(Icons.Default.Refresh, "Updated", issue.lastActivityAt ?: issue.updatedOnRemote ?: "Unknown")
+            FactRow(Icons.Default.CalendarToday, "Due", issue.dueDate?.formatDate() ?: "No due date")
+            FactRow(Icons.Default.Refresh, "Updated", (issue.lastActivityAt ?: issue.updatedOnRemote)?.formatDate() ?: "Unknown")
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 SmallStat("Spent", issue.spentHours?.let { "${it}h" } ?: "—", modifier = Modifier.weight(1f))
                 SmallStat("Estimate", issue.estimatedHours?.let { "${it}h" } ?: "—", modifier = Modifier.weight(1f))
