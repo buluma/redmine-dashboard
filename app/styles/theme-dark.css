@@ -752,6 +752,24 @@
   color: var(--accent-strong) !important;
 }
 
+[data-theme="dark"] .view-mode-tabs .secondary-button.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+[data-theme="dark"] .preset-name-input {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .preset-cancel-btn {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink-soft);
+}
+
 [data-theme="dark"] kbd {
   background: var(--surface-3);
   color: var(--ink);
