@@ -61,6 +61,16 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Runs before paint — prevents flash of wrong theme */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            var t = localStorage.getItem('theme');
+            if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', t);
+          } catch(e) {}
+        ` }} />
+      </head>
       <body className={`${sora.variable} ${mono.variable} ${display.variable}`}>
         <ErrorLoggerProvider>
           <ToastProvider>
