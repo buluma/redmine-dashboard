@@ -46,8 +46,19 @@ class ConvergeRepository(
         clients.remove(cleanServerUrl)
     }
 
-    suspend fun listIssues(serverUrl: String, search: String?): List<Issue> = call {
-        api(serverUrl).listIssues(search = search?.trim()?.takeIf { it.isNotEmpty() }).items
+    suspend fun listIssues(
+        serverUrl: String,
+        search: String?,
+        status: String? = null,
+        sort: String = "updated_desc",
+        page: Int = 1,
+    ): IssueListResponse = call {
+        api(serverUrl).listIssues(
+            search = search?.trim()?.takeIf { it.isNotEmpty() },
+            status = status?.trim()?.takeIf { it.isNotEmpty() },
+            sort = sort,
+            page = page,
+        )
     }
 
     suspend fun createIssue(

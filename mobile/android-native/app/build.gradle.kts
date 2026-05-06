@@ -1,9 +1,15 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 
     id("io.sentry.android.gradle") version "6.6.0"
+}
+
+val localProps = Properties().also { props ->
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { props.load(it) }
 }
 
 android {
@@ -17,7 +23,7 @@ android {
         versionCode = 1
         versionName = "0.1.0"
 
-        buildConfigField("String", "DEFAULT_SERVER_URL", "\"http://10.0.2.2:3000\"")
+        buildConfigField("String", "DEFAULT_SERVER_URL", "\"${localProps.getProperty("DEFAULT_SERVER_URL", "http://10.0.2.2:3000")}\"")
     }
 
     buildFeatures {
