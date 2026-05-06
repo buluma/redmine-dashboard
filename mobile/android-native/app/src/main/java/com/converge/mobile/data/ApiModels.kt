@@ -1,0 +1,243 @@
+package com.converge.mobile.data
+
+import com.squareup.moshi.Json
+
+data class MobileUser(
+    val id: String = "",
+    val username: String = "",
+    val displayName: String = "",
+)
+
+data class PairConnectRequest(
+    @param:Json(name = "baseUrl") val redmineBaseUrl: String,
+    @param:Json(name = "apiKey") val redmineApiKey: String,
+    val deviceName: String? = null,
+)
+
+data class PairConnectResponse(
+    val token: String = "",
+    val expiresAt: String? = null,
+    val user: MobileUser = MobileUser(),
+    val syncJobId: String? = null,
+)
+
+data class IssueListResponse(
+    val items: List<Issue> = emptyList(),
+    val total: Int = 0,
+    val page: Int = 1,
+    val pageSize: Int = 25,
+    val source: String? = null,
+)
+
+data class IssueDetailResponse(
+    val issue: Issue = Issue(),
+)
+
+data class CreateIssueRequest(
+    val subject: String,
+    val description: String? = null,
+    val projectId: Int,
+    val priorityId: Int? = null,
+    val assignedToId: Int? = null,
+    val dueDate: String? = null,
+)
+
+data class Issue(
+    val id: String = "",
+    val redmineIssueId: Int? = null,
+    val redmineBaseUrl: String? = null,
+    val source: String = "redmine",
+    val localIssueNumber: Int? = null,
+    val subject: String = "",
+    val description: String? = null,
+    val projectName: String? = null,
+    val tracker: String? = null,
+    val priority: String? = null,
+    val priorityId: Int? = null,
+    val statusId: Int? = null,
+    val statusName: String = "",
+    val assignedToName: String? = null,
+    val authorName: String? = null,
+    val dueDate: String? = null,
+    val startDate: String? = null,
+    val estimatedHours: Double? = null,
+    val spentHours: Double? = null,
+    val updatedOnRemote: String? = null,
+    val lastActivityAt: String? = null,
+    val isFavorited: Boolean = false,
+    val allowedStatuses: List<AllowedStatus> = emptyList(),
+    val children: List<IssueChild> = emptyList(),
+    val githubLinks: List<GithubLink> = emptyList(),
+    val attachments: List<IssueAttachment> = emptyList(),
+    val relations: List<IssueRelation> = emptyList(),
+    val timeEntries: List<TimeEntry> = emptyList(),
+)
+
+data class AllowedStatus(
+    val id: Int = 0,
+    val name: String = "",
+    val isClosed: Boolean? = null,
+)
+
+data class IssueChild(
+    val id: Int = 0,
+    val subject: String = "",
+    val tracker: String? = null,
+)
+
+data class GithubLink(
+    val id: String = "",
+    val repositoryFullName: String = "",
+    val githubIssueNumber: Int? = null,
+    val githubPrNumber: Int? = null,
+    val url: String = "",
+    val title: String? = null,
+)
+
+data class IssueAttachment(
+    val id: String = "",
+    val redmineAttachmentId: Int = 0,
+    val filename: String = "",
+    val filesize: Int = 0,
+    val contentType: String? = null,
+    val author: String? = null,
+    val createdOnRemote: String? = null,
+)
+
+data class IssueRelation(
+    val id: String = "",
+    val redmineRelationId: Int = 0,
+    val targetIssueId: Int = 0,
+    val relationType: String = "",
+    val delay: Int? = null,
+)
+
+data class TimeEntry(
+    val id: String = "",
+    val redmineTimeEntryId: Int? = null,
+    val hours: Double = 0.0,
+    val activityId: Int? = null,
+    val activityName: String? = null,
+    val authorName: String? = null,
+    val comments: String? = null,
+    val spentOn: String = "",
+)
+
+data class CommentRequest(
+    val comment: String,
+)
+
+data class StatusRequest(
+    val statusId: Int,
+)
+
+data class AssignRequest(
+    val userId: Int,
+)
+
+data class EditIssueRequest(
+    val subject: String? = null,
+    val description: String? = null,
+    val priority: String? = null,
+    val dueDate: String? = null,
+    val startDate: String? = null,
+    val estimatedHours: Double? = null,
+)
+
+data class FavoriteResponse(
+    val favorited: Boolean = false,
+)
+
+data class AssignableUsersResponse(
+    val users: List<AssignableUser> = emptyList(),
+    val source: String? = null,
+)
+
+data class AssignableUser(
+    val id: Int = 0,
+    val name: String = "",
+)
+
+data class ActivitiesResponse(
+    val activities: List<Activity> = emptyList(),
+)
+
+data class Activity(
+    val id: Int = 0,
+    val name: String = "",
+)
+
+data class TimeEntriesResponse(
+    val items: List<TimeEntry> = emptyList(),
+)
+
+data class TimeEntryRequest(
+    val hours: Double,
+    val activityId: Int,
+    val comment: String? = null,
+    val spentOn: String? = null,
+)
+
+data class InternalNotesResponse(
+    val notes: List<InternalNote> = emptyList(),
+)
+
+data class InternalNoteResponse(
+    val note: InternalNote = InternalNote(),
+)
+
+data class InternalNote(
+    val id: String = "",
+    val content: String = "",
+    val createdAt: String = "",
+    val authorName: String = "",
+)
+
+data class InternalNoteRequest(
+    val content: String,
+)
+
+data class GithubLinksResponse(
+    val items: List<GithubLink> = emptyList(),
+)
+
+data class GithubLinkRequest(
+    val repositoryFullName: String,
+    val githubIssueNumber: Int? = null,
+    val githubPrNumber: Int? = null,
+    val url: String? = null,
+    val title: String? = null,
+)
+
+data class RotateTokenResponse(
+    val token: String = "",
+    val expiresAt: String? = null,
+)
+
+data class AiIssueRequest(
+    val issueId: String,
+)
+
+data class AiSummaryResponse(
+    val summary: String = "",
+    val keyPoints: List<String> = emptyList(),
+    val actionItems: List<String> = emptyList(),
+    val modelUsed: String = "",
+    val provider: String? = null,
+    val rawResponse: Boolean = false,
+    val warning: String? = null,
+)
+
+data class AiCategorizeResponse(
+    val suggestedPriority: Map<String, Any?>? = null,
+    val suggestedTags: List<Map<String, Any?>> = emptyList(),
+    val suggestedCategory: Map<String, Any?>? = null,
+    val reasoning: String = "",
+    val modelUsed: String = "",
+    val provider: String? = null,
+    val rawResponse: Boolean = false,
+)
+
+data class ApiErrorBody(
+    val error: String? = null,
+)

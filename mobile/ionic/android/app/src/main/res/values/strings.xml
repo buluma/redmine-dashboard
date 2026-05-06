@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Converge-Ionic</string>
+    <string name="title_activity_main">Converge-Ionic</string>
+    <string name="package_name">com.redmine.dashboard</string>
+    <string name="custom_url_scheme">com.redmine.dashboard</string>
+</resources>

@@ -1,0 +1,10 @@
+.gradle/
+build/
+local.properties
+sentry.properties
+app/build/
+captures/
+*.iml
+
+# Sentry Config File
+sentry.properties

@@ -18,10 +18,10 @@ class MobileUser {
   });
 
   factory MobileUser.fromJson(Map<String, dynamic> json) => MobileUser(
-    id: json["id"] as String,
-    username: json["username"] as String,
-    displayName: json["displayName"] as String,
-  );
+        id: json["id"] as String,
+        username: json["username"] as String,
+        displayName: json["displayName"] as String,
+      );
 }
 
 class GithubLink {
@@ -42,13 +42,13 @@ class GithubLink {
   });
 
   factory GithubLink.fromJson(Map<String, dynamic> json) => GithubLink(
-    id: json["id"] as String,
-    repositoryFullName: json["repositoryFullName"] as String,
-    githubIssueNumber: json["githubIssueNumber"] as int?,
-    githubPrNumber: json["githubPrNumber"] as int?,
-    url: json["url"] as String,
-    title: json["title"] as String?,
-  );
+        id: json["id"] as String,
+        repositoryFullName: json["repositoryFullName"] as String,
+        githubIssueNumber: json["githubIssueNumber"] as int?,
+        githubPrNumber: json["githubPrNumber"] as int?,
+        url: json["url"] as String,
+        title: json["title"] as String?,
+      );
 }
 
 class Issue {
@@ -103,43 +103,42 @@ class Issue {
   });
 
   factory Issue.fromJson(Map<String, dynamic> json) => Issue(
-    id: json["id"] as String,
-    redmineIssueId: json["redmineIssueId"] as int?,
-    redmineBaseUrl: json["redmineBaseUrl"] as String?,
-    source: json["source"] as String? ?? "redmine",
-    localIssueNumber: json["localIssueNumber"] as int?,
-    subject: json["subject"] as String,
-    description: json["description"] as String?,
-    statusName: json["statusName"] as String,
-    priority: json["priority"] as String?,
-    assignedToName: json["assignedToName"] as String?,
-    parentIssueLabel: json["parentIssueLabel"] as String?,
-    parentIssueId: json["parentIssueId"] as int?,
-    projectName: json["projectName"] as String?,
-    dueDate: json["dueDate"] as String?,
-    startDate: json["startDate"] as String?,
-    estimatedHours: (json["estimatedHours"] as num?)?.toDouble(),
-    isFavorited: json["isFavorited"] as bool? ?? false,
-    githubLinks: ((json["githubLinks"] as List<dynamic>?) ?? const <dynamic>[])
-        .map((e) => GithubLink.fromJson(e as Map<String, dynamic>))
-        .toList(),
-    attachments: ((json["attachments"] as List<dynamic>?) ?? const <dynamic>[])
-        .map((e) => IssueAttachment.fromJson(e as Map<String, dynamic>))
-        .toList(),
-    relations: ((json["relations"] as List<dynamic>?) ?? const <dynamic>[])
-        .map((e) => IssueRelation.fromJson(e as Map<String, dynamic>))
-        .toList(),
-    allowedStatuses:
-        ((json["allowedStatuses"] as List<dynamic>?) ?? const <dynamic>[])
+        id: json["id"] as String,
+        redmineIssueId: json["redmineIssueId"] as int?,
+        redmineBaseUrl: json["redmineBaseUrl"] as String?,
+        source: json["source"] as String? ?? "redmine",
+        localIssueNumber: json["localIssueNumber"] as int?,
+        subject: json["subject"] as String,
+        description: json["description"] as String?,
+        statusName: json["statusName"] as String,
+        priority: json["priority"] as String?,
+        assignedToName: json["assignedToName"] as String?,
+        parentIssueLabel: json["parentIssueLabel"] as String?,
+        parentIssueId: json["parentIssueId"] as int?,
+        projectName: json["projectName"] as String?,
+        dueDate: json["dueDate"] as String?,
+        startDate: json["startDate"] as String?,
+        estimatedHours: (json["estimatedHours"] as num?)?.toDouble(),
+        isFavorited: json["isFavorited"] as bool? ?? false,
+        githubLinks: ((json["githubLinks"] as List<dynamic>?) ?? const <dynamic>[])
+            .map((e) => GithubLink.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        attachments: ((json["attachments"] as List<dynamic>?) ?? const <dynamic>[])
+            .map((e) => IssueAttachment.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        relations: ((json["relations"] as List<dynamic>?) ?? const <dynamic>[])
+            .map((e) => IssueRelation.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        allowedStatuses: ((json["allowedStatuses"] as List<dynamic>?) ?? const <dynamic>[])
             .map((e) => AllowedStatus.fromJson(e as Map<String, dynamic>))
             .toList(),
-    children: ((json["children"] as List<dynamic>?) ?? const <dynamic>[])
-        .map((e) => IssueChild.fromJson(e as Map<String, dynamic>))
-        .toList(),
-    timeEntries: ((json["timeEntries"] as List<dynamic>?) ?? const <dynamic>[])
-        .map((e) => TimeEntry.fromJson(e as Map<String, dynamic>))
-        .toList(),
-  );
+        children: ((json["children"] as List<dynamic>?) ?? const <dynamic>[])
+            .map((e) => IssueChild.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        timeEntries: ((json["timeEntries"] as List<dynamic>?) ?? const <dynamic>[])
+            .map((e) => TimeEntry.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
 }
 
 class IssueAttachment {
@@ -161,8 +160,7 @@ class IssueAttachment {
     required this.createdOnRemote,
   });
 
-  factory IssueAttachment.fromJson(Map<String, dynamic> json) =>
-      IssueAttachment(
+  factory IssueAttachment.fromJson(Map<String, dynamic> json) => IssueAttachment(
         id: json["id"] as String,
         redmineAttachmentId: json["redmineAttachmentId"] as int,
         filename: json["filename"] as String,
@@ -189,42 +187,54 @@ class IssueRelation {
   });
 
   factory IssueRelation.fromJson(Map<String, dynamic> json) => IssueRelation(
-    id: json["id"] as String,
-    redmineRelationId: json["redmineRelationId"] as int,
-    targetIssueId: json["targetIssueId"] as int,
-    relationType: json["relationType"] as String,
-    delay: json["delay"] as int?,
-  );
+        id: json["id"] as String,
+        redmineRelationId: json["redmineRelationId"] as int,
+        targetIssueId: json["targetIssueId"] as int,
+        relationType: json["relationType"] as String,
+        delay: json["delay"] as int?,
+      );
 }
 
 class AllowedStatus {
   final int id;
   final String name;
 
-  AllowedStatus({required this.id, required this.name});
+  AllowedStatus({
+    required this.id,
+    required this.name,
+  });
 
-  factory AllowedStatus.fromJson(Map<String, dynamic> json) =>
-      AllowedStatus(id: json["id"] as int, name: json["name"] as String);
+  factory AllowedStatus.fromJson(Map<String, dynamic> json) => AllowedStatus(
+        id: json["id"] as int,
+        name: json["name"] as String,
+      );
 }
 
 class IssueChild {
   final int id;
   final String subject;
 
-  IssueChild({required this.id, required this.subject});
+  IssueChild({
+    required this.id,
+    required this.subject,
+  });
 
-  factory IssueChild.fromJson(Map<String, dynamic> json) =>
-      IssueChild(id: json["id"] as int, subject: json["subject"] as String);
+  factory IssueChild.fromJson(Map<String, dynamic> json) => IssueChild(
+        id: json["id"] as int,
+        subject: json["subject"] as String,
+      );
 }
 
 class PairConnectResponse {
   final String token;
   final MobileUser user;
 
-  PairConnectResponse({required this.token, required this.user});
+  PairConnectResponse({
+    required this.token,
+    required this.user,
+  });
 
-  factory PairConnectResponse.fromJson(Map<String, dynamic> json) =>
-      PairConnectResponse(
+  factory PairConnectResponse.fromJson(Map<String, dynamic> json) => PairConnectResponse(
         token: json["token"] as String,
         user: MobileUser.fromJson(json["user"] as Map<String, dynamic>),
       );
@@ -252,15 +262,15 @@ class TimeEntry {
   });
 
   factory TimeEntry.fromJson(Map<String, dynamic> json) => TimeEntry(
-    id: json["id"] as String,
-    redmineTimeEntryId: json["redmineTimeEntryId"] as int?,
-    hours: (json["hours"] as num?)?.toDouble() ?? 0.0,
-    activityId: json["activityId"] as int?,
-    activityName: json["activityName"] as String?,
-    authorName: json["authorName"] as String?,
-    comments: json["comments"] as String?,
-    spentOn: json["spentOn"] as String,
-  );
+        id: json["id"] as String,
+        redmineTimeEntryId: json["redmineTimeEntryId"] as int?,
+        hours: (json["hours"] as num?)?.toDouble() ?? 0.0,
+        activityId: json["activityId"] as int?,
+        activityName: json["activityName"] as String?,
+        authorName: json["authorName"] as String?,
+        comments: json["comments"] as String?,
+        spentOn: json["spentOn"] as String,
+      );
 }
 
 class AssignableUser {
@@ -269,8 +279,10 @@ class AssignableUser {
 
   AssignableUser({required this.id, required this.name});
 
-  factory AssignableUser.fromJson(Map<String, dynamic> json) =>
-      AssignableUser(id: json["id"] as int, name: json["name"] as String);
+  factory AssignableUser.fromJson(Map<String, dynamic> json) => AssignableUser(
+        id: json["id"] as int,
+        name: json["name"] as String,
+      );
 }
 
 class InternalNote {
@@ -279,19 +291,14 @@ class InternalNote {
   final String createdAt;
   final String authorName;
 
-  InternalNote({
-    required this.id,
-    required this.content,
-    required this.createdAt,
-    required this.authorName,
-  });
+  InternalNote({required this.id, required this.content, required this.createdAt, required this.authorName});
 
   factory InternalNote.fromJson(Map<String, dynamic> json) => InternalNote(
-    id: json["id"] as String,
-    content: json["content"] as String,
-    createdAt: json["createdAt"] as String,
-    authorName: json["authorName"] as String,
-  );
+        id: json["id"] as String,
+        content: json["content"] as String,
+        createdAt: json["createdAt"] as String,
+        authorName: json["authorName"] as String,
+      );
 }
 
 class AiSummaryResponse {
@@ -311,16 +318,13 @@ class AiSummaryResponse {
     this.rawResponse = false,
   });
 
-  factory AiSummaryResponse.fromJson(Map<String, dynamic> json) =>
-      AiSummaryResponse(
+  factory AiSummaryResponse.fromJson(Map<String, dynamic> json) => AiSummaryResponse(
         summary: json["summary"] as String? ?? "",
-        keyPoints:
-            (json["keyPoints"] as List<dynamic>?)
+        keyPoints: (json["keyPoints"] as List<dynamic>?)
                 ?.map((e) => e.toString())
                 .toList() ??
             const <String>[],
-        actionItems:
-            (json["actionItems"] as List<dynamic>?)
+        actionItems: (json["actionItems"] as List<dynamic>?)
                 ?.map((e) => e.toString())
                 .toList() ??
             const <String>[],
@@ -345,13 +349,11 @@ class AiCategorizeResponse {
     required this.modelUsed,
   });
 
-  factory AiCategorizeResponse.fromJson(Map<String, dynamic> json) =>
-      AiCategorizeResponse(
+  factory AiCategorizeResponse.fromJson(Map<String, dynamic> json) => AiCategorizeResponse(
         suggestedPriority: json["suggestedPriority"] as Map<String, dynamic>?,
-        suggestedTags:
-            ((json["suggestedTags"] as List<dynamic>?) ?? const <dynamic>[])
-                .map((e) => Map<String, dynamic>.from(e as Map))
-                .toList(),
+        suggestedTags: ((json["suggestedTags"] as List<dynamic>?) ?? const <dynamic>[])
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList(),
         suggestedCategory: json["suggestedCategory"] as Map<String, dynamic>?,
         reasoning: json["reasoning"] as String? ?? "",
         modelUsed: json["modelUsed"] as String? ?? "",

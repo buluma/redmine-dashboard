@@ -183,9 +183,7 @@ Future<void> main() async {
     options.tracesSampleRate = tracesSampleRate;
     options.profilesSampleRate = profilesSampleRate;
     options.enableLogs = enableLogs;
-  });
-
-  runApp(SentryWidget(child: const ConvergeApp()));
+  }, appRunner: () => runApp(SentryWidget(child: const NrccApp())));
 }
 
 String _env(String key, [String fallback = ""]) {
@@ -204,14 +202,14 @@ bool _envBool(String key, bool fallback) {
   return fallback;
 }
 
-class ConvergeApp extends StatefulWidget {
-  const ConvergeApp({super.key});
+class NrccApp extends StatefulWidget {
+  const NrccApp({super.key});
 
   @override
-  State<ConvergeApp> createState() => _ConvergeAppState();
+  State<NrccApp> createState() => _NrccAppState();
 }
 
-class _ConvergeAppState extends State<ConvergeApp> {
+class _NrccAppState extends State<NrccApp> {
   late final TokenStore _tokenStore;
   late final ConvergeApiClient _apiClient;
   late final AuthRepository _authRepository;
@@ -219,74 +217,41 @@ class _ConvergeAppState extends State<ConvergeApp> {
   late final IssueActionsRepository _actionsRepository;
   bool _paired = false;
   bool _bootstrapping = true;
-  String? _error;
 
   @override
   void initState() {
     super.initState();
-    try {
-      _tokenStore = TokenStore();
-      _apiClient = ConvergeApiClient(
-        // TODO: Change this to your machine's IP address when running on a real device.
-        baseUrl: _env("CONVERGE_BASE_URL", "http://localhost:3001"),
-        tokenStore: _tokenStore,
-        onUnauthorized: () {
-          if (!mounted) return;
-          setState(() {
-            _paired = false;
-            _bootstrapping = false;
-          });
-        },
-      );
-      _authRepository = AuthRepository(_apiClient, _tokenStore);
-      _issuesRepository = IssuesRepository(_apiClient);
-      _actionsRepository = IssueActionsRepository(_apiClient);
-      _checkExistingToken();
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
-    }
+    _tokenStore = TokenStore();
+    _apiClient = ConvergeApiClient(
+      baseUrl: _env("NRCC_BASE_URL", "http://100.100.245.3:3000"),
+      tokenStore: _tokenStore,
+      onUnauthorized: () {
+        if (!mounted) return;
+        setState(() {
+          _paired = false;
+          _bootstrapping = false;
+        });
+      },
+    );
+    _authRepository = AuthRepository(_apiClient, _tokenStore);
+    _issuesRepository = IssuesRepository(_apiClient);
+    _actionsRepository = IssueActionsRepository(_apiClient);
+    _checkExistingToken();
   }
 
   Future<void> _checkExistingToken() async {
-    try {
-      final token = await _tokenStore.getToken();
-      if (!mounted) return;
-      setState(() {
-        _paired = token != null && token.isNotEmpty;
-        _bootstrapping = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
-    }
+    final token = await _tokenStore.getToken();
+    if (!mounted) return;
+    setState(() {
+      _paired = token != null && token.isNotEmpty;
+      _bootstrapping = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_error != null) {
-      return MaterialApp(
-        title: "Converge",
-        theme: _buildTheme(Brightness.light),
-        darkTheme: _buildTheme(Brightness.dark),
-        home: Scaffold(
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                "An error occurred during startup:\n\n$_error",
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
     return MaterialApp(
-      title: "Converge",
+      title: "NRCC",
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       home: _bootstrapping
