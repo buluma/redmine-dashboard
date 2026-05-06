@@ -775,6 +775,56 @@
   line-height: 1.4;
 }
 
+.view-mode-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.view-mode-tabs .secondary-button.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.preset-name-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.preset-name-input {
+  width: 10rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 6px;
+}
+
+.preset-confirm-btn {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.preset-cancel-btn {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+}
+
+.preset-cancel-btn:hover {
+  background: var(--bg-soft);
+  color: var(--ink);
+}
+
 .status-cell {
   display: flex;
   align-items: center;

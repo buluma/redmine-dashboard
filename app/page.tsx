@@ -128,6 +128,8 @@ export default function Home() {
   const [viewDraftName, setViewDraftName] = useState("");
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [filterPresets, setFilterPresets] = useState<FilterPreset[]>([]);
+  const [savingPreset, setSavingPreset] = useState(false);
+  const [presetNameInput, setPresetNameInput] = useState("");
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [hoveredIssue, setHoveredIssue] = useState<Issue | null>(null);
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
@@ -1552,29 +1554,62 @@ export default function Home() {
                       + New Issue
                     </button>
                     <ColumnPicker visibleColumns={visibleColumns} onChange={setVisibleColumns} />
-                    {filterPresets.length > 0 && (
+                    {savingPreset ? (
+                      <div className="preset-name-input-group">
+                        <input
+                          autoFocus
+                          type="text"
+                          className="preset-name-input"
+                          placeholder="Preset name…"
+                          value={presetNameInput}
+                          onChange={(e) => setPresetNameInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && presetNameInput.trim()) {
+                              setFilterPresets([...filterPresets, {
+                                id: Date.now().toString(),
+                                name: presetNameInput.trim(),
+                                statusFilter, priorityFilter, search, showFavoritesOnly,
+                              }]);
+                              setSavingPreset(false);
+                              setPresetNameInput("");
+                            } else if (e.key === "Escape") {
+                              setSavingPreset(false);
+                              setPresetNameInput("");
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="preset-confirm-btn"
+                          disabled={!presetNameInput.trim()}
+                          onClick={() => {
+                            setFilterPresets([...filterPresets, {
+                              id: Date.now().toString(),
+                              name: presetNameInput.trim(),
+                              statusFilter, priorityFilter, search, showFavoritesOnly,
+                            }]);
+                            setSavingPreset(false);
+                            setPresetNameInput("");
+                          }}
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          className="preset-cancel-btn"
+                          onClick={() => { setSavingPreset(false); setPresetNameInput(""); }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
                       <button
                         type="button"
                         className="preset-save-btn"
-                        onClick={() => {
-                          const name = prompt("Preset name:");
-                          if (name) {
-                            setFilterPresets([
-                              ...filterPresets,
-                              {
-                                id: Date.now().toString(),
-                                name,
-                                statusFilter,
-                                priorityFilter,
-                                search,
-                                showFavoritesOnly,
-                              },
-                            ]);
-                          }
-                        }}
-                        title="Save current filters"
+                        onClick={() => setSavingPreset(true)}
+                        title="Save current filters as preset"
                       >
-                        💾
+                        Save preset
                       </button>
                     )}
                   </div>
@@ -1601,8 +1636,8 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="view-mode-tabs" style={{ display: "flex", gap: "8px", marginBottom: "16px", marginTop: "8px", paddingBottom: "16px", borderBottom: "1px solid var(--border)" }}>
-                <button type="button" className={`secondary-button ${viewMode === "list" ? "active border-primary text-primary" : ""}`} onClick={() => setViewMode("list")}>
+              <div className="view-mode-tabs">
+                <button type="button" className={`secondary-button ${viewMode === "list" ? "active" : ""}`} onClick={() => setViewMode("list")}>
                   {t('queue.viewList')}
                 </button>
                 {/* Kanban Board temporarily disabled
