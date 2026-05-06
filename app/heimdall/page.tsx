@@ -49,12 +49,28 @@ export default async function HeimdallPage() {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   
-  const getDateKey = (date: Date) => date.toISOString().split("T")[0];
+  // Determine the most recent date with data
+  const [mbuDateRange, ssrDateRange, traceDateRange] = await Promise.all([
+    prisma.mbuLog.aggregate({ _max: { createdAt: true } }),
+    prisma.serverSideRulesLog.aggregate({ _max: { createdAt: true } }),
+    prisma.trace.aggregate({ _max: { createdAt: true } }),
+  ]);
+
+  const maxDates: Date[] = [];
+  for (const range of [mbuDateRange, ssrDateRange, traceDateRange]) {
+    if (range._max.createdAt) maxDates.push(range._max.createdAt);
+  }
+
+  const globalMax = maxDates.length > 0
+    ? new Date(Math.max(...maxDates.map(d => d.getTime())))
+    : new Date();
+
+  // Build up to 7 daily buckets going backwards from the most recent data
   const trendDates: string[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date();
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(globalMax.getTime());
     date.setDate(date.getDate() - i);
-    trendDates.push(getDateKey(date));
+    trendDates.unshift(date.toISOString().split("T")[0]);
   }
   const trendStart = new Date(`${trendDates[0]}T00:00:00.000Z`);
 
@@ -178,20 +194,27 @@ export default async function HeimdallPage() {
     ...traceHosts.map((l) => l.host),
   ])).sort();
 
+  // Bucket trend data into daily counts (up to 7 days)
+  const getDateKey = (date: Date) => date.toISOString().split("T")[0];
+
   const mbuTrendMap = new Map<string, number>();
   const ssrTrendMap = new Map<string, number>();
   const traceTrendMap = new Map<string, number>();
-  
-  const addLogsToTrendMap = (logs: any[], trendMap: Map<string, number>) => {
+
+  const addLogsToTrendMap = (logs: { createdAt: Date }[], trendMap: Map<string, number>) => {
     for (const log of logs) {
       const date = getDateKey(log.createdAt);
       trendMap.set(date, (trendMap.get(date) ?? 0) + 1);
     }
   };
-  
+
   addLogsToTrendMap(mbuTrendRows, mbuTrendMap);
   addLogsToTrendMap(ssrTrendRows, ssrTrendMap);
   addLogsToTrendMap(traceTrendRows, traceTrendMap);
+
+  const mbuTrend = trendDates.map(d => mbuTrendMap.get(d) ?? 0);
+  const ssrTrend = trendDates.map(d => ssrTrendMap.get(d) ?? 0);
+  const traceTrend = trendDates.map(d => traceTrendMap.get(d) ?? 0);
 
   const allErrors = [
     ...mbuErrorRows.map((l) => ({
@@ -254,9 +277,9 @@ export default async function HeimdallPage() {
         traceId: l.traceId.toString()
       }))}
       trendDates={trendDates}
-      mbuTrend={trendDates.map(d => mbuTrendMap.get(d) ?? 0)}
-      ssrTrend={trendDates.map(d => ssrTrendMap.get(d) ?? 0)}
-      traceTrend={trendDates.map(d => traceTrendMap.get(d) ?? 0)}
+      mbuTrend={mbuTrend}
+      ssrTrend={ssrTrend}
+      traceTrend={traceTrend}
       mbuByLevel={mbuByLevelRows.map((row) => [row.logLevel, row._count._all])}
       ssrByStatus={ssrByStatusRows.map((row) => [row.status, row._count._all])}
       traceByLevel={traceByLevelRows.map((row) => [row.logLevel, row._count._all])}

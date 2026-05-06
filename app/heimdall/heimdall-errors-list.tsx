@@ -94,7 +94,7 @@ export function HeimdallErrorsList({ errors }: HeimdallErrorsListProps) {
                   </span>
                   <span className="summary-project">{sourceLabel(err._source)}</span>
                 </div>
-                <time className="muted">
+                <time className="muted" suppressHydrationWarning>
                   {new Date(err.createdAt).toLocaleString()}
                 </time>
               </div>

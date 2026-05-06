@@ -21,7 +21,9 @@
     "no": "No",
     "action": "Action",
     "updated": "Updated",
-    "status": "Status"
+    "status": "Status",
+    "administration": "Administration",
+    "operations": "Operations"
   },
   "nav": {
     "dashboard": "Dashboard",
