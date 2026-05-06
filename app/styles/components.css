@@ -637,13 +637,17 @@
 
 .export-btn {
   padding: 0.5rem 1rem;
-  background: var(--accent);
-  color: white;
-  border: none;
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+.export-btn:hover:not(:disabled) {
+  background: var(--bg-soft);
 }
 
 .reports-tabs {
