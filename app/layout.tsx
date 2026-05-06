@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Sora, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import "./styles/components.css";
+import "./styles/dashboard-detail.css";
+import "./styles/reports-ai.css";
+import "./styles/issue-ui.css";
 import { ErrorLoggerProvider } from "@/src/components/ErrorLoggerProvider";
 import { OfflineBanner } from "@/src/components/OfflineBanner";
 import { SyncQueueInitializer } from "@/src/components/SyncQueueInitializer";
