@@ -513,44 +513,6 @@ export function WebhooksClient({ subscriptions }: Props) {
           gap: 0.5rem;
         }
         
-        .primary-button {
-          background: var(--accent);
-          color: white;
-          border: none;
-          padding: 0.5rem 1rem;
-          border-radius: 6px;
-          cursor: pointer;
-          font-weight: 500;
-        }
-        
-        .primary-button:hover {
-          opacity: 0.9;
-        }
-        
-        .primary-button:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-        
-        .secondary-button {
-          background: var(--surface-2);
-          color: var(--text);
-          border: 1px solid var(--border);
-          padding: 0.5rem 1rem;
-          border-radius: 6px;
-          cursor: pointer;
-          font-weight: 500;
-        }
-        
-        .secondary-button:hover {
-          background: var(--surface-3);
-        }
-        
-        .secondary-button:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-        
         .danger-button {
           background: var(--sync-failed);
           color: white;
