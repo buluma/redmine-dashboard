@@ -28,7 +28,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -175,11 +175,12 @@ fun IssueListScreen(state: MainUiState, viewModel: MainViewModel) {
         },
         floatingActionButton = {
             if (!showSearch) {
-                ExtendedFloatingActionButton(
+                FloatingActionButton(
                     onClick = viewModel::showCreateIssueDialog,
-                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text("New Issue") },
-                )
+                    modifier = Modifier.padding(bottom = 16.dp),
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "New Issue")
+                }
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
