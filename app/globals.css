@@ -617,9 +617,18 @@ h3 {
 
 .hero-actions button,
 .hero-actions .primary-link,
-.hero-actions .favorite-btn {
+.hero-actions .favorite-btn,
+.hero-actions .secondary-button,
+.hero-actions a.secondary-button {
   padding: 0.4rem 0.7rem;
   font-size: 0.82rem;
+}
+
+.hero-actions .secondary-button,
+.hero-actions a.secondary-button {
+  background: linear-gradient(145deg, var(--accent), var(--accent-strong));
+  color: #fff;
+  border: none;
 }
 
 button,
