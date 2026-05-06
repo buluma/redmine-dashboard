@@ -76,7 +76,7 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
         type="button"
         className={`ai-status-indicator ${isHealthy ? "ai-status-healthy" : "ai-status-unhealthy"}`}
         onClick={() => setShowDropdown(!showDropdown)}
-        title={isHealthy ? t('ai.statusHealthy', { modelName: status?.primaryModel }) : t('ai.statusUnhealthy', { error: status?.error || "Unavailable" })}
+        title={isHealthy ? t('ai.statusHealthy', { modelName: status?.primaryModel ?? '' }) : t('ai.statusUnhealthy', { error: status?.error || "Unavailable" })}
       >
         <span className={`ai-status-dot ${isHealthy ? "ai-status-dot-healthy" : "ai-status-dot-unhealthy"}`} />
         <span className="ai-status-text">{t('ai.indicatorText')}</span>
