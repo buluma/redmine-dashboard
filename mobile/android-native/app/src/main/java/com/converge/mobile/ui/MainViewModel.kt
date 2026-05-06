@@ -7,6 +7,8 @@ import com.converge.mobile.BuildConfig
 import com.converge.mobile.data.Activity
 import com.converge.mobile.data.ApiException
 import com.converge.mobile.data.AssignableUser
+import com.converge.mobile.data.IssueListResponse
+import com.converge.mobile.data.displayId
 import com.converge.mobile.data.AiCategorizeResponse
 import com.converge.mobile.data.AiSummaryResponse
 import com.converge.mobile.data.ConvergeRepository
@@ -16,12 +18,28 @@ import com.converge.mobile.data.SecureTokenStore
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+enum class MainTab { ISSUES, FAVORITES, SETTINGS }
+
+enum class SortMode(val label: String, val apiValue: String) {
+    UPDATED_DESC("Recent", "updated_desc"),
+    UPDATED_ASC("Oldest", "updated_asc"),
+    PRIORITY("Priority", "priority"),
+    DUE_DATE("Due Date", "due_date"),
+}
+
 data class MainUiState(
     val serverUrl: String = BuildConfig.DEFAULT_SERVER_URL,
     val redmineBaseUrl: String = "",
     val redmineApiKey: String = "",
     val deviceName: String = "Converge-Compose",
     val search: String = "",
+    val statusFilter: String = "All",
+    val sortMode: SortMode = SortMode.UPDATED_DESC,
+    val currentTab: MainTab = MainTab.ISSUES,
+    val page: Int = 1,
+    val totalIssues: Int = 0,
+    val isLoadingMore: Boolean = false,
+    val isOffline: Boolean = false,
     val commentDraft: String = "",
     val isPaired: Boolean = false,
     val isLoading: Boolean = false,
@@ -85,6 +103,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateRedmineApiKey(value: String) = update { copy(redmineApiKey = value) }
     fun updateDeviceName(value: String) = update { copy(deviceName = value) }
     fun updateSearch(value: String) = update { copy(search = value) }
+    fun updateStatusFilter(value: String) {
+        update { copy(statusFilter = value) }
+        loadIssues()
+    }
+    fun updateSortMode(mode: SortMode) {
+        update { copy(sortMode = mode) }
+        loadIssues()
+    }
+    fun switchTab(tab: MainTab) = update { copy(currentTab = tab) }
+    fun setOffline(offline: Boolean) = update { copy(isOffline = offline) }
     fun updateCommentDraft(value: String) = update { copy(commentDraft = value) }
     fun updateCreateSubject(value: String) = update { copy(createSubject = value) }
     fun updateCreateProjectId(value: String) = update { copy(createProjectId = value) }
@@ -149,8 +177,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun loadIssues() {
         viewModelScope.launch {
             runBusy {
-                val issues = repository.listIssues(state.value.serverUrl, state.value.search)
-                update { copy(issues = issues) }
+                val status = state.value.statusFilter.takeIf { it != "All" }
+                val response = repository.listIssues(state.value.serverUrl, state.value.search, status, state.value.sortMode.apiValue, 1)
+                update { copy(issues = response.items, page = 1, totalIssues = response.total) }
+            }
+        }
+    }
+
+    fun loadMoreIssues() {
+        val current = state.value
+        if (current.isLoadingMore || current.isLoading || current.issues.size >= current.totalIssues) return
+        viewModelScope.launch {
+            update { copy(isLoadingMore = true) }
+            try {
+                val status = current.statusFilter.takeIf { it != "All" }
+                val response = repository.listIssues(current.serverUrl, current.search, status, current.sortMode.apiValue, current.page + 1)
+                update { copy(issues = issues + response.items, page = page + 1, totalIssues = response.total, isLoadingMore = false) }
+            } catch (e: Exception) {
+                update { copy(isLoadingMore = false, errorMessage = e.message ?: "Failed to load more") }
             }
         }
     }
@@ -192,10 +236,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     assignedToId = null,
                     dueDate = state.value.createDueDate,
                 )
-                val issues = repository.listIssues(state.value.serverUrl, state.value.search)
+                val status = state.value.statusFilter.takeIf { it != "All" }
+                val listResponse = repository.listIssues(state.value.serverUrl, state.value.search, status, state.value.sortMode.apiValue, 1)
                 update {
                     copy(
-                        issues = issues,
+                        issues = listResponse.items,
+                        page = 1,
+                        totalIssues = listResponse.total,
                         selectedIssue = issue,
                         showCreateIssueDialog = false,
                         createSubject = "",
@@ -493,11 +540,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val current = state.value.selectedIssue ?: return
         val id = current.redmineIssueId?.toString() ?: current.id
         val refreshed = repository.refreshIssueLists(state.value.serverUrl, repository.getIssue(state.value.serverUrl, id))
-        val issues = repository.listIssues(state.value.serverUrl, state.value.search)
+        val status = state.value.statusFilter.takeIf { it != "All" }
+        val response = repository.listIssues(state.value.serverUrl, state.value.search, status, state.value.sortMode.apiValue, 1)
         val notes = refreshed.redmineIssueId?.let {
             runCatching { repository.listInternalNotes(state.value.serverUrl, it) }.getOrElse { state.value.internalNotes }
         } ?: state.value.internalNotes
-        update { copy(selectedIssue = refreshed, issues = issues, internalNotes = notes, actionMessage = actionMessage) }
+        update { copy(selectedIssue = refreshed, issues = response.items, page = 1, totalIssues = response.total, internalNotes = notes, actionMessage = actionMessage) }
     }
 
     private suspend fun runBusy(block: suspend () -> Unit) {
@@ -530,5 +578,3 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         state.value = state.value.block()
     }
 }
-
-private fun Issue.displayId(): String = redmineIssueId?.let { "#$it" } ?: localIssueNumber?.let { "L$it" } ?: id

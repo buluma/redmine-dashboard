@@ -1,6 +1,8 @@
 package com.converge.mobile.data
 
 import com.squareup.moshi.Json
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 data class MobileUser(
     val id: String = "",
@@ -241,3 +243,13 @@ data class AiCategorizeResponse(
 data class ApiErrorBody(
     val error: String? = null,
 )
+
+fun Issue.displayId(): String = redmineIssueId?.let { "#$it" } ?: localIssueNumber?.let { "L$it" } ?: id
+
+private val DATE_DISPLAY_FMT = DateTimeFormatter.ofPattern("MMM d, yyyy")
+
+fun String.formatDate(): String = try {
+    LocalDate.parse(this.take(10)).format(DATE_DISPLAY_FMT)
+} catch (_: Exception) {
+    this.take(10)
+}

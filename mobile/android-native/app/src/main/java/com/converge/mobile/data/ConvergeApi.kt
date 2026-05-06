@@ -16,9 +16,10 @@ interface ConvergeApi {
     @GET("api/mobile/v1/issues")
     suspend fun listIssues(
         @Query("search") search: String? = null,
+        @Query("status") status: String? = null,
         @Query("searchMode") searchMode: String = "local",
         @Query("scope") scope: String = "issues",
-        @Query("openOnly") openOnly: Boolean = true,
+        @Query("openOnly") openOnly: Boolean = false,
         @Query("sort") sort: String = "updated_desc",
         @Query("page") page: Int = 1,
         @Query("pageSize") pageSize: Int = 25,
