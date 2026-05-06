@@ -1579,15 +1579,15 @@
 }
 
 .badge-today {
-  background: #fff7e6;
-  color: #b45309;
-  border: 1px solid #f59e0b;
+  background: var(--warn-soft, #fff7e6);
+  color: var(--warn-strong, #b45309);
+  border: 1px solid var(--warn, #f59e0b);
 }
 
 .badge-soon {
-  background: #fffbeb;
-  color: #92400e;
-  border: 1px solid #fcd34d;
+  background: var(--warn-soft, #fffbeb);
+  color: var(--warn-strong, #92400e);
+  border: 1px solid color-mix(in srgb, var(--warn, #fcd34d), transparent 40%);
 }
 
 .peek-meta-grid {
@@ -1781,4 +1781,20 @@
 .theme-toggle-label {
   white-space: nowrap;
   overflow: hidden;
+}
+
+/* ══ Dark mode overrides ══ */
+
+[data-theme="dark"] .ai-toggle {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .lightbox-close {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .lightbox-close:hover {
+  background: var(--card);
 }
