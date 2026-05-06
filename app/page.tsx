@@ -1,14 +1,9 @@
 "use client";
 
-import { AllowedStatusView } from "@/src/lib/issue-shape";
 import { useI18n } from "@/src/components/I18nProvider";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import ReactMarkdown from "react-markdown";
-import rehypeHighlight from "rehype-highlight";
-import remarkGfm from "remark-gfm";
-import { normalizeRedmineText, splitRedmineCollapseSegments } from "@/src/lib/redmine-text-format";
 import { AiIssueActions } from "@/src/components/ai/AiIssueActions";
 import { AiSearchBar } from "@/src/components/ai/AiSearchBar";
 import { AiStatusIndicator } from "@/src/components/ai/AiStatusIndicator";
@@ -25,141 +20,50 @@ import { IssueCreateModal } from "@/src/components/IssueCreateModal";
 import { ColumnPicker, ColumnKey } from "@/src/components/ColumnPicker";
 import { KanbanBoard } from "@/src/components/KanbanBoard";
 import { GanttChart } from "@/src/components/GanttChart";
-
-type User = {
-  id: string;
-  username: string;
-  displayName: string;
-};
-
-type Journal = {
-  id: string;
-  author: string | null;
-  notes: string | null;
-  createdOnRemote: string;
-};
-
-type TimeEntry = {
-  id: string;
-  redmineTimeEntryId: number | null;
-  hours: number;
-  activityId: number;
-  activityName: string | null;
-  authorName: string | null;
-  comments: string | null;
-  spentOn: string;
-};
-
-type GithubLink = {
-  id: string;
-  repositoryFullName: string;
-  githubIssueNumber: number | null;
-  githubPrNumber: number | null;
-  url: string;
-  title: string | null;
-  createdAt: string;
-};
-
-type Attachment = {
-  id: string;
-  redmineAttachmentId: number;
-  filename: string;
-  filesize: number;
-  contentType: string | null;
-  author: string | null;
-  createdOnRemote: string | null;
-};
-
-type Relation = {
-  id: string;
-  redmineRelationId: number;
-  targetIssueId: number;
-  relationType: string;
-  delay: number | null;
-};
-
-type IssueChild = {
-  id: number;
-  subject: string;
-};
-
-type Issue = {
-  id: string;
-  redmineIssueId: number;
-  localIssueNumber?: number | null;
-  redmineBaseUrl: string;
-  subject: string;
-  description: string | null;
-  projectName: string | null;
-  parentIssueId: number | null;
-  parentIssueLabel: string | null;
-  tracker: string | null;
-  priority: string | null;
-  priorityId: number | null;
-  priorityName: string | null;
-  statusId: number;
-  statusName: string;
-  assignedToName: string | null;
-  updatedAt: string;
-  updatedOnRemote: string;
-  lastActivityAt: string | null;
-  lastActivityType: string | null;
-  dueDate: string | null;
-  startDate: string | null;
-  estimatedHours: number | null;
-  createdAt: string;
-  doneRatio: number | null;
-  githubLinks: GithubLink[];
-  journals: Journal[];
-  timeEntries: TimeEntry[];
-  attachments: Attachment[];
-  relations: Relation[];
-  allowedStatuses: AllowedStatusView[];
-  children: IssueChild[];
-};
-
-type StatusCatalog = { id: number; name: string; isClosed: boolean };
-
-type SyncState = {
-  lastSyncStatus: string;
-  lastIncrementalSyncAt: string | null;
-  lastFullSyncAt: string | null;
-  lastError: string | null;
-  runningJobId: string | null;
-} | null;
-
-type BootstrapInfo = {
-  configured: boolean;
-  canBootstrap: boolean;
-  activeCredentials: number;
-} | null;
-
-type FilterPreset = {
-  id: string;
-  name: string;
-  statusFilter: string;
-  priorityFilter: string;
-  search: string;
-  showFavoritesOnly: boolean;
-};
-
-type SavedView = {
-  id: string;
-  name: string;
-  statusFilter: string;
-  priorityFilter: string;
-  search: string;
-  sort: string;
-  position?: number;
-};
-
-type ActivityEvent = {
-  issueId: string;
-  issueLabel: string;
-  issueSubject: string;
-  timestamp: string;
-  detail: string;
-};
+import type {
+  User,
+  Journal,
+  TimeEntry,
+  GithubLink,
+  Attachment,
+  Relation,
+  IssueChild,
+  Issue,
+  StatusCatalog,
+  SyncState,
+  BootstrapInfo,
+  FilterPreset,
+  SavedView,
+  ActivityEvent,
+} from "@/src/types/dashboard";
+import {
+  attachmentUrl,
+  redmineIssueUrl,
+  isImageAttachment,
+  isPdfAttachment,
+  normalizeStatus,
+  uniqueStrings,
+  isOpenStatus,
+  isInProgressStatus,
+  isDoneStatus,
+  isBlockedStatus,
+  dueInDays,
+  issueUrgency,
+  syncTone,
+  summarizeSyncError,
+  latestSyncTimestamp,
+  dayDiffFromNow,
+  latestIssueActivityTimestamp,
+  activityTypeLabel,
+  matchesView,
+  formatDurationFromMs,
+  normalizeIssueRouteId,
+  issueRouteId,
+  issueDisplayId,
+  openIssueIdInNewTab,
+  openIssueInNewTab,
+} from "@/src/lib/issue-utils";
+import { MarkdownBlock } from "@/src/components/MarkdownBlock";
 
 const POLL_INTERVAL_MS = 90_000;
 const SAVED_VIEWS_KEY = "nrcc.savedViews.v1";
@@ -171,340 +75,6 @@ const DEFAULT_ADVANCED_FILTERS: FilterState = {
   hasGithubLinks: false,
   hasAttachments: false,
 };
-
-function normalizeAttachmentFilename(value: string): string {
-  const decoded = decodeURIComponent(value).trim();
-  const baseName = decoded.split("/").pop() ?? decoded;
-  return baseName.toLowerCase();
-}
-
-function filenamesMatch(left: string, right: string): boolean {
-  return normalizeAttachmentFilename(left) === normalizeAttachmentFilename(right);
-}
-
-function MarkdownBlock({ content, attachments = [], issueId }: { content: string; attachments?: Attachment[]; issueId?: number }) {
-  const segments = useMemo(() => splitRedmineCollapseSegments(content), [content]);
-  const { t } = useI18n();
-
-  function textFromNode(node: ReactNode): string {
-    if (typeof node === "string" || typeof node === "number") {
-      return String(node);
-    }
-    if (!node || typeof node !== "object") {
-      return "";
-    }
-    if (Array.isArray(node)) {
-      return node.map((part) => textFromNode(part)).join("");
-    }
-    const props = (node as { props?: { children?: ReactNode } }).props;
-    return textFromNode(props?.children ?? "");
-  }
-
-  function MarkdownImage({ src, alt }: { src?: string | Blob; alt?: string }) {
-    if (!src || typeof src === "object") return null;
-    const srcText = src.toString();
-    const attachmentMarker = "/api/issues/_ATTACHMENT_/";
-    const filename = srcText.includes(attachmentMarker)
-      ? decodeURIComponent(srcText.slice(srcText.indexOf(attachmentMarker) + attachmentMarker.length))
-      : srcText.split("/").pop() ?? alt ?? "image";
-
-    if (srcText.includes(attachmentMarker)) {
-      const attachment = attachments.find((item) => filenamesMatch(item.filename, filename));
-      if (!attachment || !issueId) return <span className="muted">{t('issues.imageAlt', { filename })}</span>;
-      const url = attachmentUrl(issueId, attachment.redmineAttachmentId);
-      return (
-        <span className="markdown-image-frame">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="attachment-preview-image clickable" src={url} alt={alt ?? filename} loading="lazy" />
-        </span>
-      );
-    }
-
-    return (
-      <span className="markdown-image-frame">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="attachment-preview-image clickable" src={srcText} alt={alt ?? filename} loading="lazy" />
-      </span>
-    );
-  }
-
-  function createCodePre(disableCollapse: boolean) {
-    return function CodePre(props: { children?: ReactNode }) {
-      if (disableCollapse) {
-        return <pre>{props.children}</pre>;
-      }
-      const raw = textFromNode(props.children ?? "");
-      const lines = raw.split("\n").filter((line) => line.trim().length > 0).length;
-      const shouldCollapse = lines >= 10 || raw.trim().length >= 80;
-      if (!shouldCollapse) {
-        return <pre>{props.children}</pre>;
-      }
-      return (
-        <details className="md-collapsible-code">
-          <summary>{t('issues.showCode', { count: lines })}</summary>
-          <pre>{props.children}</pre>
-        </details>
-      );
-    };
-  }
-
-  function renderMarkdown(markdown: string, key: string, options?: { disableCodeCollapse?: boolean }) {
-    const normalized = normalizeRedmineText(markdown);
-    if (!normalized.trim()) return null;
-    const CodePre = createCodePre(options?.disableCodeCollapse ?? false);
-    return (
-      <ReactMarkdown
-        key={key}
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[[rehypeHighlight, { ignoreMissing: true }]]}
-        components={{
-          pre: CodePre,
-          img: MarkdownImage,
-          a: ({ href, children }) => (
-            <a href={href} target="_blank" rel="noopener noreferrer">
-              {children}
-            </a>
-          ),
-        }}
-      >
-        {normalized}
-      </ReactMarkdown>
-    );
-  }
-
-  return (
-    <div className="markdown">
-      {segments.map((segment, index) => {
-        if (segment.type === "markdown") {
-          return renderMarkdown(segment.content, `md-${index}`);
-        }
-        return (
-          <details key={`collapse-${index}`} className="redmine-collapse">
-            <summary>{segment.title}</summary>
-            {renderMarkdown(segment.content, `collapse-body-${index}`, { disableCodeCollapse: true })}
-          </details>
-        );
-      })}
-    </div>
-  );
-}
-
-function attachmentUrl(issueId: number, attachmentId: number): string {
-  return `/api/issues/${issueId}/attachments/${attachmentId}`;
-}
-
-function redmineIssueUrl(issue: Pick<Issue, "redmineBaseUrl" | "redmineIssueId">): string | null {
-  const baseUrl = issue.redmineBaseUrl?.trim().replace(/\/+$/, "");
-  if (!baseUrl) {
-    return null;
-  }
-  return `${baseUrl}/issues/${issue.redmineIssueId}`;
-}
-
-function isImageAttachment(attachment: Attachment): boolean {
-  const type = (attachment.contentType ?? "").toLowerCase();
-  if (type.startsWith("image/")) return true;
-  const name = attachment.filename.toLowerCase();
-  return (
-    name.endsWith(".png")
-    || name.endsWith(".jpg")
-    || name.endsWith(".jpeg")
-    || name.endsWith(".gif")
-    || name.endsWith(".webp")
-    || name.endsWith(".bmp")
-  );
-}
-
-function isPdfAttachment(attachment: Attachment): boolean {
-  const type = (attachment.contentType ?? "").toLowerCase();
-  if (type === "application/pdf") return true;
-  return attachment.filename.toLowerCase().endsWith(".pdf");
-}
-
-function normalizeStatus(statusName: string): string {
-  return statusName.toLowerCase();
-}
-
-function uniqueStrings(values: string[]): string[] {
-  return Array.from(new Set(values));
-}
-
-function isOpenStatus(statusName: string): boolean {
-  const s = normalizeStatus(statusName);
-  return !s.includes("closed") && !s.includes("resolved") && !s.includes("done");
-}
-
-function isInProgressStatus(statusName: string): boolean {
-  const s = normalizeStatus(statusName);
-  return s.includes("progress") || s.includes("in dev") || s.includes("ongoing");
-}
-
-function isDoneStatus(statusName: string): boolean {
-  const s = normalizeStatus(statusName);
-  return s.includes("resolved") || s.includes("closed") || s.includes("done");
-}
-
-function isBlockedStatus(statusName: string): boolean {
-  const s = normalizeStatus(statusName);
-  return s.includes("blocked") || s.includes("hold") || s.includes("waiting");
-}
-
-function dueInDays(dueDate: string | null): number | null {
-  if (!dueDate) {
-    return null;
-  }
-  const due = new Date(dueDate);
-  if (Number.isNaN(due.getTime())) {
-    return null;
-  }
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const target = new Date(due.getFullYear(), due.getMonth(), due.getDate());
-  return Math.round((target.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
-}
-
-function issueUrgency(issue: Issue): "overdue" | "soon" | "done" | "normal" {
-  if (isDoneStatus(issue.statusName)) {
-    return "done";
-  }
-  const days = dueInDays(issue.dueDate);
-  if (days === null) {
-    return "normal";
-  }
-  if (days < 0) {
-    return "overdue";
-  }
-  if (days <= 3) {
-    return "soon";
-  }
-  return "normal";
-}
-
-function syncTone(status: string | undefined): "idle" | "running" | "success" | "failed" {
-  if (status === "running") return "running";
-  if (status === "success") return "success";
-  if (status === "failed") return "failed";
-  return "idle";
-}
-
-function summarizeSyncError(message: string | null | undefined, t: (key: string) => string): string {
-  if (!message) {
-    return t('sync.noDetailError');
-  }
-
-  if (message.includes("Unknown argument `parentIssueId`")) {
-    return t('sync.prismaOutdatedError');
-  }
-
-  const firstLine = message
-    .split("\n")
-    .map((line) => line.trim())
-    .find((line) => line.length > 0);
-
-  if (!firstLine) {
-    return t('sync.noDetailError');
-  }
-
-  const redmine = firstLine.match(/Redmine request failed \(\d{3}\):\s*(.+)$/i);
-  if (redmine?.[1]) {
-    return redmine[1].slice(0, 220);
-  }
-
-  return firstLine.slice(0, 220);
-}
-
-function latestSyncTimestamp(state: SyncState): string | null {
-  if (!state) {
-    return null;
-  }
-  const candidates = [state.lastIncrementalSyncAt, state.lastFullSyncAt].filter(
-    (value): value is string => Boolean(value),
-  );
-  if (candidates.length === 0) {
-    return null;
-  }
-  return candidates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
-}
-
-function dayDiffFromNow(dateLike: string): number {
-  const target = new Date(dateLike).getTime();
-  if (Number.isNaN(target)) return 0;
-  return Math.floor((Date.now() - target) / (24 * 60 * 60 * 1000));
-}
-
-function latestIssueActivityTimestamp(issue: Pick<Issue, "updatedOnRemote" | "lastActivityAt">): string {
-  return issue.lastActivityAt ?? issue.updatedOnRemote;
-}
-
-function activityTypeLabel(type: string | null | undefined): string {
-  const normalized = (type ?? "").trim().toLowerCase();
-  if (!normalized) return "issue update";
-  if (normalized === "issue_update") return "issue update";
-  return normalized.replace(/_/g, " ");
-}
-
-function matchesView(view: SavedView, state: {
-  statusFilter: string;
-  priorityFilter: string;
-  search: string;
-  sort: string;
-}): boolean {
-  return (
-    view.statusFilter === state.statusFilter
-    && view.priorityFilter === state.priorityFilter
-    && view.search === state.search
-    && view.sort === state.sort
-  );
-}
-
-function formatDurationFromMs(durationMs: number): string {
-  const safe = Math.max(0, durationMs);
-  const totalSeconds = Math.floor(safe / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  if (hours > 0) {
-    return `${hours}h ${minutes}m ${seconds}s`;
-  }
-  return `${minutes}m ${seconds}s`;
-}
-
-function normalizeIssueRouteId(value: number | string | null | undefined): string | null {
-  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-    return String(value);
-  }
-  if (typeof value === "string" && value.trim().length > 0) {
-    return value.trim();
-  }
-  return null;
-}
-
-function issueRouteId(issue: Pick<Issue, "id" | "redmineIssueId">): string {
-  return normalizeIssueRouteId(issue.redmineIssueId) ?? issue.id;
-}
-
-function issueDisplayId(issue: Pick<Issue, "redmineIssueId" | "localIssueNumber">): string {
-  const remote = normalizeIssueRouteId(issue.redmineIssueId);
-  if (remote) {
-    return `#${remote}`;
-  }
-  if (typeof issue.localIssueNumber === "number" && issue.localIssueNumber > 0) {
-    return `#${issue.localIssueNumber}`;
-  }
-  return "#";
-}
-
-function openIssueIdInNewTab(issueId: number | string | null | undefined): void {
-  const routeId = normalizeIssueRouteId(issueId);
-  if (!routeId) {
-    return;
-  }
-  window.open(`/issues/${encodeURIComponent(routeId)}`, "_blank", "noopener,noreferrer");
-}
-
-function openIssueInNewTab(issue: Pick<Issue, "id" | "redmineIssueId">): void {
-  openIssueIdInNewTab(issueRouteId(issue));
-}
 
 export default function Home() {
   const router = useRouter();
