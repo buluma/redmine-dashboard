@@ -1,7 +1,0 @@
-{
-  "name": "Converge-Ionic",
-  "integrations": {
-    "capacitor": {}
-  },
-  "type": "react-vite"
-}
