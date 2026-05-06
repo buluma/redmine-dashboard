@@ -66,6 +66,7 @@ data class Issue(
     val spentHours: Double? = null,
     val updatedOnRemote: String? = null,
     val lastActivityAt: String? = null,
+    val doneRatio: Int? = null,
     val isFavorited: Boolean = false,
     val allowedStatuses: List<AllowedStatus> = emptyList(),
     val children: List<IssueChild> = emptyList(),
@@ -252,4 +253,19 @@ fun String.formatDate(): String = try {
     LocalDate.parse(this.take(10)).format(DATE_DISPLAY_FMT)
 } catch (_: Exception) {
     this.take(10)
+}
+
+enum class DueUrgency { OVERDUE, SOON, NORMAL }
+
+fun parseDueUrgency(dueDate: String?): DueUrgency {
+    if (dueDate == null) return DueUrgency.NORMAL
+    return try {
+        val date = LocalDate.parse(dueDate.take(10))
+        val today = LocalDate.now()
+        when {
+            date.isBefore(today) -> DueUrgency.OVERDUE
+            !date.isAfter(today.plusDays(3)) -> DueUrgency.SOON
+            else -> DueUrgency.NORMAL
+        }
+    } catch (_: Exception) { DueUrgency.NORMAL }
 }

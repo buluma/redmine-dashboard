@@ -43,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -130,7 +131,7 @@ fun SmallStat(label: String, value: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun FactRow(icon: ImageVector, label: String, value: String) {
+fun FactRow(icon: ImageVector, label: String, value: String, valueColor: Color = Color.Unspecified) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -138,7 +139,7 @@ fun FactRow(icon: ImageVector, label: String, value: String) {
     ) {
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
         Text(label, modifier = Modifier.widthIn(min = 80.dp, max = 96.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, maxLines = 2)
+        Text(value, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, maxLines = 2, color = valueColor)
     }
 }
 

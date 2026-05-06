@@ -18,7 +18,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MoreVert
@@ -28,7 +27,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -52,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -70,6 +69,8 @@ import com.converge.mobile.ui.components.FormDialog
 import com.converge.mobile.ui.components.FormTextField
 import com.converge.mobile.ui.components.PriorityPill
 import com.converge.mobile.ui.components.ShimmerIssueItem
+import com.converge.mobile.data.DueUrgency
+import com.converge.mobile.data.parseDueUrgency
 import com.converge.mobile.ui.components.StatusPill
 
 private val STATUS_FILTERS = listOf("All", "Open", "In Progress", "Resolved", "Closed")
@@ -173,16 +174,6 @@ fun IssueListScreen(state: MainUiState, viewModel: MainViewModel) {
                 ),
             )
         },
-        floatingActionButton = {
-            if (!showSearch) {
-                FloatingActionButton(
-                    onClick = viewModel::showCreateIssueDialog,
-                    modifier = Modifier.padding(bottom = 16.dp),
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "New Issue")
-                }
-            }
-        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
@@ -274,8 +265,13 @@ private fun IssueRow(issue: Issue, onClick: () -> Unit) {
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 issue.assignedToName?.let { AssigneeAvatar(it) }
-                issue.dueDate?.let {
-                    Text("Due ${it.formatDate()}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                issue.dueDate?.let { dd ->
+                    val urgencyColor = when (parseDueUrgency(dd)) {
+                        DueUrgency.OVERDUE -> MaterialTheme.colorScheme.error
+                        DueUrgency.SOON -> Color(0xFFF59E0B)
+                        DueUrgency.NORMAL -> MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    Text("Due ${dd.formatDate()}", style = MaterialTheme.typography.labelSmall, color = urgencyColor)
                 }
             }
         }
