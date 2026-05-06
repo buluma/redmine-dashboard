@@ -3,6 +3,18 @@
 ## Pending
 - [ ] **Mobile Application** — Broken, explore alternative approaches using Electron, Ionic framework or Apache Cordova
 
+### 🔧 Technical Debt
+- [ ] **Split `app/page.tsx`** — 3026 lines, entire dashboard in one file. Extract panels, modals, and hooks into dedicated components.
+- [ ] **Enable TypeScript strict build** — `ignoreBuildErrors: true` in `next.config.ts` masks real bugs in production builds. Fix underlying errors and remove the flag.
+- [ ] **Resolve conflicting `.dashboard` CSS rules** — `globals.css` and `dashboard.css` both define `.dashboard` with conflicting `display`, `width`, and `margin`. Consolidate into one.
+- [ ] **Split `globals.css`** — 7569 lines, unmaintainable. Co-locate styles with their components.
+- [ ] **Login page + auth redirect** — Nav hides when unauthenticated but pages are still accessible. Need a `/login` route and redirect middleware for protected pages.
+
+### 🏗️ Infrastructure
+- [ ] **Migrate Pi from SQLite to PostgreSQL** — Architecture doc flags SQLite as MVP-only. Concurrent writes lock. Docker Compose Postgres config already exists (`docker-compose.postgres.yml`).
+- [ ] **Streamline log pruning** — Poller ingests 300 records every 5 min with no retention policy. Unbounded DB growth on Pi (disk already at 73%).
+- [ ] **Review Dependabot vulnerability** — Moderate severity flagged on `buluma/redmine-dashboard` default branch (dependabot/47).
+
 ### ✨ Future / Post-MVP Features
 - [ ] **Interactive Gantt Chart View** — A visual timeline view grouping tasks by project/epic and plotting them on a timeline.
 - [ ] **Jira-Style Kanban Board** — A full agile board with drag-and-drop columns for statuses, allowing rapid triaging of issues.
