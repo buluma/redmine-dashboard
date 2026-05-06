@@ -885,3 +885,296 @@
   color: var(--accent-color);
   font-weight: 500;
 }
+
+/* ══ Dark mode overrides ══ */
+
+[data-theme="dark"] .chat-log-entry {
+  background: var(--card);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .chat-log-entry.chat-log-user {
+  background: var(--accent-soft);
+}
+
+[data-theme="dark"] .chat-log-entry.chat-log-assistant {
+  background: color-mix(in srgb, var(--card), var(--accent-soft) 30%);
+}
+
+[data-theme="dark"] .chat-log-issue-subject,
+[data-theme="dark"] .chat-log-time,
+[data-theme="dark"] .chat-log-content {
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .chat-log-content {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .chat-log-duration,
+[data-theme="dark"] .chat-log-tokens {
+  background: var(--bg-soft);
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .chat-log-model {
+  background: var(--warn-soft);
+  color: var(--warn-strong);
+}
+
+[data-theme="dark"] .chat-role-badge.chat-role-user,
+[data-theme="dark"] .chat-role-badge.chat-role-assistant {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+[data-theme="dark"] .ai-overview {
+  background: var(--card);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .ai-stat-card {
+  background: var(--card);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .ai-stat-card:hover {
+  border-color: var(--accent);
+}
+
+[data-theme="dark"] .ai-stat-label,
+[data-theme="dark"] .ai-stat-meta {
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .ai-model-name {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .ai-model-rank {
+  color: var(--ink-soft);
+  background: var(--bg-soft);
+}
+
+[data-theme="dark"] .ai-model-track {
+  background: var(--line);
+}
+
+[data-theme="dark"] .ai-model-stats {
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .ai-model-total {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .ai-overview-card {
+  background: var(--card);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .ai-overview-card-badge,
+[data-theme="dark"] .ai-section-badge {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+[data-theme="dark"] .ai-overview-card h4 {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .ai-list-row {
+  border-bottom-color: var(--line);
+}
+
+[data-theme="dark"] .ai-list-name {
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .ai-list-meter {
+  background: var(--line);
+}
+
+[data-theme="dark"] .ai-list-count {
+  color: var(--accent);
+}
+
+[data-theme="dark"] .ai-list-link {
+  color: var(--signal);
+}
+
+[data-theme="dark"] .ai-overview + .stat-card,
+[data-theme="dark"] .ai-overview ~ .stat-card {
+  background: var(--card);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .ai-overview + .stat-card .stat-label,
+[data-theme="dark"] .ai-overview ~ .stat-card .stat-label {
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .ai-overview + .stat-card .stat-value,
+[data-theme="dark"] .ai-overview ~ .stat-card .stat-value {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .ai-overview + .stat-card .stat-foot,
+[data-theme="dark"] .ai-overview ~ .stat-card .stat-foot {
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .queue-stat {
+  background: var(--card);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .queue-stat.queue-warn {
+  background: var(--warn-soft);
+  color: var(--warn-strong);
+}
+
+[data-theme="dark"] .queue-stat.queue-stale {
+  background: var(--line);
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .quick-filters {
+  border-bottom-color: var(--line);
+}
+
+[data-theme="dark"] .quick-filter-btn {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .quick-filter-btn:hover {
+  background: var(--bg-soft);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .quick-filter-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+[data-theme="dark"] .quick-filter-btn.quick-open.active {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: var(--bg);
+}
+
+[data-theme="dark"] .quick-filter-btn.quick-progress.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+[data-theme="dark"] .quick-filter-btn.quick-blocked.active {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--bg);
+}
+
+[data-theme="dark"] .quick-filter-btn.quick-overdue {
+  background: var(--warn-soft);
+  border-color: var(--warn);
+  color: var(--warn-strong);
+}
+
+[data-theme="dark"] .priority-badge {
+  background: var(--card);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .priority-badge.priority-urgent,
+[data-theme="dark"] .priority-badge.priority-high {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+[data-theme="dark"] .priority-badge.priority-medium {
+  background: var(--warn-soft);
+  color: var(--warn-strong);
+}
+
+[data-theme="dark"] .priority-badge.priority-low {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+[data-theme="dark"] .due-overdue,
+[data-theme="dark"] .due-badge.overdue {
+  color: var(--danger);
+}
+
+[data-theme="dark"] .due-soon,
+[data-theme="dark"] .due-badge.soon {
+  color: var(--warn);
+}
+
+[data-theme="dark"] .preset-select,
+[data-theme="dark"] .preset-save-btn {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .preset-save-btn:hover {
+  background: var(--bg-soft);
+}
+
+[data-theme="dark"] .issue-preview-tooltip {
+  background: var(--card);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .preview-id,
+[data-theme="dark"] .preview-subject {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .preview-meta {
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .preview-due {
+  color: var(--warn);
+}
+
+[data-theme="dark"] .preview-desc {
+  color: var(--ink-soft);
+  border-top-color: var(--line);
+}
+
+[data-theme="dark"] .drag-handle {
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .drag-handle:hover {
+  background: var(--bg-soft);
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .issues-table tr.drag-over {
+  background: var(--bg-soft);
+}
+
+[data-theme="dark"] .stale-job {
+  background: var(--warn-soft);
+}
+
+[data-theme="dark"] .stale-job:hover {
+  background: color-mix(in srgb, var(--warn-soft), var(--warn) 12%);
+}
+
+[data-theme="dark"] .not-found-page {
+  background:
+    radial-gradient(circle at 8% 12%, rgba(90, 50, 20, 0.10) 0%, transparent 22%),
+    radial-gradient(circle at 85% 10%, rgba(20, 65, 70, 0.12) 0%, transparent 30%),
+    radial-gradient(circle at 76% 88%, rgba(65, 50, 20, 0.08) 0%, transparent 25%),
+    var(--bg);
+}
