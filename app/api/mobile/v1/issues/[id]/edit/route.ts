@@ -15,6 +15,7 @@ const editSchema = z.object({
   dueDate: z.string().date().optional(),
   startDate: z.string().date().optional(),
   estimatedHours: z.number().positive().optional(),
+  customFields: z.array(z.object({ id: z.number().int().positive(), value: z.string() })).optional(),
 });
 
 function parseIssueId(id: string): number {
@@ -48,6 +49,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       dueDate: body.dueDate,
       startDate: body.startDate,
       estimatedHours: body.estimatedHours,
+      customFields: body.customFields,
     };
 
     const hasUpdates = Object.values(updates).some((v) => v !== undefined);

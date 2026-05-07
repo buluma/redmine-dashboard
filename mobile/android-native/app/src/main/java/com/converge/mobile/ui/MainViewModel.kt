@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.converge.mobile.BuildConfig
 import com.converge.mobile.data.Activity
+import com.converge.mobile.data.CustomFieldEdit
 import com.converge.mobile.data.ApiException
 import com.converge.mobile.data.AssignableUser
 import com.converge.mobile.data.IssueListResponse
@@ -111,6 +112,7 @@ data class MainUiState(
     val editDueDate: String = "",
     val editStartDate: String = "",
     val editEstimate: String = "",
+    val editCustomFields: Map<Int, String> = emptyMap(),
     val timeHours: String = "",
     val timeActivityId: String = "",
     val timeComment: String = "",
@@ -207,6 +209,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateEditDueDate(value: String) = update { copy(editDueDate = value) }
     fun updateEditStartDate(value: String) = update { copy(editStartDate = value) }
     fun updateEditEstimate(value: String) = update { copy(editEstimate = value) }
+    fun updateEditCustomField(id: Int, value: String) = update { copy(editCustomFields = editCustomFields + (id to value)) }
     fun updateTimeHours(value: String) = update { copy(timeHours = value) }
     fun updateTimeActivityId(value: String) = update { copy(timeActivityId = value) }
     fun updateTimeComment(value: String) = update { copy(timeComment = value) }
@@ -612,6 +615,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         val matchedTrackerId = state.value.catalogTrackers
             .firstOrNull { it.name == issue.tracker }?.id?.toString().orEmpty()
+        val initialCustomFields = issue.customFieldsJson
+            .filter { it.value != null }
+            .associate { it.id to (it.value ?: "") }
         update {
             copy(
                 showEditIssueDialog = true,
@@ -622,6 +628,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 editDueDate = issue.dueDate.orEmpty(),
                 editStartDate = issue.startDate.orEmpty(),
                 editEstimate = issue.estimatedHours?.toString().orEmpty(),
+                editCustomFields = initialCustomFields,
             )
         }
     }
@@ -645,6 +652,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     dueDate = state.value.editDueDate,
                     startDate = state.value.editStartDate,
                     estimatedHours = state.value.editEstimate.toDoubleOrNull(),
+                    customFields = state.value.editCustomFields
+                        .map { (id, value) -> CustomFieldEdit(id, value) }
+                        .takeIf { it.isNotEmpty() },
                 )
                 refreshSelectedIssue(actionMessage = "Issue updated")
                 update { copy(showEditIssueDialog = false) }

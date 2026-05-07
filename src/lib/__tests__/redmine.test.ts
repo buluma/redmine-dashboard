@@ -64,6 +64,38 @@ describe("RedmineClient", () => {
     );
   });
 
+  it("includes custom_fields in updateIssue payload when provided", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new RedmineClient("https://redmine.example.com", "apikey");
+    await client.updateIssue(42, {
+      subject: "Updated subject",
+      customFields: [
+        { id: 5, value: "foo" },
+        { id: 9, value: "bar" },
+      ],
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://redmine.example.com/issues/42.json",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({
+          issue: {
+            subject: "Updated subject",
+            custom_fields: [
+              { id: 5, value: "foo" },
+              { id: 9, value: "bar" },
+            ],
+          },
+        }),
+      }),
+    );
+  });
+
   it("throws typed Redmine errors without exposing upstream body in the Error message", async () => {
     vi.stubGlobal(
       "fetch",

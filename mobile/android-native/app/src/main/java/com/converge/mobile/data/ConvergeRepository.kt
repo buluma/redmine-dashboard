@@ -219,6 +219,7 @@ class ConvergeRepository(
         dueDate: String?,
         startDate: String?,
         estimatedHours: Double?,
+        customFields: List<CustomFieldEdit>? = null,
     ) = call {
         api(serverUrl).editIssue(
             redmineIssueId.toString(),
@@ -230,6 +231,7 @@ class ConvergeRepository(
                 dueDate = dueDate?.trim()?.takeIf { it.isNotEmpty() },
                 startDate = startDate?.trim()?.takeIf { it.isNotEmpty() },
                 estimatedHours = estimatedHours,
+                customFields = customFields?.takeIf { it.isNotEmpty() },
             ),
         )
     }

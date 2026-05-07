@@ -161,6 +161,11 @@ data class AssignRequest(
     val userId: Int,
 )
 
+data class CustomFieldEdit(
+    val id: Int,
+    val value: String,
+)
+
 data class EditIssueRequest(
     val subject: String? = null,
     val description: String? = null,
@@ -169,6 +174,7 @@ data class EditIssueRequest(
     val dueDate: String? = null,
     val startDate: String? = null,
     val estimatedHours: Double? = null,
+    val customFields: List<CustomFieldEdit>? = null,
 )
 
 data class FavoriteResponse(
