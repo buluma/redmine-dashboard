@@ -1,6 +1,7 @@
 package com.converge.mobile.data
 
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -28,6 +29,20 @@ class ConvergeRepository(
 
     fun savedServerUrl(defaultUrl: String): String = tokenStore.serverUrl(defaultUrl)
 
+    fun savedIssueViews(): List<SavedIssueView> {
+        val json = tokenStore.savedViewsJson()?.takeIf { it.isNotBlank() } ?: return emptyList()
+        val type = Types.newParameterizedType(List::class.java, SavedIssueView::class.java)
+        return runCatching {
+            moshi.adapter<List<SavedIssueView>>(type).fromJson(json).orEmpty()
+        }.getOrElse { emptyList() }
+    }
+
+    fun saveIssueViews(views: List<SavedIssueView>) {
+        val type = Types.newParameterizedType(List::class.java, SavedIssueView::class.java)
+        val json = moshi.adapter<List<SavedIssueView>>(type).toJson(views)
+        tokenStore.saveViewsJson(json)
+    }
+
     suspend fun pair(serverUrl: String, redmineBaseUrl: String, redmineApiKey: String, deviceName: String?) {
         val cleanServerUrl = normalizeBaseUrl(serverUrl)
         val response = call {
@@ -46,18 +61,32 @@ class ConvergeRepository(
         clients.remove(cleanServerUrl)
     }
 
+    fun currentToken(): String? = tokenStore.token()
+
     suspend fun listIssues(
         serverUrl: String,
         search: String?,
         status: String? = null,
+        priority: String? = null,
+        project: String? = null,
+        searchMode: String = "local",
+        openOnly: Boolean = false,
+        favoritedOnly: Boolean = false,
         sort: String = "updated_desc",
         page: Int = 1,
+        pageSize: Int = 25,
     ): IssueListResponse = call {
         api(serverUrl).listIssues(
             search = search?.trim()?.takeIf { it.isNotEmpty() },
             status = status?.trim()?.takeIf { it.isNotEmpty() },
+            priority = priority?.trim()?.takeIf { it.isNotEmpty() },
+            project = project?.trim()?.takeIf { it.isNotEmpty() },
+            searchMode = searchMode,
+            openOnly = openOnly,
+            favoritedOnly = favoritedOnly,
             sort = sort,
             page = page,
+            pageSize = pageSize,
         )
     }
 
@@ -104,6 +133,10 @@ class ConvergeRepository(
 
     suspend fun listActivities(serverUrl: String): List<Activity> = call {
         api(serverUrl).listActivities().activities
+    }
+
+    suspend fun listNotifications(serverUrl: String): NotificationsResponse = call {
+        api(serverUrl).listNotifications()
     }
 
     suspend fun toggleFavorite(serverUrl: String, redmineIssueId: Int): Boolean = call {
@@ -160,6 +193,25 @@ class ConvergeRepository(
         api(serverUrl).deleteTimeEntry(redmineTimeEntryId)
     }
 
+    suspend fun updateTimeEntry(
+        serverUrl: String,
+        redmineTimeEntryId: Int,
+        hours: Double,
+        activityId: Int,
+        comment: String?,
+        spentOn: String?,
+    ) = call {
+        api(serverUrl).updateTimeEntry(
+            redmineTimeEntryId,
+            TimeEntryRequest(
+                hours = hours,
+                activityId = activityId,
+                comment = comment?.trim()?.takeIf { it.isNotEmpty() },
+                spentOn = spentOn?.trim()?.takeIf { it.isNotEmpty() },
+            ),
+        )
+    }
+
     suspend fun listInternalNotes(serverUrl: String, redmineIssueId: Int): List<InternalNote> = call {
         api(serverUrl).listInternalNotes(redmineIssueId.toString()).notes
     }
@@ -199,6 +251,25 @@ class ConvergeRepository(
 
     suspend fun removeGithubLink(serverUrl: String, redmineIssueId: Int, linkId: String) = call {
         api(serverUrl).removeGithubLink(redmineIssueId.toString(), linkId)
+    }
+
+    suspend fun listJournals(serverUrl: String, redmineIssueId: Int): List<Journal> = call {
+        api(serverUrl).listJournals(redmineIssueId.toString()).journals
+    }
+
+    suspend fun getCatalogs(serverUrl: String): CatalogResponse = call {
+        api(serverUrl).getCatalogs()
+    }
+
+    suspend fun createRelation(serverUrl: String, redmineIssueId: Int, issueToId: Int, relationType: String) = call {
+        api(serverUrl).createRelation(
+            redmineIssueId.toString(),
+            RelationCreateRequest(issueToId = issueToId, relationType = relationType),
+        )
+    }
+
+    suspend fun deleteRelation(serverUrl: String, redmineIssueId: Int, redmineRelationId: Int) = call {
+        api(serverUrl).deleteRelation(redmineIssueId.toString(), redmineRelationId)
     }
 
     suspend fun summarizeIssue(serverUrl: String, issueId: String): AiSummaryResponse = call {

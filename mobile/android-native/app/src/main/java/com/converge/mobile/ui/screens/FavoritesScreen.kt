@@ -11,10 +11,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -39,19 +41,24 @@ import com.converge.mobile.ui.components.StatusPill
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(state: MainUiState, viewModel: MainViewModel) {
-    val favorites = state.issues.filter { it.isFavorited }
+    val favorites = state.favoriteIssues
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Favorites", fontWeight = FontWeight.SemiBold) },
+                actions = {
+                    IconButton(onClick = viewModel::loadFavorites, enabled = !state.isLoading) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh favorites")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
         },
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             if (favorites.isEmpty()) {
-                EmptyState(if (state.issues.isEmpty()) "Load issues first to see favorites." else "No favorited issues yet.")
+                EmptyState("No favorited issues yet.")
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     item {

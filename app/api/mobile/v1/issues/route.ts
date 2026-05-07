@@ -54,10 +54,22 @@ export async function GET(request: Request) {
     }
 
     const q = parsed.data;
+
+    let favoritedFilter: Prisma.IssueWhereInput = {};
+    if (q.favoritedOnly) {
+      const favs = await prisma.favorite.findMany({
+        where: { userId: user.id },
+        select: { issueId: true },
+      });
+      favoritedFilter = { redmineIssueId: { in: favs.map((f) => f.issueId) } };
+    }
+
     const baseWhere: Prisma.IssueWhereInput = {
       userId: user.id,
+      ...favoritedFilter,
       ...(q.status ? { statusName: q.status } : {}),
       ...(q.priority ? { priority: q.priority } : {}),
+      ...(q.project ? { projectName: q.project } : {}),
     };
     const localSearchFilter: Prisma.IssueWhereInput = q.search
       ? {

@@ -1,6 +1,7 @@
-# Mobile/Web Surface Gap Audit
+# Mobile/Web Surface Gap Audit Checklist
 
 Audit date: 2026-05-07
+Last updated: 2026-05-07
 
 Scope:
 
@@ -8,144 +9,291 @@ Scope:
 - Native Android app under `mobile/android-native`.
 - Mobile API routes under `app/api/mobile/v1`.
 
-## Summary
+Legend:
 
-Native Android covers the core Redmine issue workflow: pairing, issue list, issue detail, comments, status changes, assignment, favorites, basic create/edit, time logging, internal notes, GitHub links, AI summary/categorization, token rotation, and logout.
+- `[x]` implemented in the current tree.
+- `[ ]` still missing.
+- `[ ] Partial` means some backend, model, or UI support exists, but web parity is not complete.
 
-It does not cover the broader web app product surface: dashboard widgets, saved views, board/Gantt modes, bulk actions, full reporting, AI chat/tool execution, personal/local tickets, ops/admin, Slack, WakaTime, webhooks, API docs, audit logs, push notifications, and offline sync queue UX.
+## Current Coverage
 
-## Surface Matrix
+- [x] Native Android covers core Redmine issue workflow: pairing, issue list, issue detail, comments, status changes, assignment, favorites, basic create/edit, time logging, internal notes, GitHub links, AI summary/categorization, token rotation, and logout.
+- [x] Native Android has P1 issue-list productivity improvements: dashboard stats, priority filters, explicit search mode selector, open-only toggle, compact density, quick preview, and local saved filter views.
+- [x] Native Android has a mobile notification inbox backed by a bearer-auth mobile API endpoint.
+- [ ] The broader web product surface is still not fully mobile: reports, AI chat/tool execution, ops/admin, Slack, WakaTime, webhooks, API docs, audit logs, push subscription, and offline write queue remain web-only or mostly absent.
 
-| Web surface | Web capability | Native Android | Gap |
-| --- | --- | --- | --- |
-| Login / session | Browser session login, Redmine connect/bootstrap | Mobile pairing with Redmine URL/API key, secure token, rotate, revoke | No server-side account login or bootstrap flow. |
-| Main issue dashboard | Stats, filters, issue table, quick peek, charts, widgets, refresh state | Issue list with search, status chips, sort, pull refresh, pagination | Lacks dashboard widgets, chart summary, quick peek, selectable rows, sync health detail. |
-| Search | Local, hybrid, FTS, AI search | Search query with local mode from repository defaults | No explicit search mode selector, FTS, or AI search entry. |
-| Advanced filters | Status IDs, priority IDs, assigned-to-me, GitHub links, attachments, due date, updated-after | Coarse status chips only | Missing advanced mobile filters. |
-| Saved views | Save/apply/delete/reorder filter views | Not present | Requires mobile UX plus bearer-compatible saved-view API use. |
-| View modes | List, Kanban board, Gantt chart | List only | Board and Gantt are web-only. |
-| Bulk actions | Multi-select and bulk status update | Not present | Needs selection model and mobile bulk-status endpoint/client. |
-| Issue create | Project picker, status picker, priority picker, due date | Create dialog with subject, numeric project ID, description, numeric priority ID, due date | Should use project/priority/status catalogs instead of numeric ID fields. |
-| Issue detail overview | Hero, metadata, markdown, breadcrumbs, custom fields, parent/children, attachments, relations, GitHub links | Overview/Notes/Time/Links tabs with core metadata and markdown | Lacks breadcrumbs, custom fields, done ratio, category, and attachment previews/actions. |
-| Markdown description | Redmine text normalization, GFM, code highlighting/collapse, attachment image resolution, external links | Custom Compose parser, textile sanitization | Still lacks code highlighting, GFM tables/task lists, and authenticated attachment image rendering. |
-| Status changes | Allowed statuses, transition UI, comments | Allowed-status bottom sheet | No transition comment/notes in same action. |
-| Comments/journals | Journal display and comment posting | Post-only; existing journals not shown | Cannot read existing comments or journal history. |
-| Assignment | Assignable users and assign action | Assign sheet | Lacks search/filter for large user lists. |
-| Favorites | Favorite toggle and favorites endpoint | Toggle from detail; Favorites tab filters loaded issues | Favorites tab not independently loaded — misses favorites outside current list page/filter. |
-| Time tracking | List/create/update/delete time entries, activity catalog | List/create/delete time entries | No edit/update UI. |
-| Internal notes | List/create/delete/edit internal notes | List/create internal notes | No delete or edit. |
-| GitHub links | List/add/remove/open issue/PR links | List/add/remove/open URL | Entry is manual; no URL parse/validate. |
-| Attachments | List, upload, download, image/PDF previews, attachment-aware markdown | Filename + size display only | No upload/download/open action wired to authenticated mobile endpoint. |
-| Relations | List, create, delete Redmine relations | Display only | Retrofit/repository/UI do not wire mobile relation endpoints. |
-| Children / hierarchy | Children, parent, breadcrumbs, local/Redmine identifiers | Children list only | No navigable breadcrumbs/parent/child drilldown. |
-| Personal tickets | Local-only ticket board and create flow | Local issues visible but create/edit/comment/status blocked | No personal-ticket surface or local issue creation/editing. |
-| AI issue actions | Summary, categorization, stale summaries, status indicator | Summary and categorization actions | No issue chat, stale summary queue, AI status, or AI history. |
-| AI chat | Chat page with tool calls and confirmation before actions | Not present | No mobile chat/tool execution surface. |
-| Reports | Aggregate charts, trends, filters, drilldowns, time export | Not present | Web-only. |
-| Notifications | Notifications panel, push subscribe API, sync notifications | Offline network banner only | No push subscription, notification inbox, or background sync notification handling. |
-| Offline/PWA | Offline page, service worker, offline action queue hooks | Network callback banner only | No cached issue DB or queued writes. |
-| Ops dashboard | Health, sync status/jobs, mobile token admin, logs, manual sync controls | Settings: token rotate/logout/server info only | Web-only admin/ops surface. |
-| Users/RBAC | Admin user management and role changes | Not present | Web-only. |
-| Audit logs | Audit log page | Not present | Web-only. |
-| Slack | Slack message browser, threads, test notification | Not present | Web-only. |
-| WakaTime | Coding stats dashboard | Not present | Web-only. |
-| Webhooks | Subscription management, test deliveries, delivery log | Not present | Web-only. |
-| Heimdall/logs | Log views, refresh, dashboard | Not present | Web-only. |
-| API docs/OpenAPI | API docs route and OpenAPI JSON | Not present | Web-only. |
-| Settings/theme/i18n | Theme, language, locale-aware formatting | Server/device/token/logout only | Lacks theme/language/account preferences. |
-| Error telemetry | Sentry pages/API and logging providers | Sentry configured, not exposed in UX | Mobile runtime error reporting not surfaced to user. |
+## Surface Checklist
 
-## Field-Level Gaps (Android Native — May 2026)
+### Login / Session
 
-Gaps identified by comparing `app/issues/[id]/page.tsx` + `app/page.tsx` against all Android screens.
+- [x] Pair Android device with Converge using Redmine URL/API key.
+- [x] Store mobile token securely.
+- [x] Rotate and revoke mobile token.
+- [ ] Add server-side account login/bootstrap equivalent to web session login.
 
-### Fields missing from `ApiModels.kt` — server returns them but Android ignores
+### Main Issue Dashboard
 
-| Field | Type | Web displays | Priority |
-|---|---|---|---|
-| `doneRatio` | `Int` (0–100) | Header snapshot, table column, overview card, peek sidebar | P0 |
-| `customFieldsJson` | `List<CustomField>` | Type-aware display + edit in metadata card | P1 |
-| `parentIssueId` / `parentIssueLabel` | `Int?` / `String?` | Breadcrumb navigation chain | P1 |
-| `categoryName` / `categoryId` | `String?` / `Int?` | Metadata card read + edit dropdown | P1 |
+- [x] Issue list with search, status chips, sort, pull refresh, and pagination.
+- [x] Dashboard stat strip for loaded/open/due soon/overdue/favorites.
+- [x] Quick preview dialog from issue list rows.
+- [x] Compact/comfortable list density toggle.
+- [ ] Add web-level dashboard widgets/charts.
+- [ ] Add selectable rows and bulk dashboard actions.
+- [ ] Add sync health detail in the mobile dashboard.
 
-### Fields in model but displayed incompletely
+### Search And Filters
 
-| Field | Gap |
-|---|---|
-| `startDate` | Present in edit form only; not shown in `IssueKeyFacts` read view |
-| `dueDate` | Shown in `IssueKeyFacts` but no urgency colouring (overdue = red, soon = amber) |
-| `redmineIssueId` | Displayed as plain text `#N`; not a tappable link to external Redmine URL |
-| `children[].id` | Shown as `#id subject` text; not tappable / no drilldown |
+- [x] Text search.
+- [x] Explicit `local` / `hybrid` / `remote` search mode selector.
+- [x] Status filter chips.
+- [x] Priority filter chips.
+- [x] Open-only toggle.
+- [x] Add project filter.
+- [ ] Add assigned-to-me filter.
+- [ ] Add GitHub-link/attachment filters.
+- [ ] Add due-date and updated-after filters.
+- [ ] Add mobile FTS search entry backed by bearer auth.
+- [ ] Add mobile AI search entry backed by bearer auth.
 
-### Actions present on web, absent on Android
+### Saved Views
 
-| Action | Web location | Priority |
-|---|---|---|
-| Delete internal note | ✕ button per note in Notes tab | P0 |
-| View journals / comment history | History + Notes tabs (all journals with notes) | P0 |
-| Properties / change-log tab | Tab showing field changes per journal | P1 |
-| Delete local issue | Delete button (local-only issues) | P1 |
-| Tap attachment to open/download | Authenticated download via mobile endpoint | P0 (existing backend) |
+- [x] Save current mobile filters/search/sort/density as local on-device views.
+- [x] Apply saved mobile views.
+- [x] Delete saved mobile views.
+- [ ] Sync saved views with the web saved-view API.
+- [ ] Reorder saved views.
+- [ ] Support default/shared saved views.
 
-### Issue list — per-row display gaps
+### View Modes
 
-| Gap | Web behaviour |
-|---|---|
-| No urgency pill | `overdue` / `soon` / `due-today` badge next to subject |
-| No done ratio column | Optional column showing 0–100 % |
-| No priority filter chip | Dropdown filter alongside status chips |
-| No project filter chip | Dropdown filter above chip row |
+- [x] List mode.
+- [ ] Kanban board mode.
+- [ ] Gantt mode.
 
----
+### Bulk Actions
+
+- [ ] Multi-select issues.
+- [ ] Bulk status update.
+- [ ] Bulk assignment or other batch actions.
+
+### Issue Create / Edit
+
+- [x] Create issue from Android.
+- [x] Edit subject/description/priority/due/start/estimate from Android.
+- [x] Mobile catalogs endpoint exists for statuses/priorities/trackers/projects.
+- [ ] Partial Replace numeric project/priority/status entry in Android create/edit forms with catalog pickers.
+- [x] Add project catalog support for create form.
+- [ ] Add tracker/category/custom-field editing.
+
+### Issue Detail Fields
+
+- [x] Show hero metadata, status, priority, tracker, project, source, done ratio, spent/estimate, due/start dates, author, assignee.
+- [x] Show category name when present.
+- [x] Show parent issue ID/label when present.
+- [x] Make Redmine issue ID tappable to external Redmine issue URL.
+- [x] Show parent/children/relations as navigable hierarchy.
+- [ ] Show full breadcrumb chain.
+- [x] Show custom fields.
+- [ ] Add custom-field editing.
+
+### Markdown Description
+
+- [x] Render markdown-ish description instead of plain text.
+- [x] Sanitize/normalize common Redmine textile fragments.
+- [x] Add full GFM table support.
+- [x] Add task-list support.
+- [x] Add code highlighting.
+- [x] Render authenticated attachment images inline.
+
+### Status Changes
+
+- [x] Show allowed status transitions.
+- [x] Change status from Android.
+- [ ] Add transition comment/notes in the same status-change action.
+- [ ] Add properties/change-log view for status and field changes.
+
+### Comments / Journals
+
+- [x] Post Redmine comments from Android.
+- [x] Mobile journals endpoint exists.
+- [x] Android repository/API models can fetch journals.
+- [x] Display existing Redmine journals/comment history in Android UI.
+- [ ] Display field-change journals separately from note/comment journals.
+
+### Assignment
+
+- [x] Fetch assignable users.
+- [x] Assign issue.
+- [ ] Search/filter large assignable-user lists.
+
+### Favorites
+
+- [x] Toggle favorite from issue detail.
+- [x] Favorites tab exists.
+- [x] Load favorites independently from current list page/filter.
+
+### Time Tracking
+
+- [x] List time entries.
+- [x] Create time entries.
+- [x] Delete time entries.
+- [x] Android API/repository has update-time-entry plumbing.
+- [x] Add edit/update time-entry UI.
+
+### Internal Notes
+
+- [x] List internal notes.
+- [x] Create internal notes.
+- [x] Delete internal notes.
+- [ ] Edit internal notes.
+
+### GitHub Links
+
+- [x] List GitHub links.
+- [x] Add GitHub links.
+- [x] Remove GitHub links.
+- [x] Open GitHub link URL.
+- [ ] Parse and validate GitHub URLs into repo/issue/PR fields automatically.
+
+### Attachments
+
+- [x] List attachment filename and size.
+- [x] Mobile authenticated download endpoint exists.
+- [x] Tap attachment to authenticated open/download in Android.
+- [ ] Upload attachments from Android.
+- [ ] Show image/PDF previews.
+- [ ] Partial Resolve attachment references from markdown descriptions.
+
+### Relations / Hierarchy
+
+- [x] List relations.
+- [x] Navigate to related issue targets.
+- [x] Mobile relation create/delete endpoints exist.
+- [x] Android API/repository has relation create/delete plumbing.
+- [x] Add relation create/delete UI.
+- [x] Add relation type picker.
+
+### Personal / Local Tickets
+
+- [ ] Dedicated personal-ticket surface.
+- [ ] Create local-only ticket from Android.
+- [ ] Edit local-only ticket from Android.
+- [ ] Comment/status local-only tickets from Android.
+- [ ] Delete local-only ticket from Android.
+
+### AI
+
+- [x] AI summary action.
+- [x] AI categorization action.
+- [ ] AI status indicator.
+- [ ] Stale summary queue/history.
+- [ ] Issue AI chat.
+- [ ] General AI chat with confirmed tool execution.
+
+### Notifications
+
+- [x] Mobile bearer-auth notifications endpoint.
+- [x] Android Alerts tab/inbox.
+- [x] Tap issue notification to open the issue.
+- [ ] Push subscription from Android.
+- [ ] Background notification delivery.
+- [ ] Read/unread persistence.
+
+### Offline / Sync Queue
+
+- [x] Network connectivity banner.
+- [ ] Local issue cache for offline detail/list browsing.
+- [ ] Queued offline writes for comments/status/time/favorites.
+- [ ] Conflict handling after reconnect.
+
+### Ops / Admin / Integrations
+
+- [ ] Reports dashboard.
+- [ ] Ops health/sync jobs/logs.
+- [ ] Mobile token admin beyond current-device rotate/revoke.
+- [ ] Users/RBAC management.
+- [ ] Audit logs.
+- [ ] Slack message/thread surface.
+- [ ] WakaTime stats.
+- [ ] Webhook subscription/delivery surface.
+- [ ] Heimdall/logs surface.
+- [ ] API docs/OpenAPI surface.
+
+### Settings / Preferences / Telemetry
+
+- [x] Server URL/device/token/logout settings.
+- [x] Sentry Gradle plugin is configured for Android.
+- [ ] Theme preference.
+- [ ] Language/locale preference.
+- [ ] Account/profile settings.
+- [ ] User-facing runtime error reporting/status.
 
 ## Native Android Backlog
 
-P0:
+### P0
 
-- Replace numeric create/edit inputs with mobile catalog endpoints for projects, priorities, statuses, trackers, categories, and activities.
-- Add `doneRatio` to `ApiModels.kt` and display in `IssueHero` + `IssueKeyFacts` (progress bar or `SmallStat`).
-- Add journal/comment history view so existing Redmine comments are readable (not just postable).
-- Add internal note delete action per note row.
-- Add urgency/overdue colouring to `dueDate` in list rows and detail header.
-- Add independent Favorites loading so the tab is not limited to the current issue page.
-- Wire attachment tap → authenticated open/download via existing mobile attachment endpoint.
-- Wire relation create/delete UI to existing mobile relation endpoints.
-- Add time-entry edit UI.
-- Add local/personal ticket create/edit/detail support, or clearly hide local-only actions until supported.
-- Add markdown parity for tables, task lists, collapsible Redmine sections, code blocks, and attachment images.
+- [x] Add `doneRatio` to Android issue model and display in hero/key facts.
+- [x] Add internal-note delete action.
+- [x] Add urgency/overdue coloring to due dates.
+- [x] Add mobile catalog endpoint for statuses/priorities/trackers/projects.
+- [ ] Partial Replace numeric create/edit fields with catalog-backed pickers.
+- [x] Add journal/comment history UI.
+- [x] Add independent Favorites loading.
+- [x] Wire attachment tap to authenticated open/download.
+- [x] Add relation create/delete UI.
+- [x] Add time-entry edit UI.
+- [ ] Add local/personal ticket create/edit/detail support.
+- [x] Add markdown parity for tables, task lists, code blocks, and attachment images.
 
-P1:
+### P1
 
-- Add `parentIssueId`, `categoryName/Id`, `customFieldsJson` to `ApiModels.kt` and display/edit them.
-- Add `startDate` to `IssueKeyFacts` read view (already editable).
-- Make issue ID (`#N`) a tappable external link to Redmine base URL.
-- Add properties/change-log tab showing per-journal field deltas.
-- Add project filter and priority filter chips to issue list.
-- Add urgency pill to issue list rows (`overdue` / `soon` / `due-today`).
-- Add advanced filters, saved views, explicit search mode selector, and FTS/AI search entry points.
-- Add issue list density controls, dashboard stats, and quick peek/preview equivalents for mobile.
-- Add navigable hierarchy: parent, breadcrumbs, children, and related issue drilldown.
-- Add notification inbox and push subscription flow.
-- Add offline cache plus queued writes for comments/status/time/favorites.
+- [x] Add `parentIssueId` / `parentIssueLabel` to Android issue model.
+- [x] Add `categoryName` to Android issue model and detail display.
+- [x] Add `startDate` to read view.
+- [x] Make issue ID tappable to external Redmine URL.
+- [x] Add priority filter chips.
+- [x] Add explicit search mode selector.
+- [x] Add saved views locally on Android.
+- [x] Add issue list density controls.
+- [x] Add dashboard stats.
+- [x] Add quick preview dialog.
+- [x] Add navigable parent/children/relation drilldown.
+- [x] Add mobile notification inbox.
+- [ ] Partial Add `customFieldsJson` to Android issue model and display/edit it.
+- [ ] Add properties/change-log tab.
+- [x] Add project filter.
+- [ ] Add FTS/AI search entry points.
+- [ ] Add push subscription flow.
+- [ ] Add offline cache and queued writes.
 
-P2:
+### P2
 
-- Add board/Gantt mobile views only if they can be made usable on small screens.
-- Add AI chat with confirmed tool execution.
-- Add mobile reports with a compact KPI/drilldown layout.
-- Add admin/ops surfaces: health, sync jobs, token admin, logs, users/RBAC, audit logs.
-- Add integrations: Slack, WakaTime, webhooks, Heimdall.
+- [ ] Add board/Gantt mobile views if useful on small screens.
+- [ ] Add AI chat with confirmed tool execution.
+- [ ] Add mobile reports with compact KPI/drilldown layout.
+- [ ] Add admin/ops surfaces: health, sync jobs, token admin, logs, users/RBAC, audit logs.
+- [ ] Add integrations: Slack, WakaTime, webhooks, Heimdall.
 
-## API / Backend Gaps
+## API / Backend Checklist
 
-- Mobile has issue-focused endpoints but not mobile-specific saved views, reports, notifications, projects/catalog bootstrap, personal tickets, chat, ops, Slack, WakaTime, webhooks, or audit logs.
-- Some web APIs are session-cookie oriented. Mobile needs bearer-token access or mobile-specific wrappers before native clients can call them safely.
-- Mobile issue create needs catalog endpoints to avoid numeric ID entry.
-- Mobile attachment download exists, but clients need an authenticated in-app downloader/opener because external browsers will not include the bearer token.
-- AI summary/categorization endpoints are called from native Android through general `/api/ai/*` routes. Confirm those routes consistently accept mobile bearer auth, or add `/api/mobile/v1/ai/*` wrappers.
+- [x] Issue-focused mobile API exists.
+- [x] Mobile catalogs endpoint exists for statuses/priorities/trackers/projects.
+- [x] Mobile journals endpoint exists.
+- [x] Mobile notifications endpoint exists.
+- [x] Mobile attachment download endpoint exists.
+- [x] Mobile relation create/delete endpoints exist.
+- [ ] Mobile saved-view API wrappers with bearer auth.
+- [ ] Mobile FTS/AI search wrappers with bearer auth.
+- [ ] Mobile reports endpoint.
+- [ ] Mobile personal-ticket endpoints.
+- [ ] Mobile AI chat endpoints.
+- [ ] Mobile ops/admin endpoints.
+- [ ] Mobile Slack/WakaTime/webhook/Heimdall endpoints.
+- [x] Android-safe attachment opener/downloader that carries bearer auth.
+- [ ] Confirm `/api/ai/summarize` and `/api/ai/categorize` consistently accept mobile bearer auth, or add `/api/mobile/v1/ai/*` wrappers.
 
 ## Suggested Sequencing
 
-1. Finish issue-workflow parity: catalogs, attachments, relations, favorite list, time edit, local tickets.
-2. Add mobile productivity parity: saved views, advanced filters, notifications, offline queue.
+1. Finish remaining P0 issue-workflow parity: catalog pickers, journals UI, independent favorites, attachments, relations UI, time edit, local tickets.
+2. Finish P1 productivity parity: custom fields, project filter, change log, FTS/AI search wrappers, push, offline queue.
 3. Add high-value web-only modules: AI chat, reports, ops health.

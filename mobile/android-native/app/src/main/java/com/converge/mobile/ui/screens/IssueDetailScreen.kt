@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
@@ -75,6 +76,9 @@ import com.converge.mobile.data.AssignableUser
 import com.converge.mobile.data.GithubLink
 import com.converge.mobile.data.InternalNote
 import com.converge.mobile.data.Issue
+import com.converge.mobile.data.IssueAttachment
+import com.converge.mobile.data.IssueRelation
+import com.converge.mobile.data.Journal
 import com.converge.mobile.data.TimeEntry
 import com.converge.mobile.data.displayId
 import com.converge.mobile.data.DueUrgency
@@ -83,6 +87,7 @@ import com.converge.mobile.data.parseDueUrgency
 import com.converge.mobile.ui.MainUiState
 import com.converge.mobile.ui.MainViewModel
 import com.converge.mobile.ui.MarkdownDescription
+import com.converge.mobile.ui.MarkdownImageSource
 import com.converge.mobile.ui.components.AssigneeAvatar
 import com.converge.mobile.ui.components.ErrorBanner
 import com.converge.mobile.ui.components.FactRow
@@ -95,10 +100,12 @@ import com.converge.mobile.ui.components.Section
 import com.converge.mobile.ui.components.SmallStat
 import com.converge.mobile.ui.components.StatusPill
 import kotlinx.coroutines.launch
+import java.net.URLDecoder
 
 private enum class DetailTab(val label: String) {
     OVERVIEW("Overview"),
     NOTES("Notes"),
+    HISTORY("History"),
     TIME("Time"),
     LINKS("Links"),
 }
@@ -140,6 +147,7 @@ fun IssueDetailScreen(state: MainUiState, viewModel: MainViewModel) {
     if (state.showTimeDialog) TimeEntryDialog(state, viewModel)
     if (state.showInternalNoteDialog) InternalNoteDialog(state, viewModel)
     if (state.showGithubDialog) GithubLinkDialog(state, viewModel)
+    if (state.showRelationDialog) RelationDialog(state, viewModel)
     if (state.showAssignSheet) {
         AssignBottomSheet(
             users = state.assignableUsers,
@@ -193,6 +201,7 @@ fun IssueDetailScreen(state: MainUiState, viewModel: MainViewModel) {
                 when (DetailTab.entries[page]) {
                     DetailTab.OVERVIEW -> OverviewContent(issue, state, viewModel, onChangeStatus = { showStatusSheet = true })
                     DetailTab.NOTES -> NotesContent(state, viewModel)
+                    DetailTab.HISTORY -> HistoryContent(state, viewModel)
                     DetailTab.TIME -> TimeContent(issue, state, viewModel)
                     DetailTab.LINKS -> LinksContent(issue, state, viewModel)
                 }
@@ -214,6 +223,7 @@ private fun OverviewContent(issue: Issue, state: MainUiState, viewModel: MainVie
         IssueHero(issue)
         IssueActionGrid(issue, state, viewModel)
         IssueKeyFacts(issue)
+        CustomFieldsSection(issue)
         StatusSummary(issue, state.isLoading, onChange = onChangeStatus)
 
         Section("Description") {
@@ -221,7 +231,7 @@ private fun OverviewContent(issue: Issue, state: MainUiState, viewModel: MainVie
             if (description == null) {
                 Text("No description provided.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-                MarkdownDescription(description)
+                MarkdownDescription(description, imageResolver = markdownImageResolver(issue, viewModel))
             }
         }
 
@@ -249,6 +259,65 @@ private fun OverviewContent(issue: Issue, state: MainUiState, viewModel: MainVie
 
         AiSection(state)
         Spacer(Modifier.height(80.dp))
+    }
+}
+
+@Composable
+private fun HistoryContent(state: MainUiState, viewModel: MainViewModel) {
+    val issue = state.selectedIssue
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (state.journals.isEmpty()) {
+            Spacer(Modifier.height(24.dp))
+            Text(
+                "No Redmine history found.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
+        } else {
+            state.journals.forEach { journal ->
+                JournalCard(
+                    journal = journal,
+                    imageResolver = issue?.let { markdownImageResolver(it, viewModel) },
+                )
+            }
+        }
+        Spacer(Modifier.height(80.dp))
+    }
+}
+
+@Composable
+private fun JournalCard(journal: Journal, imageResolver: ((String) -> MarkdownImageSource?)? = null) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
+                    AssigneeAvatar(journal.author ?: "Unknown")
+                    Text(journal.author ?: "Unknown", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                }
+                Text(journal.createdOnRemote.formatDate(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            val notes = journal.notes?.takeIf { it.isNotBlank() }
+            if (notes == null) {
+                Text("Field update", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                MarkdownDescription(notes, imageResolver = imageResolver)
+            }
+        }
     }
 }
 
@@ -334,7 +403,11 @@ private fun TimeContent(issue: Issue, state: MainUiState, viewModel: MainViewMod
             Text("No time entries.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.align(Alignment.CenterHorizontally))
         } else {
             issue.timeEntries.forEach { entry ->
-                TimeEntryCard(entry, onDelete = entry.redmineTimeEntryId?.let { id -> { viewModel.deleteTimeEntry(id) } })
+                TimeEntryCard(
+                    entry = entry,
+                    onEdit = entry.redmineTimeEntryId?.let { { viewModel.openEditTimeEntry(entry) } },
+                    onDelete = entry.redmineTimeEntryId?.let { id -> { viewModel.deleteTimeEntry(id) } },
+                )
             }
         }
         Spacer(Modifier.height(80.dp))
@@ -342,7 +415,7 @@ private fun TimeContent(issue: Issue, state: MainUiState, viewModel: MainViewMod
 }
 
 @Composable
-private fun TimeEntryCard(entry: TimeEntry, onDelete: (() -> Unit)?) {
+private fun TimeEntryCard(entry: TimeEntry, onEdit: (() -> Unit)?, onDelete: (() -> Unit)?) {
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -357,8 +430,13 @@ private fun TimeEntryCard(entry: TimeEntry, onDelete: (() -> Unit)?) {
                 Text("${entry.hours}h — ${entry.activityName ?: "Activity"}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                 Text("${entry.spentOn}${entry.comments?.let { "  ·  $it" } ?: ""}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
-            onDelete?.let {
-                TextButton(onClick = it) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+                onEdit?.let {
+                    TextButton(onClick = it) { Text("Edit") }
+                }
+                onDelete?.let {
+                    TextButton(onClick = it) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }
             }
         }
     }
@@ -374,6 +452,43 @@ private fun LinksContent(issue: Issue, state: MainUiState, viewModel: MainViewMo
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        Section("Hierarchy") {
+            Button(
+                onClick = viewModel::openRelationDialog,
+                enabled = issue.redmineIssueId != null,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Default.AccountTree, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Add Relation")
+            }
+            issue.parentIssueId?.let { parentId ->
+                TextButton(onClick = { viewModel.selectIssueById(parentId) }) {
+                    Text("Parent #$parentId ${issue.parentIssueLabel ?: ""}", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+            if (issue.children.isNotEmpty()) {
+                Text("Children", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                issue.children.forEach { child ->
+                    TextButton(onClick = { viewModel.selectIssueById(child.id) }) {
+                        Text("#${child.id} ${child.subject}", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+            if (issue.relations.isEmpty()) {
+                Text("No issue relations.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                Text("Relations", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                issue.relations.forEach { relation ->
+                    RelationRow(
+                        relation = relation,
+                        onOpen = { viewModel.selectIssueById(relation.targetIssueId) },
+                        onDelete = { viewModel.deleteRelation(relation) },
+                    )
+                }
+            }
+        }
+
         Section("GitHub Links") {
             Button(
                 onClick = viewModel::openGithubDialog,
@@ -392,32 +507,10 @@ private fun LinksContent(issue: Issue, state: MainUiState, viewModel: MainViewMo
             }
         }
 
-        if (issue.children.isNotEmpty()) {
-            Section("Child Issues") {
-                issue.children.forEach { child ->
-                    Text("#${child.id} ${child.subject}", style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-        }
-
         if (issue.attachments.isNotEmpty()) {
             Section("Attachments") {
                 issue.attachments.forEach { attachment ->
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Column {
-                            Text(attachment.filename, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${attachment.filesize / 1024} KB", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-            }
-        }
-
-        if (issue.relations.isNotEmpty()) {
-            Section("Relations") {
-                issue.relations.forEach { relation ->
-                    Text("${relation.relationType} #${relation.targetIssueId}", style = MaterialTheme.typography.bodySmall)
+                    AttachmentRow(attachment, onDownload = { viewModel.downloadAttachment(attachment) })
                 }
             }
         }
@@ -431,6 +524,84 @@ private fun LinksContent(issue: Issue, state: MainUiState, viewModel: MainViewMo
 
         Spacer(Modifier.height(80.dp))
     }
+}
+
+@Composable
+private fun RelationRow(relation: IssueRelation, onOpen: () -> Unit, onDelete: () -> Unit) {
+    Card(
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("${relation.relationType} #${relation.targetIssueId}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                relation.delay?.let { Text("Delay: $it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
+            TextButton(onClick = onOpen) { Text("Open") }
+            IconButton(onClick = onDelete, enabled = relation.redmineRelationId > 0) {
+                Icon(Icons.Default.Delete, contentDescription = "Remove relation", tint = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttachmentRow(attachment: IssueAttachment, onDownload: () -> Unit) {
+    Card(
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onDownload),
+    ) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(attachment.filename, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${attachment.filesize / 1024} KB${attachment.contentType?.let { " · $it" } ?: ""}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            TextButton(onClick = onDownload) { Text("Download") }
+        }
+    }
+}
+
+private fun markdownImageResolver(issue: Issue, viewModel: MainViewModel): (String) -> MarkdownImageSource? = { destination ->
+    val cleanDestination = destination.trim().trim('<', '>')
+    val attachment = issue.attachments.firstOrNull { attachment ->
+        isImageAttachment(attachment) && attachmentMatchesDestination(attachment, cleanDestination)
+    }
+    if (attachment != null) {
+        viewModel.attachmentUrl(issue, attachment)?.let { url ->
+            MarkdownImageSource(
+                url = url,
+                bearerToken = viewModel.currentBearerToken(),
+                description = attachment.filename,
+            )
+        }
+    } else if (cleanDestination.startsWith("http://") || cleanDestination.startsWith("https://")) {
+        MarkdownImageSource(url = cleanDestination)
+    } else {
+        null
+    }
+}
+
+private fun isImageAttachment(attachment: IssueAttachment): Boolean =
+    attachment.contentType?.startsWith("image/") == true ||
+        attachment.filename.endsWith(".png", ignoreCase = true) ||
+        attachment.filename.endsWith(".jpg", ignoreCase = true) ||
+        attachment.filename.endsWith(".jpeg", ignoreCase = true) ||
+        attachment.filename.endsWith(".gif", ignoreCase = true) ||
+        attachment.filename.endsWith(".webp", ignoreCase = true) ||
+        attachment.filename.endsWith(".bmp", ignoreCase = true)
+
+private fun attachmentMatchesDestination(attachment: IssueAttachment, destination: String): Boolean {
+    val withoutFragment = destination.substringBefore('#')
+    val withoutQuery = withoutFragment.substringBefore('?')
+    val decoded = runCatching { URLDecoder.decode(withoutQuery, "UTF-8") }.getOrDefault(withoutQuery)
+    val filename = decoded.substringAfterLast('/').substringAfterLast('\\')
+    return decoded == attachment.redmineAttachmentId.toString() ||
+        decoded.contains("/${attachment.redmineAttachmentId}/") ||
+        decoded.endsWith("/${attachment.redmineAttachmentId}") ||
+        filename.equals(attachment.filename, ignoreCase = true)
 }
 
 @Composable
@@ -543,6 +714,8 @@ private fun IssueKeyFacts(issue: Issue) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             FactRow(Icons.Default.Person, "Assignee", issue.assignedToName ?: "Unassigned")
             FactRow(Icons.Default.Person, "Author", issue.authorName ?: "Unknown")
+            issue.categoryName?.takeIf { it.isNotBlank() }?.let { FactRow(Icons.Default.Info, "Category", it) }
+            issue.parentIssueId?.let { FactRow(Icons.Default.AccountTree, "Parent", "#$it ${issue.parentIssueLabel ?: ""}") }
             FactRow(Icons.Default.CalendarToday, "Due", issue.dueDate?.formatDate() ?: "No due date", valueColor = dueDateColor)
             issue.startDate?.let { FactRow(Icons.Default.CalendarToday, "Start", it.formatDate()) }
             FactRow(Icons.Default.Refresh, "Updated", (issue.lastActivityAt ?: issue.updatedOnRemote)?.formatDate() ?: "Unknown")
@@ -552,6 +725,21 @@ private fun IssueKeyFacts(issue: Issue) {
                 issue.doneRatio?.let { ratio ->
                     SmallStat("Done", "$ratio%", modifier = Modifier.weight(1f))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CustomFieldsSection(issue: Issue) {
+    val fields = issue.customFieldsJson.filter { field ->
+        field.name.isNotBlank() && !field.value.isNullOrBlank()
+    }
+    if (fields.isEmpty()) return
+    Section("Custom Fields") {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            fields.forEach { field ->
+                FactRow(Icons.Default.Info, field.name, field.value.orEmpty())
             }
         }
     }
@@ -671,7 +859,8 @@ private fun EditIssueDialog(state: MainUiState, viewModel: MainViewModel) {
 
 @Composable
 private fun TimeEntryDialog(state: MainUiState, viewModel: MainViewModel) {
-    FormDialog(title = "Log Time", onDismiss = viewModel::hideTimeDialog, onConfirm = viewModel::createTimeEntry, confirmLabel = "Log") {
+    val editing = state.editingTimeEntryId != null
+    FormDialog(title = if (editing) "Edit Time" else "Log Time", onDismiss = viewModel::hideTimeDialog, onConfirm = viewModel::createTimeEntry, confirmLabel = if (editing) "Save" else "Log") {
         FormTextField("Hours", state.timeHours, viewModel::updateTimeHours, numeric = true)
         FormTextField("Activity ID", state.timeActivityId, viewModel::updateTimeActivityId, numeric = true)
         if (state.activities.isNotEmpty()) {
@@ -679,6 +868,25 @@ private fun TimeEntryDialog(state: MainUiState, viewModel: MainViewModel) {
         }
         FormTextField("Spent on (YYYY-MM-DD)", state.timeSpentOn, viewModel::updateTimeSpentOn)
         FormTextField("Comment", state.timeComment, viewModel::updateTimeComment, minLines = 2)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RelationDialog(state: MainUiState, viewModel: MainViewModel) {
+    val relationTypes = listOf("relates", "duplicates", "duplicated", "blocks", "blocked", "precedes", "follows", "copied_to", "copied_from")
+    FormDialog(title = "Add Relation", onDismiss = viewModel::hideRelationDialog, onConfirm = viewModel::createRelation, confirmLabel = "Add") {
+        FormTextField("Issue ID", state.relationTargetId, viewModel::updateRelationTargetId, numeric = true)
+        Text("Relation type", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            relationTypes.forEach { type ->
+                androidx.compose.material3.FilterChip(
+                    selected = state.relationType == type,
+                    onClick = { viewModel.updateRelationType(type) },
+                    label = { Text(type, style = MaterialTheme.typography.labelSmall) },
+                )
+            }
+        }
     }
 }
 

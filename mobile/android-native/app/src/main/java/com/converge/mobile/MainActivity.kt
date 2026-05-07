@@ -23,12 +23,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -57,6 +60,7 @@ import com.converge.mobile.ui.components.NetworkBanner
 import com.converge.mobile.ui.screens.FavoritesScreen
 import com.converge.mobile.ui.screens.IssueDetailScreen
 import com.converge.mobile.ui.screens.IssueListScreen
+import com.converge.mobile.ui.screens.NotificationsScreen
 import com.converge.mobile.ui.screens.SettingsScreen
 import com.converge.mobile.ui.theme.ConvergeTheme
 
@@ -136,6 +140,12 @@ private fun MainScaffold(state: MainUiState, viewModel: MainViewModel) {
                         label = { Text("Favorites") },
                     )
                     NavigationBarItem(
+                        selected = state.currentTab == MainTab.NOTIFICATIONS,
+                        onClick = { viewModel.switchTab(MainTab.NOTIFICATIONS) },
+                        icon = { Icon(Icons.Default.Notifications, contentDescription = null) },
+                        label = { Text("Alerts") },
+                    )
+                    NavigationBarItem(
                         selected = state.currentTab == MainTab.SETTINGS,
                         onClick = { viewModel.switchTab(MainTab.SETTINGS) },
                         icon = { Icon(Icons.Default.Settings, contentDescription = null) },
@@ -144,11 +154,19 @@ private fun MainScaffold(state: MainUiState, viewModel: MainViewModel) {
                 }
             }
         },
+        floatingActionButton = {
+            if (state.currentTab == MainTab.ISSUES) {
+                FloatingActionButton(onClick = viewModel::showCreateIssueDialog) {
+                    Icon(Icons.Default.Add, contentDescription = "New Issue")
+                }
+            }
+        },
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             when (state.currentTab) {
                 MainTab.ISSUES -> IssueListScreen(state, viewModel)
                 MainTab.FAVORITES -> FavoritesScreen(state, viewModel)
+                MainTab.NOTIFICATIONS -> NotificationsScreen(state, viewModel)
                 MainTab.SETTINGS -> SettingsScreen(state, viewModel)
             }
         }

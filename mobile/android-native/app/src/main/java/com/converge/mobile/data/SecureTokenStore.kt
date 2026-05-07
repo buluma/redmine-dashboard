@@ -28,6 +28,8 @@ class SecureTokenStore(private val context: Context) {
 
     fun serverUrl(defaultUrl: String): String = prefs.getString(KEY_SERVER_URL, defaultUrl) ?: defaultUrl
 
+    fun savedViewsJson(): String? = prefs.getString(KEY_SAVED_VIEWS, null)
+
     fun saveSession(serverUrl: String, token: String) {
         prefs.edit {
             putString(KEY_SERVER_URL, serverUrl.trimEnd('/'))
@@ -41,6 +43,12 @@ class SecureTokenStore(private val context: Context) {
         }
     }
 
+    fun saveViewsJson(value: String) {
+        prefs.edit {
+            putString(KEY_SAVED_VIEWS, value)
+        }
+    }
+
     fun clear() {
         prefs.edit {
             remove(KEY_TOKEN)
@@ -50,5 +58,6 @@ class SecureTokenStore(private val context: Context) {
     companion object {
         private const val KEY_SERVER_URL = "server_url"
         private const val KEY_TOKEN = "token"
+        private const val KEY_SAVED_VIEWS = "saved_issue_views"
     }
 }
