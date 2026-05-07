@@ -34,6 +34,43 @@
   --error: var(--danger);
 }
 
+[data-theme="light"],
+.light {
+  --bg: #f2ede2;
+  --bg-soft: #faf7f1;
+  --ink: #1d2a3a;
+  --ink-soft: #5b6a7b;
+  --card: #fffdf8;
+  --line: #d8d3c5;
+  --accent: #006d77;
+  --accent-strong: #00515a;
+  --accent-soft: #d8eff1;
+  --signal: #c65d1f;
+  --signal-soft: #fde8db;
+  --danger: #9f2f2f;
+  --danger-soft: #fbe6e6;
+  --ok: #2a7f52;
+  --ok-soft: #e1f4e9;
+  --warn: #d97706;
+  --warn-soft: #fef3c7;
+  --warn-strong: #b45309;
+  --radius: 16px;
+  --shadow: 0 12px 30px rgba(24, 32, 44, 0.08);
+  --surface-1: var(--card);
+  --surface-2: var(--bg-soft);
+  --surface-3: #f0ece2;
+  --text: var(--ink);
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-soft);
+  --text-soft: var(--ink-soft);
+  --text-muted: var(--ink-soft);
+  --muted: var(--ink-soft);
+  --border: var(--line);
+  --border-color: var(--line);
+  --accent-light: var(--accent-soft);
+  --error: var(--danger);
+}
+
 /* Global link styles */
 a {
   color: var(--signal);
@@ -49,7 +86,7 @@ a[href^="http"]:not([href*="localhost"]):not([href*="redmine-dashboard"]) {
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
     --bg: #141210;
     --bg-soft: #1c1a17;
     --ink: #e8e3da;
