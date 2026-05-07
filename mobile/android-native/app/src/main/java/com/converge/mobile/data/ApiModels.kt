@@ -371,6 +371,39 @@ data class ApiErrorBody(
     val error: String? = null,
 )
 
+data class ChatMessage(
+    val role: String = "user",
+    val content: String = "",
+    val model: String? = null,
+    val createdAt: String? = null,
+)
+
+data class PendingToolCall(
+    val id: String = "",
+    val name: String = "",
+    val arguments: Map<String, @JvmSuppressWildcards Any?> = emptyMap(),
+    val summary: String = "",
+)
+
+data class ChatSendRequest(
+    val messages: List<ChatMessage>,
+)
+
+data class ChatHistoryResponse(
+    val messages: List<ChatMessage> = emptyList(),
+)
+
+data class ChatMessageResponse(
+    val message: ChatMessage = ChatMessage(),
+    val pendingToolCalls: List<PendingToolCall> = emptyList(),
+    val conversationContext: List<Map<String, String>> = emptyList(),
+)
+
+data class ExecuteToolsRequest(
+    val toolCalls: List<PendingToolCall>,
+    val conversationContext: List<Map<String, String>>,
+)
+
 fun Issue.displayId(): String = redmineIssueId?.let { "#$it" } ?: localIssueNumber?.let { "L$it" } ?: id
 
 private val DATE_DISPLAY_FMT = DateTimeFormatter.ofPattern("MMM d, yyyy")

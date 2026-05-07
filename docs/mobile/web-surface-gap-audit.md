@@ -1,7 +1,7 @@
 # Mobile/Web Surface Gap Audit Checklist
 
 Audit date: 2026-05-07
-Last updated: 2026-05-07 (session 3)
+Last updated: 2026-05-07 (session 4)
 
 Scope:
 
@@ -190,8 +190,8 @@ Legend:
 - [x] AI categorization action.
 - [ ] AI status indicator.
 - [ ] Stale summary queue/history.
-- [ ] Issue AI chat.
-- [ ] General AI chat with confirmed tool execution.
+- [ ] Issue AI chat (context-prefilled from open issue detail).
+- [x] General AI chat with confirmed tool execution (ChatScreen, /api/mobile/v1/chat + execute-tools, two-step confirmation card).
 
 ### Notifications
 
@@ -205,8 +205,8 @@ Legend:
 ### Offline / Sync Queue
 
 - [x] Network connectivity banner.
-- [ ] Local issue cache for offline detail/list browsing.
-- [ ] Queued offline writes for comments/status/time/favorites.
+- [x] Local issue cache for offline list browsing (Room, 7-day eviction, keyed by serverUrl+redmineIssueId).
+- [x] Queued offline writes for comments/status/time/favorites (Room OfflineActionEntity, WorkManager OfflineSyncWorker dispatches on reconnect).
 - [ ] Conflict handling after reconnect.
 
 ### Ops / Admin / Integrations
@@ -268,12 +268,12 @@ Legend:
 - [x] Add project filter.
 - [x] Add FTS/AI search entry points (`/api/mobile/v1/search` + FTS mode in Android search bar).
 - [x] Add push subscription flow (FCM, MobilePushToken model, /api/mobile/v1/push/subscribe).
-- [ ] Add offline cache and queued writes. **Blocked: requires Room + WorkManager dependencies in build.gradle.kts.**
+- [x] Add offline cache and queued writes (Room + WorkManager + KSP; OfflineSyncWorker; ViewModel queues COMMENT/STATUS/FAVORITE/TIME_ENTRY when offline and schedules sync on reconnect).
 
 ### P2
 
 - [ ] Add board/Gantt mobile views if useful on small screens.
-- [ ] Add AI chat with confirmed tool execution.
+- [x] Add AI chat with confirmed tool execution (ChatScreen + /api/mobile/v1/chat).
 - [ ] Add mobile reports with compact KPI/drilldown layout.
 - [ ] Add admin/ops surfaces: health, sync jobs, token admin, logs, users/RBAC, audit logs.
 - [ ] Add integrations: Slack, WakaTime, webhooks, Heimdall.
@@ -290,7 +290,7 @@ Legend:
 - [x] Mobile FTS/AI search wrappers with bearer auth (`/api/mobile/v1/search` + ai/summarize + ai/categorize).
 - [ ] Mobile reports endpoint.
 - [x] Mobile personal-ticket endpoints.
-- [ ] Mobile AI chat endpoints.
+- [x] Mobile AI chat endpoints (/api/mobile/v1/chat GET/POST + execute-tools POST, bearer auth).
 - [ ] Mobile ops/admin endpoints.
 - [ ] Mobile Slack/WakaTime/webhook/Heimdall endpoints.
 - [x] Android-safe attachment opener/downloader that carries bearer auth.
@@ -299,5 +299,5 @@ Legend:
 ## Suggested Sequencing
 
 1. ~~Finish remaining P0 issue-workflow parity: catalog pickers, journals UI, independent favorites, attachments, relations UI, time edit, local tickets.~~ **P0 complete.**
-2. ~~Finish P1 productivity parity: custom field editing, FTS/AI search wrappers, push subscription.~~ **Done.** Offline queue (P1-D) blocked on Room/WorkManager dependency addition.
-3. Add high-value web-only modules: AI chat, reports, ops health.
+2. ~~Finish P1 productivity parity: custom field editing, FTS/AI search wrappers, push subscription, offline cache/queued writes.~~ **P1 complete.**
+3. ~~Add AI chat with confirmed tool execution.~~ **Done.** Next: mobile reports, ops health surface.

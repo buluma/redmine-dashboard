@@ -176,4 +176,13 @@ interface ConvergeApi {
 
     @DELETE("api/mobile/v1/tokens/current")
     suspend fun revokeCurrentToken()
+
+    @GET("api/mobile/v1/chat")
+    suspend fun getChatHistory(): ChatHistoryResponse
+
+    @POST("api/mobile/v1/chat")
+    suspend fun sendChatMessage(@Body body: ChatSendRequest): ChatMessageResponse
+
+    @POST("api/mobile/v1/chat/execute-tools")
+    suspend fun executeTools(@Body body: ExecuteToolsRequest): ChatMessageResponse
 }

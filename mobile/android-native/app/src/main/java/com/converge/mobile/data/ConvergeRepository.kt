@@ -376,6 +376,22 @@ class ConvergeRepository(
         runCatching { api(serverUrl).unregisterPushToken() }
     }
 
+    suspend fun getChatHistory(serverUrl: String): ChatHistoryResponse = call {
+        api(serverUrl).getChatHistory()
+    }
+
+    suspend fun sendChatMessage(serverUrl: String, messages: List<ChatMessage>): ChatMessageResponse = call {
+        api(serverUrl).sendChatMessage(ChatSendRequest(messages))
+    }
+
+    suspend fun executeTools(
+        serverUrl: String,
+        toolCalls: List<PendingToolCall>,
+        conversationContext: List<Map<String, String>>,
+    ): ChatMessageResponse = call {
+        api(serverUrl).executeTools(ExecuteToolsRequest(toolCalls, conversationContext))
+    }
+
     suspend fun logout(serverUrl: String) {
         runCatching { api(serverUrl).unregisterPushToken() }
         runCatching { api(serverUrl).revokeCurrentToken() }

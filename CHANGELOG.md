@@ -45,6 +45,28 @@ All notable changes to this project are documented in this file.
 ### Security
 
 - **PostCSS advisory mitigation** — added a package override for `postcss >=8.5.10` to address `GHSA-qx2v-qp2m-jg93`.
+- **CSRF protection** — added SameSite=strict cookie and CSRF protection for tool-call mutation endpoints (`281fe28`).
+
+## 2026-05-07
+
+### Added
+
+- **Android personal tickets API** — Added local issues API and Android personal tickets screen (`44393db`)
+- **Android notifications endpoint** — Added `/api/mobile/v1/notifications/route.ts` for push notification support (`82ae04c`)
+
+### Changed
+
+- **Android UI overhaul** — Overhauled android-native UI to enterprise Material 3 standard (`a553ea5`)
+- **Mobile app strategy** — Removed Ionic and Flutter, established android-native as the sole mobile target (`f86a1e2`)
+
+### Fixed
+
+- **ISO timestamp rendering** — Fixed raw ISO timestamps in Android detail screen (due date, updated, note date) (`574c80a`)
+- **Theme system** — Consolidated theme system and added system mode support (`1be212c`)
+
+### Security
+
+- **CSRF protection** — Added SameSite=strict cookie and CSRF protection for tool-call mutation endpoints (`281fe28`)
 
 ## 2026-05-03
 
@@ -137,12 +159,13 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
-- **AI Tool Calls for the Chat Page** — Enable the AI assistant to perform real Redmine actions with user confirmation.
-  - New service: `src/lib/ai-tools.ts` defining 9 tools (get_issue, search_issues, update_status, log_time, etc.) in OpenAI format.
+- **AI Tool Calls** — Enable the AI assistant to perform real Redmine actions with user confirmation. (`acce1b3`, `38e792a`)
+  - Service: `src/lib/ai-tools.ts` defining 9 tools (get_issue, search_issues, update_status, log_time, etc.) in OpenAI format.
   - Confirmation loop: Mutating actions (status, time, comments) require explicit user approval via inline chat cards.
   - Multi-provider support: Tool-calling parsing implemented for OpenAI, Anthropic, OpenRouter, and Ollama (≥0.5).
   - New endpoint: `POST /api/chat/execute-tools` to execute confirmed actions and summarize results.
   - UI: Enhanced `ChatInterface` with action badges, confirmation cards, and `slideIn` animations.
+- **CSRF protection** — Added SameSite=strict cookie and CSRF protection for tool-call mutation endpoints (`281fe28`).
 
 ## 2026-04-14
 
