@@ -376,6 +376,10 @@ class ConvergeRepository(
         runCatching { api(serverUrl).unregisterPushToken() }
     }
 
+    suspend fun getReports(serverUrl: String): ReportsResponse = call {
+        api(serverUrl).getReports()
+    }
+
     suspend fun getChatHistory(serverUrl: String): ChatHistoryResponse = call {
         api(serverUrl).getChatHistory()
     }

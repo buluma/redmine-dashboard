@@ -28,6 +28,7 @@ import com.converge.mobile.data.IssueRelation
 import com.converge.mobile.data.Journal
 import com.converge.mobile.data.ChatMessage
 import com.converge.mobile.data.PendingToolCall
+import com.converge.mobile.data.ReportsResponse
 import com.converge.mobile.data.SearchResult
 import com.converge.mobile.data.TimeEntry
 import com.converge.mobile.data.NotificationItem
@@ -159,6 +160,9 @@ data class MainUiState(
     val isChatLoading: Boolean = false,
     val pendingToolCalls: List<PendingToolCall> = emptyList(),
     val chatConversationContext: List<Map<String, String>> = emptyList(),
+    val chatIssueContext: Issue? = null,
+    val reports: ReportsResponse? = null,
+    val isLoadingReports: Boolean = false,
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -233,7 +237,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             MainTab.PERSONAL -> loadLocalIssues()
             MainTab.FAVORITES -> loadFavorites()
             MainTab.NOTIFICATIONS -> loadNotifications()
-            MainTab.CHAT -> loadChatHistory()
+            MainTab.CHAT -> { update { copy(chatIssueContext = null) }; loadChatHistory() }
+            MainTab.SETTINGS -> loadReports()
             else -> Unit
         }
     }
@@ -1036,6 +1041,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateChatInput(value: String) = update { copy(chatInput = value) }
+    fun clearChatContext() = update { copy(chatIssueContext = null) }
+
+    fun openIssueChatContext(issue: Issue) {
+        update {
+            copy(
+                chatIssueContext = issue,
+                chatMessages = emptyList(),
+                chatInput = "",
+                pendingToolCalls = emptyList(),
+                chatConversationContext = emptyList(),
+                currentTab = MainTab.CHAT,
+            )
+        }
+    }
+
+    fun loadReports() {
+        if (!state.value.isPaired) return
+        viewModelScope.launch {
+            update { copy(isLoadingReports = true) }
+            runCatching {
+                val r = repository.getReports(state.value.serverUrl)
+                update { copy(reports = r, isLoadingReports = false) }
+            }.onFailure {
+                update { copy(isLoadingReports = false) }
+            }
+        }
+    }
 
     fun loadChatHistory() {
         viewModelScope.launch {
@@ -1046,6 +1078,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun buildIssueContextPrompt(issue: Issue): String {
+        val sb = StringBuilder()
+        sb.appendLine("You are assisting with a specific Redmine issue. Context:")
+        sb.appendLine("Issue: ${issue.displayId()} — ${issue.subject}")
+        issue.projectName?.let { sb.appendLine("Project: $it") }
+        issue.tracker?.let { sb.appendLine("Tracker: $it") }
+        issue.statusName.takeIf { it.isNotBlank() }?.let { sb.appendLine("Status: $it") }
+        issue.priority?.let { sb.appendLine("Priority: $it") }
+        issue.assignedToName?.let { sb.appendLine("Assigned to: $it") }
+        issue.dueDate?.let { sb.appendLine("Due date: $it") }
+        issue.description?.takeIf { it.isNotBlank() }?.let { sb.appendLine("Description: $it") }
+        return sb.toString().trim()
+    }
+
     fun sendChatMessage() {
         val input = state.value.chatInput.trim()
         if (input.isBlank()) return
@@ -1054,7 +1100,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         update { copy(chatMessages = history, chatInput = "", isChatLoading = true, pendingToolCalls = emptyList()) }
         viewModelScope.launch {
             runCatching {
-                val sendable = history.filter { it.role == "user" || it.role == "assistant" }
+                val sendable = buildList {
+                    state.value.chatIssueContext?.let { issue ->
+                        add(ChatMessage(role = "system", content = buildIssueContextPrompt(issue)))
+                    }
+                    addAll(history.filter { it.role == "user" || it.role == "assistant" })
+                }
                 val response = repository.sendChatMessage(state.value.serverUrl, sendable)
                 val updated = state.value.chatMessages + response.message
                 update {

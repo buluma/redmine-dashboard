@@ -304,7 +304,7 @@ fun IssueListScreen(state: MainUiState, viewModel: MainViewModel) {
                                     )
                                 }
                                 items(state.ftsResults, key = { it.id }) { result ->
-                                    FtsResultRow(result, onClick = { viewModel.selectIssueById(result.redmineIssueId) })
+                                    FtsResultRow(result, onClick = { result.redmineIssueId?.let { viewModel.selectIssueById(it) } })
                                     HorizontalDivider(thickness = 0.5.dp)
                                 }
                             }
