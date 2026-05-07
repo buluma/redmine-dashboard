@@ -54,8 +54,8 @@ Legend:
 - [x] Add assigned-to-me filter.
 - [ ] Add GitHub-link/attachment filters.
 - [ ] Add due-date and updated-after filters.
-- [ ] Add mobile FTS search entry backed by bearer auth.
-- [ ] Add mobile AI search entry backed by bearer auth.
+- [x] Add mobile FTS search entry backed by bearer auth (`/api/mobile/v1/search` + Android FTS mode).
+- [x] Add mobile AI search entry backed by bearer auth (ai/summarize and ai/categorize already accept bearer auth).
 
 ### Saved Views
 
@@ -263,12 +263,12 @@ Legend:
 - [x] Add navigable parent/children/relation drilldown.
 - [x] Add mobile notification inbox.
 - [x] Add `customFieldsJson` to Android issue model and display it in issue detail.
-- [ ] Add `customFieldsJson` edit support.
+- [x] Add `customFieldsJson` edit support (Edit dialog custom-field text fields → `PATCH /edit`).
 - [x] Add properties/change-log tab (field changes shown inline per journal card).
 - [x] Add project filter.
-- [ ] Add FTS/AI search entry points.
-- [ ] Add push subscription flow.
-- [ ] Add offline cache and queued writes.
+- [x] Add FTS/AI search entry points (`/api/mobile/v1/search` + FTS mode in Android search bar).
+- [ ] Add push subscription flow. **Blocked: requires Firebase project + google-services.json.**
+- [ ] Add offline cache and queued writes. **Blocked: requires Room + WorkManager dependencies in build.gradle.kts.**
 
 ### P2
 
@@ -287,17 +287,17 @@ Legend:
 - [x] Mobile attachment download endpoint exists.
 - [x] Mobile relation create/delete endpoints exist.
 - [ ] Mobile saved-view API wrappers with bearer auth.
-- [ ] Mobile FTS/AI search wrappers with bearer auth.
+- [x] Mobile FTS/AI search wrappers with bearer auth (`/api/mobile/v1/search` + ai/summarize + ai/categorize).
 - [ ] Mobile reports endpoint.
 - [x] Mobile personal-ticket endpoints.
 - [ ] Mobile AI chat endpoints.
 - [ ] Mobile ops/admin endpoints.
 - [ ] Mobile Slack/WakaTime/webhook/Heimdall endpoints.
 - [x] Android-safe attachment opener/downloader that carries bearer auth.
-- [ ] Confirm `/api/ai/summarize` and `/api/ai/categorize` consistently accept mobile bearer auth, or add `/api/mobile/v1/ai/*` wrappers.
+- [x] Confirmed `/api/ai/summarize` and `/api/ai/categorize` accept mobile bearer auth via `resolveActorUserId` fallback pattern.
 
 ## Suggested Sequencing
 
 1. ~~Finish remaining P0 issue-workflow parity: catalog pickers, journals UI, independent favorites, attachments, relations UI, time edit, local tickets.~~ **P0 complete.**
-2. Finish P1 productivity parity: custom field editing, FTS/AI search wrappers, push, offline queue.
+2. ~~Finish P1 productivity parity: custom field editing, FTS/AI search wrappers.~~ **Done.** Push (P1-C) blocked on Firebase setup; offline queue (P1-D) blocked on Room/WorkManager dependency addition.
 3. Add high-value web-only modules: AI chat, reports, ops health.
