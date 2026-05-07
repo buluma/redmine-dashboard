@@ -55,6 +55,10 @@ fun SettingsScreen(state: MainUiState, viewModel: MainViewModel) {
         ) {
             Spacer(Modifier.height(4.dp))
 
+            ReportsSection(reports = state.reports, isLoading = state.isLoadingReports)
+
+            Spacer(Modifier.height(20.dp))
+
             SectionLabel("Connection")
             SettingsRow("Server URL", state.serverUrl)
             HorizontalDivider(thickness = 0.5.dp)

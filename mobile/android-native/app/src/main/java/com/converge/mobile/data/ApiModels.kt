@@ -404,6 +404,38 @@ data class ExecuteToolsRequest(
     val conversationContext: List<Map<String, String>>,
 )
 
+data class ReportSummary(
+    val total: Int = 0,
+    val open: Int = 0,
+    val closed: Int = 0,
+    val overdue: Int = 0,
+    val dueSoon: Int = 0,
+    val favorited: Int = 0,
+)
+
+data class ReportBucket(
+    val name: String = "",
+    val count: Int = 0,
+)
+
+data class ReportProjectBucket(
+    val name: String = "",
+    val open: Int = 0,
+    val total: Int = 0,
+)
+
+data class ReportSyncInfo(
+    val lastSyncAt: String? = null,
+)
+
+data class ReportsResponse(
+    val summary: ReportSummary = ReportSummary(),
+    val byPriority: List<ReportBucket> = emptyList(),
+    val byProject: List<ReportProjectBucket> = emptyList(),
+    val byStatus: List<ReportBucket> = emptyList(),
+    val syncInfo: ReportSyncInfo = ReportSyncInfo(),
+)
+
 fun Issue.displayId(): String = redmineIssueId?.let { "#$it" } ?: localIssueNumber?.let { "L$it" } ?: id
 
 private val DATE_DISPLAY_FMT = DateTimeFormatter.ofPattern("MMM d, yyyy")

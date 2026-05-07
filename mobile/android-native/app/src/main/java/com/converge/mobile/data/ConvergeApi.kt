@@ -177,6 +177,9 @@ interface ConvergeApi {
     @DELETE("api/mobile/v1/tokens/current")
     suspend fun revokeCurrentToken()
 
+    @GET("api/mobile/v1/reports")
+    suspend fun getReports(): ReportsResponse
+
     @GET("api/mobile/v1/chat")
     suspend fun getChatHistory(): ChatHistoryResponse
 
