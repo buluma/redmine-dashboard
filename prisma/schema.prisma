@@ -303,6 +303,7 @@ model IssueJournal {
   issue            Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
   author           String?
   notes            String?
+  detailsJson      Json?
   createdOnRemote  DateTime
   createdAt        DateTime @default(now())
 

@@ -279,11 +279,19 @@ data class AiCategorizeResponse(
     val rawResponse: Boolean = false,
 )
 
+data class JournalDetail(
+    val property: String = "",
+    val name: String = "",
+    @param:Json(name = "old_value") val oldValue: String? = null,
+    @param:Json(name = "new_value") val newValue: String? = null,
+)
+
 data class Journal(
     val id: String = "",
     val redmineJournalId: Int = 0,
     val author: String? = null,
     val notes: String? = null,
+    val details: List<JournalDetail> = emptyList(),
     val createdOnRemote: String = "",
 )
 

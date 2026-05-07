@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS "IssueJournal" (
   "issueId" TEXT NOT NULL,
   "author" TEXT,
   "notes" TEXT,
+  "detailsJson" TEXT,
   "createdOnRemote" DATETIME NOT NULL,
   "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "IssueJournal_issueId_fkey" FOREIGN KEY ("issueId") REFERENCES "Issue" ("id") ON DELETE CASCADE ON UPDATE CASCADE

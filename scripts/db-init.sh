@@ -30,6 +30,10 @@ case "$DATABASE_URL_VALUE" in
       sqlite3 "$DB_PATH" "ALTER TABLE \"Issue\" ADD COLUMN \"redmineBaseUrl\" TEXT NOT NULL DEFAULT '';"
     fi
 
+    if [ "$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM pragma_table_info('IssueJournal') WHERE name = 'detailsJson';")" = "0" ]; then
+      sqlite3 "$DB_PATH" "ALTER TABLE \"IssueJournal\" ADD COLUMN \"detailsJson\" TEXT;"
+    fi
+
     sqlite3 "$DB_PATH" <<'SQL'
 UPDATE "Issue"
 SET "redmineBaseUrl" = COALESCE(
