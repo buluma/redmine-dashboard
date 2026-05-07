@@ -1,54 +1,59 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useTheme } from "./ThemeProvider";
+import { useI18n } from "./I18nProvider";
 
-type Theme = "light" | "dark";
+type ThemeMode = "light" | "dark" | "system";
 
-function getInitialTheme(): Theme {
-  if (typeof window === "undefined") return "light";
-  const saved = localStorage.getItem("theme") as Theme | null;
-  if (saved === "light" || saved === "dark") return saved;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
+const ICONS: Record<ThemeMode, string> = {
+  light: "☀",
+  dark: "☾",
+  system: "◑",
+};
 
-function applyTheme(theme: Theme) {
-  document.documentElement.setAttribute("data-theme", theme);
-  localStorage.setItem("theme", theme);
-}
+const CYCLE: Record<ThemeMode, ThemeMode> = {
+  system: "light",
+  light: "dark",
+  dark: "system",
+};
 
 type Props = { collapsed?: boolean };
 
 export function ThemeToggle({ collapsed = false }: Props) {
-  const [theme, setTheme] = useState<Theme>("light");
-  const [mounted, setMounted] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const { t } = useI18n();
 
-  useEffect(() => {
-    const t = getInitialTheme();
-    setTheme(t);
-    applyTheme(t);
-    setMounted(true);
-  }, []);
-
-  function toggle() {
-    const next: Theme = theme === "light" ? "dark" : "light";
-    setTheme(next);
-    applyTheme(next);
+  function cycleMode() {
+    setTheme(CYCLE[theme]);
   }
 
-  const isDark = mounted && theme === "dark";
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        className="theme-toggle"
+        onClick={cycleMode}
+        aria-label={`Theme: ${theme}`}
+        title={`Theme: ${theme}`}
+      >
+        <span className="theme-toggle-icon">{ICONS[theme]}</span>
+      </button>
+    );
+  }
 
   return (
-    <button
-      type="button"
-      className="theme-toggle"
-      onClick={toggle}
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      title={isDark ? "Light mode" : "Dark mode"}
-    >
-      <span className="theme-toggle-icon">{isDark ? "☀" : "☾"}</span>
-      {!collapsed && (
-        <span className="theme-toggle-label">{isDark ? "Light" : "Dark"}</span>
-      )}
-    </button>
+    <div className="theme-toggle theme-toggle-select">
+      <span className="theme-toggle-icon">{ICONS[theme]}</span>
+      <select
+        value={theme}
+        onChange={(e) => setTheme(e.target.value as ThemeMode)}
+        aria-label="Theme"
+        className="theme-toggle-select-input"
+      >
+        <option value="system">{t("theme.system")}</option>
+        <option value="light">{t("theme.light")}</option>
+        <option value="dark">{t("theme.dark")}</option>
+      </select>
+    </div>
   );
 }
