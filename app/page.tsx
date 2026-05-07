@@ -69,6 +69,8 @@ import { MarkdownBlock } from "@/src/components/MarkdownBlock";
 
 const POLL_INTERVAL_MS = 90_000;
 const SAVED_VIEWS_KEY = "nrcc.savedViews.v1";
+const THEME_KEY = "nrcc.themeMode.v1";
+type ThemeMode = "light" | "dark" | "system";
 const DEFAULT_ADVANCED_FILTERS: FilterState = {
   search: "",
   statusIds: [],
@@ -123,6 +125,7 @@ export default function Home() {
   const [sort, setSort] = useState("updated_desc");
   const [advancedFilters, setAdvancedFilters] = useState<FilterState>(DEFAULT_ADVANCED_FILTERS);
   const [viewMode, setViewMode] = useState<"list" | "board" | "gantt">("list");
+  const [themeMode, setThemeMode] = useState<ThemeMode>("system");
 
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [viewDraftName, setViewDraftName] = useState("");
@@ -149,6 +152,48 @@ export default function Home() {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const prefetchedIssueIdsRef = useRef<Set<string>>(new Set());
   const heroRef = useRef<HTMLElement>(null);
+
+  // Effect for theme management
+  useEffect(() => {
+    // Read theme from localStorage on mount
+    const storedTheme = localStorage.getItem(THEME_KEY) as ThemeMode;
+    if (storedTheme) {
+      setThemeMode(storedTheme);
+    }
+
+    // Apply theme class to documentElement
+    const applyTheme = (mode: ThemeMode) => {
+      const element = document.documentElement;
+      element.classList.remove("light", "dark"); // Remove existing themes
+
+      if (mode === "system") {
+        // Check system preference
+        if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+          element.classList.add("dark");
+        } else {
+          element.classList.add("light");
+        }
+      } else {
+        element.classList.add(mode);
+      }
+      localStorage.setItem(THEME_KEY, mode);
+    };
+
+    applyTheme(themeMode);
+
+    // Listen for system theme changes if mode is 'system'
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const systemThemeChangeHandler = (e: MediaQueryListEvent) => {
+      if (themeMode === "system") {
+        applyTheme("system"); // Re-apply to reflect system change
+      }
+    };
+    mediaQuery.addEventListener("change", systemThemeChangeHandler);
+
+    return () => {
+      mediaQuery.removeEventListener("change", systemThemeChangeHandler);
+    };
+  }, [themeMode]);
 
   const prefetchIssueDetail = useCallback((targetIssueId: number | string | null | undefined) => {
     const routeId = normalizeIssueRouteId(targetIssueId);
@@ -1112,6 +1157,13 @@ export default function Home() {
           <button className="secondary-button" type="button" onClick={() => setShowShortcutHelp(true)}>
             {t('hero.shortcutsBtn')}
           </button>
+          <div className="theme-selector">
+            <select value={themeMode} onChange={(e) => setThemeMode(e.target.value as ThemeMode)}>
+              <option value="system">{t('theme.system')}</option>
+              <option value="light">{t('theme.light')}</option>
+              <option value="dark">{t('theme.dark')}</option>
+            </select>
+          </div>
         </div>
 
         <section className={`metrics-grid${loading ? " metrics-loading" : ""}`}>
