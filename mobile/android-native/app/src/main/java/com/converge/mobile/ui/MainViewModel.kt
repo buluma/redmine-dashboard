@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.util.UUID
 
-enum class MainTab { ISSUES, FAVORITES, NOTIFICATIONS, SETTINGS }
+enum class MainTab { ISSUES, PERSONAL, FAVORITES, NOTIFICATIONS, SETTINGS }
 
 enum class SortMode(val label: String, val apiValue: String) {
     UPDATED_DESC("Recent", "updated_desc"),
@@ -69,6 +69,7 @@ data class MainUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val issues: List<Issue> = emptyList(),
+    val localIssues: List<Issue> = emptyList(),
     val favoriteIssues: List<Issue> = emptyList(),
     val selectedIssue: Issue? = null,
     val assignableUsers: List<AssignableUser> = emptyList(),
@@ -93,6 +94,8 @@ data class MainUiState(
     val showInternalNoteDialog: Boolean = false,
     val showGithubDialog: Boolean = false,
     val showRelationDialog: Boolean = false,
+    val showLocalIssueDialog: Boolean = false,
+    val editingLocalIssueId: String? = null,
     val createSubject: String = "",
     val createProjectId: String = "",
     val createDescription: String = "",
@@ -112,6 +115,14 @@ data class MainUiState(
     val internalNoteDraft: String = "",
     val relationTargetId: String = "",
     val relationType: String = "relates",
+    val localSubject: String = "",
+    val localDescription: String = "",
+    val localTracker: String = "Task",
+    val localPriority: String = "Normal",
+    val localStatusName: String = "New",
+    val localDueDate: String = "",
+    val localEstimate: String = "",
+    val localDoneRatio: String = "0",
     val githubRepository: String = "",
     val githubIssueNumber: String = "",
     val githubPrNumber: String = "",
@@ -171,6 +182,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun switchTab(tab: MainTab) {
         update { copy(currentTab = tab) }
         when (tab) {
+            MainTab.PERSONAL -> loadLocalIssues()
             MainTab.FAVORITES -> loadFavorites()
             MainTab.NOTIFICATIONS -> loadNotifications()
             else -> Unit
@@ -196,6 +208,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateInternalNoteDraft(value: String) = update { copy(internalNoteDraft = value) }
     fun updateRelationTargetId(value: String) = update { copy(relationTargetId = value) }
     fun updateRelationType(value: String) = update { copy(relationType = value) }
+    fun updateLocalSubject(value: String) = update { copy(localSubject = value) }
+    fun updateLocalDescription(value: String) = update { copy(localDescription = value) }
+    fun updateLocalTracker(value: String) = update { copy(localTracker = value) }
+    fun updateLocalPriority(value: String) = update { copy(localPriority = value) }
+    fun updateLocalStatusName(value: String) = update { copy(localStatusName = value) }
+    fun updateLocalDueDate(value: String) = update { copy(localDueDate = value) }
+    fun updateLocalEstimate(value: String) = update { copy(localEstimate = value) }
+    fun updateLocalDoneRatio(value: String) = update { copy(localDoneRatio = value) }
     fun updateGithubRepository(value: String) = update { copy(githubRepository = value) }
     fun updateGithubIssueNumber(value: String) = update { copy(githubIssueNumber = value) }
     fun updateGithubPrNumber(value: String) = update { copy(githubPrNumber = value) }
@@ -215,6 +235,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun hideInternalNoteDialog() = update { copy(showInternalNoteDialog = false) }
     fun hideGithubDialog() = update { copy(showGithubDialog = false) }
     fun hideRelationDialog() = update { copy(showRelationDialog = false) }
+    fun hideLocalIssueDialog() = update { copy(showLocalIssueDialog = false, editingLocalIssueId = null) }
 
     fun pairDevice() {
         val current = state.value
@@ -272,6 +293,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             runBusy {
                 val response = repository.listNotifications(state.value.serverUrl)
                 update { copy(notifications = response.notifications, unreadNotifications = response.unreadCount) }
+            }
+        }
+    }
+
+    fun loadLocalIssues() {
+        viewModelScope.launch {
+            runBusy {
+                val response = repository.listLocalIssues(state.value.serverUrl)
+                update { copy(localIssues = response.items) }
             }
         }
     }
@@ -458,8 +488,118 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun showLocalIssueDialog() {
+        update {
+            copy(
+                showLocalIssueDialog = true,
+                editingLocalIssueId = null,
+                localSubject = "",
+                localDescription = "",
+                localTracker = "Task",
+                localPriority = "Normal",
+                localStatusName = "New",
+                localDueDate = "",
+                localEstimate = "",
+                localDoneRatio = "0",
+            )
+        }
+    }
+
+    fun openEditLocalIssueDialog(issue: Issue? = state.value.selectedIssue) {
+        issue ?: return
+        if (issue.source != "local") return
+        update {
+            copy(
+                showLocalIssueDialog = true,
+                editingLocalIssueId = issue.id,
+                localSubject = issue.subject,
+                localDescription = issue.description.orEmpty(),
+                localTracker = issue.tracker ?: "Task",
+                localPriority = issue.priority ?: "Normal",
+                localStatusName = issue.statusName.ifBlank { "New" },
+                localDueDate = issue.dueDate.orEmpty(),
+                localEstimate = issue.estimatedHours?.toString().orEmpty(),
+                localDoneRatio = issue.doneRatio?.toString() ?: "0",
+            )
+        }
+    }
+
+    fun saveLocalIssue() {
+        val subject = state.value.localSubject.trim()
+        if (subject.isBlank()) {
+            update { copy(errorMessage = "Subject is required.") }
+            return
+        }
+        val estimate = state.value.localEstimate.toDoubleOrNull()
+        val doneRatio = state.value.localDoneRatio.toIntOrNull()?.coerceIn(0, 100)
+        viewModelScope.launch {
+            runBusy {
+                val editingId = state.value.editingLocalIssueId
+                val issue = if (editingId == null) {
+                    repository.createLocalIssue(
+                        serverUrl = state.value.serverUrl,
+                        subject = subject,
+                        description = state.value.localDescription,
+                        tracker = state.value.localTracker,
+                        priority = state.value.localPriority,
+                        statusName = state.value.localStatusName,
+                        dueDate = state.value.localDueDate,
+                        estimatedHours = estimate,
+                        doneRatio = doneRatio,
+                    )
+                } else {
+                    repository.updateLocalIssue(
+                        serverUrl = state.value.serverUrl,
+                        issueId = editingId,
+                        subject = subject,
+                        description = state.value.localDescription,
+                        tracker = state.value.localTracker,
+                        priority = state.value.localPriority,
+                        statusName = state.value.localStatusName,
+                        dueDate = state.value.localDueDate,
+                        estimatedHours = estimate,
+                        doneRatio = doneRatio,
+                    )
+                }
+                val local = repository.listLocalIssues(state.value.serverUrl)
+                update {
+                    copy(
+                        localIssues = local.items,
+                        selectedIssue = if (selectedIssue?.id == issue.id || editingId == null) issue else selectedIssue,
+                        showLocalIssueDialog = false,
+                        editingLocalIssueId = null,
+                        actionMessage = if (editingId == null) "Personal ticket created" else "Personal ticket updated",
+                    )
+                }
+            }
+        }
+    }
+
+    fun deleteSelectedLocalIssue() {
+        val issue = state.value.selectedIssue ?: return
+        if (issue.source != "local") return
+        viewModelScope.launch {
+            runBusy {
+                repository.deleteLocalIssue(state.value.serverUrl, issue.id)
+                val local = repository.listLocalIssues(state.value.serverUrl)
+                update {
+                    copy(
+                        selectedIssue = null,
+                        localIssues = local.items,
+                        currentTab = MainTab.PERSONAL,
+                        actionMessage = "Personal ticket deleted",
+                    )
+                }
+            }
+        }
+    }
+
     fun openEditIssueDialog() {
         val issue = state.value.selectedIssue ?: return
+        if (issue.source == "local") {
+            openEditLocalIssueDialog(issue)
+            return
+        }
         update {
             copy(
                 showEditIssueDialog = true,
@@ -629,15 +769,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun openInternalNoteDialog() = update { copy(showInternalNoteDialog = true) }
 
     fun createInternalNote() {
-        val redmineIssueId = state.value.selectedIssue?.redmineIssueId ?: return
+        val issue = state.value.selectedIssue ?: return
+        val issueId = issue.redmineIssueId?.toString() ?: issue.id
         if (state.value.internalNoteDraft.isBlank()) {
             update { copy(errorMessage = "Internal note cannot be empty.") }
             return
         }
         viewModelScope.launch {
             runBusy {
-                repository.createInternalNote(state.value.serverUrl, redmineIssueId, state.value.internalNoteDraft)
-                val notes = repository.listInternalNotes(state.value.serverUrl, redmineIssueId)
+                repository.createInternalNote(state.value.serverUrl, issueId, state.value.internalNoteDraft)
+                val notes = repository.listInternalNotes(state.value.serverUrl, issueId)
                 update {
                     copy(
                         internalNotes = notes,
@@ -651,11 +792,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteInternalNote(noteId: String) {
-        val redmineIssueId = state.value.selectedIssue?.redmineIssueId ?: return
+        val issue = state.value.selectedIssue ?: return
+        val issueId = issue.redmineIssueId?.toString() ?: issue.id
         viewModelScope.launch {
             runBusy {
-                repository.deleteInternalNote(state.value.serverUrl, redmineIssueId, noteId)
-                val notes = repository.listInternalNotes(state.value.serverUrl, redmineIssueId)
+                repository.deleteInternalNote(state.value.serverUrl, issueId, noteId)
+                val notes = repository.listInternalNotes(state.value.serverUrl, issueId)
                 update { copy(internalNotes = notes, actionMessage = "Note deleted") }
             }
         }
@@ -794,15 +936,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             update { copy(errorMessage = "Comment cannot be empty.") }
             return
         }
-        if (issue.redmineIssueId == null) {
-            update { copy(errorMessage = "Local-only issues cannot be commented from mobile yet.") }
-            return
-        }
-
         viewModelScope.launch {
             runBusy {
-                repository.postComment(state.value.serverUrl, issue.redmineIssueId.toString(), comment)
-                refreshSelectedIssue(actionMessage = "Comment posted")
+                if (issue.source == "local") {
+                    repository.createInternalNote(state.value.serverUrl, issue.id, comment)
+                    refreshSelectedIssue(actionMessage = "Personal ticket comment added")
+                } else {
+                    val redmineIssueId = issue.redmineIssueId ?: return@runBusy
+                    repository.postComment(state.value.serverUrl, redmineIssueId.toString(), comment)
+                    refreshSelectedIssue(actionMessage = "Comment posted")
+                }
                 update { copy(commentDraft = "") }
             }
         }
@@ -812,7 +955,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val issue = state.value.selectedIssue ?: return
         val redmineIssueId = issue.redmineIssueId
         if (redmineIssueId == null) {
-            update { copy(errorMessage = "Local-only issues cannot sync status changes to Redmine.") }
+            viewModelScope.launch {
+                runBusy {
+                    val status = issue.allowedStatuses.firstOrNull { it.id == statusId }?.name ?: when (statusId) {
+                        2 -> "In Progress"
+                        3 -> "Resolved"
+                        5 -> "Closed"
+                        else -> "New"
+                    }
+                    repository.updateLocalIssue(
+                        serverUrl = state.value.serverUrl,
+                        issueId = issue.id,
+                        subject = issue.subject,
+                        description = issue.description,
+                        tracker = issue.tracker,
+                        priority = issue.priority,
+                        statusName = status,
+                        dueDate = issue.dueDate,
+                        estimatedHours = issue.estimatedHours,
+                        doneRatio = issue.doneRatio,
+                    )
+                    refreshSelectedIssue(actionMessage = "Personal ticket status updated")
+                }
+            }
             return
         }
 
@@ -832,6 +997,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     copy(
                         isPaired = false,
                         issues = emptyList(),
+                        localIssues = emptyList(),
                         selectedIssue = null,
                         commentDraft = "",
                         internalNotes = emptyList(),
@@ -861,21 +1027,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             page = 1,
             pageSize = if (state.value.compactList) 50 else 25,
         )
-        val notes = refreshed.redmineIssueId?.let {
-            runCatching { repository.listInternalNotes(state.value.serverUrl, it) }.getOrElse { state.value.internalNotes }
-        } ?: state.value.internalNotes
+        val refreshedIssueId = refreshed.redmineIssueId?.toString() ?: refreshed.id
+        val notes = runCatching { repository.listInternalNotes(state.value.serverUrl, refreshedIssueId) }.getOrElse { state.value.internalNotes }
         val journals = refreshed.redmineIssueId?.let {
             runCatching { repository.listJournals(state.value.serverUrl, it) }.getOrElse { state.value.journals }
         } ?: state.value.journals
-        update { copy(selectedIssue = refreshed, issues = response.items, page = 1, totalIssues = response.total, internalNotes = notes, journals = journals, actionMessage = actionMessage) }
+        val local = if (refreshed.source == "local" || state.value.currentTab == MainTab.PERSONAL) {
+            runCatching { repository.listLocalIssues(state.value.serverUrl).items }.getOrElse { state.value.localIssues }
+        } else {
+            state.value.localIssues
+        }
+        update { copy(selectedIssue = refreshed, issues = response.items, localIssues = local, page = 1, totalIssues = response.total, internalNotes = notes, journals = journals, actionMessage = actionMessage) }
     }
 
     private suspend fun loadIssueDetail(id: String) {
         val detail = repository.getIssue(state.value.serverUrl, id)
         val enriched = repository.refreshIssueLists(state.value.serverUrl, detail)
-        val notes = detail.redmineIssueId?.let {
-            runCatching { repository.listInternalNotes(state.value.serverUrl, it) }.getOrElse { emptyList() }
-        } ?: emptyList()
+        val detailIssueId = detail.redmineIssueId?.toString() ?: detail.id
+        val notes = runCatching { repository.listInternalNotes(state.value.serverUrl, detailIssueId) }.getOrElse { emptyList() }
         val journals = detail.redmineIssueId?.let {
             runCatching { repository.listJournals(state.value.serverUrl, it) }.getOrElse { emptyList() }
         } ?: emptyList()
@@ -902,6 +1071,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 errorMessage = message,
                 isPaired = if (sessionExpired) false else isPaired,
                 issues = if (sessionExpired) emptyList() else issues,
+                localIssues = if (sessionExpired) emptyList() else localIssues,
                 selectedIssue = if (sessionExpired) null else selectedIssue,
                 actionMessage = null,
             )

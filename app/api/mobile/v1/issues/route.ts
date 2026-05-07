@@ -70,6 +70,7 @@ export async function GET(request: Request) {
       ...(q.status ? { statusName: q.status } : {}),
       ...(q.priority ? { priority: q.priority } : {}),
       ...(q.project ? { projectName: q.project } : {}),
+      ...(q.source !== "all" ? { source: q.source } : {}),
     };
     const localSearchFilter: Prisma.IssueWhereInput = q.search
       ? {
