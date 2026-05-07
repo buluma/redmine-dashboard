@@ -198,8 +198,8 @@ Legend:
 - [x] Mobile bearer-auth notifications endpoint.
 - [x] Android Alerts tab/inbox.
 - [x] Tap issue notification to open the issue.
-- [ ] Push subscription from Android.
-- [ ] Background notification delivery.
+- [x] Push subscription from Android (FCM token registration on pair + /api/mobile/v1/push/subscribe).
+- [x] Background notification delivery (ConvergeFirebaseMessagingService shows system notification).
 - [ ] Read/unread persistence.
 
 ### Offline / Sync Queue
@@ -267,7 +267,7 @@ Legend:
 - [x] Add properties/change-log tab (field changes shown inline per journal card).
 - [x] Add project filter.
 - [x] Add FTS/AI search entry points (`/api/mobile/v1/search` + FTS mode in Android search bar).
-- [ ] Add push subscription flow. **Blocked: requires Firebase project + google-services.json.**
+- [x] Add push subscription flow (FCM, MobilePushToken model, /api/mobile/v1/push/subscribe).
 - [ ] Add offline cache and queued writes. **Blocked: requires Room + WorkManager dependencies in build.gradle.kts.**
 
 ### P2
@@ -299,5 +299,5 @@ Legend:
 ## Suggested Sequencing
 
 1. ~~Finish remaining P0 issue-workflow parity: catalog pickers, journals UI, independent favorites, attachments, relations UI, time edit, local tickets.~~ **P0 complete.**
-2. ~~Finish P1 productivity parity: custom field editing, FTS/AI search wrappers.~~ **Done.** Push (P1-C) blocked on Firebase setup; offline queue (P1-D) blocked on Room/WorkManager dependency addition.
+2. ~~Finish P1 productivity parity: custom field editing, FTS/AI search wrappers, push subscription.~~ **Done.** Offline queue (P1-D) blocked on Room/WorkManager dependency addition.
 3. Add high-value web-only modules: AI chat, reports, ops health.
