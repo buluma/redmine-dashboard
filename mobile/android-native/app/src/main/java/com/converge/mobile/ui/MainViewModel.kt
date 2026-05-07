@@ -1,6 +1,9 @@
 package com.converge.mobile.ui
 
 import android.app.Application
+import android.app.DownloadManager
+import android.net.Uri
+import android.os.Environment
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.converge.mobile.BuildConfig
@@ -11,20 +14,36 @@ import com.converge.mobile.data.IssueListResponse
 import com.converge.mobile.data.displayId
 import com.converge.mobile.data.AiCategorizeResponse
 import com.converge.mobile.data.AiSummaryResponse
+import com.converge.mobile.data.CatalogPriority
+import com.converge.mobile.data.CatalogProject
+import com.converge.mobile.data.CatalogStatus
 import com.converge.mobile.data.ConvergeRepository
 import com.converge.mobile.data.InternalNote
 import com.converge.mobile.data.Issue
+import com.converge.mobile.data.IssueAttachment
+import com.converge.mobile.data.IssueRelation
+import com.converge.mobile.data.Journal
+import com.converge.mobile.data.TimeEntry
+import com.converge.mobile.data.NotificationItem
+import com.converge.mobile.data.SavedIssueView
 import com.converge.mobile.data.SecureTokenStore
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.util.UUID
 
-enum class MainTab { ISSUES, FAVORITES, SETTINGS }
+enum class MainTab { ISSUES, FAVORITES, NOTIFICATIONS, SETTINGS }
 
 enum class SortMode(val label: String, val apiValue: String) {
     UPDATED_DESC("Recent", "updated_desc"),
     UPDATED_ASC("Oldest", "updated_asc"),
     PRIORITY("Priority", "priority"),
     DUE_DATE("Due Date", "due_date"),
+}
+
+enum class SearchMode(val label: String, val apiValue: String) {
+    LOCAL("Local", "local"),
+    HYBRID("Hybrid", "hybrid"),
+    REMOTE("Remote", "remote"),
 }
 
 data class MainUiState(
@@ -34,7 +53,12 @@ data class MainUiState(
     val deviceName: String = "Converge-Compose",
     val search: String = "",
     val statusFilter: String = "All",
+    val priorityFilter: String = "All",
+    val projectFilter: String = "All",
+    val searchMode: SearchMode = SearchMode.LOCAL,
+    val openOnly: Boolean = false,
     val sortMode: SortMode = SortMode.UPDATED_DESC,
+    val compactList: Boolean = false,
     val currentTab: MainTab = MainTab.ISSUES,
     val page: Int = 1,
     val totalIssues: Int = 0,
@@ -45,12 +69,22 @@ data class MainUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val issues: List<Issue> = emptyList(),
+    val favoriteIssues: List<Issue> = emptyList(),
     val selectedIssue: Issue? = null,
     val assignableUsers: List<AssignableUser> = emptyList(),
     val activities: List<Activity> = emptyList(),
+    val catalogStatuses: List<CatalogStatus> = emptyList(),
+    val catalogPriorities: List<CatalogPriority> = emptyList(),
+    val catalogProjects: List<CatalogProject> = emptyList(),
     val internalNotes: List<InternalNote> = emptyList(),
+    val journals: List<Journal> = emptyList(),
+    val notifications: List<NotificationItem> = emptyList(),
+    val unreadNotifications: Int = 0,
     val aiSummary: AiSummaryResponse? = null,
     val aiCategorization: AiCategorizeResponse? = null,
+    val savedViews: List<SavedIssueView> = emptyList(),
+    val savedViewName: String = "",
+    val activeSavedViewId: String? = null,
     val actionMessage: String? = null,
     val showCreateIssueDialog: Boolean = false,
     val showEditIssueDialog: Boolean = false,
@@ -58,6 +92,7 @@ data class MainUiState(
     val showTimeDialog: Boolean = false,
     val showInternalNoteDialog: Boolean = false,
     val showGithubDialog: Boolean = false,
+    val showRelationDialog: Boolean = false,
     val createSubject: String = "",
     val createProjectId: String = "",
     val createDescription: String = "",
@@ -73,7 +108,10 @@ data class MainUiState(
     val timeActivityId: String = "",
     val timeComment: String = "",
     val timeSpentOn: String = LocalDate.now().toString(),
+    val editingTimeEntryId: Int? = null,
     val internalNoteDraft: String = "",
+    val relationTargetId: String = "",
+    val relationType: String = "relates",
     val githubRepository: String = "",
     val githubIssueNumber: String = "",
     val githubPrNumber: String = "",
@@ -88,6 +126,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         MainUiState(
             serverUrl = repository.savedServerUrl(BuildConfig.DEFAULT_SERVER_URL),
             isPaired = repository.hasToken(),
+            savedViews = repository.savedIssueViews(),
         ),
     )
         private set
@@ -102,16 +141,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateRedmineBaseUrl(value: String) = update { copy(redmineBaseUrl = value) }
     fun updateRedmineApiKey(value: String) = update { copy(redmineApiKey = value) }
     fun updateDeviceName(value: String) = update { copy(deviceName = value) }
-    fun updateSearch(value: String) = update { copy(search = value) }
+    fun updateSearch(value: String) = update { copy(search = value, activeSavedViewId = null) }
     fun updateStatusFilter(value: String) {
-        update { copy(statusFilter = value) }
+        update { copy(statusFilter = value, activeSavedViewId = null) }
+        loadIssues()
+    }
+    fun updatePriorityFilter(value: String) {
+        update { copy(priorityFilter = value, activeSavedViewId = null) }
+        loadIssues()
+    }
+    fun updateProjectFilter(value: String) {
+        update { copy(projectFilter = value, activeSavedViewId = null) }
+        loadIssues()
+    }
+    fun updateSearchMode(mode: SearchMode) {
+        update { copy(searchMode = mode, activeSavedViewId = null) }
+        loadIssues()
+    }
+    fun toggleOpenOnly() {
+        update { copy(openOnly = !openOnly, activeSavedViewId = null) }
         loadIssues()
     }
     fun updateSortMode(mode: SortMode) {
-        update { copy(sortMode = mode) }
+        update { copy(sortMode = mode, activeSavedViewId = null) }
         loadIssues()
     }
-    fun switchTab(tab: MainTab) = update { copy(currentTab = tab) }
+    fun toggleCompactList() = update { copy(compactList = !compactList, activeSavedViewId = null) }
+    fun updateSavedViewName(value: String) = update { copy(savedViewName = value) }
+    fun switchTab(tab: MainTab) {
+        update { copy(currentTab = tab) }
+        when (tab) {
+            MainTab.FAVORITES -> loadFavorites()
+            MainTab.NOTIFICATIONS -> loadNotifications()
+            else -> Unit
+        }
+    }
     fun setOffline(offline: Boolean) = update { copy(isOffline = offline) }
     fun updateCommentDraft(value: String) = update { copy(commentDraft = value) }
     fun updateCreateSubject(value: String) = update { copy(createSubject = value) }
@@ -130,6 +194,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateTimeComment(value: String) = update { copy(timeComment = value) }
     fun updateTimeSpentOn(value: String) = update { copy(timeSpentOn = value) }
     fun updateInternalNoteDraft(value: String) = update { copy(internalNoteDraft = value) }
+    fun updateRelationTargetId(value: String) = update { copy(relationTargetId = value) }
+    fun updateRelationType(value: String) = update { copy(relationType = value) }
     fun updateGithubRepository(value: String) = update { copy(githubRepository = value) }
     fun updateGithubIssueNumber(value: String) = update { copy(githubIssueNumber = value) }
     fun updateGithubPrNumber(value: String) = update { copy(githubPrNumber = value) }
@@ -138,13 +204,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun clearError() = update { copy(errorMessage = null) }
     fun clearActionMessage() = update { copy(actionMessage = null) }
 
-    fun showCreateIssueDialog() = update { copy(showCreateIssueDialog = true) }
+    fun showCreateIssueDialog() {
+        loadCatalogs()
+        update { copy(showCreateIssueDialog = true) }
+    }
     fun hideCreateIssueDialog() = update { copy(showCreateIssueDialog = false) }
     fun hideEditIssueDialog() = update { copy(showEditIssueDialog = false) }
     fun hideAssignSheet() = update { copy(showAssignSheet = false) }
-    fun hideTimeDialog() = update { copy(showTimeDialog = false) }
+    fun hideTimeDialog() = update { copy(showTimeDialog = false, editingTimeEntryId = null) }
     fun hideInternalNoteDialog() = update { copy(showInternalNoteDialog = false) }
     fun hideGithubDialog() = update { copy(showGithubDialog = false) }
+    fun hideRelationDialog() = update { copy(showRelationDialog = false) }
 
     fun pairDevice() {
         val current = state.value
@@ -178,8 +248,61 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             runBusy {
                 val status = state.value.statusFilter.takeIf { it != "All" }
-                val response = repository.listIssues(state.value.serverUrl, state.value.search, status, state.value.sortMode.apiValue, 1)
+                val priority = state.value.priorityFilter.takeIf { it != "All" }
+                val project = state.value.projectFilter.takeIf { it != "All" }
+                val response = repository.listIssues(
+                    serverUrl = state.value.serverUrl,
+                    search = state.value.search,
+                    status = status,
+                    priority = priority,
+                    project = project,
+                    searchMode = state.value.searchMode.apiValue,
+                    openOnly = state.value.openOnly,
+                    sort = state.value.sortMode.apiValue,
+                    page = 1,
+                    pageSize = if (state.value.compactList) 50 else 25,
+                )
                 update { copy(issues = response.items, page = 1, totalIssues = response.total) }
+            }
+        }
+    }
+
+    fun loadNotifications() {
+        viewModelScope.launch {
+            runBusy {
+                val response = repository.listNotifications(state.value.serverUrl)
+                update { copy(notifications = response.notifications, unreadNotifications = response.unreadCount) }
+            }
+        }
+    }
+
+    fun loadCatalogs() {
+        viewModelScope.launch {
+            runCatching {
+                val catalogs = repository.getCatalogs(state.value.serverUrl)
+                update {
+                    copy(
+                        catalogStatuses = catalogs.statuses,
+                        catalogPriorities = catalogs.priorities,
+                        catalogProjects = catalogs.projects,
+                    )
+                }
+            }
+        }
+    }
+
+    fun loadFavorites() {
+        viewModelScope.launch {
+            runBusy {
+                val response = repository.listIssues(
+                    serverUrl = state.value.serverUrl,
+                    search = null,
+                    favoritedOnly = true,
+                    sort = state.value.sortMode.apiValue,
+                    page = 1,
+                    pageSize = 100,
+                )
+                update { copy(favoriteIssues = response.items) }
             }
         }
     }
@@ -191,7 +314,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             update { copy(isLoadingMore = true) }
             try {
                 val status = current.statusFilter.takeIf { it != "All" }
-                val response = repository.listIssues(current.serverUrl, current.search, status, current.sortMode.apiValue, current.page + 1)
+                val priority = current.priorityFilter.takeIf { it != "All" }
+                val project = current.projectFilter.takeIf { it != "All" }
+                val response = repository.listIssues(
+                    serverUrl = current.serverUrl,
+                    search = current.search,
+                    status = status,
+                    priority = priority,
+                    project = project,
+                    searchMode = current.searchMode.apiValue,
+                    openOnly = current.openOnly,
+                    sort = current.sortMode.apiValue,
+                    page = current.page + 1,
+                    pageSize = if (current.compactList) 50 else 25,
+                )
                 update { copy(issues = issues + response.items, page = page + 1, totalIssues = response.total, isLoadingMore = false) }
             } catch (e: Exception) {
                 update { copy(isLoadingMore = false, errorMessage = e.message ?: "Failed to load more") }
@@ -199,22 +335,74 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun saveCurrentView() {
+        val name = state.value.savedViewName.trim().ifBlank { "View ${state.value.savedViews.size + 1}" }
+        val view = SavedIssueView(
+            id = UUID.randomUUID().toString(),
+            name = name,
+            search = state.value.search,
+            statusFilter = state.value.statusFilter,
+            priorityFilter = state.value.priorityFilter,
+            projectFilter = state.value.projectFilter,
+            searchMode = state.value.searchMode.apiValue,
+            openOnly = state.value.openOnly,
+            sort = state.value.sortMode.apiValue,
+            compactList = state.value.compactList,
+        )
+        val next = state.value.savedViews + view
+        repository.saveIssueViews(next)
+        update { copy(savedViews = next, savedViewName = "", activeSavedViewId = view.id, actionMessage = "Saved view \"$name\"") }
+    }
+
+    fun applySavedView(view: SavedIssueView) {
+        val mode = SearchMode.entries.firstOrNull { it.apiValue == view.searchMode } ?: SearchMode.LOCAL
+        val sort = SortMode.entries.firstOrNull { it.apiValue == view.sort } ?: SortMode.UPDATED_DESC
+        update {
+            copy(
+                search = view.search,
+                statusFilter = view.statusFilter,
+                priorityFilter = view.priorityFilter,
+                projectFilter = view.projectFilter,
+                searchMode = mode,
+                openOnly = view.openOnly,
+                sortMode = sort,
+                compactList = view.compactList,
+                activeSavedViewId = view.id,
+            )
+        }
+        loadIssues()
+    }
+
+    fun deleteSavedView(viewId: String) {
+        val next = state.value.savedViews.filterNot { it.id == viewId }
+        repository.saveIssueViews(next)
+        update {
+            copy(
+                savedViews = next,
+                activeSavedViewId = activeSavedViewId.takeIf { it != viewId },
+                actionMessage = "Saved view removed",
+            )
+        }
+    }
+
     fun selectIssue(issue: Issue) {
         viewModelScope.launch {
             runBusy {
-                val id = issue.redmineIssueId?.toString() ?: issue.id
-                val detail = repository.getIssue(state.value.serverUrl, id)
-                val enriched = repository.refreshIssueLists(state.value.serverUrl, detail)
-                val notes = detail.redmineIssueId?.let {
-                    runCatching { repository.listInternalNotes(state.value.serverUrl, it) }.getOrElse { emptyList() }
-                } ?: emptyList()
-                update { copy(selectedIssue = enriched, internalNotes = notes, commentDraft = "", aiSummary = null, aiCategorization = null) }
+                loadIssueDetail(issue.redmineIssueId?.toString() ?: issue.id)
+            }
+        }
+    }
+
+    fun selectIssueById(redmineIssueId: Int) {
+        viewModelScope.launch {
+            runBusy {
+                loadIssueDetail(redmineIssueId.toString())
             }
         }
     }
 
     fun backToList() {
-        update { copy(selectedIssue = null, commentDraft = "", internalNotes = emptyList(), aiSummary = null, aiCategorization = null) }
+        update { copy(selectedIssue = null, commentDraft = "", internalNotes = emptyList(), journals = emptyList(), aiSummary = null, aiCategorization = null) }
     }
 
     fun createIssue() {
@@ -237,7 +425,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     dueDate = state.value.createDueDate,
                 )
                 val status = state.value.statusFilter.takeIf { it != "All" }
-                val listResponse = repository.listIssues(state.value.serverUrl, state.value.search, status, state.value.sortMode.apiValue, 1)
+                val priority = state.value.priorityFilter.takeIf { it != "All" }
+                val project = state.value.projectFilter.takeIf { it != "All" }
+                val listResponse = repository.listIssues(
+                    serverUrl = state.value.serverUrl,
+                    search = state.value.search,
+                    status = status,
+                    priority = priority,
+                    project = project,
+                    searchMode = state.value.searchMode.apiValue,
+                    openOnly = state.value.openOnly,
+                    sort = state.value.sortMode.apiValue,
+                    page = 1,
+                    pageSize = if (state.value.compactList) 50 else 25,
+                )
                 update {
                     copy(
                         issues = listResponse.items,
@@ -303,6 +504,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             runBusy {
                 val favorited = repository.toggleFavorite(state.value.serverUrl, redmineIssueId)
                 refreshSelectedIssue(actionMessage = if (favorited) "Added to favorites" else "Removed from favorites")
+                if (state.value.currentTab == MainTab.FAVORITES) loadFavorites()
             }
         }
     }
@@ -345,8 +547,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     copy(
                         activities = activities,
                         showTimeDialog = true,
+                        editingTimeEntryId = null,
+                        timeHours = "",
+                        timeComment = "",
                         timeActivityId = activities.firstOrNull()?.id?.toString().orEmpty(),
                         timeSpentOn = LocalDate.now().toString(),
+                    )
+                }
+            }
+        }
+    }
+
+    fun openEditTimeEntry(entry: TimeEntry) {
+        val redmineIssueId = state.value.selectedIssue?.redmineIssueId
+        val remoteEntryId = entry.redmineTimeEntryId
+        if (redmineIssueId == null || remoteEntryId == null) return
+        viewModelScope.launch {
+            runBusy {
+                val activities = repository.listActivities(state.value.serverUrl)
+                update {
+                    copy(
+                        activities = activities,
+                        showTimeDialog = true,
+                        editingTimeEntryId = remoteEntryId,
+                        timeHours = entry.hours.toString(),
+                        timeActivityId = entry.activityId?.toString() ?: activities.firstOrNull()?.id?.toString().orEmpty(),
+                        timeComment = entry.comments.orEmpty(),
+                        timeSpentOn = entry.spentOn.ifBlank { LocalDate.now().toString() },
                     )
                 }
             }
@@ -363,16 +590,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             runBusy {
-                repository.createTimeEntry(
-                    serverUrl = state.value.serverUrl,
-                    redmineIssueId = redmineIssueId,
-                    hours = hours,
-                    activityId = activityId,
-                    comment = state.value.timeComment,
-                    spentOn = state.value.timeSpentOn,
-                )
-                refreshSelectedIssue(actionMessage = "Time logged")
-                update { copy(showTimeDialog = false, timeHours = "", timeComment = "") }
+                val editingId = state.value.editingTimeEntryId
+                if (editingId == null) {
+                    repository.createTimeEntry(
+                        serverUrl = state.value.serverUrl,
+                        redmineIssueId = redmineIssueId,
+                        hours = hours,
+                        activityId = activityId,
+                        comment = state.value.timeComment,
+                        spentOn = state.value.timeSpentOn,
+                    )
+                    refreshSelectedIssue(actionMessage = "Time logged")
+                } else {
+                    repository.updateTimeEntry(
+                        serverUrl = state.value.serverUrl,
+                        redmineTimeEntryId = editingId,
+                        hours = hours,
+                        activityId = activityId,
+                        comment = state.value.timeComment,
+                        spentOn = state.value.timeSpentOn,
+                    )
+                    refreshSelectedIssue(actionMessage = "Time entry updated")
+                }
+                update { copy(showTimeDialog = false, editingTimeEntryId = null, timeHours = "", timeComment = "") }
             }
         }
     }
@@ -459,6 +699,61 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 refreshSelectedIssue(actionMessage = "GitHub link removed")
             }
         }
+    }
+
+    fun openRelationDialog() = update { copy(showRelationDialog = true, relationType = "relates", relationTargetId = "") }
+
+    fun createRelation() {
+        val redmineIssueId = state.value.selectedIssue?.redmineIssueId ?: return
+        val targetId = state.value.relationTargetId.toIntOrNull()
+        if (targetId == null) {
+            update { copy(errorMessage = "Related issue ID is required.") }
+            return
+        }
+        viewModelScope.launch {
+            runBusy {
+                repository.createRelation(state.value.serverUrl, redmineIssueId, targetId, state.value.relationType)
+                refreshSelectedIssue(actionMessage = "Relation added")
+                update { copy(showRelationDialog = false, relationTargetId = "", relationType = "relates") }
+            }
+        }
+    }
+
+    fun deleteRelation(relation: IssueRelation) {
+        val redmineIssueId = state.value.selectedIssue?.redmineIssueId ?: return
+        if (relation.redmineRelationId <= 0) return
+        viewModelScope.launch {
+            runBusy {
+                repository.deleteRelation(state.value.serverUrl, redmineIssueId, relation.redmineRelationId)
+                refreshSelectedIssue(actionMessage = "Relation removed")
+            }
+        }
+    }
+
+    fun downloadAttachment(attachment: IssueAttachment) {
+        val issueId = state.value.selectedIssue?.redmineIssueId ?: return
+        val token = repository.currentToken()
+        if (token.isNullOrBlank()) {
+            update { copy(errorMessage = "Session token is missing. Pair this device again.") }
+            return
+        }
+        val url = repository.attachmentUrl(state.value.serverUrl, issueId, attachment.redmineAttachmentId)
+        val request = DownloadManager.Request(Uri.parse(url))
+            .addRequestHeader("Authorization", "Bearer $token")
+            .setTitle(attachment.filename.ifBlank { "Attachment ${attachment.redmineAttachmentId}" })
+            .setDescription("Downloading Converge attachment")
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .setDestinationInExternalFilesDir(getApplication(), Environment.DIRECTORY_DOWNLOADS, attachment.filename.ifBlank { "attachment-${attachment.redmineAttachmentId}" })
+        val manager = getApplication<Application>().getSystemService(DownloadManager::class.java)
+        manager.enqueue(request)
+        update { copy(actionMessage = "Attachment download started") }
+    }
+
+    fun currentBearerToken(): String? = repository.currentToken()
+
+    fun attachmentUrl(issue: Issue, attachment: IssueAttachment): String? {
+        val redmineIssueId = issue.redmineIssueId ?: return null
+        return repository.attachmentUrl(state.value.serverUrl, redmineIssueId, attachment.redmineAttachmentId)
     }
 
     fun summarizeIssue() {
@@ -552,11 +847,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val id = current.redmineIssueId?.toString() ?: current.id
         val refreshed = repository.refreshIssueLists(state.value.serverUrl, repository.getIssue(state.value.serverUrl, id))
         val status = state.value.statusFilter.takeIf { it != "All" }
-        val response = repository.listIssues(state.value.serverUrl, state.value.search, status, state.value.sortMode.apiValue, 1)
+        val priority = state.value.priorityFilter.takeIf { it != "All" }
+        val project = state.value.projectFilter.takeIf { it != "All" }
+        val response = repository.listIssues(
+            serverUrl = state.value.serverUrl,
+            search = state.value.search,
+            status = status,
+            priority = priority,
+            project = project,
+            searchMode = state.value.searchMode.apiValue,
+            openOnly = state.value.openOnly,
+            sort = state.value.sortMode.apiValue,
+            page = 1,
+            pageSize = if (state.value.compactList) 50 else 25,
+        )
         val notes = refreshed.redmineIssueId?.let {
             runCatching { repository.listInternalNotes(state.value.serverUrl, it) }.getOrElse { state.value.internalNotes }
         } ?: state.value.internalNotes
-        update { copy(selectedIssue = refreshed, issues = response.items, page = 1, totalIssues = response.total, internalNotes = notes, actionMessage = actionMessage) }
+        val journals = refreshed.redmineIssueId?.let {
+            runCatching { repository.listJournals(state.value.serverUrl, it) }.getOrElse { state.value.journals }
+        } ?: state.value.journals
+        update { copy(selectedIssue = refreshed, issues = response.items, page = 1, totalIssues = response.total, internalNotes = notes, journals = journals, actionMessage = actionMessage) }
+    }
+
+    private suspend fun loadIssueDetail(id: String) {
+        val detail = repository.getIssue(state.value.serverUrl, id)
+        val enriched = repository.refreshIssueLists(state.value.serverUrl, detail)
+        val notes = detail.redmineIssueId?.let {
+            runCatching { repository.listInternalNotes(state.value.serverUrl, it) }.getOrElse { emptyList() }
+        } ?: emptyList()
+        val journals = detail.redmineIssueId?.let {
+            runCatching { repository.listJournals(state.value.serverUrl, it) }.getOrElse { emptyList() }
+        } ?: emptyList()
+        update { copy(selectedIssue = enriched, internalNotes = notes, journals = journals, commentDraft = "", aiSummary = null, aiCategorization = null) }
     }
 
     private suspend fun runBusy(block: suspend () -> Unit) {

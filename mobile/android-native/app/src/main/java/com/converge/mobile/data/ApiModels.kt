@@ -58,12 +58,16 @@ data class Issue(
     val priorityId: Int? = null,
     val statusId: Int? = null,
     val statusName: String = "",
+    val parentIssueId: Int? = null,
+    val parentIssueLabel: String? = null,
     val assignedToName: String? = null,
     val authorName: String? = null,
+    val categoryName: String? = null,
     val dueDate: String? = null,
     val startDate: String? = null,
     val estimatedHours: Double? = null,
     val spentHours: Double? = null,
+    val customFieldsJson: List<CustomField> = emptyList(),
     val updatedOnRemote: String? = null,
     val lastActivityAt: String? = null,
     val doneRatio: Int? = null,
@@ -124,6 +128,12 @@ data class TimeEntry(
     val authorName: String? = null,
     val comments: String? = null,
     val spentOn: String = "",
+)
+
+data class CustomField(
+    val id: Int = 0,
+    val name: String = "",
+    val value: String? = null,
 )
 
 data class CommentRequest(
@@ -217,6 +227,20 @@ data class RotateTokenResponse(
     val expiresAt: String? = null,
 )
 
+data class NotificationsResponse(
+    val notifications: List<NotificationItem> = emptyList(),
+    val unreadCount: Int = 0,
+)
+
+data class NotificationItem(
+    val id: String = "",
+    val type: String = "info",
+    val title: String = "",
+    val message: String = "",
+    val timestamp: String = "",
+    val issueId: Int? = null,
+)
+
 data class AiIssueRequest(
     val issueId: String,
 )
@@ -239,6 +263,49 @@ data class AiCategorizeResponse(
     val modelUsed: String = "",
     val provider: String? = null,
     val rawResponse: Boolean = false,
+)
+
+data class Journal(
+    val id: String = "",
+    val redmineJournalId: Int = 0,
+    val author: String? = null,
+    val notes: String? = null,
+    val createdOnRemote: String = "",
+)
+
+data class JournalsResponse(
+    val journals: List<Journal> = emptyList(),
+)
+
+data class CatalogStatus(
+    val id: Int = 0,
+    val name: String = "",
+    val isClosed: Boolean = false,
+)
+
+data class CatalogPriority(
+    val id: Int = 0,
+    val name: String = "",
+    val isDefault: Boolean = false,
+)
+
+data class CatalogProject(
+    val id: Int = 0,
+    val name: String = "",
+    val identifier: String = "",
+)
+
+data class CatalogResponse(
+    val statuses: List<CatalogStatus> = emptyList(),
+    val priorities: List<CatalogPriority> = emptyList(),
+    val trackers: List<String> = emptyList(),
+    val projects: List<CatalogProject> = emptyList(),
+)
+
+data class RelationCreateRequest(
+    val issueToId: Int,
+    val relationType: String,
+    val delay: Int? = null,
 )
 
 data class ApiErrorBody(

@@ -23,6 +23,10 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -34,6 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -61,6 +66,7 @@ import com.converge.mobile.data.displayId
 import com.converge.mobile.data.formatDate
 import com.converge.mobile.ui.MainUiState
 import com.converge.mobile.ui.MainViewModel
+import com.converge.mobile.ui.SearchMode
 import com.converge.mobile.ui.SortMode
 import com.converge.mobile.ui.components.AssigneeAvatar
 import com.converge.mobile.ui.components.EmptyState
@@ -81,8 +87,17 @@ fun IssueListScreen(state: MainUiState, viewModel: MainViewModel) {
     val focusManager = LocalFocusManager.current
     var showSearch by remember { mutableStateOf(false) }
     var showOverflow by remember { mutableStateOf(false) }
+    var previewIssue by remember { mutableStateOf<Issue?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
+    val priorityOptions = remember(state.issues) {
+        state.issues.mapNotNull { it.priority?.takeIf(String::isNotBlank) }.distinct().sorted()
+    }
+    val projectOptions = remember(state.issues, state.catalogProjects) {
+        (state.catalogProjects.map { it.name } + state.issues.mapNotNull { it.projectName?.takeIf(String::isNotBlank) })
+            .distinct()
+            .sorted()
+    }
 
     val shouldLoadMore by remember {
         derivedStateOf {
@@ -103,6 +118,16 @@ fun IssueListScreen(state: MainUiState, viewModel: MainViewModel) {
     }
 
     if (state.showCreateIssueDialog) CreateIssueDialog(state, viewModel)
+    previewIssue?.let { issue ->
+        IssuePreviewDialog(
+            issue = issue,
+            onDismiss = { previewIssue = null },
+            onOpen = {
+                previewIssue = null
+                viewModel.selectIssue(issue)
+            },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -164,6 +189,32 @@ fun IssueListScreen(state: MainUiState, viewModel: MainViewModel) {
                                     )
                                 }
                                 HorizontalDivider()
+                                DropdownMenuItem(text = { Text("Search Mode", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }, onClick = {}, enabled = false)
+                                SearchMode.entries.forEach { mode ->
+                                    DropdownMenuItem(
+                                        text = { Text(mode.label) },
+                                        leadingIcon = {
+                                            if (state.searchMode == mode) Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        },
+                                        onClick = { showOverflow = false; viewModel.updateSearchMode(mode) },
+                                    )
+                                }
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text(if (state.openOnly) "Open only: On" else "Open only: Off") },
+                                    leadingIcon = {
+                                        if (state.openOnly) Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    },
+                                    onClick = { showOverflow = false; viewModel.toggleOpenOnly() },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (state.compactList) "Density: Compact" else "Density: Comfortable") },
+                                    leadingIcon = {
+                                        if (state.compactList) Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    },
+                                    onClick = { showOverflow = false; viewModel.toggleCompactList() },
+                                )
+                                HorizontalDivider()
                                 DropdownMenuItem(text = { Text("Rotate Token") }, onClick = { showOverflow = false; viewModel.rotateToken() })
                             }
                         }
@@ -178,6 +229,8 @@ fun IssueListScreen(state: MainUiState, viewModel: MainViewModel) {
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             ErrorBanner(state.errorMessage, viewModel::clearError)
+            IssueDashboardSummary(state)
+            SavedViewsRow(state, viewModel)
 
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
@@ -189,6 +242,38 @@ fun IssueListScreen(state: MainUiState, viewModel: MainViewModel) {
                         onClick = { viewModel.updateStatusFilter(filter) },
                         label = { Text(filter, style = MaterialTheme.typography.labelSmall) },
                     )
+                }
+                if (priorityOptions.isNotEmpty()) {
+                    item {
+                        FilterChip(
+                            selected = state.priorityFilter == "All",
+                            onClick = { viewModel.updatePriorityFilter("All") },
+                            label = { Text("Any Priority", style = MaterialTheme.typography.labelSmall) },
+                        )
+                    }
+                    items(priorityOptions) { priority ->
+                        FilterChip(
+                            selected = state.priorityFilter == priority,
+                            onClick = { viewModel.updatePriorityFilter(priority) },
+                            label = { Text(priority, style = MaterialTheme.typography.labelSmall) },
+                        )
+                    }
+                }
+                if (projectOptions.isNotEmpty()) {
+                    item {
+                        FilterChip(
+                            selected = state.projectFilter == "All",
+                            onClick = { viewModel.updateProjectFilter("All") },
+                            label = { Text("Any Project", style = MaterialTheme.typography.labelSmall) },
+                        )
+                    }
+                    items(projectOptions) { project ->
+                        FilterChip(
+                            selected = state.projectFilter == project,
+                            onClick = { viewModel.updateProjectFilter(project) },
+                            label = { Text(project, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        )
+                    }
                 }
             }
             HorizontalDivider(thickness = 0.5.dp)
@@ -218,14 +303,19 @@ fun IssueListScreen(state: MainUiState, viewModel: MainViewModel) {
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     Text(
-                                        state.sortMode.label,
+                                        "${state.sortMode.label} · ${state.searchMode.label}${if (state.openOnly) " · Open" else ""}",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary,
                                     )
                                 }
                             }
                             items(state.issues, key = { it.id }) { issue ->
-                                IssueRow(issue = issue, onClick = { viewModel.selectIssue(issue) })
+                                IssueRow(
+                                    issue = issue,
+                                    compact = state.compactList,
+                                    onClick = { viewModel.selectIssue(issue) },
+                                    onPeek = { previewIssue = issue },
+                                )
                                 HorizontalDivider(thickness = 0.5.dp)
                             }
                             item {
@@ -246,16 +336,99 @@ fun IssueListScreen(state: MainUiState, viewModel: MainViewModel) {
 }
 
 @Composable
-private fun IssueRow(issue: Issue, onClick: () -> Unit) {
+private fun IssueDashboardSummary(state: MainUiState) {
+    if (state.issues.isEmpty()) return
+    val open = state.issues.count { it.statusName.lowercase().let { status -> !status.contains("closed") && !status.contains("resolved") } }
+    val dueSoon = state.issues.count { parseDueUrgency(it.dueDate) == DueUrgency.SOON }
+    val overdue = state.issues.count { parseDueUrgency(it.dueDate) == DueUrgency.OVERDUE }
+    val favorites = state.issues.count { it.isFavorited }
+
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item { DashboardStat("Loaded", state.issues.size.toString()) }
+        item { DashboardStat("Open", open.toString()) }
+        item { DashboardStat("Due soon", dueSoon.toString(), warn = dueSoon > 0) }
+        item { DashboardStat("Overdue", overdue.toString(), danger = overdue > 0) }
+        item { DashboardStat("Favorites", favorites.toString()) }
+    }
+}
+
+@Composable
+private fun DashboardStat(label: String, value: String, warn: Boolean = false, danger: Boolean = false) {
+    val container = when {
+        danger -> MaterialTheme.colorScheme.errorContainer
+        warn -> Color(0xFFFFF7ED)
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val content = when {
+        danger -> MaterialTheme.colorScheme.onErrorContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Card(
+        shape = MaterialTheme.shapes.small,
+        colors = CardDefaults.cardColors(containerColor = container, contentColor = content),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(label, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
+private fun SavedViewsRow(state: MainUiState, viewModel: MainViewModel) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        item {
+            OutlinedTextField(
+                value = state.savedViewName,
+                onValueChange = viewModel::updateSavedViewName,
+                placeholder = { Text("View name") },
+                singleLine = true,
+                textStyle = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.size(width = 132.dp, height = 54.dp),
+            )
+        }
+        item {
+            TextButton(onClick = viewModel::saveCurrentView) {
+                Text("Save")
+            }
+        }
+        items(state.savedViews, key = { it.id }) { savedView ->
+            FilterChip(
+                selected = state.activeSavedViewId == savedView.id,
+                onClick = { viewModel.applySavedView(savedView) },
+                label = { Text(savedView.name, style = MaterialTheme.typography.labelSmall) },
+                trailingIcon = {
+                    Text(
+                        "×",
+                        modifier = Modifier.clickable { viewModel.deleteSavedView(savedView.id) },
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun IssueRow(issue: Issue, compact: Boolean, onClick: () -> Unit, onPeek: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = if (compact) 7.dp else 10.dp),
+        verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
             Text(issue.subject, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(end = 8.dp))
-            Text(issue.displayId(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = onPeek, modifier = Modifier.padding(0.dp)) {
+                Text(issue.displayId(), style = MaterialTheme.typography.labelSmall)
+            }
         }
-        issue.projectName?.takeIf { it.isNotBlank() }?.let {
+        if (!compact) issue.projectName?.takeIf { it.isNotBlank() }?.let {
             Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -279,12 +452,62 @@ private fun IssueRow(issue: Issue, onClick: () -> Unit) {
 }
 
 @Composable
+private fun IssuePreviewDialog(issue: Issue, onDismiss: () -> Unit, onOpen: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { Button(onClick = onOpen) { Text("Open") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        title = { Text("${issue.displayId()} · ${issue.subject}", maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                issue.projectName?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary) }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    StatusPill(issue.statusName)
+                    issue.priority?.takeIf { it.isNotBlank() }?.let { PriorityPill(it) }
+                }
+                Text("Assignee: ${issue.assignedToName ?: "Unassigned"}", style = MaterialTheme.typography.bodySmall)
+                Text("Due: ${issue.dueDate?.formatDate() ?: "No due date"}", style = MaterialTheme.typography.bodySmall)
+                issue.description?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, maxLines = 5, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        },
+    )
+}
+
+@Composable
 fun CreateIssueDialog(state: MainUiState, viewModel: MainViewModel) {
     FormDialog(title = "Create Issue", onDismiss = viewModel::hideCreateIssueDialog, onConfirm = viewModel::createIssue, confirmLabel = "Create") {
         FormTextField("Subject", state.createSubject, viewModel::updateCreateSubject)
-        FormTextField("Project ID", state.createProjectId, viewModel::updateCreateProjectId, numeric = true)
+        if (state.catalogProjects.isNotEmpty()) {
+            Text("Project", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(state.catalogProjects, key = { it.id }) { project ->
+                    FilterChip(
+                        selected = state.createProjectId == project.id.toString(),
+                        onClick = { viewModel.updateCreateProjectId(project.id.toString()) },
+                        label = { Text(project.name, style = MaterialTheme.typography.labelSmall) },
+                    )
+                }
+            }
+        } else {
+            FormTextField("Project ID", state.createProjectId, viewModel::updateCreateProjectId, numeric = true)
+        }
         FormTextField("Description", state.createDescription, viewModel::updateCreateDescription, minLines = 3)
-        FormTextField("Priority ID", state.createPriorityId, viewModel::updateCreatePriorityId, numeric = true)
+        if (state.catalogPriorities.isNotEmpty()) {
+            Text("Priority", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(state.catalogPriorities, key = { it.id }) { priority ->
+                    FilterChip(
+                        selected = state.createPriorityId == priority.id.toString(),
+                        onClick = { viewModel.updateCreatePriorityId(priority.id.toString()) },
+                        label = { Text(priority.name, style = MaterialTheme.typography.labelSmall) },
+                    )
+                }
+            }
+        } else {
+            FormTextField("Priority ID", state.createPriorityId, viewModel::updateCreatePriorityId, numeric = true)
+        }
         FormTextField("Due date (YYYY-MM-DD)", state.createDueDate, viewModel::updateCreateDueDate)
     }
 }

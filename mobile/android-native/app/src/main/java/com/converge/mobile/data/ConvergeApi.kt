@@ -17,9 +17,12 @@ interface ConvergeApi {
     suspend fun listIssues(
         @Query("search") search: String? = null,
         @Query("status") status: String? = null,
+        @Query("priority") priority: String? = null,
+        @Query("project") project: String? = null,
         @Query("searchMode") searchMode: String = "local",
         @Query("scope") scope: String = "issues",
         @Query("openOnly") openOnly: Boolean = false,
+        @Query("favoritedOnly") favoritedOnly: Boolean = false,
         @Query("sort") sort: String = "updated_desc",
         @Query("page") page: Int = 1,
         @Query("pageSize") pageSize: Int = 25,
@@ -54,6 +57,9 @@ interface ConvergeApi {
 
     @GET("api/mobile/v1/activities")
     suspend fun listActivities(): ActivitiesResponse
+
+    @GET("api/mobile/v1/notifications")
+    suspend fun listNotifications(): NotificationsResponse
 
     @POST("api/mobile/v1/issues/{id}/favorite")
     suspend fun toggleFavorite(@Path("id") issueId: String): FavoriteResponse
@@ -120,6 +126,24 @@ interface ConvergeApi {
 
     @POST("api/mobile/v1/tokens/rotate")
     suspend fun rotateToken(): RotateTokenResponse
+
+    @GET("api/mobile/v1/issues/{id}/journals")
+    suspend fun listJournals(@Path("id") issueId: String): JournalsResponse
+
+    @GET("api/mobile/v1/catalogs")
+    suspend fun getCatalogs(): CatalogResponse
+
+    @POST("api/mobile/v1/issues/{id}/relations")
+    suspend fun createRelation(
+        @Path("id") issueId: String,
+        @Body body: RelationCreateRequest,
+    )
+
+    @DELETE("api/mobile/v1/issues/{id}/relations/{relationId}")
+    suspend fun deleteRelation(
+        @Path("id") issueId: String,
+        @Path("relationId") relationId: Int,
+    )
 
     @DELETE("api/mobile/v1/tokens/current")
     suspend fun revokeCurrentToken()

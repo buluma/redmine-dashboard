@@ -36,6 +36,7 @@ export const bulkStatusUpdateSchema = z.object({
 export const issueQuerySchema = z.object({
   status: z.string().optional(),
   priority: z.string().optional(),
+  project: z.string().optional(),
   search: z.string().optional(),
   searchMode: z.enum(["local", "remote", "hybrid"]).default("local"),
   scope: z.enum(["issues", "all"]).default("issues"),
@@ -44,6 +45,11 @@ export const issueQuerySchema = z.object({
     .union([z.boolean(), z.enum(["true", "false"])])
     .optional()
     .transform((value) => (typeof value === "string" ? value === "true" : value)),
+  favoritedOnly: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .optional()
+    .default(false)
+    .transform((value) => (typeof value === "string" ? value === "true" : value ?? false)),
   sort: z.enum(["updated_desc", "updated_asc", "priority", "due_date"]).default("updated_desc"),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(1000).default(25),
