@@ -354,12 +354,13 @@ export default function Home() {
     if (statusFilter) params.set("status", statusFilter);
     if (priorityFilter) params.set("priority", priorityFilter);
     if (search) params.set("search", search);
+    if (advancedFilters.assignedToMe) params.set("assignedToMe", "true");
     params.set("searchMode", searchMode);
     params.set("scope", "issues");
     if (sort) params.set("sort", sort);
     params.set("page", "1");
     return params.toString();
-  }, [priorityFilter, search, searchMode, sort, statusFilter]);
+  }, [priorityFilter, search, searchMode, sort, statusFilter, advancedFilters.assignedToMe]);
 
   useEffect(() => {
     if (!heroRef.current) return;
@@ -915,6 +916,7 @@ export default function Home() {
     setPriorityFilter(view.priorityFilter);
     setSearch(view.search);
     setSort(view.sort);
+    setAdvancedFilters((current) => ({ ...current, assignedToMe: view.assignedToMe ?? false }));
     setActiveViewId(view.id);
   }
 
@@ -929,6 +931,7 @@ export default function Home() {
       search,
       sort,
       position: existing?.position ?? savedViews.length,
+      assignedToMe: advancedFilters.assignedToMe,
     };
 
     if (existing) {
@@ -1569,6 +1572,7 @@ export default function Home() {
                                 id: Date.now().toString(),
                                 name: presetNameInput.trim(),
                                 statusFilter, priorityFilter, search, showFavoritesOnly,
+                                assignedToMe: advancedFilters.assignedToMe,
                               }]);
                               setSavingPreset(false);
                               setPresetNameInput("");
@@ -1621,6 +1625,16 @@ export default function Home() {
                       resetPage();
                     }}
                   />
+                  <button
+                    type="button"
+                    className={`favorite-filter ${advancedFilters.assignedToMe ? "active" : ""}`}
+                    onClick={() => {
+                      setAdvancedFilters((current) => ({ ...current, assignedToMe: !current.assignedToMe }));
+                      resetPage();
+                    }}
+                  >
+                    {advancedFilters.assignedToMe ? t('queue.assignedToMeOn') : t('queue.assignedToMeOff')}
+                  </button>
                   <button
                     type="button"
                     className={`favorite-filter ${showFavoritesOnly ? "active" : ""}`}

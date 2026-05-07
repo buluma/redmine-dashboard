@@ -506,6 +506,10 @@ export default function IssueDetailPage() {
   const { performAction } = useOfflineAction();
   const { t, locale } = useI18n();
 
+  // State for editing internal notes
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editNoteContent, setEditNoteContent] = useState<string>("");
+
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
   const [editDraft, setEditDraft] = useState<{
@@ -873,6 +877,29 @@ export default function IssueDetailPage() {
       await loadInternalNotes();
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to delete note");
+    }
+  }
+
+  async function updateInternalNote(noteId: string, newContent: string) {
+    setNoteBusy(true);
+    try {
+      const res = await fetch(`/api/internal/notes/${noteId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: newContent.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || t("issues.messages.noteUpdateFailed"));
+      }
+      setEditingNoteId(null);
+      setEditNoteContent("");
+      await loadInternalNotes();
+      setActionInfo(t("issues.messages.noteUpdated"));
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : t("issues.messages.noteUpdateFailed"));
+    } finally {
+      setNoteBusy(false);
     }
   }
 
@@ -1955,27 +1982,72 @@ export default function IssueDetailPage() {
                     <div className="internal-note-head">
                       <span className="internal-note-author">{note.authorName}</span>
                       <span className="internal-note-date">{formatAgo(new Date(note.createdAt).toISOString(), t)}</span>
+                      <div className="internal-note-actions">
+                        {editingNoteId !== note.id && (
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            onClick={() => {
+                              setEditingNoteId(note.id);
+                              setEditNoteContent(note.content);
+                            }}
+                          >
+                            {t("common.edit")}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="internal-note-delete"
+                          onClick={() => {
+                            if (confirm(t("issues.actions.confirmDeleteNote"))) {
+                              void deleteInternalNote(note.id);
+                            }
+                          }}
+                          title={t("common.delete")}
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
                     <div className="internal-note-content">
-                      <MarkdownBlock
-                        content={note.content}
-                        attachments={issue.attachments}
-                        issueId={issue.redmineIssueId ?? undefined}
-                        onImageClick={(src, alt) => setLightboxImage({ src, alt })}
-                      />
+                      {editingNoteId === note.id ? (
+                        <div className="edit-note-form">
+                          <textarea
+                            value={editNoteContent}
+                            onChange={(e) => setEditNoteContent(e.target.value)}
+                            rows={5}
+                          />
+                          <div className="edit-note-actions">
+                            <button
+                              type="button"
+                              className="primary-button"
+                              onClick={() => void updateInternalNote(note.id, editNoteContent)}
+                              disabled={noteBusy || editNoteContent.trim().length === 0}
+                            >
+                              {noteBusy ? t("common.loading") : t("common.save")}
+                            </button>
+                            <button
+                              type="button"
+                              className="secondary-button"
+                              onClick={() => {
+                                setEditingNoteId(null);
+                                setEditNoteContent("");
+                              }}
+                              disabled={noteBusy}
+                            >
+                              {t("common.cancel")}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <MarkdownBlock
+                          content={note.content}
+                          attachments={issue.attachments}
+                          issueId={issue.redmineIssueId ?? undefined}
+                          onImageClick={(src, alt) => setLightboxImage({ src, alt })}
+                        />
+                      )}
                     </div>
-                    <button
-                      type="button"
-                      className="internal-note-delete"
-                      onClick={() => {
-                        if (confirm(t("issues.actions.confirmDeleteNote"))) {
-                          void deleteInternalNote(note.id);
-                        }
-                      }}
-                      title="Delete note"
-                    >
-                      ✕
-                    </button>
                   </article>
                 ))}
               </div>
