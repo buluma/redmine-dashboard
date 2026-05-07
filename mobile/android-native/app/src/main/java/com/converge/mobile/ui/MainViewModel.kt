@@ -17,6 +17,7 @@ import com.converge.mobile.data.AiSummaryResponse
 import com.converge.mobile.data.CatalogPriority
 import com.converge.mobile.data.CatalogProject
 import com.converge.mobile.data.CatalogStatus
+import com.converge.mobile.data.CatalogTracker
 import com.converge.mobile.data.ConvergeRepository
 import com.converge.mobile.data.InternalNote
 import com.converge.mobile.data.Issue
@@ -77,6 +78,7 @@ data class MainUiState(
     val catalogStatuses: List<CatalogStatus> = emptyList(),
     val catalogPriorities: List<CatalogPriority> = emptyList(),
     val catalogProjects: List<CatalogProject> = emptyList(),
+    val catalogTrackers: List<CatalogTracker> = emptyList(),
     val internalNotes: List<InternalNote> = emptyList(),
     val journals: List<Journal> = emptyList(),
     val notifications: List<NotificationItem> = emptyList(),
@@ -100,10 +102,12 @@ data class MainUiState(
     val createProjectId: String = "",
     val createDescription: String = "",
     val createPriorityId: String = "",
+    val createTrackerId: String = "",
     val createDueDate: String = "",
     val editSubject: String = "",
     val editDescription: String = "",
-    val editPriority: String = "",
+    val editPriorityId: String = "",
+    val editTrackerId: String = "",
     val editDueDate: String = "",
     val editStartDate: String = "",
     val editEstimate: String = "",
@@ -194,10 +198,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateCreateProjectId(value: String) = update { copy(createProjectId = value) }
     fun updateCreateDescription(value: String) = update { copy(createDescription = value) }
     fun updateCreatePriorityId(value: String) = update { copy(createPriorityId = value) }
+    fun updateCreateTrackerId(value: String) = update { copy(createTrackerId = value) }
     fun updateCreateDueDate(value: String) = update { copy(createDueDate = value) }
     fun updateEditSubject(value: String) = update { copy(editSubject = value) }
     fun updateEditDescription(value: String) = update { copy(editDescription = value) }
-    fun updateEditPriority(value: String) = update { copy(editPriority = value) }
+    fun updateEditPriorityId(value: String) = update { copy(editPriorityId = value) }
+    fun updateEditTrackerId(value: String) = update { copy(editTrackerId = value) }
     fun updateEditDueDate(value: String) = update { copy(editDueDate = value) }
     fun updateEditStartDate(value: String) = update { copy(editStartDate = value) }
     fun updateEditEstimate(value: String) = update { copy(editEstimate = value) }
@@ -315,6 +321,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         catalogStatuses = catalogs.statuses,
                         catalogPriorities = catalogs.priorities,
                         catalogProjects = catalogs.projects,
+                        catalogTrackers = catalogs.trackers,
                     )
                 }
             }
@@ -438,8 +445,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun createIssue() {
         val projectId = state.value.createProjectId.toIntOrNull()
         val priorityId = state.value.createPriorityId.toIntOrNull()
+        val trackerId = state.value.createTrackerId.toIntOrNull()
         if (state.value.createSubject.isBlank() || projectId == null) {
-            update { copy(errorMessage = "Subject and numeric project ID are required.") }
+            update { copy(errorMessage = "Subject and project are required.") }
             return
         }
 
@@ -451,6 +459,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     description = state.value.createDescription,
                     projectId = projectId,
                     priorityId = priorityId,
+                    trackerId = trackerId,
                     assignedToId = null,
                     dueDate = state.value.createDueDate,
                 )
@@ -480,6 +489,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         createProjectId = "",
                         createDescription = "",
                         createPriorityId = "",
+                        createTrackerId = "",
                         createDueDate = "",
                         actionMessage = "Created ${issue.displayId()}",
                     )
@@ -600,12 +610,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             openEditLocalIssueDialog(issue)
             return
         }
+        val matchedTrackerId = state.value.catalogTrackers
+            .firstOrNull { it.name == issue.tracker }?.id?.toString().orEmpty()
         update {
             copy(
                 showEditIssueDialog = true,
                 editSubject = issue.subject,
                 editDescription = issue.description.orEmpty(),
-                editPriority = issue.priority.orEmpty(),
+                editPriorityId = issue.priorityId?.toString().orEmpty(),
+                editTrackerId = matchedTrackerId,
                 editDueDate = issue.dueDate.orEmpty(),
                 editStartDate = issue.startDate.orEmpty(),
                 editEstimate = issue.estimatedHours?.toString().orEmpty(),
@@ -627,7 +640,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     redmineIssueId = redmineIssueId,
                     subject = state.value.editSubject,
                     description = state.value.editDescription,
-                    priority = state.value.editPriority,
+                    priorityId = state.value.editPriorityId.toIntOrNull(),
+                    trackerId = state.value.editTrackerId.toIntOrNull(),
                     dueDate = state.value.editDueDate,
                     startDate = state.value.editStartDate,
                     estimatedHours = state.value.editEstimate.toDoubleOrNull(),

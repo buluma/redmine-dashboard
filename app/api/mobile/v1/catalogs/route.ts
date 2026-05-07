@@ -10,18 +10,13 @@ export async function GET(request: Request) {
 
     const { client } = await requireRedmineClientForUser(user.id);
 
-    const [statuses, priorities, trackerRows, projects] = await Promise.all([
+    const [statuses, priorities, trackers, projects] = await Promise.all([
       prisma.statusCatalog.findMany({ orderBy: { id: "asc" } }),
       prisma.enumerationCatalog.findMany({
         where: { kind: "issue_priority", isActive: true },
         orderBy: { position: "asc" },
       }),
-      prisma.issue.findMany({
-        where: { userId: user.id, tracker: { not: null } },
-        select: { tracker: true },
-        distinct: ["tracker"],
-        orderBy: { tracker: "asc" },
-      }),
+      client.listTrackers(),
       client.listProjects(),
     ]);
 
@@ -36,9 +31,7 @@ export async function GET(request: Request) {
         name: p.name,
         isDefault: p.isDefault,
       })),
-      trackers: trackerRows
-        .map((r) => r.tracker)
-        .filter((t): t is string => t !== null),
+      trackers: trackers.map((t) => ({ id: t.id, name: t.name })),
       projects: projects.map((p) => ({
         id: p.id,
         name: p.name,

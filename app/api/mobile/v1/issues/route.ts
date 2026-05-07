@@ -214,7 +214,7 @@ export async function POST(request: Request) {
     const { client } = await requireRedmineClientForUser(user.id);
     const body = await request.json();
 
-    const { subject, description, projectId, priorityId, assignedToId, dueDate } = body;
+    const { subject, description, projectId, priorityId, trackerId, assignedToId, dueDate } = body;
 
     if (!subject || !projectId) {
       return jsonError("Subject and Project are required", 400);
@@ -226,6 +226,7 @@ export async function POST(request: Request) {
       description,
       projectId,
       priorityId: priorityId ? Number(priorityId) : undefined,
+      trackerId: trackerId ? Number(trackerId) : undefined,
       assignedToId: assignedToId ? Number(assignedToId) : undefined,
       dueDate,
     });

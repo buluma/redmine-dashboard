@@ -268,6 +268,11 @@ export class RedmineClient {
     return data.projects;
   }
 
+  async listTrackers(): Promise<Array<{ id: number; name: string }>> {
+    const data = await this.request<{ trackers: Array<{ id: number; name: string }> }>("/trackers.json");
+    return data.trackers;
+  }
+
   async getIssueStatuses(): Promise<RedmineStatus[]> {
     const data = await this.request<{ issue_statuses: RedmineStatus[] }>("/issue_statuses.json");
     return data.issue_statuses;
@@ -396,6 +401,7 @@ export class RedmineClient {
     description?: string;
     projectId?: number;
     priorityId?: number;
+    trackerId?: number;
     assignedToId?: number;
     dueDate?: string;
   }): Promise<{ id: number; url: string }> {
@@ -407,6 +413,7 @@ export class RedmineClient {
           description: input.description,
           project_id: input.projectId,
           priority_id: input.priorityId,
+          tracker_id: input.trackerId,
           assigned_to_id: input.assignedToId,
           due_date: input.dueDate,
         },
@@ -471,8 +478,13 @@ export class RedmineClient {
     statusId?: number;
     notes?: string;
     dueDate?: string;
+    startDate?: string;
     estimatedHours?: number;
     doneRatio?: number;
+    subject?: string;
+    description?: string;
+    priorityId?: number;
+    trackerId?: number;
   }): Promise<void> {
     await this.request(`/issues/${issueId}.json`, {
       method: "PUT",
@@ -482,8 +494,13 @@ export class RedmineClient {
           ...(updates.statusId !== undefined ? { status_id: updates.statusId } : {}),
           ...(updates.notes !== undefined ? { notes: updates.notes } : {}),
           ...(updates.dueDate !== undefined ? { due_date: updates.dueDate } : {}),
+          ...(updates.startDate !== undefined ? { start_date: updates.startDate } : {}),
           ...(updates.estimatedHours !== undefined ? { estimated_hours: updates.estimatedHours } : {}),
           ...(updates.doneRatio !== undefined ? { done_ratio: updates.doneRatio } : {}),
+          ...(updates.subject !== undefined ? { subject: updates.subject } : {}),
+          ...(updates.description !== undefined ? { description: updates.description } : {}),
+          ...(updates.priorityId !== undefined ? { priority_id: updates.priorityId } : {}),
+          ...(updates.trackerId !== undefined ? { tracker_id: updates.trackerId } : {}),
         },
       }),
     });
