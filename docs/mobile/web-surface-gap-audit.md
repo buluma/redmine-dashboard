@@ -1,7 +1,7 @@
 # Mobile/Web Surface Gap Audit Checklist
 
 Audit date: 2026-05-07
-Last updated: 2026-05-07
+Last updated: 2026-05-07 (session 3)
 
 Scope:
 
@@ -17,9 +17,11 @@ Legend:
 
 ## Current Coverage
 
-- [x] Native Android covers core Redmine issue workflow: pairing, issue list, issue detail, comments, status changes, assignment, favorites, basic create/edit, time logging, internal notes, GitHub links, AI summary/categorization, token rotation, and logout.
+- [x] Native Android covers core Redmine issue workflow: pairing, issue list, issue detail, comments, status changes, assignment, favorites, create/edit with catalog pickers, time logging, internal notes, GitHub links, AI summary/categorization, token rotation, and logout.
 - [x] Native Android has P1 issue-list productivity improvements: dashboard stats, priority filters, explicit search mode selector, open-only toggle, compact density, quick preview, and local saved filter views.
 - [x] Native Android has a mobile notification inbox backed by a bearer-auth mobile API endpoint.
+- [x] Web theme system consolidated: light/dark/system via ThemeProvider with flash-prevention pre-paint script; Android respects system dark-mode.
+- [x] History tab shows Redmine journal field-change details (Status, Assignee, Priority, etc.) inline per journal card.
 - [ ] The broader web product surface is still not fully mobile: reports, AI chat/tool execution, ops/admin, Slack, WakaTime, webhooks, API docs, audit logs, push subscription, and offline write queue remain web-only or mostly absent.
 
 ## Surface Checklist
@@ -81,7 +83,7 @@ Legend:
 - [x] Create issue from Android.
 - [x] Edit subject/description/priority/due/start/estimate from Android.
 - [x] Mobile catalogs endpoint exists for statuses/priorities/trackers/projects.
-- [ ] Partial Replace numeric project/priority/status entry in Android create/edit forms with catalog pickers.
+- [x] Replace numeric project/priority/status entry in Android create/edit forms with catalog pickers.
 - [x] Add project catalog support for create form.
 - [ ] Add tracker/category/custom-field editing.
 
@@ -110,7 +112,7 @@ Legend:
 - [x] Show allowed status transitions.
 - [x] Change status from Android.
 - [ ] Add transition comment/notes in the same status-change action.
-- [ ] Add properties/change-log view for status and field changes.
+- [x] Add properties/change-log view for status and field changes.
 
 ### Comments / Journals
 
@@ -118,6 +120,7 @@ Legend:
 - [x] Mobile journals endpoint exists.
 - [x] Android repository/API models can fetch journals.
 - [x] Display existing Redmine journals/comment history in Android UI.
+- [x] Display field-change details (property, old value, new value) inline in History tab journal cards.
 - [ ] Display field-change journals separately from note/comment journals.
 
 ### Assignment
@@ -223,7 +226,7 @@ Legend:
 
 - [x] Server URL/device/token/logout settings.
 - [x] Sentry Gradle plugin is configured for Android.
-- [ ] Theme preference.
+- [x] Theme preference (light/dark/system, web ThemeProvider + Android dark-mode setting).
 - [ ] Language/locale preference.
 - [ ] Account/profile settings.
 - [ ] User-facing runtime error reporting/status.
@@ -236,7 +239,7 @@ Legend:
 - [x] Add internal-note delete action.
 - [x] Add urgency/overdue coloring to due dates.
 - [x] Add mobile catalog endpoint for statuses/priorities/trackers/projects.
-- [ ] Partial Replace numeric create/edit fields with catalog-backed pickers.
+- [x] Replace numeric create/edit fields with catalog-backed pickers.
 - [x] Add journal/comment history UI.
 - [x] Add independent Favorites loading.
 - [x] Wire attachment tap to authenticated open/download.
@@ -259,8 +262,9 @@ Legend:
 - [x] Add quick preview dialog.
 - [x] Add navigable parent/children/relation drilldown.
 - [x] Add mobile notification inbox.
-- [ ] Partial Add `customFieldsJson` to Android issue model and display/edit it.
-- [ ] Add properties/change-log tab.
+- [x] Add `customFieldsJson` to Android issue model and display it in issue detail.
+- [ ] Add `customFieldsJson` edit support.
+- [x] Add properties/change-log tab (field changes shown inline per journal card).
 - [x] Add project filter.
 - [ ] Add FTS/AI search entry points.
 - [ ] Add push subscription flow.
@@ -294,6 +298,6 @@ Legend:
 
 ## Suggested Sequencing
 
-1. Finish remaining P0 issue-workflow parity: catalog pickers, journals UI, independent favorites, attachments, relations UI, time edit, local tickets.
-2. Finish P1 productivity parity: custom fields, project filter, change log, FTS/AI search wrappers, push, offline queue.
+1. ~~Finish remaining P0 issue-workflow parity: catalog pickers, journals UI, independent favorites, attachments, relations UI, time edit, local tickets.~~ **P0 complete.**
+2. Finish P1 productivity parity: custom field editing, FTS/AI search wrappers, push, offline queue.
 3. Add high-value web-only modules: AI chat, reports, ops health.
