@@ -51,6 +51,11 @@
       "collapse": "Menu saamtrek"
     }
   },
+  "theme": {
+    "system": "Stelsel",
+    "light": "Lig",
+    "dark": "Donker"
+  },
   "dashboard": {
     "title": "Paneel",
     "openIssues": "Oop kaartjies",

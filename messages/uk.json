@@ -51,6 +51,11 @@
       "collapse": "Згорнути меню"
     }
   },
+  "theme": {
+    "system": "Системна",
+    "light": "Світла",
+    "dark": "Темна"
+  },
   "dashboard": {
     "title": "Панель",
     "openIssues": "Відкриті тикети",

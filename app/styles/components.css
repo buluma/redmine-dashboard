@@ -1787,6 +1787,22 @@
   overflow: hidden;
 }
 
+.theme-toggle-select {
+  cursor: default;
+}
+
+.theme-toggle-select-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  outline: none;
+  padding: 0;
+  min-width: 0;
+}
+
 /* ══ Dark mode overrides ══ */
 
 [data-theme="dark"] .ai-toggle {

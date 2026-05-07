@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireCurrentUser } from "@/src/lib/auth";
+import { requireCurrentUser, requireRedmineClient } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
@@ -126,7 +126,14 @@ export async function GET(request: Request) {
       where.priority = priorityFilter;
     }
     if (assignedToMeFilter === "true") {
-      where.assignedToId = user.id;
+      try {
+        const { client } = await requireRedmineClient();
+        const redmineUser = await client.getCurrentUser();
+        where.assignedToId = redmineUser.id;
+      } catch {
+        // No Redmine credentials or API unavailable — filter yields no results
+        where.assignedToId = -1;
+      }
     }
 
     const issues = await prisma.issue.findMany({
