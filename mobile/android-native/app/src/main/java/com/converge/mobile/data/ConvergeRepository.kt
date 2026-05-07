@@ -69,6 +69,7 @@ class ConvergeRepository(
         status: String? = null,
         priority: String? = null,
         project: String? = null,
+        source: String = "all",
         searchMode: String = "local",
         openOnly: Boolean = false,
         favoritedOnly: Boolean = false,
@@ -81,6 +82,7 @@ class ConvergeRepository(
             status = status?.trim()?.takeIf { it.isNotEmpty() },
             priority = priority?.trim()?.takeIf { it.isNotEmpty() },
             project = project?.trim()?.takeIf { it.isNotEmpty() },
+            source = source,
             searchMode = searchMode,
             openOnly = openOnly,
             favoritedOnly = favoritedOnly,
@@ -113,6 +115,68 @@ class ConvergeRepository(
 
     suspend fun getIssue(serverUrl: String, issueId: String): Issue = call {
         api(serverUrl).getIssue(issueId).issue
+    }
+
+    suspend fun listLocalIssues(serverUrl: String): IssueListResponse = call {
+        api(serverUrl).listLocalIssues()
+    }
+
+    suspend fun createLocalIssue(
+        serverUrl: String,
+        subject: String,
+        description: String?,
+        tracker: String?,
+        priority: String?,
+        statusName: String?,
+        dueDate: String?,
+        estimatedHours: Double?,
+        doneRatio: Int?,
+    ): Issue = call {
+        api(serverUrl).createLocalIssue(
+            LocalIssueRequest(
+                subject = subject.trim(),
+                description = description?.trim()?.takeIf { it.isNotEmpty() },
+                tracker = tracker?.trim()?.takeIf { it.isNotEmpty() },
+                priority = priority?.trim()?.takeIf { it.isNotEmpty() },
+                statusId = statusIdFor(statusName),
+                statusName = statusName?.trim()?.takeIf { it.isNotEmpty() } ?: "New",
+                dueDate = dueDate?.trim()?.takeIf { it.isNotEmpty() },
+                estimatedHours = estimatedHours,
+                doneRatio = doneRatio,
+            ),
+        ).issue
+    }
+
+    suspend fun updateLocalIssue(
+        serverUrl: String,
+        issueId: String,
+        subject: String?,
+        description: String?,
+        tracker: String?,
+        priority: String?,
+        statusName: String?,
+        dueDate: String?,
+        estimatedHours: Double?,
+        doneRatio: Int?,
+    ): Issue = call {
+        api(serverUrl).updateLocalIssue(
+            issueId,
+            LocalIssueRequest(
+                subject = subject?.trim().orEmpty(),
+                description = description?.trim(),
+                tracker = tracker?.trim()?.takeIf { it.isNotEmpty() },
+                priority = priority?.trim()?.takeIf { it.isNotEmpty() },
+                statusId = statusIdFor(statusName),
+                statusName = statusName?.trim()?.takeIf { it.isNotEmpty() },
+                dueDate = dueDate?.trim()?.takeIf { it.isNotEmpty() },
+                estimatedHours = estimatedHours,
+                doneRatio = doneRatio,
+            ),
+        ).issue
+    }
+
+    suspend fun deleteLocalIssue(serverUrl: String, issueId: String) = call {
+        api(serverUrl).deleteLocalIssue(issueId)
     }
 
     suspend fun postComment(serverUrl: String, issueId: String, comment: String) = call {
@@ -212,16 +276,16 @@ class ConvergeRepository(
         )
     }
 
-    suspend fun listInternalNotes(serverUrl: String, redmineIssueId: Int): List<InternalNote> = call {
-        api(serverUrl).listInternalNotes(redmineIssueId.toString()).notes
+    suspend fun listInternalNotes(serverUrl: String, issueId: String): List<InternalNote> = call {
+        api(serverUrl).listInternalNotes(issueId).notes
     }
 
-    suspend fun createInternalNote(serverUrl: String, redmineIssueId: Int, content: String): InternalNote = call {
-        api(serverUrl).createInternalNote(redmineIssueId.toString(), InternalNoteRequest(content.trim())).note
+    suspend fun createInternalNote(serverUrl: String, issueId: String, content: String): InternalNote = call {
+        api(serverUrl).createInternalNote(issueId, InternalNoteRequest(content.trim())).note
     }
 
-    suspend fun deleteInternalNote(serverUrl: String, redmineIssueId: Int, noteId: String) = call {
-        api(serverUrl).deleteInternalNote(redmineIssueId.toString(), noteId)
+    suspend fun deleteInternalNote(serverUrl: String, issueId: String, noteId: String) = call {
+        api(serverUrl).deleteInternalNote(issueId, noteId)
     }
 
     suspend fun listGithubLinks(serverUrl: String, redmineIssueId: Int): List<GithubLink> = call {
@@ -368,5 +432,12 @@ class ConvergeRepository(
             return value
         }
         return "http://$value"
+    }
+
+    private fun statusIdFor(statusName: String?): Int = when (statusName?.trim()?.lowercase()) {
+        "in progress" -> 2
+        "resolved" -> 3
+        "closed" -> 5
+        else -> 1
     }
 }

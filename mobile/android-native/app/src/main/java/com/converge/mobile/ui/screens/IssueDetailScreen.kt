@@ -148,6 +148,7 @@ fun IssueDetailScreen(state: MainUiState, viewModel: MainViewModel) {
     if (state.showInternalNoteDialog) InternalNoteDialog(state, viewModel)
     if (state.showGithubDialog) GithubLinkDialog(state, viewModel)
     if (state.showRelationDialog) RelationDialog(state, viewModel)
+    if (state.showLocalIssueDialog) LocalIssueDialog(state, viewModel)
     if (state.showAssignSheet) {
         AssignBottomSheet(
             users = state.assignableUsers,
@@ -236,8 +237,8 @@ private fun OverviewContent(issue: Issue, state: MainUiState, viewModel: MainVie
         }
 
         Section("Comment") {
-            if (issue.redmineIssueId == null) {
-                Text("Local-only issue — comments cannot sync to Redmine from mobile.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (issue.source == "local") {
+                Text("Comments are stored as personal ticket notes.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(4.dp))
             }
             OutlinedTextField(
@@ -250,7 +251,7 @@ private fun OverviewContent(issue: Issue, state: MainUiState, viewModel: MainVie
             Spacer(Modifier.height(4.dp))
             Button(
                 onClick = viewModel::postComment,
-                enabled = !state.isLoading && issue.redmineIssueId != null && state.commentDraft.isNotBlank(),
+                enabled = !state.isLoading && state.commentDraft.isNotBlank() && (issue.redmineIssueId != null || issue.source == "local"),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Post Comment")
@@ -680,10 +681,17 @@ private fun IssueActionGrid(issue: Issue, state: MainUiState, viewModel: MainVie
                 Spacer(Modifier.width(4.dp))
                 Text(if (issue.isFavorited) "Unfavorite" else "Favorite")
             }
-            OutlinedButton(onClick = viewModel::openEditIssueDialog, enabled = !state.isLoading && issue.redmineIssueId != null) {
+            OutlinedButton(onClick = viewModel::openEditIssueDialog, enabled = !state.isLoading && (issue.redmineIssueId != null || issue.source == "local")) {
                 Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
                 Text("Edit")
+            }
+            if (issue.source == "local") {
+                OutlinedButton(onClick = viewModel::deleteSelectedLocalIssue, enabled = !state.isLoading) {
+                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Delete")
+                }
             }
             OutlinedButton(onClick = viewModel::openAssignSheet, enabled = !state.isLoading && issue.redmineIssueId != null) {
                 Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -759,7 +767,7 @@ private fun StatusSummary(issue: Issue, disabled: Boolean, onChange: () -> Unit)
             }
             Button(
                 onClick = onChange,
-                enabled = !disabled && issue.allowedStatuses.isNotEmpty() && issue.redmineIssueId != null,
+                enabled = !disabled && issue.allowedStatuses.isNotEmpty() && (issue.redmineIssueId != null || issue.source == "local"),
             ) {
                 Text("Change")
             }

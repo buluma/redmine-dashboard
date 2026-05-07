@@ -6,12 +6,9 @@ import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
 import { getSlackNotificationService } from "@/src/lib/slack-notification-service";
 import { z } from "zod";
 
-function parseIssueId(id: string): number {
+function parseIssueId(id: string): number | null {
   const n = Number(id);
-  if (!Number.isInteger(n) || n <= 0) {
-    throw new Error("Invalid issue id");
-  }
-  return n;
+  return Number.isInteger(n) && n > 0 ? n : null;
 }
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -19,10 +16,10 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     assertMobileApiEnabled();
     const { user } = await requireMobileUser(request);
     const { id } = await context.params;
-    const issueId = parseIssueId(id);
+    const redmineIssueId = parseIssueId(id);
 
     const issue = await prisma.issue.findFirst({
-      where: { userId: user.id, redmineIssueId: issueId },
+      where: redmineIssueId ? { userId: user.id, redmineIssueId } : { userId: user.id, id },
       select: { id: true },
     });
     if (!issue) return jsonError("Issue not found", 404);
@@ -57,11 +54,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     assertMobileApiEnabled();
     const { user } = await requireMobileUser(request);
     const { id } = await context.params;
-    const issueId = parseIssueId(id);
+    const redmineIssueId = parseIssueId(id);
     const body = await parseJson(request, createNoteSchema);
 
     const issue = await prisma.issue.findFirst({
-      where: { userId: user.id, redmineIssueId: issueId },
+      where: redmineIssueId ? { userId: user.id, redmineIssueId } : { userId: user.id, id },
       select: { id: true },
     });
     if (!issue) return jsonError("Issue not found", 404);
