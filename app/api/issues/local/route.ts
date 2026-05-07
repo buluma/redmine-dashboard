@@ -109,8 +109,9 @@ export async function GET(request: Request) {
     const statusFilter = searchParams.get("status");
     const trackerFilter = searchParams.get("tracker");
     const priorityFilter = searchParams.get("priority");
+    const assignedToMeFilter = searchParams.get("assignedToMe");
 
-    const where: Record<string, unknown> = {
+    const where: Prisma.IssueWhereInput = {
       userId: user.id,
       source: "local",
     };
@@ -123,6 +124,9 @@ export async function GET(request: Request) {
     }
     if (priorityFilter) {
       where.priority = priorityFilter;
+    }
+    if (assignedToMeFilter === "true") {
+      where.assignedToId = user.id;
     }
 
     const issues = await prisma.issue.findMany({

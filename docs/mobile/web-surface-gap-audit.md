@@ -49,7 +49,7 @@ Legend:
 - [x] Priority filter chips.
 - [x] Open-only toggle.
 - [x] Add project filter.
-- [ ] Add assigned-to-me filter.
+- [x] Add assigned-to-me filter.
 - [ ] Add GitHub-link/attachment filters.
 - [ ] Add due-date and updated-after filters.
 - [ ] Add mobile FTS search entry backed by bearer auth.
@@ -145,7 +145,7 @@ Legend:
 - [x] List internal notes.
 - [x] Create internal notes.
 - [x] Delete internal notes.
-- [ ] Edit internal notes.
+- [x] Edit internal notes.
 
 ### GitHub Links
 
@@ -175,11 +175,11 @@ Legend:
 
 ### Personal / Local Tickets
 
-- [ ] Dedicated personal-ticket surface.
-- [ ] Create local-only ticket from Android.
-- [ ] Edit local-only ticket from Android.
-- [ ] Comment/status local-only tickets from Android.
-- [ ] Delete local-only ticket from Android.
+- [x] Dedicated personal-ticket surface.
+- [x] Create local-only ticket from Android.
+- [x] Edit local-only ticket from Android.
+- [x] Comment/status local-only tickets from Android.
+- [x] Delete local-only ticket from Android.
 
 ### AI
 
@@ -242,7 +242,7 @@ Legend:
 - [x] Wire attachment tap to authenticated open/download.
 - [x] Add relation create/delete UI.
 - [x] Add time-entry edit UI.
-- [ ] Add local/personal ticket create/edit/detail support.
+- [x] Add local/personal ticket create/edit/detail support.
 - [x] Add markdown parity for tables, task lists, code blocks, and attachment images.
 
 ### P1
@@ -285,7 +285,7 @@ Legend:
 - [ ] Mobile saved-view API wrappers with bearer auth.
 - [ ] Mobile FTS/AI search wrappers with bearer auth.
 - [ ] Mobile reports endpoint.
-- [ ] Mobile personal-ticket endpoints.
+- [x] Mobile personal-ticket endpoints.
 - [ ] Mobile AI chat endpoints.
 - [ ] Mobile ops/admin endpoints.
 - [ ] Mobile Slack/WakaTime/webhook/Heimdall endpoints.

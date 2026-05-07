@@ -100,8 +100,10 @@
       "personalUpdated": "Personal ticket updated.",
       "redmineUpdated": "Issue updated in Redmine successfully.",
       "githubLinked": "GitHub link added.",
-      "githubRemoved": "GitHub link removed.",
+      "ghLinkRemoved": "GitHub link removed.",
       "noteFailed": "Failed to add note",
+      "noteUpdateFailed": "Failed to update note",
+      "noteUpdated": "Note updated.",
       "statusUpdated": "Status updated in Redmine.",
       "assigned": "Issue assigned.",
       "timeLogged": "Time entry logged.",
@@ -161,7 +163,8 @@
       "assign": "Assign",
       "assignTo": "Assign to {name}",
       "select": "Select...",
-      "postToRedmine": "Post to Redmine"
+      "postToRedmine": "Post to Redmine",
+      "confirmDeleteNote": "Are you sure you want to delete this internal note?"
     },
     "badges": {
       "local": "🟢 Local"
@@ -405,12 +408,14 @@
     "colPriority": "Priority",
     "colDue": "Due",
     "colProgress": "Progress",
-    "colActivity": "Activity",
+    "queue.colActivity": "Activity",
     "dragToReorder": "Drag to reorder",
     "ghLinks": "GH: {count} link(s)",
     "attachmentsCount": "Attachments: {count}",
-    "relationsCount": "Relations: {count}"
-  },
+    "relationsCount": "Relations: {count}",
+    "assignedToMeOn": "👤 Assigned to Me",
+    "assignedToMeOff": "👤 Not Assigned to Me"
+    },
   "pagination": {
     "pageInfo": "Page {current} of {max}",
     "showing": " · Showing {start}–{end} of {total}",

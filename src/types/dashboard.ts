@@ -117,6 +117,7 @@ export type FilterPreset = {
   priorityFilter: string;
   search: string;
   showFavoritesOnly: boolean;
+  assignedToMe?: boolean;
 };
 
 export type SavedView = {
@@ -127,6 +128,7 @@ export type SavedView = {
   search: string;
   sort: string;
   position?: number;
+  assignedToMe: boolean;
 };
 
 export type ActivityEvent = {
