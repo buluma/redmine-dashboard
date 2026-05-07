@@ -51,6 +51,11 @@
       "collapse": "Collapse menu"
     }
   },
+  "theme": {
+    "system": "Системная",
+    "light": "Светлая",
+    "dark": "Тёмная"
+  },
   "dashboard": {
     "title": "Панель",
     "openIssues": "Открытые тикеты",

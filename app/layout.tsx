@@ -14,6 +14,7 @@ import { ServiceWorkerRegistrar } from "@/src/components/ServiceWorkerRegistrar"
 import { AppNav } from "@/src/components/AppNav";
 import { ToastProvider } from "@/src/components/ToastProvider";
 import { I18nProvider, useI18n } from "@/src/components/I18nProvider";
+import { ThemeProvider } from "@/src/components/ThemeProvider";
 import { LocaleIndicator } from "@/src/components/LocaleIndicator";
 import React, { useContext } from 'react';
 import { LocaleSwitcherTest } from '@/src/components/LocaleSwitcherTest';
@@ -72,6 +73,7 @@ export default async function RootLayout({
       </head>
       <body className={`${sora.variable} ${mono.variable} ${display.variable}`}>
         <ErrorLoggerProvider>
+          <ThemeProvider>
           <ToastProvider>
             <I18nProvider>
               <LocaleIndicator />
@@ -84,6 +86,7 @@ export default async function RootLayout({
               </div>
             </I18nProvider>
           </ToastProvider>
+          </ThemeProvider>
         </ErrorLoggerProvider>
         <style>{`
           body {
