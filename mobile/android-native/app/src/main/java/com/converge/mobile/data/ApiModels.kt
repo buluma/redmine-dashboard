@@ -362,6 +362,11 @@ data class SearchResponse(
     val pageSize: Int = 25,
 )
 
+data class FcmTokenRequest(
+    val fcmToken: String,
+    val platform: String = "android",
+)
+
 data class ApiErrorBody(
     val error: String? = null,
 )

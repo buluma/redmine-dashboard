@@ -229,3 +229,15 @@ CREATE TABLE IF NOT EXISTS "IssueEmbedding" (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "IssueEmbedding_issueId_key" ON "IssueEmbedding"("issueId");
 CREATE INDEX IF NOT EXISTS "IssueEmbedding_issueId_idx" ON "IssueEmbedding"("issueId");
+
+CREATE TABLE IF NOT EXISTS "MobilePushToken" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "userId" TEXT NOT NULL,
+  "fcmToken" TEXT NOT NULL,
+  "platform" TEXT NOT NULL DEFAULT 'android',
+  "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" DATETIME NOT NULL,
+  CONSTRAINT "MobilePushToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "MobilePushToken_fcmToken_key" ON "MobilePushToken"("fcmToken");
+CREATE INDEX IF NOT EXISTS "MobilePushToken_userId_idx" ON "MobilePushToken"("userId");

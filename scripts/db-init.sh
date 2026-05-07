@@ -34,6 +34,8 @@ case "$DATABASE_URL_VALUE" in
       sqlite3 "$DB_PATH" "ALTER TABLE \"IssueJournal\" ADD COLUMN \"detailsJson\" TEXT;"
     fi
 
+    sqlite3 "$DB_PATH" "CREATE TABLE IF NOT EXISTS \"MobilePushToken\" (\"id\" TEXT NOT NULL PRIMARY KEY, \"userId\" TEXT NOT NULL, \"fcmToken\" TEXT NOT NULL, \"platform\" TEXT NOT NULL DEFAULT 'android', \"createdAt\" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, \"updatedAt\" DATETIME NOT NULL, CONSTRAINT \"MobilePushToken_userId_fkey\" FOREIGN KEY (\"userId\") REFERENCES \"User\" (\"id\") ON DELETE CASCADE ON UPDATE CASCADE); CREATE UNIQUE INDEX IF NOT EXISTS \"MobilePushToken_fcmToken_key\" ON \"MobilePushToken\"(\"fcmToken\"); CREATE INDEX IF NOT EXISTS \"MobilePushToken_userId_idx\" ON \"MobilePushToken\"(\"userId\");"
+
     sqlite3 "$DB_PATH" <<'SQL'
 UPDATE "Issue"
 SET "redmineBaseUrl" = COALESCE(
