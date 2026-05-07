@@ -9,10 +9,9 @@ import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
 import { isRateLimited } from "@/src/lib/rate-limit";
 import { trackFailure, trackInfo, trackSuccess } from "@/src/lib/telemetry";
 
-function parseIssueId(id: string): number {
+function parseIssueId(id: string): number | null {
   const n = Number(id);
-  if (!Number.isInteger(n) || n <= 0) throw new Error("Invalid issue id");
-  return n;
+  return Number.isInteger(n) && n > 0 ? n : null;
 }
 
 function statusClass(status: number): string {
@@ -31,7 +30,7 @@ export async function DELETE(
     const { user } = await requireMobileUser(request);
     trackInfo("mobile.issue.internal_note.delete.requested", {
       userId: user.id,
-      redmineIssueId,
+      issueId: id,
       noteId,
     });
 
@@ -45,7 +44,7 @@ export async function DELETE(
         event: "mobile.issue.internal_note.delete.rate_limited",
         error: "mobile issue internal note delete rate-limited",
         level: "warn",
-        data: { userId: user.id, redmineIssueId },
+        data: { userId: user.id, issueId: id },
         metricName: "mobile_issue_internal_note_delete_rate_limited",
         metricTags: { reason: "rate_limited" },
         durationMetricName: "mobile_issue_internal_note_delete_duration",
@@ -55,7 +54,7 @@ export async function DELETE(
     }
 
     const issue = await prisma.issue.findFirst({
-      where: { redmineIssueId, userId: user.id },
+      where: redmineIssueId ? { redmineIssueId, userId: user.id } : { id, userId: user.id },
       select: { id: true },
     });
     if (!issue) return jsonError("Issue not found", 404);
@@ -77,7 +76,7 @@ export async function DELETE(
 
     trackSuccess({
       event: "mobile.issue.internal_note.delete.succeeded",
-      data: { userId: user.id, redmineIssueId, noteId },
+      data: { userId: user.id, issueId: id, noteId },
       metricName: "mobile_issue_internal_note_delete_succeeded",
       durationMetricName: "mobile_issue_internal_note_delete_duration",
       durationMs: Date.now() - startedAt,

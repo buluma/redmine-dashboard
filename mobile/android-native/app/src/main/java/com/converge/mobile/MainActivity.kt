@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
@@ -61,6 +62,7 @@ import com.converge.mobile.ui.screens.FavoritesScreen
 import com.converge.mobile.ui.screens.IssueDetailScreen
 import com.converge.mobile.ui.screens.IssueListScreen
 import com.converge.mobile.ui.screens.NotificationsScreen
+import com.converge.mobile.ui.screens.PersonalTicketsScreen
 import com.converge.mobile.ui.screens.SettingsScreen
 import com.converge.mobile.ui.theme.ConvergeTheme
 
@@ -134,6 +136,12 @@ private fun MainScaffold(state: MainUiState, viewModel: MainViewModel) {
                         label = { Text("Issues") },
                     )
                     NavigationBarItem(
+                        selected = state.currentTab == MainTab.PERSONAL,
+                        onClick = { viewModel.switchTab(MainTab.PERSONAL) },
+                        icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                        label = { Text("Personal") },
+                    )
+                    NavigationBarItem(
                         selected = state.currentTab == MainTab.FAVORITES,
                         onClick = { viewModel.switchTab(MainTab.FAVORITES) },
                         icon = { Icon(Icons.Default.Star, contentDescription = null) },
@@ -155,16 +163,25 @@ private fun MainScaffold(state: MainUiState, viewModel: MainViewModel) {
             }
         },
         floatingActionButton = {
-            if (state.currentTab == MainTab.ISSUES) {
-                FloatingActionButton(onClick = viewModel::showCreateIssueDialog) {
-                    Icon(Icons.Default.Add, contentDescription = "New Issue")
+            when (state.currentTab) {
+                MainTab.ISSUES -> {
+                    FloatingActionButton(onClick = viewModel::showCreateIssueDialog) {
+                        Icon(Icons.Default.Add, contentDescription = "New Issue")
+                    }
                 }
+                MainTab.PERSONAL -> {
+                    FloatingActionButton(onClick = viewModel::showLocalIssueDialog) {
+                        Icon(Icons.Default.Add, contentDescription = "New Personal Ticket")
+                    }
+                }
+                else -> Unit
             }
         },
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             when (state.currentTab) {
                 MainTab.ISSUES -> IssueListScreen(state, viewModel)
+                MainTab.PERSONAL -> PersonalTicketsScreen(state, viewModel)
                 MainTab.FAVORITES -> FavoritesScreen(state, viewModel)
                 MainTab.NOTIFICATIONS -> NotificationsScreen(state, viewModel)
                 MainTab.SETTINGS -> SettingsScreen(state, viewModel)

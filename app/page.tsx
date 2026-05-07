@@ -123,7 +123,6 @@ export default function Home() {
   const [sort, setSort] = useState("updated_desc");
   const [advancedFilters, setAdvancedFilters] = useState<FilterState>(DEFAULT_ADVANCED_FILTERS);
   const [viewMode, setViewMode] = useState<"list" | "board" | "gantt">("list");
-
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [viewDraftName, setViewDraftName] = useState("");
   const [activeViewId, setActiveViewId] = useState<string | null>(null);

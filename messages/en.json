@@ -51,6 +51,11 @@
       "collapse": "Collapse menu"
     }
   },
+  "theme": {
+    "system": "System Default",
+    "light": "Light",
+    "dark": "Dark"
+  },
   "dashboard": {
     "title": "Dashboard",
     "openIssues": "Open Issues",

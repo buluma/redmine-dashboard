@@ -44,6 +44,18 @@ data class CreateIssueRequest(
     val dueDate: String? = null,
 )
 
+data class LocalIssueRequest(
+    val subject: String,
+    val description: String? = null,
+    val tracker: String? = null,
+    val priority: String? = null,
+    val statusId: Int? = null,
+    val statusName: String? = null,
+    val dueDate: String? = null,
+    val estimatedHours: Double? = null,
+    val doneRatio: Int? = null,
+)
+
 data class Issue(
     val id: String = "",
     val redmineIssueId: Int? = null,

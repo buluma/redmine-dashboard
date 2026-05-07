@@ -19,6 +19,7 @@ interface ConvergeApi {
         @Query("status") status: String? = null,
         @Query("priority") priority: String? = null,
         @Query("project") project: String? = null,
+        @Query("source") source: String = "all",
         @Query("searchMode") searchMode: String = "local",
         @Query("scope") scope: String = "issues",
         @Query("openOnly") openOnly: Boolean = false,
@@ -33,6 +34,21 @@ interface ConvergeApi {
 
     @POST("api/mobile/v1/issues")
     suspend fun createIssue(@Body body: CreateIssueRequest): IssueDetailResponse
+
+    @GET("api/mobile/v1/issues/local")
+    suspend fun listLocalIssues(): IssueListResponse
+
+    @POST("api/mobile/v1/issues/local")
+    suspend fun createLocalIssue(@Body body: LocalIssueRequest): IssueDetailResponse
+
+    @PATCH("api/mobile/v1/issues/local/{id}")
+    suspend fun updateLocalIssue(
+        @Path("id") issueId: String,
+        @Body body: LocalIssueRequest,
+    ): IssueDetailResponse
+
+    @DELETE("api/mobile/v1/issues/local/{id}")
+    suspend fun deleteLocalIssue(@Path("id") issueId: String)
 
     @POST("api/mobile/v1/issues/{id}/comment")
     suspend fun postComment(
