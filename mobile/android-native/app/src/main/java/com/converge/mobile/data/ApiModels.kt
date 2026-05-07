@@ -40,6 +40,7 @@ data class CreateIssueRequest(
     val description: String? = null,
     val projectId: Int,
     val priorityId: Int? = null,
+    val trackerId: Int? = null,
     val assignedToId: Int? = null,
     val dueDate: String? = null,
 )
@@ -163,7 +164,8 @@ data class AssignRequest(
 data class EditIssueRequest(
     val subject: String? = null,
     val description: String? = null,
-    val priority: String? = null,
+    val priorityId: Int? = null,
+    val trackerId: Int? = null,
     val dueDate: String? = null,
     val startDate: String? = null,
     val estimatedHours: Double? = null,
@@ -307,10 +309,15 @@ data class CatalogProject(
     val identifier: String = "",
 )
 
+data class CatalogTracker(
+    val id: Int = 0,
+    val name: String = "",
+)
+
 data class CatalogResponse(
     val statuses: List<CatalogStatus> = emptyList(),
     val priorities: List<CatalogPriority> = emptyList(),
-    val trackers: List<String> = emptyList(),
+    val trackers: List<CatalogTracker> = emptyList(),
     val projects: List<CatalogProject> = emptyList(),
 )
 

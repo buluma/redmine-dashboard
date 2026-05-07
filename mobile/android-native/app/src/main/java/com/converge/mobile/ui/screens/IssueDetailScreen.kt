@@ -854,11 +854,35 @@ private fun AssignBottomSheet(users: List<AssignableUser>, disabled: Boolean, on
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun EditIssueDialog(state: MainUiState, viewModel: MainViewModel) {
     FormDialog(title = "Edit Issue", onDismiss = viewModel::hideEditIssueDialog, onConfirm = viewModel::saveIssueEdits, confirmLabel = "Save") {
         FormTextField("Subject", state.editSubject, viewModel::updateEditSubject)
         FormTextField("Description", state.editDescription, viewModel::updateEditDescription, minLines = 4)
-        FormTextField("Priority name", state.editPriority, viewModel::updateEditPriority)
+        if (state.catalogPriorities.isNotEmpty()) {
+            Text("Priority", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                state.catalogPriorities.forEach { priority ->
+                    FilterChip(
+                        selected = state.editPriorityId == priority.id.toString(),
+                        onClick = { viewModel.updateEditPriorityId(priority.id.toString()) },
+                        label = { Text(priority.name, style = MaterialTheme.typography.labelSmall) },
+                    )
+                }
+            }
+        }
+        if (state.catalogTrackers.isNotEmpty()) {
+            Text("Tracker", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                state.catalogTrackers.forEach { tracker ->
+                    FilterChip(
+                        selected = state.editTrackerId == tracker.id.toString(),
+                        onClick = { viewModel.updateEditTrackerId(tracker.id.toString()) },
+                        label = { Text(tracker.name, style = MaterialTheme.typography.labelSmall) },
+                    )
+                }
+            }
+        }
         FormTextField("Due date (YYYY-MM-DD)", state.editDueDate, viewModel::updateEditDueDate)
         FormTextField("Start date (YYYY-MM-DD)", state.editStartDate, viewModel::updateEditStartDate)
         FormTextField("Estimate hours", state.editEstimate, viewModel::updateEditEstimate, numeric = true)
@@ -866,13 +890,24 @@ private fun EditIssueDialog(state: MainUiState, viewModel: MainViewModel) {
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun TimeEntryDialog(state: MainUiState, viewModel: MainViewModel) {
     val editing = state.editingTimeEntryId != null
     FormDialog(title = if (editing) "Edit Time" else "Log Time", onDismiss = viewModel::hideTimeDialog, onConfirm = viewModel::createTimeEntry, confirmLabel = if (editing) "Save" else "Log") {
         FormTextField("Hours", state.timeHours, viewModel::updateTimeHours, numeric = true)
-        FormTextField("Activity ID", state.timeActivityId, viewModel::updateTimeActivityId, numeric = true)
         if (state.activities.isNotEmpty()) {
-            Text("Activities: ${state.activities.take(6).joinToString { "${it.id} ${it.name}" }}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Activity", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                state.activities.forEach { activity ->
+                    FilterChip(
+                        selected = state.timeActivityId == activity.id.toString(),
+                        onClick = { viewModel.updateTimeActivityId(activity.id.toString()) },
+                        label = { Text(activity.name, style = MaterialTheme.typography.labelSmall) },
+                    )
+                }
+            }
+        } else {
+            FormTextField("Activity ID", state.timeActivityId, viewModel::updateTimeActivityId, numeric = true)
         }
         FormTextField("Spent on (YYYY-MM-DD)", state.timeSpentOn, viewModel::updateTimeSpentOn)
         FormTextField("Comment", state.timeComment, viewModel::updateTimeComment, minLines = 2)

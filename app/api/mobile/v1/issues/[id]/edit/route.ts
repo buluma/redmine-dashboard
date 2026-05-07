@@ -10,7 +10,8 @@ import { z } from "zod";
 const editSchema = z.object({
   subject: z.string().trim().min(1).max(255).optional(),
   description: z.string().trim().optional(),
-  priority: z.string().trim().optional(),
+  priorityId: z.number().int().positive().optional(),
+  trackerId: z.number().int().positive().optional(),
   dueDate: z.string().date().optional(),
   startDate: z.string().date().optional(),
   estimatedHours: z.number().positive().optional(),
@@ -39,18 +40,18 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     });
     if (!issue) return jsonError("Issue not found", 404);
 
-    // Build Redmine update payload
-    const updates: Record<string, unknown> = {};
-    if (body.subject !== undefined) updates.subject = body.subject;
-    if (body.description !== undefined) updates.description = body.description;
-    if (body.priority !== undefined) updates.priority_name = body.priority;
-    if (body.dueDate !== undefined) updates.due_date = body.dueDate;
-    if (body.startDate !== undefined) updates.start_date = body.startDate;
-    if (body.estimatedHours !== undefined) updates.estimated_hours = body.estimatedHours;
+    const updates = {
+      subject: body.subject,
+      description: body.description,
+      priorityId: body.priorityId,
+      trackerId: body.trackerId,
+      dueDate: body.dueDate,
+      startDate: body.startDate,
+      estimatedHours: body.estimatedHours,
+    };
 
-    if (Object.keys(updates).length === 0) {
-      return jsonError("No fields to update", 400);
-    }
+    const hasUpdates = Object.values(updates).some((v) => v !== undefined);
+    if (!hasUpdates) return jsonError("No fields to update", 400);
 
     await client.updateIssue(issueId, updates);
     await syncSingleIssue(user.id, client, issueId);

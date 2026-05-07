@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -476,6 +478,7 @@ private fun IssuePreviewDialog(issue: Issue, onDismiss: () -> Unit, onOpen: () -
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 fun CreateIssueDialog(state: MainUiState, viewModel: MainViewModel) {
     FormDialog(title = "Create Issue", onDismiss = viewModel::hideCreateIssueDialog, onConfirm = viewModel::createIssue, confirmLabel = "Create") {
         FormTextField("Subject", state.createSubject, viewModel::updateCreateSubject)
@@ -507,6 +510,18 @@ fun CreateIssueDialog(state: MainUiState, viewModel: MainViewModel) {
             }
         } else {
             FormTextField("Priority ID", state.createPriorityId, viewModel::updateCreatePriorityId, numeric = true)
+        }
+        if (state.catalogTrackers.isNotEmpty()) {
+            Text("Tracker", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                state.catalogTrackers.forEach { tracker ->
+                    FilterChip(
+                        selected = state.createTrackerId == tracker.id.toString(),
+                        onClick = { viewModel.updateCreateTrackerId(tracker.id.toString()) },
+                        label = { Text(tracker.name, style = MaterialTheme.typography.labelSmall) },
+                    )
+                }
+            }
         }
         FormTextField("Due date (YYYY-MM-DD)", state.createDueDate, viewModel::updateCreateDueDate)
     }
