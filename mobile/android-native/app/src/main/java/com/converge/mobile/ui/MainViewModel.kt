@@ -26,16 +26,31 @@ import com.converge.mobile.data.Issue
 import com.converge.mobile.data.IssueAttachment
 import com.converge.mobile.data.IssueRelation
 import com.converge.mobile.data.Journal
+import com.converge.mobile.data.ChatMessage
+import com.converge.mobile.data.PendingToolCall
 import com.converge.mobile.data.SearchResult
 import com.converge.mobile.data.TimeEntry
 import com.converge.mobile.data.NotificationItem
 import com.converge.mobile.data.SavedIssueView
 import com.converge.mobile.data.SecureTokenStore
+import com.converge.mobile.data.offline.CachedIssueEntity
+import com.converge.mobile.data.offline.ConvergeDatabase
+import com.converge.mobile.data.offline.OfflineActionEntity
+import com.converge.mobile.data.offline.OfflineActionType
+import com.converge.mobile.data.offline.OfflineSyncWorker
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.time.LocalDate
 import java.util.UUID
 
-enum class MainTab { ISSUES, PERSONAL, FAVORITES, NOTIFICATIONS, SETTINGS }
+enum class MainTab { ISSUES, PERSONAL, FAVORITES, NOTIFICATIONS, CHAT, SETTINGS }
 
 enum class SortMode(val label: String, val apiValue: String) {
     UPDATED_DESC("Recent", "updated_desc"),
@@ -138,10 +153,18 @@ data class MainUiState(
     val githubPrNumber: String = "",
     val githubUrl: String = "",
     val githubTitle: String = "",
+    val pendingActionsCount: Int = 0,
+    val chatMessages: List<ChatMessage> = emptyList(),
+    val chatInput: String = "",
+    val isChatLoading: Boolean = false,
+    val pendingToolCalls: List<PendingToolCall> = emptyList(),
+    val chatConversationContext: List<Map<String, String>> = emptyList(),
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = ConvergeRepository(SecureTokenStore(application))
+    private val db by lazy { ConvergeDatabase.get(getApplication()) }
+    private val moshi by lazy { Moshi.Builder().add(KotlinJsonAdapterFactory()).build() }
 
     var state = androidx.compose.runtime.mutableStateOf(
         MainUiState(
@@ -210,10 +233,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             MainTab.PERSONAL -> loadLocalIssues()
             MainTab.FAVORITES -> loadFavorites()
             MainTab.NOTIFICATIONS -> loadNotifications()
+            MainTab.CHAT -> loadChatHistory()
             else -> Unit
         }
     }
-    fun setOffline(offline: Boolean) = update { copy(isOffline = offline) }
+    fun setOffline(offline: Boolean) {
+        update { copy(isOffline = offline) }
+        if (!offline) scheduleOfflineSync()
+    }
+
+    private fun scheduleOfflineSync() {
+        val userId = state.value.serverUrl
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+        val request = OneTimeWorkRequestBuilder<OfflineSyncWorker>()
+            .setConstraints(constraints)
+            .setInputData(workDataOf(OfflineSyncWorker.KEY_USER_ID to userId))
+            .build()
+        WorkManager.getInstance(getApplication()).enqueue(request)
+    }
     fun updateCommentDraft(value: String) = update { copy(commentDraft = value) }
     fun updateCreateSubject(value: String) = update { copy(createSubject = value) }
     fun updateCreateProjectId(value: String) = update { copy(createProjectId = value) }
@@ -305,6 +344,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadIssues() {
         viewModelScope.launch {
+            if (state.value.isOffline) {
+                loadIssuesFromCache()
+                return@launch
+            }
             runBusy {
                 val status = state.value.statusFilter.takeIf { it != "All" }
                 val priority = state.value.priorityFilter.takeIf { it != "All" }
@@ -322,6 +365,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     pageSize = if (state.value.compactList) 50 else 25,
                 )
                 update { copy(issues = response.items, page = 1, totalIssues = response.total) }
+                cacheIssues(response.items)
             }
         }
     }
@@ -693,6 +737,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleFavorite() {
         val redmineIssueId = state.value.selectedIssue?.redmineIssueId ?: return
+        if (state.value.isOffline) {
+            viewModelScope.launch {
+                enqueueOfflineAction(OfflineActionType.FAVORITE, redmineIssueId, emptyMap())
+                update { copy(actionMessage = "Favorite change queued for sync") }
+            }
+            return
+        }
         viewModelScope.launch {
             runBusy {
                 val favorited = repository.toggleFavorite(state.value.serverUrl, redmineIssueId)
@@ -784,6 +835,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             runBusy {
                 val editingId = state.value.editingTimeEntryId
+                if (editingId == null && state.value.isOffline) {
+                    val payload = buildMap<String, Any> {
+                        put("hours", hours)
+                        put("activityId", activityId)
+                        state.value.timeComment.trim().takeIf { it.isNotEmpty() }?.let { put("comment", it) }
+                        state.value.timeSpentOn.trim().takeIf { it.isNotEmpty() }?.let { put("spentOn", it) }
+                    }
+                    enqueueOfflineAction(OfflineActionType.TIME_ENTRY, redmineIssueId, payload)
+                    update { copy(showTimeDialog = false, editingTimeEntryId = null, timeHours = "", timeComment = "", actionMessage = "Time entry queued for sync") }
+                    return@runBusy
+                }
                 if (editingId == null) {
                     repository.createTimeEntry(
                         serverUrl = state.value.serverUrl,
@@ -973,6 +1035,65 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun updateChatInput(value: String) = update { copy(chatInput = value) }
+
+    fun loadChatHistory() {
+        viewModelScope.launch {
+            runCatching {
+                val response = repository.getChatHistory(state.value.serverUrl)
+                update { copy(chatMessages = response.messages) }
+            }
+        }
+    }
+
+    fun sendChatMessage() {
+        val input = state.value.chatInput.trim()
+        if (input.isBlank()) return
+        val userMsg = ChatMessage(role = "user", content = input)
+        val history = state.value.chatMessages + userMsg
+        update { copy(chatMessages = history, chatInput = "", isChatLoading = true, pendingToolCalls = emptyList()) }
+        viewModelScope.launch {
+            runCatching {
+                val sendable = history.filter { it.role == "user" || it.role == "assistant" }
+                val response = repository.sendChatMessage(state.value.serverUrl, sendable)
+                val updated = state.value.chatMessages + response.message
+                update {
+                    copy(
+                        chatMessages = updated,
+                        isChatLoading = false,
+                        pendingToolCalls = response.pendingToolCalls,
+                        chatConversationContext = response.conversationContext,
+                    )
+                }
+            }.onFailure { e ->
+                update { copy(isChatLoading = false, errorMessage = e.message ?: "Chat failed") }
+            }
+        }
+    }
+
+    fun confirmToolCalls() {
+        val pending = state.value.pendingToolCalls
+        val context = state.value.chatConversationContext
+        if (pending.isEmpty()) return
+        update { copy(isChatLoading = true, pendingToolCalls = emptyList()) }
+        viewModelScope.launch {
+            runCatching {
+                val response = repository.executeTools(state.value.serverUrl, pending, context)
+                update {
+                    copy(
+                        chatMessages = chatMessages + response.message,
+                        isChatLoading = false,
+                        chatConversationContext = emptyList(),
+                    )
+                }
+            }.onFailure { e ->
+                update { copy(isChatLoading = false, errorMessage = e.message ?: "Tool execution failed") }
+            }
+        }
+    }
+
+    fun dismissToolCalls() = update { copy(pendingToolCalls = emptyList(), chatConversationContext = emptyList()) }
+
     fun rotateToken() {
         viewModelScope.launch {
             runBusy {
@@ -987,6 +1108,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val comment = state.value.commentDraft.trim()
         if (comment.isBlank()) {
             update { copy(errorMessage = "Comment cannot be empty.") }
+            return
+        }
+        if (state.value.isOffline && issue.source != "local") {
+            val redmineIssueId = issue.redmineIssueId ?: return
+            viewModelScope.launch {
+                enqueueOfflineAction(OfflineActionType.COMMENT, redmineIssueId, mapOf("comment" to comment))
+                update { copy(commentDraft = "", actionMessage = "Comment queued for sync") }
+            }
             return
         }
         viewModelScope.launch {
@@ -1030,6 +1159,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                     refreshSelectedIssue(actionMessage = "Personal ticket status updated")
                 }
+            }
+            return
+        }
+
+        if (state.value.isOffline) {
+            viewModelScope.launch {
+                enqueueOfflineAction(OfflineActionType.STATUS, redmineIssueId, mapOf("statusId" to statusId))
+                update { copy(actionMessage = "Status change queued for sync") }
             }
             return
         }
@@ -1102,6 +1239,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             runCatching { repository.listJournals(state.value.serverUrl, it) }.getOrElse { emptyList() }
         } ?: emptyList()
         update { copy(selectedIssue = enriched, internalNotes = notes, journals = journals, commentDraft = "", aiSummary = null, aiCategorization = null) }
+    }
+
+    private suspend fun enqueueOfflineAction(type: OfflineActionType, redmineIssueId: Int, payload: Map<String, Any>) {
+        val userId = state.value.serverUrl
+        val json = JSONObject().apply { payload.forEach { (k, v) -> put(k, v) } }
+        db.offlineActionDao().insert(
+            OfflineActionEntity(
+                userId = userId,
+                type = type.name,
+                redmineIssueId = redmineIssueId,
+                payloadJson = json.toString(),
+            )
+        )
+        val count = db.offlineActionDao().pendingCount(userId)
+        update { copy(pendingActionsCount = count) }
+    }
+
+    private suspend fun loadIssuesFromCache() {
+        val userId = state.value.serverUrl
+        val cached = db.cachedIssueDao().getAll(userId)
+        if (cached.isEmpty()) {
+            update { copy(errorMessage = "No cached issues available offline.") }
+            return
+        }
+        val adapter = moshi.adapter(Issue::class.java)
+        val issues = cached.mapNotNull { runCatching { adapter.fromJson(it.issueJson) }.getOrNull() }
+        update { copy(issues = issues, totalIssues = issues.size) }
+    }
+
+    private suspend fun cacheIssues(issues: List<Issue>) {
+        val userId = state.value.serverUrl
+        val adapter = moshi.adapter(Issue::class.java)
+        val entities = issues.mapNotNull { issue ->
+            val rid = issue.redmineIssueId ?: return@mapNotNull null
+            val json = runCatching { adapter.toJson(issue) }.getOrNull() ?: return@mapNotNull null
+            CachedIssueEntity(id = "${userId}_$rid", userId = userId, redmineIssueId = rid, issueJson = json)
+        }
+        if (entities.isNotEmpty()) {
+            db.cachedIssueDao().upsertAll(entities)
+            db.cachedIssueDao().evictOlderThan(userId, System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000L)
+        }
     }
 
     private suspend fun runBusy(block: suspend () -> Unit) {

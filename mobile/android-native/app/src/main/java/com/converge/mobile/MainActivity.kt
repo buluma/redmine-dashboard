@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,6 +59,7 @@ import com.converge.mobile.ui.MainUiState
 import com.converge.mobile.ui.MainViewModel
 import com.converge.mobile.ui.components.ErrorBanner
 import com.converge.mobile.ui.components.NetworkBanner
+import com.converge.mobile.ui.screens.ChatScreen
 import com.converge.mobile.ui.screens.FavoritesScreen
 import com.converge.mobile.ui.screens.IssueDetailScreen
 import com.converge.mobile.ui.screens.IssueListScreen
@@ -154,6 +156,12 @@ private fun MainScaffold(state: MainUiState, viewModel: MainViewModel) {
                         label = { Text("Alerts") },
                     )
                     NavigationBarItem(
+                        selected = state.currentTab == MainTab.CHAT,
+                        onClick = { viewModel.switchTab(MainTab.CHAT) },
+                        icon = { Icon(Icons.Default.SmartToy, contentDescription = null) },
+                        label = { Text("AI Chat") },
+                    )
+                    NavigationBarItem(
                         selected = state.currentTab == MainTab.SETTINGS,
                         onClick = { viewModel.switchTab(MainTab.SETTINGS) },
                         icon = { Icon(Icons.Default.Settings, contentDescription = null) },
@@ -184,6 +192,7 @@ private fun MainScaffold(state: MainUiState, viewModel: MainViewModel) {
                 MainTab.PERSONAL -> PersonalTicketsScreen(state, viewModel)
                 MainTab.FAVORITES -> FavoritesScreen(state, viewModel)
                 MainTab.NOTIFICATIONS -> NotificationsScreen(state, viewModel)
+                MainTab.CHAT -> ChatScreen(state, viewModel)
                 MainTab.SETTINGS -> SettingsScreen(state, viewModel)
             }
         }
