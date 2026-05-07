@@ -485,6 +485,7 @@ export class RedmineClient {
     description?: string;
     priorityId?: number;
     trackerId?: number;
+    customFields?: Array<{ id: number; value: string }>;
   }): Promise<void> {
     await this.request(`/issues/${issueId}.json`, {
       method: "PUT",
@@ -501,6 +502,7 @@ export class RedmineClient {
           ...(updates.description !== undefined ? { description: updates.description } : {}),
           ...(updates.priorityId !== undefined ? { priority_id: updates.priorityId } : {}),
           ...(updates.trackerId !== undefined ? { tracker_id: updates.trackerId } : {}),
+          ...(updates.customFields !== undefined ? { custom_fields: updates.customFields } : {}),
         },
       }),
     });

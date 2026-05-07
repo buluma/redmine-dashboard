@@ -935,6 +935,17 @@ private fun EditIssueDialog(state: MainUiState, viewModel: MainViewModel) {
         FormTextField("Due date (YYYY-MM-DD)", state.editDueDate, viewModel::updateEditDueDate)
         FormTextField("Start date (YYYY-MM-DD)", state.editStartDate, viewModel::updateEditStartDate)
         FormTextField("Estimate hours", state.editEstimate, viewModel::updateEditEstimate, numeric = true)
+        val editableCustomFields = state.selectedIssue?.customFieldsJson?.filter { it.value != null } ?: emptyList()
+        if (editableCustomFields.isNotEmpty()) {
+            Text("Custom fields", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            editableCustomFields.forEach { field ->
+                FormTextField(
+                    label = field.name,
+                    value = state.editCustomFields[field.id] ?: field.value.orEmpty(),
+                    onValueChange = { viewModel.updateEditCustomField(field.id, it) },
+                )
+            }
+        }
     }
 }
 
