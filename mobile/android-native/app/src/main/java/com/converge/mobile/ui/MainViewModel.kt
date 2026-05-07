@@ -25,6 +25,7 @@ import com.converge.mobile.data.Issue
 import com.converge.mobile.data.IssueAttachment
 import com.converge.mobile.data.IssueRelation
 import com.converge.mobile.data.Journal
+import com.converge.mobile.data.SearchResult
 import com.converge.mobile.data.TimeEntry
 import com.converge.mobile.data.NotificationItem
 import com.converge.mobile.data.SavedIssueView
@@ -46,6 +47,7 @@ enum class SearchMode(val label: String, val apiValue: String) {
     LOCAL("Local", "local"),
     HYBRID("Hybrid", "hybrid"),
     REMOTE("Remote", "remote"),
+    FTS("Full text", "fts"),
 }
 
 data class MainUiState(
@@ -58,6 +60,7 @@ data class MainUiState(
     val priorityFilter: String = "All",
     val projectFilter: String = "All",
     val searchMode: SearchMode = SearchMode.LOCAL,
+    val ftsResults: List<SearchResult> = emptyList(),
     val openOnly: Boolean = false,
     val sortMode: SortMode = SortMode.UPDATED_DESC,
     val compactList: Boolean = false,
@@ -172,9 +175,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadIssues()
     }
     fun updateSearchMode(mode: SearchMode) {
-        update { copy(searchMode = mode, activeSavedViewId = null) }
-        loadIssues()
+        update { copy(searchMode = mode, activeSavedViewId = null, ftsResults = emptyList()) }
+        if (mode == SearchMode.FTS) performFtsSearch() else loadIssues()
     }
+
+    fun performFtsSearch() {
+        val query = state.value.search.trim()
+        if (query.length < 2) {
+            update { copy(ftsResults = emptyList()) }
+            return
+        }
+        viewModelScope.launch {
+            runBusy {
+                val response = repository.search(state.value.serverUrl, query)
+                update { copy(ftsResults = response.results) }
+            }
+        }
+    }
+
     fun toggleOpenOnly() {
         update { copy(openOnly = !openOnly, activeSavedViewId = null) }
         loadIssues()

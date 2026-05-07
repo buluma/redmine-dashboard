@@ -146,6 +146,13 @@ interface ConvergeApi {
     @GET("api/mobile/v1/issues/{id}/journals")
     suspend fun listJournals(@Path("id") issueId: String): JournalsResponse
 
+    @GET("api/mobile/v1/search")
+    suspend fun search(
+        @Query("q") query: String,
+        @Query("limit") limit: Int = 25,
+        @Query("page") page: Int = 1,
+    ): SearchResponse
+
     @GET("api/mobile/v1/catalogs")
     suspend fun getCatalogs(): CatalogResponse
 
