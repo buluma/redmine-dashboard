@@ -79,6 +79,7 @@ import com.converge.mobile.data.Issue
 import com.converge.mobile.data.IssueAttachment
 import com.converge.mobile.data.IssueRelation
 import com.converge.mobile.data.Journal
+import com.converge.mobile.data.JournalDetail
 import com.converge.mobile.data.TimeEntry
 import com.converge.mobile.data.displayId
 import com.converge.mobile.data.DueUrgency
@@ -313,11 +314,59 @@ private fun JournalCard(journal: Journal, imageResolver: ((String) -> MarkdownIm
                 Text(journal.createdOnRemote.formatDate(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             val notes = journal.notes?.takeIf { it.isNotBlank() }
-            if (notes == null) {
-                Text("Field update", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            } else {
+            if (notes != null) {
                 MarkdownDescription(notes, imageResolver = imageResolver)
             }
+            if (journal.details.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    journal.details.forEach { detail ->
+                        JournalDetailRow(detail)
+                    }
+                }
+            }
+            if (notes == null && journal.details.isEmpty()) {
+                Text("Field update", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+private val FIELD_LABELS = mapOf(
+    "status_id" to "Status",
+    "assigned_to_id" to "Assignee",
+    "priority_id" to "Priority",
+    "tracker_id" to "Tracker",
+    "subject" to "Subject",
+    "description" to "Description",
+    "done_ratio" to "% Done",
+    "due_date" to "Due date",
+    "start_date" to "Start date",
+    "estimated_hours" to "Estimated hours",
+    "category_id" to "Category",
+    "fixed_version_id" to "Target version",
+    "parent_id" to "Parent issue",
+)
+
+@Composable
+private fun JournalDetailRow(detail: JournalDetail) {
+    val label = FIELD_LABELS[detail.name] ?: detail.name.replace("_", " ").replaceFirstChar { it.uppercase() }
+    val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            "$label:",
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            color = secondaryColor,
+        )
+        when {
+            detail.oldValue != null && detail.newValue != null ->
+                Text("${detail.oldValue} → ${detail.newValue}", style = MaterialTheme.typography.bodySmall, color = secondaryColor)
+            detail.newValue != null ->
+                Text("set to ${detail.newValue}", style = MaterialTheme.typography.bodySmall, color = secondaryColor)
+            detail.oldValue != null ->
+                Text("cleared (was ${detail.oldValue})", style = MaterialTheme.typography.bodySmall, color = secondaryColor)
+            else ->
+                Text("changed", style = MaterialTheme.typography.bodySmall, color = secondaryColor)
         }
     }
 }

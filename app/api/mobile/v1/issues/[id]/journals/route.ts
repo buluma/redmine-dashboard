@@ -33,6 +33,7 @@ export async function GET(
         redmineJournalId: j.redmineJournalId,
         author: j.author,
         notes: j.notes,
+        details: Array.isArray(j.detailsJson) ? j.detailsJson : [],
         createdOnRemote: j.createdOnRemote.toISOString(),
       })),
     });

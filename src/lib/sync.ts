@@ -380,12 +380,14 @@ async function upsertJournals(issueId: string, issueRaw: Record<string, unknown>
 
     const createdOnRemote = asDate(journal.created_on) ?? new Date();
     const notes = asString(journal.notes);
+    const details = Array.isArray(journal.details) ? journal.details : undefined;
 
     await prisma.issueJournal.upsert({
       where: { issueId_redmineJournalId: { issueId, redmineJournalId: remoteId } },
       update: {
         author: nestedName(journal.user),
         notes,
+        detailsJson: details ?? undefined,
         createdOnRemote,
       },
       create: {
@@ -393,6 +395,7 @@ async function upsertJournals(issueId: string, issueRaw: Record<string, unknown>
         issueId,
         author: nestedName(journal.user),
         notes,
+        detailsJson: details ?? undefined,
         createdOnRemote,
       },
     });
