@@ -368,7 +368,16 @@ class ConvergeRepository(
         return detail.copy(timeEntries = freshTimes, githubLinks = freshLinks)
     }
 
+    suspend fun registerPushToken(serverUrl: String, fcmToken: String) = call {
+        api(serverUrl).registerPushToken(FcmTokenRequest(fcmToken = fcmToken))
+    }
+
+    suspend fun unregisterPushToken(serverUrl: String) {
+        runCatching { api(serverUrl).unregisterPushToken() }
+    }
+
     suspend fun logout(serverUrl: String) {
+        runCatching { api(serverUrl).unregisterPushToken() }
         runCatching { api(serverUrl).revokeCurrentToken() }
         tokenStore.clear()
     }

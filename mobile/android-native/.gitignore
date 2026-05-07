@@ -8,3 +8,6 @@ captures/
 
 # Sentry Config File
 sentry.properties
+
+# Firebase — contains API keys, do not commit
+app/google-services.json

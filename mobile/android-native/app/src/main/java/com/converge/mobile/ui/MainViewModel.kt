@@ -2,6 +2,7 @@ package com.converge.mobile.ui
 
 import android.app.Application
 import android.app.DownloadManager
+import com.google.firebase.messaging.FirebaseMessaging
 import android.net.Uri
 import android.os.Environment
 import androidx.lifecycle.AndroidViewModel
@@ -287,7 +288,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         selectedIssue = null,
                     )
                 }
+                registerFcmToken()
                 loadIssues()
+            }
+        }
+    }
+
+    fun registerFcmToken() {
+        val serverUrl = state.value.serverUrl
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { fcmToken ->
+            viewModelScope.launch {
+                runCatching { repository.registerPushToken(serverUrl, fcmToken) }
             }
         }
     }

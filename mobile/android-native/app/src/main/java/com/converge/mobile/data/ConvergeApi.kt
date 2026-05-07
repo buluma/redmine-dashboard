@@ -168,6 +168,12 @@ interface ConvergeApi {
         @Path("relationId") relationId: Int,
     )
 
+    @POST("api/mobile/v1/push/subscribe")
+    suspend fun registerPushToken(@Body body: FcmTokenRequest)
+
+    @DELETE("api/mobile/v1/push/subscribe")
+    suspend fun unregisterPushToken()
+
     @DELETE("api/mobile/v1/tokens/current")
     suspend fun revokeCurrentToken()
 }

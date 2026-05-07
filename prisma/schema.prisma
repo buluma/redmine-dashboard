@@ -18,6 +18,7 @@ model User {
   issues            Issue[]
   githubLinks       IssueGithubLink[]
   mobileApiTokens   MobileApiToken[]
+  mobilePushTokens  MobilePushToken[]
   timeEntries       TimeEntry[]
   syncState         SyncState?
   syncJobs          SyncJob[]
@@ -398,6 +399,18 @@ model MobileApiToken {
   updatedAt   DateTime  @updatedAt
 
   @@index([userId, revokedAt])
+}
+
+model MobilePushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fcmToken  String   @unique
+  platform  String   @default("android")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model IssueEmbedding {
