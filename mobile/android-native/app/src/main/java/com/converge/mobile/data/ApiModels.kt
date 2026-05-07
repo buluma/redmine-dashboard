@@ -341,6 +341,27 @@ data class RelationCreateRequest(
     val delay: Int? = null,
 )
 
+data class SearchResult(
+    val id: String = "",
+    val redmineIssueId: Int? = null,
+    val localIssueNumber: Int? = null,
+    val subject: String = "",
+    val projectName: String? = null,
+    val statusName: String = "",
+    val priority: String? = null,
+    val dueDate: String? = null,
+    val assignedToName: String? = null,
+    val source: String = "redmine",
+)
+
+data class SearchResponse(
+    val results: List<SearchResult> = emptyList(),
+    val total: Int = 0,
+    val query: String = "",
+    val page: Int = 1,
+    val pageSize: Int = 25,
+)
+
 data class ApiErrorBody(
     val error: String? = null,
 )

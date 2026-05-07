@@ -64,6 +64,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.converge.mobile.data.Issue
+import com.converge.mobile.data.SearchResult
 import com.converge.mobile.data.displayId
 import com.converge.mobile.data.formatDate
 import com.converge.mobile.ui.MainUiState
@@ -146,7 +147,8 @@ fun IssueListScreen(state: MainUiState, viewModel: MainViewModel) {
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             keyboardActions = KeyboardActions(onSearch = {
                                 focusManager.clearFocus()
-                                viewModel.loadIssues()
+                                if (state.searchMode == SearchMode.FTS) viewModel.performFtsSearch()
+                                else viewModel.loadIssues()
                             }),
                             colors = OutlinedTextFieldDefaults.colors(
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
@@ -286,6 +288,28 @@ fun IssueListScreen(state: MainUiState, viewModel: MainViewModel) {
                 modifier = Modifier.fillMaxSize(),
             ) {
                 when {
+                    state.searchMode == SearchMode.FTS -> {
+                        if (state.isLoading) {
+                            LazyColumn(modifier = Modifier.fillMaxSize()) { items(7) { ShimmerIssueItem() } }
+                        } else if (state.ftsResults.isEmpty()) {
+                            EmptyState(if (state.search.length < 2) "Type to search…" else "No results for \"${state.search}\".")
+                        } else {
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                item {
+                                    Text(
+                                        "${state.ftsResults.size} result${if (state.ftsResults.size != 1) "s" else ""} for \"${state.search}\"",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                                    )
+                                }
+                                items(state.ftsResults, key = { it.id }) { result ->
+                                    FtsResultRow(result, onClick = { viewModel.selectIssueById(result.redmineIssueId) })
+                                    HorizontalDivider(thickness = 0.5.dp)
+                                }
+                            }
+                        }
+                    }
                     state.isLoading && state.issues.isEmpty() -> {
                         LazyColumn(modifier = Modifier.fillMaxSize()) {
                             items(7) { ShimmerIssueItem() }
@@ -524,5 +548,41 @@ fun CreateIssueDialog(state: MainUiState, viewModel: MainViewModel) {
             }
         }
         FormTextField("Due date (YYYY-MM-DD)", state.createDueDate, viewModel::updateCreateDueDate)
+    }
+}
+
+@Composable
+private fun FtsResultRow(result: SearchResult, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                result.subject,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                result.projectName?.let {
+                    Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                result.assignedToName?.let {
+                    Text("· $it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            StatusPill(result.statusName)
+            result.dueDate?.let {
+                Text(it.formatDate(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
 }

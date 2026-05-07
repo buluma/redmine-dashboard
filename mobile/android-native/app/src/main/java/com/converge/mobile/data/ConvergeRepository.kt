@@ -236,6 +236,10 @@ class ConvergeRepository(
         )
     }
 
+    suspend fun search(serverUrl: String, query: String): SearchResponse = call {
+        api(serverUrl).search(query)
+    }
+
     suspend fun listTimeEntries(serverUrl: String, redmineIssueId: Int): List<TimeEntry> = call {
         api(serverUrl).listTimeEntries(redmineIssueId.toString()).items
     }
