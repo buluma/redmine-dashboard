@@ -37,6 +37,13 @@ function csvFromEnv(key: string): string[] {
     .filter((item) => item.length > 0);
 }
 
+function oneOfFromEnv<T extends string>(key: string, options: readonly T[], fallback: T): T {
+  const value = process.env[key];
+  if (!value) return fallback;
+  if ((options as readonly string[]).includes(value)) return value as T;
+  throw new Error(`Invalid value "${value}" for ${key}. Must be one of: ${options.join(", ")}`);
+}
+
 function syncIssueScopeFromEnv(): "assigned" | "open" | "all" {
   const value = (process.env.REDMINE_SYNC_ISSUE_SCOPE ?? "assigned").trim().toLowerCase();
   if (value === "assigned" || value === "open" || value === "all") {
@@ -83,7 +90,7 @@ export const env = {
   aiSearchEnabled: boolFromEnv("AI_SEARCH_ENABLED", true),
   aiCategorizeEnabled: boolFromEnv("AI_CATEGORIZE_ENABLED", true),
   // LLM Provider Configuration
-  llmProvider: (process.env.LLM_PROVIDER as "ollama" | "openai" | "anthropic" | "openrouter") || "ollama",
+  llmProvider: oneOfFromEnv("LLM_PROVIDER", ["ollama", "openai", "anthropic", "openrouter", "aperture"] as const, "ollama"),
   // OpenAI Configuration (alternative to Ollama)
   openaiApiKey: process.env.OPENAI_API_KEY,
   openaiChatModel: process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini",
@@ -110,7 +117,7 @@ export const env = {
   slackNotifyOnStatusChange: boolFromEnv("SLACK_NOTIFY_ON_STATUS_CHANGE", true),
   slackNotifyOnAssignment: boolFromEnv("SLACK_NOTIFY_ON_ASSIGNMENT", true),
   slackNotifyOnInternalNote: boolFromEnv("SLACK_NOTIFY_ON_INTERNAL_NOTE", true),
-  slackNotifyFormat: (process.env.SLACK_NOTIFY_FORMAT as "compact" | "detailed") || "compact",
+  slackNotifyFormat: oneOfFromEnv("SLACK_NOTIFY_FORMAT", ["compact", "detailed"] as const, "compact"),
   slackRefreshIntervalMs: numberFromEnv("SLACK_REFRESH_INTERVAL_MS", 30000),
   // VAPID Configuration for Push Notifications
   vapidPublicKey: process.env.VAPID_PUBLIC_KEY!,

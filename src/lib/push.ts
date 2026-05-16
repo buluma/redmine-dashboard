@@ -3,12 +3,11 @@ import { env } from "./env";
 import { prisma } from "./db";
 import { trackInfo, trackFailure } from "./telemetry";
 
-// Initialize VAPID
-webpush.setVapidDetails(
-  env.pushContact,
-  env.vapidPublicKey,
-  env.vapidPrivateKey
-);
+// Initialize VAPID only when keys are present
+const vapidConfigured = Boolean(env.vapidPublicKey && env.vapidPrivateKey);
+if (vapidConfigured) {
+  webpush.setVapidDetails(env.pushContact, env.vapidPublicKey, env.vapidPrivateKey);
+}
 
 interface PushNotificationOptions {
   title: string;
@@ -26,7 +25,7 @@ export async function sendPushNotification(
     where: { userId },
   });
 
-  if (subscriptions.length === 0) return;
+  if (!vapidConfigured || subscriptions.length === 0) return;
 
   const payload = JSON.stringify({
     notification: {

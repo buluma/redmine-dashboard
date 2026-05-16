@@ -50,10 +50,15 @@ describe("Bootstrap API", () => {
     }));
     vi.doMock("@/src/lib/env", () => ({
       env: {
+        databaseUrl: "file:./test.db",
         redmineBaseUrl: "https://redmine.example.com",
         redmineApiKey: "test-key",
       },
     }));
+    vi.doMock("@/src/lib/session", () => ({ setSessionCookie: vi.fn() }));
+    vi.doMock("@/src/lib/redmine-connect", () => ({ connectRedmineAccount: vi.fn() }));
+    vi.doMock("@/src/lib/sync", () => ({ runSyncJob: vi.fn() }));
+    vi.doMock("@/src/lib/log", () => ({ logEvent: vi.fn() }));
 
     const { GET } = await import("@/app/api/redmine/bootstrap/route");
     const res = await GET();
