@@ -78,14 +78,13 @@ export async function POST(request: Request) {
       return jsonError('Last message must be from user', 400);
     }
 
-    // Save the incoming user message
+    // Save the incoming user message (issueId omitted = null, general chat)
     await prisma.aiChatMessage.create({
       data: {
         userId: user.id,
-        issueId: null, // null = general chat not tied to issue
         role: "user",
         content: lastUserMsg.content,
-      } as any, // Use unchecked input to bypass Prisma type issue
+      },
     });
 
     // Get recent system stats for context
@@ -252,16 +251,15 @@ Current session context:
     }
 
     // ---------- No tool calls — standard response ----------
-    // Save the assistant response
+    // Save the assistant response (issueId omitted = null, general chat)
     await prisma.aiChatMessage.create({
       data: {
         userId: user.id,
-        issueId: null, // null = general chat
         role: "assistant",
         content: result.content,
         model: result.model,
-        totalDuration: result.metrics?.totalDuration ?? null,
-      } as any, // Use unchecked input to bypass Prisma type issue
+        totalDuration: result.metrics?.totalDuration != null ? BigInt(result.metrics.totalDuration) : null,
+      },
     });
 
     return Response.json({

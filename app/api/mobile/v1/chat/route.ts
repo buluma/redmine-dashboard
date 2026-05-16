@@ -104,10 +104,9 @@ export async function POST(request: Request) {
     await prisma.aiChatMessage.create({
       data: {
         userId: user.id,
-        issueId: null,
         role: 'user',
         content: lastUserMsg.content,
-      } as any,
+      },
     });
 
     const [issueCount] = await Promise.all([
@@ -231,12 +230,11 @@ export async function POST(request: Request) {
     await prisma.aiChatMessage.create({
       data: {
         userId: user.id,
-        issueId: null,
         role: 'assistant',
         content: result.content,
         model: result.model,
-        totalDuration: result.metrics?.totalDuration ?? null,
-      } as any,
+        totalDuration: result.metrics?.totalDuration != null ? BigInt(result.metrics.totalDuration) : null,
+      },
     });
 
     trackSuccess({

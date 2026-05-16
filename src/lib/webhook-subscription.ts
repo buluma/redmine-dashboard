@@ -11,9 +11,9 @@
  * - Event delivery history logging
  */
 
-import https from 'https';
 import { prisma } from './db';
 import { getAuditService } from './audit';
+import { trackInfo, trackSuccess, trackFailure } from './telemetry';
 
 // ─── Types ───────────────────────────────────────────────────────────────
 
@@ -234,55 +234,31 @@ async function deliverWebhook(
   const body = JSON.stringify(payload);
   const signature = generateSignature(body, subscription.secret);
 
-  return new Promise((resolve) => {
-    try {
-      const parsed = new URL(subscription.url);
-      const options = {
-        hostname: parsed.hostname,
-        port: 443,
-        path: parsed.pathname + parsed.search,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(body),
-          'User-Agent': 'Converge-Webhook/1.0',
-          'X-Webhook-Event': payload.event,
-          'X-Webhook-Delivery': payload.id,
-          'X-Webhook-Timestamp': payload.timestamp,
-          'X-Webhook-Signature': `sha256=${signature}`,
-        },
-        family: 4, // Force IPv4
-      };
-
-      const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', (chunk) => { data += chunk; });
-        res.on('end', () => {
-          const success = res.statusCode !== undefined && res.statusCode >= 200 && res.statusCode < 300;
-          resolve({
-            success,
-            status: res.statusCode,
-            responseBody: data,
-            error: success ? undefined : `HTTP ${res.statusCode}: ${data.substring(0, 100)}`,
-          });
-        });
-      });
-
-      req.on('error', (e) => {
-        resolve({ success: false, error: e.message });
-      });
-
-      req.on('timeout', () => {
-        req.destroy();
-        resolve({ success: false, error: 'Request timeout' });
-      });
-
-      req.write(body);
-      req.end();
-    } catch (e: any) {
-      resolve({ success: false, error: e.message });
-    }
-  });
+  try {
+    const response = await fetch(subscription.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Converge-Webhook/1.0',
+        'X-Webhook-Event': payload.event,
+        'X-Webhook-Delivery': payload.id,
+        'X-Webhook-Timestamp': payload.timestamp,
+        'X-Webhook-Signature': `sha256=${signature}`,
+      },
+      body,
+      signal: AbortSignal.timeout(10000),
+    });
+    const responseBody = await response.text().catch(() => '');
+    const success = response.status >= 200 && response.status < 300;
+    return {
+      success,
+      status: response.status,
+      responseBody,
+      error: success ? undefined : `HTTP ${response.status}: ${responseBody.substring(0, 100)}`,
+    };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 // ─── Main Dispatcher ───────────────────────────────────────────────────
@@ -311,7 +287,7 @@ export async function dispatchWebhook(
     metadata: triggeredBy ? { triggeredBy } : undefined,
   };
 
-  console.log(`[Webhook] Dispatching ${event} to ${interested.length} subscriber(s)`);
+  trackInfo("webhook.dispatch.started", { event, subscriberCount: interested.length });
 
   // Deliver to all interested subscribers in parallel
   await Promise.all(
@@ -337,16 +313,16 @@ export async function dispatchWebhook(
             deliveredAt: new Date(),
           },
         }).catch(err => {
-          console.error("[Webhook] Failed to log delivery:", err);
+          trackFailure({ event: "webhook.delivery.log.failed", error: err });
         });
 
-        console.log(`[Webhook] Delivery ${result.success ? '✓' : '✗'} to ${maskUrl(sub.url)}: ${result.status} (${durationMs}ms)`);
-
-        if (!result.success) {
-          console.error(`[Webhook] Delivery failed to ${maskUrl(sub.url)}:`, result.error);
+        if (result.success) {
+          trackSuccess({ event: "webhook.delivery.succeeded", metricName: "webhook_delivery_succeeded", data: { status: result.status, durationMs } });
+        } else {
+          trackFailure({ event: "webhook.delivery.failed", error: result.error ?? "unknown", metricName: "webhook_delivery_failed" });
         }
       } catch (err) {
-        console.error(`[Webhook] Error delivering to ${maskUrl(sub.url)}:`, err);
+        trackFailure({ event: "webhook.delivery.error", error: err, metricName: "webhook_delivery_error" });
         await updateSubscriptionFailure(sub.id, null, false);
         
         // Log failed delivery

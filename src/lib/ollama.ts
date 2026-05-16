@@ -1,4 +1,5 @@
 import { env } from "./env";
+import { trackWarn } from "./telemetry";
 
 export interface OllamaModel {
   name: string;
@@ -299,7 +300,7 @@ export class OllamaClient {
       const result = await this.chat(messages, { ...options, useFallback: false });
       return { ...result, usedFallback: false };
     } catch (error) {
-      console.warn(`Primary model failed, trying fallback:`, error);
+      trackWarn("ollama.model.fallback", { primaryModel: env.ollamaChatModel, fallbackModel: env.ollamaChatModelFallback });
     }
 
     // Try fallback model

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { dispatchWebhook, getActiveSubscriptions } from '../webhook-subscription';
 import type { WebhookPayload, WebhookEvent } from '../webhook-subscription';
 
-vi.mock('../../src/lib/db', () => ({
+vi.mock('@/src/lib/db', () => ({
   prisma: {
     webhookSubscription: {
       findMany: vi.fn(),
@@ -15,13 +15,15 @@ vi.mock('../../src/lib/db', () => ({
   },
 }));
 
-import { prisma } from '../db';
+import { prisma } from '@/src/lib/db';
 
 const mockPrisma = prisma as any;
 
 describe('Webhook Dispatch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // webhookDelivery.create is called fire-and-forget with .catch(); must return a Promise
+    mockPrisma.webhookDelivery.create.mockResolvedValue({});
   });
 
   const mockPayload: WebhookPayload = {
@@ -50,9 +52,9 @@ describe('Webhook Dispatch', () => {
 
   describe('getActiveSubscriptions', () => {
     it('should return only active subscriptions', async () => {
+      // Prisma applies where: { active: true } — mock returns what the DB would return
       mockPrisma.webhookSubscription.findMany.mockResolvedValue([
         { id: '1', name: 'Active Sub', url: 'https://example.com/webhook', events: ['ticket.created'], active: true },
-        { id: '2', name: 'Inactive Sub', url: 'https://example2.com/webhook', events: ['ticket.updated'], active: false },
       ]);
 
       const subscriptions = await getActiveSubscriptions();
@@ -83,7 +85,7 @@ describe('Webhook Dispatch', () => {
       // Mock the HTTP request
       const mockFetch = vi.fn().mockResolvedValue({
         status: 200,
-        body: null,
+        text: async () => '',
       });
       vi.stubGlobal('fetch', mockFetch);
 
@@ -106,7 +108,7 @@ describe('Webhook Dispatch', () => {
 
       const mockFetch = vi.fn().mockResolvedValue({
         status: 200,
-        body: null,
+        text: async () => '',
       });
       vi.stubGlobal('fetch', mockFetch);
 
@@ -123,7 +125,7 @@ describe('Webhook Dispatch', () => {
 
       const mockFetch = vi.fn().mockResolvedValue({
         status: 200,
-        body: null,
+        text: async () => '',
       });
       vi.stubGlobal('fetch', mockFetch);
 
@@ -140,7 +142,7 @@ describe('Webhook Dispatch', () => {
 
       const mockFetch = vi.fn().mockResolvedValue({
         status: 200,
-        body: null,
+        text: async () => '',
       });
       vi.stubGlobal('fetch', mockFetch);
 
@@ -157,7 +159,7 @@ describe('Webhook Dispatch', () => {
 
       const mockFetch = vi.fn().mockResolvedValue({
         status: 200,
-        body: null,
+        text: async () => '',
       });
       vi.stubGlobal('fetch', mockFetch);
 
