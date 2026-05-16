@@ -1282,7 +1282,15 @@ export default function Home() {
           <h2>{t('insights.statusMixTitle')}</h2>
           <p className="muted">Click a status to filter quickly.</p>
           <div className="chip-row">
-            {summary.topStatuses.length === 0 && <span className="muted">No status data yet.</span>}
+            {summary.topStatuses.length === 0 && (
+              <div className="empty-state">
+                <span className="empty-state-icon" aria-hidden="true">📊</span>
+                <p className="muted">No status data yet.</p>
+                <p className="empty-state-hint">
+                  Connect to Redmine and run a sync to populate the status mix.
+                </p>
+              </div>
+            )}
             {summary.topStatuses.map(([name, count]) => (
               <button
                 key={name}
@@ -1299,7 +1307,12 @@ export default function Home() {
         <article className="card">
           <h2>{t('insights.priorityMixTitle')}</h2>
           <div className="bars-list">
-            {summary.priorityMix.length === 0 && <span className="muted">No priority data yet.</span>}
+            {summary.priorityMix.length === 0 && (
+              <div className="empty-state">
+                <span className="empty-state-icon" aria-hidden="true">🎯</span>
+                <p className="muted">No priority data yet.</p>
+              </div>
+            )}
             {summary.priorityMix.map(([name, count]) => (
               <div key={name} className="bar-row">
                 <div className="bar-label-row">
@@ -1356,7 +1369,24 @@ export default function Home() {
 
           {opsAlertsOpen ? (
             <div id="ops-alerts-content" className="alert-list">
-              {summary.atRisk.length === 0 && <p className="muted">No active risk alerts.</p>}
+              {summary.atRisk.length === 0 && (
+                <div className="empty-state">
+                  <span className="empty-state-icon" aria-hidden="true">✅</span>
+                  <p className="muted">No active risk alerts.</p>
+                  <p className="empty-state-hint">
+                    Nothing overdue, blocked, or stale right now.{" "}
+                    <button
+                      type="button"
+                      className="link-button"
+                      onClick={handleManualPull}
+                      disabled={manualRefreshBusy}
+                    >
+                      {manualRefreshBusy ? t('hero.refreshing') : t('hero.forceRefresh')}
+                    </button>{" "}
+                    to refresh from Redmine.
+                  </p>
+                </div>
+              )}
               {summary.atRisk.map(({ issue, reason }) => (
                 <button
                   key={issue.id}
