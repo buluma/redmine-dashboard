@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { env } from "@/src/lib/env";
+import { trackFailure } from "@/src/lib/telemetry";
 
 declare global {
   var prisma: PrismaClient | undefined;
@@ -155,8 +156,7 @@ async function ensureRuntimeTables(): Promise<void> {
 }
 
 void ensureRuntimeTables().catch((error) => {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(`[db] runtime compatibility bootstrap failed: ${message}`);
+  trackFailure({ event: "db.runtime_tables.failed", error, metricName: "db_runtime_tables_failed" });
 });
 
 if (process.env.NODE_ENV !== "production") {
