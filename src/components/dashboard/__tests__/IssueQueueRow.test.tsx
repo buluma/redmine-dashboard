@@ -47,9 +47,9 @@ function makeIssue(over: Partial<Issue> = {}): Issue {
 }
 
 const statuses: StatusCatalog[] = [
-  { id: 1, name: "Open" },
-  { id: 2, name: "In Progress" },
-  { id: 3, name: "Done" },
+  { id: 1, name: "Open", isClosed: false },
+  { id: 2, name: "In Progress", isClosed: false },
+  { id: 3, name: "Done", isClosed: true },
 ];
 
 function renderRow(over: Partial<Parameters<typeof IssueQueueRow>[0]> = {}) {
@@ -119,7 +119,8 @@ describe("IssueQueueRow", () => {
   });
 
   it("calls onStatusChange when the status select changes", () => {
-    const { onStatusChange } = renderRow();
+    const onStatusChange = vi.fn();
+    renderRow({ onStatusChange });
     const select = screen.getByDisplayValue("In Progress");
     fireEvent.change(select, { target: { value: "3" } });
     expect(onStatusChange).toHaveBeenCalled();
