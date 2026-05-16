@@ -60,7 +60,8 @@ describe("GithubLinksSection", () => {
     fireEvent.submit(inputs[0].closest("form")!);
 
     await waitFor(() => expect(onCreate).toHaveBeenCalled());
-    expect(onCreate.mock.calls[0][0]).toEqual({
+    const firstCall = onCreate.mock.calls[0] as unknown as [Record<string, unknown>];
+    expect(firstCall[0]).toEqual({
       repositoryFullName: "acme/platform",
       githubIssueNumber: 55,
       githubPrNumber: undefined,

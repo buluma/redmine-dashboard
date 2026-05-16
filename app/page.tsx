@@ -18,6 +18,8 @@ import { SavedViewsPanel } from "@/src/components/SavedViewsPanel";
 import { useToast } from "@/src/components/ToastProvider";
 import { IssueCreateModal } from "@/src/components/IssueCreateModal";
 import { ColumnPicker, ColumnKey } from "@/src/components/ColumnPicker";
+import { KanbanBoard } from "@/src/components/KanbanBoard";
+import { GanttChart } from "@/src/components/GanttChart";
 import { IssueQuickPeek } from "@/src/components/IssueQuickPeek";
 import { SkeletonTable } from "@/src/components/SkeletonTable";
 import type {
@@ -146,6 +148,7 @@ export default function Home() {
   const [opsAlertsOpen, setOpsAlertsOpen] = useState(false);
   const [activityFeedOpen, setActivityFeedOpen] = useState(false);
   const [issueQueueOpen, setIssueQueueOpen] = useState(true);
+  const [viewMode, setViewMode] = useState<"list" | "board" | "gantt">("list");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [favoriteIssueIds, setFavoriteIssueIds] = useState<number[]>([]);
   const [showCharts, setShowCharts] = useState(false);
@@ -944,6 +947,29 @@ export default function Home() {
     setBulkPriorityId(0);
   }
 
+  async function handleBoardDrop(issueId: number, targetStatusId: number) {
+    try {
+      const res = await fetch("/api/issues/bulk-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ issueIds: [issueId], statusId: targetStatusId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Status update failed");
+      }
+      if (data.failures?.length > 0) {
+        throw new Error(data.failures[0].error || t('toasts.actionNotPermitted'));
+      }
+      toast.info(t('toasts.statusUpdated'));
+      await refreshAll();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('toasts.dropFailed'));
+      // Refetch to revert KanbanBoard's optimistic state.
+      await refreshAll();
+    }
+  }
+
   async function updateBulkMarkDone() {
     await runBulkUpdate({ doneRatio: 100 }, 'toasts.bulkSuccess');
   }
@@ -1679,9 +1705,78 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* View-mode tabs (Kanban/Gantt) hidden until 1.1 re-enables them; list is the only working view. */}
+              <div className="view-mode-tabs" role="tablist" aria-label="Issue view mode">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={viewMode === "list"}
+                  className={`secondary-button ${viewMode === "list" ? "active" : ""}`}
+                  onClick={() => setViewMode("list")}
+                >
+                  {t('queue.viewList')}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={viewMode === "board"}
+                  className={`secondary-button ${viewMode === "board" ? "active" : ""}`}
+                  onClick={() => setViewMode("board")}
+                >
+                  {t('queue.viewBoard')}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={viewMode === "gantt"}
+                  className={`secondary-button ${viewMode === "gantt" ? "active" : ""}`}
+                  onClick={() => setViewMode("gantt")}
+                >
+                  {t('queue.viewGantt')}
+                </button>
+              </div>
 
-              {(
+              {viewMode === "board" ? (
+                <KanbanBoard
+                  issues={visibleIssues
+                    .filter((i): i is typeof i & { redmineIssueId: number } =>
+                      Number.isInteger(i.redmineIssueId) && (i.redmineIssueId ?? 0) > 0,
+                    )
+                    .map((i) => ({
+                      id: i.id,
+                      redmineIssueId: i.redmineIssueId as number,
+                      subject: i.subject,
+                      projectName: i.projectName,
+                      priority: i.priority,
+                      statusId: i.statusId,
+                      statusName: i.statusName,
+                      doneRatio: i.doneRatio ?? null,
+                    }))}
+                  statuses={statuses}
+                  onDrop={handleBoardDrop}
+                  onClick={(boardIssue) => setSelectedIssueId(boardIssue.redmineIssueId)}
+                />
+              ) : viewMode === "gantt" ? (
+                <GanttChart
+                  issues={visibleIssues
+                    .filter((i): i is typeof i & { redmineIssueId: number } =>
+                      Number.isInteger(i.redmineIssueId) && (i.redmineIssueId ?? 0) > 0,
+                    )
+                    .map((i) => ({
+                      id: i.id,
+                      redmineIssueId: i.redmineIssueId as number,
+                      subject: i.subject,
+                      projectName: i.projectName,
+                      priority: i.priority,
+                      statusName: i.statusName,
+                      startDate: i.startDate ?? null,
+                      dueDate: i.dueDate ?? null,
+                      createdAt: i.createdAt,
+                      updatedAt: i.updatedAt,
+                      doneRatio: i.doneRatio ?? null,
+                    }))}
+                  onClick={(g) => setSelectedIssueId(g.redmineIssueId)}
+                />
+              ) : (
                 <>
                 <table className="issues-table">
                   <thead>

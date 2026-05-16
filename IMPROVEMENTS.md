@@ -34,6 +34,10 @@ Completed during this session:
 | 2.18 Chart drill-down audit | ✅ already shipped | `app/reports/page.tsx:149` drilldown state + `onClick` on every chart |
 | 2.24 Focus rings + reduced motion | ✅ done | global `:focus-visible` ring; global `prefers-reduced-motion` rule shortening animations/transitions |
 | 2.25 Page size selector | ✅ done | 20/50/100 inline with pagination; persisted to `nrcc.pageSize.v1` |
+| 1.1 Kanban + Gantt revive | ✅ done | view-mode tab strip restored; KanbanBoard wired to `/api/issues/bulk-status`; GanttChart consumes `visibleIssues` mapping |
+| 1.22 axe-core CI gate | ✅ done | `@axe-core/playwright`; `e2e/a11y.spec.ts` scans `/` + `/login`; CI `a11y` job in `.github/workflows/ci.yml` |
+| Hygiene: tests for new hooks + components | ✅ done | 47 tests in `src/hooks/__tests__/`, `src/components/dashboard/__tests__/`, `src/components/issue-detail/__tests__/` (403/403 suite pass) |
+| Hygiene: setState-in-effect lint | ✅ done | hydration-load comment + scoped disable in `usePageSize.ts:28`, `useDashboardSavedViews.ts:47` |
 
 Verification at session end:
 - `npx tsc --noEmit` → 2 pre-existing errors in `mobile/v1/reports` only.
@@ -54,7 +58,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 
 ## 1. Functional Improvements
 
-### 1.1 Re-enable Kanban Board and Gantt views — High
+### 1.1 Re-enable Kanban Board and Gantt views — High ✅ done
 - **Evidence:** `app/page.tsx:1656-1687` — Kanban + Gantt view-mode buttons and renderers are commented out (`temporarily disabled`). Only the `list` tab actually renders, so `view-mode-tabs` shows a single button with no purpose.
 - **Impact:** Two TODO items in `TODO.md` ("Jira-Style Kanban Board", "Interactive Gantt Chart View") already have component scaffolding (`src/components/KanbanBoard.tsx`, `src/components/GanttChart.tsx`).
 - **Action:** Either restore both with working drag-and-drop status updates, or remove `KanbanBoard`/`GanttChart` imports and the `viewMode` state entirely. Half-wired UI is worse than no UI.
@@ -255,7 +259,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 |-------|-------|
 | **Now (small, high payoff)** | ✅ 1.3, ⛔ 1.18 (blocked), ✅ 2.3, ✅ 2.4, ✅ 2.6, ✅ 2.7–2.8, ✅ 2.25 |
 | **Next (med)** | ⏳ 1.4 (partial: 1.4a–d), ⏳ 1.5 (partial: 1.5a–c), ✅ 1.7, ✅ 1.9, ✅ 2.1, ✅ 2.2, ✅ 2.5, ✅ 2.12, ✅ 2.18, ✅ 2.24 |
-| **After** | 1.1 (Kanban+Gantt), 1.6 (SSE), 1.8 (Postgres on Pi), 1.12 (offline conflicts), 1.13 (AI RBAC), 1.17 (mobile strategy), 2.19 (log virtualization) |
+| **After** | ✅ 1.1, 1.6 (SSE), 1.8 (Postgres on Pi), 1.12 (offline conflicts), 1.13 (AI RBAC), 1.17 (mobile strategy), 2.19 (log virtualization) |
 | **Polish / opportunistic** | 1.11, 1.14–1.16, 1.19–1.22, 2.9–2.11, 2.13–2.17, 2.20–2.23 |
 
 Legend: ✅ done · ⏳ partial · ⛔ blocked
