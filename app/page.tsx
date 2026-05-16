@@ -67,6 +67,7 @@ import {
 } from "@/src/lib/issue-utils";
 import { MarkdownBlock } from "@/src/components/MarkdownBlock";
 import { useDashboardSavedViews } from "@/src/hooks/useDashboardSavedViews";
+import { useEventStream } from "@/src/hooks/useEventStream";
 import { PAGE_SIZE_OPTIONS, usePageSize } from "@/src/hooks/usePageSize";
 import { DashboardHero } from "@/src/components/dashboard/DashboardHero";
 import { IssueQueueRow } from "@/src/components/dashboard/IssueQueueRow";
@@ -623,6 +624,16 @@ export default function Home() {
     // refreshAll/loadActivities intentionally depend on current query + user snapshot.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryString, user]);
+
+  // Live updates via Server-Sent Events. The polling loop above stays
+  // as a backstop in case the stream is dropped by an intermediate proxy.
+  useEventStream({
+    enabled: Boolean(user),
+    handlers: {
+      "issue.created": () => { void refreshAll(); },
+      "issue.updated": () => { void refreshAll(); },
+    },
+  });
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
