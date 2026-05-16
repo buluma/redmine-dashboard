@@ -61,6 +61,7 @@ export const env = {
   streamlineLogLockTtlMs: numberFromEnv("STREAMLINE_LOG_LOCK_TTL_MS", 90000), // 90 sec default
   streamlineEnvironment: process.env.STREAMLINE_ENV || "staging",
   streamlineLogFetchLimit: numberFromEnv("STREAMLINE_LOG_FETCH_LIMIT", 100),
+  streamlineLogRetentionMs: numberFromEnv("STREAMLINE_LOG_RETENTION_DAYS", 7) * 24 * 60 * 60 * 1000,
   memoryLogging: boolFromEnv("MEMORY_LOGGING", false),
   memoryLogIntervalMs: numberFromEnv("MEMORY_LOG_INTERVAL_MS", 60000),
   redmineBaseUrl: process.env.REDMINE_BASE_URL,

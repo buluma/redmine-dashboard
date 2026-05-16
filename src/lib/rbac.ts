@@ -88,20 +88,24 @@ export async function requirePermission(permission: Permission): Promise<void> {
 
 /**
  * Require minimum role level
+ *
+ * The hierarchy is VIEWER < USER < EDITOR < ADMIN. Passing minRole="EDITOR" allows
+ * EDITOR and ADMIN. Additional explicit roles are also accepted (e.g. to allow a
+ * specific lower role without opening the full hierarchy below minRole).
  */
 export async function requireRole(minRole: UserRole, ...additionalRoles: UserRole[]): Promise<void> {
   const user = await requireCurrentUser();
   const userRole = await getUserRole(user.id);
-  
+
   const roleHierarchy: UserRole[] = ["VIEWER", "USER", "EDITOR", "ADMIN"];
   const userLevel = roleHierarchy.indexOf(userRole);
   const requiredLevel = roleHierarchy.indexOf(minRole);
-  
-  // Check if user has any of the allowed roles
-  const allowedRoles = [minRole, ...additionalRoles];
-  if (!allowedRoles.includes(userRole)) {
-    throw new Error(`Role requirement not met: ${minRole} required, ${userRole} found`);
+
+  if (userLevel >= requiredLevel || additionalRoles.includes(userRole)) {
+    return;
   }
+
+  throw new Error(`Role requirement not met: ${minRole} required, ${userRole} found`);
 }
 
 /**
@@ -185,6 +189,7 @@ export async function isFeatureEnabled(userId: string, feature: string): Promise
   
   const required = featurePermissions[feature] ?? [];
   if (required.length === 0) return true;
-  
-  return required.some(p => hasPermission(userId, p));
+
+  const permissions = ROLE_PERMISSIONS[role] ?? [];
+  return required.some((p) => permissions.includes(p));
 }

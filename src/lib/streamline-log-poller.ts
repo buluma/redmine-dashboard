@@ -14,6 +14,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "@/src/lib/db";
 import { env } from "@/src/lib/env";
 import { logEvent } from "@/src/lib/log";
+import { acquireLeaderLock } from "@/src/lib/leader-lock";
 import {
   fetchStreamlineLogsFromAPI,
   upsertMbuLog,
@@ -30,37 +31,17 @@ const ownerId = randomUUID();
 let intervalRef: NodeJS.Timeout | null = null;
 let tickInFlight = false;
 
-async function acquireLeaderLock(): Promise<boolean> {
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + env.streamlineLogLockTtlMs);
-  const current = await prisma.leaderLock.findUnique({ where: { name: LOCK_NAME } });
-
-  if (!current) {
-    await prisma.leaderLock.create({
-      data: {
-        name: LOCK_NAME,
-        ownerId,
-        heartbeatAt: now,
-        expiresAt,
-      },
-    });
-    return true;
+async function pruneOldLogs(): Promise<void> {
+  const cutoff = new Date(Date.now() - env.streamlineLogRetentionMs);
+  const [mbu, ssr, traces] = await Promise.all([
+    prisma.mbuLog.deleteMany({ where: { createdAt: { lt: cutoff } } }),
+    prisma.serverSideRulesLog.deleteMany({ where: { createdAt: { lt: cutoff } } }),
+    prisma.trace.deleteMany({ where: { createdAt: { lt: cutoff } } }),
+  ]);
+  const total = mbu.count + ssr.count + traces.count;
+  if (total > 0) {
+    logEvent("streamline_log_poller.pruned", { mbuLogs: mbu.count, serverSideRules: ssr.count, traces: traces.count });
   }
-
-  const lockExpired = current.expiresAt.getTime() < Date.now();
-  if (current.ownerId === ownerId || lockExpired) {
-    await prisma.leaderLock.update({
-      where: { name: LOCK_NAME },
-      data: {
-        ownerId,
-        heartbeatAt: now,
-        expiresAt,
-      },
-    });
-    return true;
-  }
-
-  return false;
 }
 
 async function pollTick(): Promise<void> {
@@ -72,11 +53,13 @@ async function pollTick(): Promise<void> {
   const startTime = Date.now();
 
   try {
-    const isLeader = await acquireLeaderLock();
+    const isLeader = await acquireLeaderLock(LOCK_NAME, ownerId, env.streamlineLogLockTtlMs);
     if (!isLeader) {
       logEvent("streamline_log_poller.tick.skipped_not_leader", { ownerId });
       return;
     }
+
+    await pruneOldLogs();
 
     logEvent("streamline_log_poller.tick.started", {
       ownerId,

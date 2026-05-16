@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
 import { env } from "@/src/lib/env";
+import { trackFailure } from "@/src/lib/telemetry";
 import { checkRedisHealth, isRedisHealthy } from "./redis";
 
 // In-memory rate limiting (original implementation)
@@ -133,49 +134,35 @@ export async function checkRateLimit(
   }
 
   const windowStart = new Date(Date.now() - config.windowMs);
+  const endpoint = `${method} ${path}`;
 
   try {
-    // Get or create rate limit record
-    const record = await prisma.apiRateLimit.upsert({
-      where: {
-        key_keyType_endpoint: {
-          key,
-          keyType: config.keyType,
-          endpoint: `${method} ${path}`,
-        },
-      },
-      create: {
-        key,
-        keyType: config.keyType,
-        endpoint: `${method} ${path}`,
-        count: 1,
-        windowStart: new Date(),
-      },
-      update: {
-        count: {
-          increment: 1,
-        },
-      },
-    });
-
-    // Check if window has expired
-    if (record.windowStart.getTime() < windowStart.getTime()) {
-      // Reset window
-      await prisma.apiRateLimit.update({
-        where: { id: record.id },
-        data: {
-          count: 1,
-          windowStart: new Date(),
-        },
+    // Atomic check-and-update inside a transaction to avoid TOCTOU on window reset.
+    // Two concurrent requests both seeing an expired window would otherwise both
+    // reset to count=1 and both be allowed, defeating the limit.
+    const record = await prisma.$transaction(async (tx) => {
+      const existing = await tx.apiRateLimit.findUnique({
+        where: { key_keyType_endpoint: { key, keyType: config.keyType, endpoint } },
       });
-      
-      return {
-        allowed: true,
-        remaining: config.maxRequests - 1,
-        resetAt: new Date(Date.now() + config.windowMs),
-        limit: config.maxRequests,
-      };
-    }
+
+      if (!existing) {
+        return tx.apiRateLimit.create({
+          data: { key, keyType: config.keyType, endpoint, count: 1, windowStart: new Date() },
+        });
+      }
+
+      if (existing.windowStart.getTime() < windowStart.getTime()) {
+        return tx.apiRateLimit.update({
+          where: { id: existing.id },
+          data: { count: 1, windowStart: new Date() },
+        });
+      }
+
+      return tx.apiRateLimit.update({
+        where: { id: existing.id },
+        data: { count: { increment: 1 } },
+      });
+    });
 
     const remaining = Math.max(0, config.maxRequests - record.count);
     const allowed = record.count <= config.maxRequests;
@@ -187,8 +174,7 @@ export async function checkRateLimit(
       limit: config.maxRequests,
     };
   } catch (error) {
-    // If rate limiting fails, allow the request
-    console.error("Rate limit check failed:", error);
+    trackFailure({ event: "rate_limit.check.failed", error, metricName: "rate_limit_check_failed" });
     return { allowed: true, remaining: 999, resetAt: new Date(), limit: 999 };
   }
 }
