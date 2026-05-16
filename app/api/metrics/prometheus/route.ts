@@ -31,6 +31,11 @@ export async function GET() {
     favoriteCount,
     savedViewCount,
     timeEntryCount,
+    webhookSubsActive,
+    webhookSubsTotal,
+    webhookDeliveries,
+    auditLogTotal,
+    pushSubTotal,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.issue.count(),
@@ -44,7 +49,12 @@ export async function GET() {
     prisma.favorite.count(),
     prisma.savedView.count(),
     prisma.timeEntry.count(),
-  ]).catch(() => [0, 0, 0, 0, 0, [], [], [], [], 0, 0, 0]);
+    prisma.webhookSubscription.count({ where: { active: true } }).catch(() => 0),
+    prisma.webhookSubscription.count().catch(() => 0),
+    prisma.webhookDelivery.groupBy({ by: ['responseStatus'], _count: { id: true } }).catch(() => []),
+    prisma.auditLog.count().catch(() => 0),
+    prisma.pushSubscription.count().catch(() => 0),
+  ]).catch(() => [0, 0, 0, 0, 0, [], [], [], [], 0, 0, 0, 0, 0, [], 0, 0]);
 
   const lines: string[] = [];
 
@@ -97,6 +107,20 @@ export async function GET() {
   }
   lines.push('');
   lines.push(g('redmine_sync_error_count', 'Number of users with a last sync error', syncErrorCount));
+
+  // Webhooks
+  lines.push(g('redmine_webhook_subscriptions_active', 'Active webhook subscriptions', webhookSubsActive as number));
+  lines.push(g('redmine_webhook_subscriptions_total', 'Total webhook subscriptions', webhookSubsTotal as number));
+
+  const deliveryRows = (webhookDeliveries as { responseStatus: number | null; _count: { id: number } }[]);
+  const deliverySuccess = deliveryRows.filter(r => r.responseStatus !== null && r.responseStatus >= 200 && r.responseStatus < 300).reduce((n, r) => n + r._count.id, 0);
+  const deliveryFailed = deliveryRows.filter(r => r.responseStatus === null || r.responseStatus < 200 || r.responseStatus >= 300).reduce((n, r) => n + r._count.id, 0);
+  lines.push(c('redmine_webhook_deliveries_success_total', 'Total successful webhook deliveries', deliverySuccess));
+  lines.push(c('redmine_webhook_deliveries_failed_total', 'Total failed webhook deliveries', deliveryFailed));
+
+  // Audit & push
+  lines.push(g('redmine_audit_log_entries_total', 'Total audit log entries', auditLogTotal as number));
+  lines.push(g('redmine_push_subscriptions_total', 'Total active push subscriptions', pushSubTotal as number));
 
   const body = lines.join('\n');
   return new Response(body, {
