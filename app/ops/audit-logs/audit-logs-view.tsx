@@ -1,10 +1,23 @@
 "use client";
 
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { useI18n } from "@/src/components/I18nProvider";
 
+interface AuditLog {
+  id: string;
+  createdAt: string | Date;
+  userEmail?: string | null;
+  userId?: string | null;
+  action: string;
+  entityType: string;
+  entityId?: string | number | null;
+  ipAddress?: string | null;
+  changes?: unknown;
+  metadata?: unknown;
+}
+
 interface AuditLogsViewProps {
-  auditLogs: any[];
+  auditLogs: AuditLog[];
   stats: {
     total: number;
     creates: number;
@@ -15,16 +28,84 @@ interface AuditLogsViewProps {
   };
 }
 
+function getActionClass(action: string): string {
+  switch (action) {
+    case "CREATE": return "sync-success";
+    case "UPDATE": return "status-chip";
+    case "DELETE": return "sync-failed";
+    default: return "";
+  }
+}
+
+function csvCell(value: unknown): string {
+  if (value == null) return "";
+  const str = typeof value === "object" ? JSON.stringify(value) : String(value);
+  // Always quote so commas/newlines/double-quotes inside the value cannot
+  // break out into adjacent columns.
+  return `"${str.replace(/"/g, '""')}"`;
+}
+
+function downloadCsv(filename: string, rows: string[]): void {
+  const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export function AuditLogsView({ auditLogs, stats }: AuditLogsViewProps) {
   const { t, formatDate } = useI18n();
 
-  function getActionClass(action: string): string {
-    switch (action) {
-      case "CREATE": return "sync-success";
-      case "UPDATE": return "status-chip";
-      case "DELETE": return "sync-failed";
-      default: return "";
+  const [actionFilter, setActionFilter] = useState<string>("all");
+  const [entityFilter, setEntityFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
+
+  const entityOptions = useMemo(() => {
+    const seen = new Set<string>();
+    for (const log of auditLogs) {
+      if (log.entityType) seen.add(log.entityType);
     }
+    return Array.from(seen).sort();
+  }, [auditLogs]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return auditLogs.filter((log) => {
+      if (actionFilter !== "all" && log.action !== actionFilter) return false;
+      if (entityFilter !== "all" && log.entityType !== entityFilter) return false;
+      if (q) {
+        const hay = [log.userEmail, log.userId, log.entityId, log.ipAddress]
+          .filter((v): v is string | number => v != null)
+          .map((v) => String(v).toLowerCase())
+          .join(" ");
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [auditLogs, actionFilter, entityFilter, search]);
+
+  function handleExport() {
+    const header = ["timestamp", "user", "action", "entityType", "entityId", "ipAddress", "changes", "metadata"];
+    const rows = [
+      header.map(csvCell).join(","),
+      ...filtered.map((log) =>
+        [
+          formatDate(log.createdAt instanceof Date ? log.createdAt : new Date(log.createdAt)),
+          log.userEmail ?? log.userId ?? "",
+          log.action,
+          log.entityType,
+          log.entityId ?? "",
+          log.ipAddress ?? "",
+          log.changes ?? "",
+          log.metadata ?? "",
+        ].map(csvCell).join(","),
+      ),
+    ];
+    downloadCsv(`audit-logs-${new Date().toISOString().slice(0, 10)}.csv`, rows);
   }
 
   return (
@@ -59,10 +140,46 @@ export function AuditLogsView({ auditLogs, stats }: AuditLogsViewProps) {
         <article className="card">
           <h2>{t("ops.overview")}</h2>
           <div className="ops-kv">
-            <p><strong>Showing:</strong> {t("ops.todayEvents", { count: auditLogs.length })}</p>
+            <p><strong>Showing:</strong> {t("ops.todayEvents", { count: filtered.length })} / {auditLogs.length}</p>
             <p><strong>{t("ops.uniqueUsers")}:</strong> {stats.uniqueUsers}</p>
           </div>
         </article>
+      </section>
+
+      {/* Filter bar */}
+      <section className="card">
+        <div className="filters-bar filters-bar-compact" role="region" aria-label="Audit log filters">
+          <label className="inline-field">
+            Action
+            <select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}>
+              <option value="all">All</option>
+              <option value="CREATE">CREATE</option>
+              <option value="UPDATE">UPDATE</option>
+              <option value="DELETE">DELETE</option>
+            </select>
+          </label>
+          <label className="inline-field">
+            Entity
+            <select value={entityFilter} onChange={(e) => setEntityFilter(e.target.value)}>
+              <option value="all">All</option>
+              {entityOptions.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </label>
+          <label className="inline-field" style={{ flex: "1 1 220px" }}>
+            Search
+            <input
+              type="text"
+              placeholder="User, IP, or entity ID…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </label>
+          <button type="button" className="secondary-button" onClick={handleExport}>
+            Export CSV ({filtered.length})
+          </button>
+        </div>
       </section>
 
       {/* Audit Logs Table */}
@@ -83,14 +200,14 @@ export function AuditLogsView({ auditLogs, stats }: AuditLogsViewProps) {
               </tr>
             </thead>
             <tbody>
-              {auditLogs.length === 0 && (
+              {filtered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="muted">{t("ops.noAuditLogs")}</td>
                 </tr>
               )}
-              {auditLogs.map((log) => (
+              {filtered.map((log) => (
                 <tr key={log.id}>
-                  <td>{formatDate(log.createdAt)}</td>
+                  <td>{formatDate(log.createdAt instanceof Date ? log.createdAt : new Date(log.createdAt))}</td>
                   <td>{log.userEmail ?? log.userId ?? "-"}</td>
                   <td>
                     <span className={`status-chip ${getActionClass(log.action)}`}>
@@ -108,7 +225,7 @@ export function AuditLogsView({ auditLogs, stats }: AuditLogsViewProps) {
       </section>
 
       {/* Log Details (expandable) */}
-      {auditLogs.some(l => l.changes || l.metadata) && (
+      {filtered.some(l => l.changes || l.metadata) && (
         <section className="card">
           <h2>{t("ops.logDetails")}</h2>
           <div className="drill-table-wrap">
@@ -121,7 +238,7 @@ export function AuditLogsView({ auditLogs, stats }: AuditLogsViewProps) {
                 </tr>
               </thead>
               <tbody>
-                {auditLogs.filter(l => l.changes || l.metadata).map((log) => (
+                {filtered.filter(l => l.changes || l.metadata).map((log) => (
                   <tr key={`detail-${log.id}`}>
                     <td>{log.entityType} #{log.entityId}</td>
                     <td>
