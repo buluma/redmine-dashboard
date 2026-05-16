@@ -31,6 +31,12 @@ make logs
 make down
 ```
 
+## Migrating from SQLite to PostgreSQL
+
+For Pi homelab installs that started on SQLite, see
+[`docs/POSTGRES_MIGRATION.md`](docs/POSTGRES_MIGRATION.md) for the
+end-to-end runbook (pre-flight, snapshot, swap, verify, rollback).
+
 ## Supabase Import To Local Docker Postgres
 
 Use this when you want your Docker app to run against a local Postgres copy of Supabase data.
