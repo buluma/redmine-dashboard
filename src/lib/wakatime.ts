@@ -6,6 +6,7 @@
  */
 
 import https from 'https';
+import { trackInfo, trackFailure } from '@/src/lib/telemetry';
 
 export const WAKATIME_RANGE_OPTIONS = [
   { label: "Last 7 Days", value: "last_7_days", days: 7 },
@@ -293,14 +294,14 @@ export class WakaTimeClient {
     const separator = path.includes('?') ? '&' : '?';
     const url = `${BASE}${path}${separator}api_key=${this.apiKey}`;
     if (!quiet) {
-      console.log('[WakaTime] Fetching:', url.replace(this.apiKey, '***'));
+      trackInfo("wakatime.fetch.started", { path });
     }
 
     try {
       // Force IPv4 by using Node's https module directly with family=4
       const result = await this.httpsGet(url);
       if (!quiet) {
-        console.log('[WakaTime] Response status:', result.status);
+        trackInfo("wakatime.fetch.completed", { status: result.status });
       }
 
       if (result.status === 401) {
@@ -337,7 +338,7 @@ export class WakaTimeClient {
       if (err instanceof WakaTimeApiError) {
         // Optional endpoints may fail for plan/scope reasons; caller decides handling.
         if (!quiet && err.status >= 500) {
-          console.error('[WakaTime] API error:', err.status, err.message);
+          trackFailure({ event: "wakatime.api.error", error: err, metricName: "wakatime_api_error", metricTags: { status_class: "5xx" } });
         }
         throw err;
       }
@@ -353,13 +354,13 @@ export class WakaTimeClient {
       
       if (isNetworkError) {
         if (!quiet) {
-          console.error('[WakaTime] Network connectivity issue:', causeCode || message);
+          trackFailure({ event: "wakatime.network.error", error: err instanceof Error ? err : new Error(message), metricName: "wakatime_network_error" });
         }
         throw new Error(`Network error: Cannot reach WakaTime API. Check firewall/VPN settings.`);
       }
-      
+
       if (!quiet) {
-        console.error('[WakaTime] Fetch error:', message);
+        trackFailure({ event: "wakatime.fetch.failed", error: err instanceof Error ? err : new Error(message), metricName: "wakatime_fetch_failed" });
       }
       throw new Error(`fetch failed: ${message}`);
     }
