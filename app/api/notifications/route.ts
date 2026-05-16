@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
+import { trackFailure } from "@/src/lib/telemetry";
 
 interface Notification {
   id: string;
@@ -97,7 +98,7 @@ export async function GET() {
       unreadCount: notifications.filter(n => !n.read).length,
     });
   } catch (error) {
-    console.error("Error fetching notifications:", error);
+    trackFailure({ event: "notifications.list.failed", error, metricName: "notifications_list_failed" });
     // Return empty notifications if not authenticated
     return NextResponse.json({ 
       notifications: [],

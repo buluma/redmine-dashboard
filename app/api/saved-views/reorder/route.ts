@@ -1,6 +1,7 @@
 import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
+import { trackFailure } from "@/src/lib/telemetry";
 import { z } from "zod";
 
 const reorderSchema = z.object({
@@ -71,7 +72,7 @@ export async function PATCH(request: Request) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return jsonError("Unauthorized", 401);
     }
-    console.error("Saved views reorder error:", error);
+    trackFailure({ event: "saved_views.reorder.failed", error, metricName: "saved_views_reorder_failed" });
     return jsonError("Failed to reorder views", 500);
   }
 }

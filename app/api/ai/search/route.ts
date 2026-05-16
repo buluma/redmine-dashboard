@@ -3,6 +3,7 @@ import { createSearchMessages, parseJsonResponse, type SearchResponse } from "@/
 import { env } from "@/src/lib/env";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
+import { trackFailure } from "@/src/lib/telemetry";
 
 export const runtime = "nodejs";
 
@@ -108,7 +109,7 @@ export async function POST(request: Request) {
       usedFallback: result.usedFallback,
     });
   } catch (error) {
-    console.error("Search error:", error);
+    trackFailure({ event: "ai.search.failed", error, metricName: "ai_search_failed" });
     return jsonError(
       `Failed to search: ${error instanceof Error ? error.message : "Unknown error"}`,
       500

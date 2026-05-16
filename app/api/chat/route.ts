@@ -3,6 +3,7 @@ import type { LLMChatMessage } from '@/src/lib/llm-provider';
 import { requireCurrentUser, requireRedmineClientForUser } from '@/src/lib/auth';
 import { prisma } from '@/src/lib/db';
 import { jsonError } from '@/src/lib/http';
+import { trackFailure } from '@/src/lib/telemetry';
 import {
   toolDefinitions,
   requiresConfirmation,
@@ -122,7 +123,7 @@ Current session context:
         tools: toolDefinitions,
       });
     } catch (llmError) {
-      console.error('LLM completion failed:', llmError);
+      trackFailure({ event: 'chat.llm_completion.failed', error: llmError, metricName: 'chat_llm_completion_failed' });
       return jsonError('AI service unavailable. Please try again later.', 503);
     }
 
@@ -274,7 +275,7 @@ Current session context:
     if (error instanceof Error && error.message === 'Unauthorized') {
       return jsonError('Unauthorized', 401);
     }
-    console.error('Chat error:', error);
+    trackFailure({ event: 'chat.request.failed', error, metricName: 'chat_request_failed' });
     return jsonError('Failed to process chat message', 500);
   }
 }

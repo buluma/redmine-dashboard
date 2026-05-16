@@ -3,6 +3,7 @@ import type { LLMChatMessage } from '@/src/lib/llm-provider';
 import { requireCurrentUser, requireRedmineClientForUser } from '@/src/lib/auth';
 import { prisma } from '@/src/lib/db';
 import { jsonError } from '@/src/lib/http';
+import { trackFailure } from '@/src/lib/telemetry';
 import { z } from 'zod';
 import type { RedmineClient } from '@/src/lib/redmine';
 
@@ -79,7 +80,7 @@ ${messageText}`;
       confidence: 0.7,
     };
   } catch (error) {
-    console.error('Failed to parse Slack message:', error);
+    trackFailure({ event: 'slack.create_issue.parse.failed', error, metricName: 'slack_create_issue_parse_failed' });
     return null;
   }
 }
@@ -202,7 +203,7 @@ export async function GET(request: Request) {
     if (error instanceof Error && error.message === 'Unauthorized') {
       return jsonError('Unauthorized', 401);
     }
-    console.error('Slack create-issue error:', error);
+    trackFailure({ event: 'slack.create_issue.failed', error, metricName: 'slack_create_issue_failed' });
     return jsonError('Failed to analyze Slack messages', 500);
   }
 }
@@ -270,7 +271,7 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message === 'Unauthorized') {
       return jsonError('Unauthorized', 401);
     }
-    console.error('Slack create-issue error:', error);
+    trackFailure({ event: 'slack.create_issue.failed', error, metricName: 'slack_create_issue_failed' });
     return jsonError('Failed to create issue from Slack', 500);
   }
 }

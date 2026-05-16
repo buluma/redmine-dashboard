@@ -3,6 +3,7 @@ import type { LLMChatMessage } from '@/src/lib/llm-provider';
 import { requireCurrentUser } from '@/src/lib/auth';
 import { prisma } from '@/src/lib/db';
 import { jsonError } from '@/src/lib/http';
+import { trackFailure } from '@/src/lib/telemetry';
 
 export const runtime = 'nodejs';
 
@@ -80,7 +81,7 @@ Provide helpful, concise responses. Reference actual data when available.`;
         },
       });
     } catch (llmError) {
-      console.error('LLM error:', llmError);
+      trackFailure({ event: 'ai.stream.llm.failed', error: llmError, metricName: 'ai_stream_llm_failed' });
       return jsonError('AI service unavailable. Please try again later.', 503);
     }
   } catch (error) {

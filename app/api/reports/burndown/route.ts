@@ -1,6 +1,7 @@
 import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
+import { trackFailure } from "@/src/lib/telemetry";
 
 /**
  * GET /api/reports/burndown
@@ -124,7 +125,7 @@ export async function GET(request: Request) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return jsonError("Unauthorized", 401);
     }
-    console.error("Burndown report error:", error);
+    trackFailure({ event: "reports.burndown.failed", error, metricName: "reports_burndown_failed" });
     return jsonError("Failed to generate burndown report", 500);
   }
 }

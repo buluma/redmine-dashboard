@@ -872,8 +872,19 @@
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   padding: 0.75rem;
-  max-width: 320px;
+  width: 360px;
+  max-width: calc(100vw - 24px);
   pointer-events: none;
+  animation: tooltip-fade-in 120ms ease-out;
+}
+
+@keyframes tooltip-fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .issue-preview-tooltip { animation: none; }
 }
 
 .preview-header {

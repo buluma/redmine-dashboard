@@ -48,7 +48,8 @@
     },
     "tooltips": {
       "expand": "Expand menu",
-      "collapse": "Collapse menu"
+      "collapse": "Collapse menu",
+      "more": "More"
     }
   },
   "theme": {
@@ -312,6 +313,8 @@
     "syncStatusIdle": "Idle"
   },
   "metrics": {
+    "expandAll": "All metrics",
+    "collapseAll": "Show less",
     "visibleTotalLabel": "Visible / Total",
     "dueTodayInfo": "Due Today: {count}",
     "avgOpenAgeInfo": "Avg Since Update: {days}d",
@@ -391,6 +394,7 @@
     "selected": "Selected: {count}",
     "dueToday": " • Due today: {count}",
     "bulkStatus": "Bulk Status",
+    "bulkHint": "Select issues to bulk-edit.",
     "applySelected": "Apply to Selected",
     "applying": "Applying...",
     "clearSelection": "Clear Selection",
@@ -423,7 +427,8 @@
     },
   "pagination": {
     "pageInfo": "Page {current} of {max}",
-    "showing": " · Showing {start}–{end} of {total}",
+    "perPage": "Per page",
+    "showing": "Showing {start}–{end} of {total}",
     "filtered": " (filtered from {unfilteredTotal})",
     "queueHidden": {
       "=0": "Queue hidden.",

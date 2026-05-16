@@ -6,6 +6,7 @@ import {
   updateSubscription,
   getSubscription,
 } from "@/src/lib/webhook-subscription";
+import { trackFailure } from "@/src/lib/telemetry";
 
 export const runtime = "nodejs";
 
@@ -28,7 +29,7 @@ export async function GET(
     }
     return NextResponse.json({ ...subscription, secret: subscription.secret ? "***" : "" });
   } catch (err) {
-    console.error("Error getting webhook subscription:", err);
+    trackFailure({ event: "webhooks.subscriptions.get.failed", error: err, metricName: "webhooks_subscriptions_get_failed" });
     return NextResponse.json(
       { error: "Failed to get subscription" },
       { status: 500 }
@@ -52,7 +53,7 @@ export async function DELETE(
     await deleteSubscription(id);
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("Error deleting webhook subscription:", err);
+    trackFailure({ event: "webhooks.subscriptions.delete.failed", error: err, metricName: "webhooks_subscriptions_delete_failed" });
     return NextResponse.json(
       { error: "Failed to delete subscription" },
       { status: 500 }
@@ -114,7 +115,7 @@ export async function PATCH(
 
     return NextResponse.json({ ...updated, secret: updated.secret ? "***" : "" });
   } catch (err) {
-    console.error("Error updating webhook subscription:", err);
+    trackFailure({ event: "webhooks.subscriptions.update.failed", error: err, metricName: "webhooks_subscriptions_update_failed" });
     return NextResponse.json(
       { error: "Failed to update subscription" },
       { status: 500 }

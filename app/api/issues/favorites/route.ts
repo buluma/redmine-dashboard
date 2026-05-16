@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
+import { trackFailure } from "@/src/lib/telemetry";
 
 export async function GET() {
   const user = await requireCurrentUser();
@@ -13,7 +14,7 @@ export async function GET() {
 
     return NextResponse.json({ favorites: favorites.map(f => f.issueId) });
   } catch (error) {
-    console.error("Error fetching favorites:", error);
+    trackFailure({ event: "issues.favorites.list.failed", error, metricName: "issues_favorites_list_failed" });
     return NextResponse.json({ error: "Failed to fetch favorites" }, { status: 500 });
   }
 }

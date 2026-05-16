@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { env } from "@/src/lib/env";
 import { SlackClient } from "@/src/lib/slack";
+import { trackFailure } from "@/src/lib/telemetry";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ messages, users });
   } catch (error) {
-    console.error("Slack thread API error:", error);
+    trackFailure({ event: "slack.thread.fetch.failed", error, metricName: "slack_thread_fetch_failed" });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to fetch thread" },
       { status: 500 }

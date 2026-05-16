@@ -7,15 +7,17 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 import { useI18n } from "./I18nProvider";
 
-const navItems = [
-  { href: "/", labelKey: "nav.dashboard", icon: "🏠" },
-  { href: "/personal-tickets", labelKey: "nav.personalTickets", icon: "📝", group: "Personal" },
+type NavItem = { href: string; labelKey: string; icon: string; group?: string; mobilePrimary?: boolean };
+
+const navItems: NavItem[] = [
+  { href: "/", labelKey: "nav.dashboard", icon: "🏠", mobilePrimary: true },
+  { href: "/personal-tickets", labelKey: "nav.personalTickets", icon: "📝", group: "Personal", mobilePrimary: true },
   { href: "/ai-summaries", labelKey: "nav.aiSummaries", icon: "🤖", group: "Personal" },
   { href: "/chat", labelKey: "nav.chat", icon: "💬", group: "Personal" },
-  { href: "/heimdall", labelKey: "nav.heimdall", icon: "🔍", group: "Team Ops" },
+  { href: "/heimdall", labelKey: "nav.heimdall", icon: "🔍", group: "Team Ops", mobilePrimary: true },
   { href: "/slack", labelKey: "nav.slack", icon: "💬", group: "Team Ops" },
   { href: "/wakatime", labelKey: "nav.wakatime", icon: "⏱️", group: "Team Ops" },
-  { href: "/reports", labelKey: "nav.reports", icon: "📊", group: "Reporting" },
+  { href: "/reports", labelKey: "nav.reports", icon: "📊", group: "Reporting", mobilePrimary: true },
   { href: "/webhooks", labelKey: "nav.webhooks", icon: "🔗", group: "Integrations" },
   { href: "/api-docs", labelKey: "nav.apiDocs", icon: "📚", group: "Integrations" },
   { href: "/ops", labelKey: "nav.ops", icon: "⚙️", group: "System" },
@@ -25,6 +27,7 @@ export function AppNav() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const { t } = useI18n();
 
   // Load collapsed state from localStorage after mount
@@ -91,21 +94,60 @@ export function AppNav() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`nav-link ${pathname === item.href ? "active" : ""}`}
+                  className={`nav-link ${pathname === item.href ? "active" : ""} ${item.mobilePrimary ? "nav-link-mobile-primary" : "nav-link-mobile-secondary"}`}
                   title={mounted && collapsed ? t(item.labelKey) : undefined}
                 >
-                  <span className="nav-icon">{item.icon}</span>
+                  <span className="nav-icon" aria-hidden="true">{item.icon}</span>
                   {(mounted && !collapsed) && <span className="nav-label">{t(item.labelKey)}</span>}
                 </Link>
               ))}
             </div>
           ))}
+          <button
+            type="button"
+            className="nav-link nav-mobile-more"
+            onClick={() => setMobileMoreOpen(true)}
+            aria-label={t("nav.tooltips.more", "More")}
+            aria-expanded={mobileMoreOpen}
+          >
+            <span className="nav-icon" aria-hidden="true">⋯</span>
+            <span className="nav-label">{t("nav.tooltips.more", "More")}</span>
+          </button>
         </div>
         <div className="nav-footer">
           <ThemeToggle collapsed={mounted && collapsed} />
           <LanguageSwitcher />
         </div>
       </nav>
+
+      {mobileMoreOpen && (
+        <div className="nav-mobile-sheet-backdrop" onClick={() => setMobileMoreOpen(false)}>
+          <div
+            className="nav-mobile-sheet"
+            role="dialog"
+            aria-label={t("nav.tooltips.more", "More")}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="nav-mobile-sheet-head">
+              <strong>{t("nav.tooltips.more", "More")}</strong>
+              <button type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Close">✕</button>
+            </div>
+            <div className="nav-mobile-sheet-list">
+              {navItems.filter((item) => !item.mobilePrimary).map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`nav-link ${pathname === item.href ? "active" : ""}`}
+                  onClick={() => setMobileMoreOpen(false)}
+                >
+                  <span className="nav-icon" aria-hidden="true">{item.icon}</span>
+                  <span className="nav-label">{t(item.labelKey)}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .nav-toggle {
@@ -312,7 +354,7 @@ export function AppNav() {
             border-left: none;
             border-bottom: 2px solid transparent;
           }
-          
+
           .nav-link.active {
             border-bottom-color: var(--accent);
             background: transparent;
@@ -322,6 +364,85 @@ export function AppNav() {
             display: block;
             font-size: 0.65rem;
           }
+
+          .nav-group-label { display: none; }
+          .nav-group { display: contents; }
+
+          .nav-link-mobile-secondary { display: none; }
+          .nav-mobile-more {
+            display: flex;
+            background: transparent;
+            color: var(--text);
+            cursor: pointer;
+          }
+        }
+
+        @media (min-width: 769px) {
+          .nav-mobile-more { display: none; }
+        }
+
+        .nav-mobile-sheet-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.35);
+          z-index: 1000;
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+        }
+
+        .nav-mobile-sheet {
+          width: 100%;
+          max-width: 560px;
+          background: var(--surface-1, #fff);
+          color: var(--text);
+          border-top-left-radius: 12px;
+          border-top-right-radius: 12px;
+          padding: 0.75rem 1rem 1.25rem;
+          box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.15);
+          max-height: 75vh;
+          overflow-y: auto;
+          animation: nav-sheet-up 180ms ease-out;
+        }
+
+        @keyframes nav-sheet-up {
+          from { transform: translateY(12%); opacity: 0; }
+          to   { transform: translateY(0); opacity: 1; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .nav-mobile-sheet { animation: none; }
+        }
+
+        .nav-mobile-sheet-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding-bottom: 0.5rem;
+          border-bottom: 1px solid var(--border, var(--line));
+          margin-bottom: 0.5rem;
+        }
+
+        .nav-mobile-sheet-head button {
+          border: 0;
+          background: transparent;
+          font-size: 1.1rem;
+          cursor: pointer;
+          color: var(--text);
+        }
+
+        .nav-mobile-sheet-list {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 0.25rem 0.5rem;
+        }
+
+        .nav-mobile-sheet-list .nav-link {
+          flex-direction: row;
+          gap: 0.5rem;
+          padding: 0.6rem 0.75rem;
+          border-bottom: 0;
+          font-size: 0.85rem;
         }
       `}</style>
     </>
