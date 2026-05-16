@@ -113,17 +113,38 @@ export function ChatFab({ issueId }: { issueId: number }) {
   }, [issueId]);
 
   if (!open) {
+    let dismissed = false;
+    try {
+      dismissed = typeof window !== "undefined" && window.localStorage.getItem("nrcc.chatFab.tourSeen.v1") === "true";
+    } catch {
+      // Ignore storage errors; tour will simply re-pulse.
+    }
     return (
-      <button
-        type="button"
-        className="chat-fab-btn"
-        onClick={() => setOpen(true)}
-        title="AI Chat"
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-      </button>
+      <>
+        <button
+          type="button"
+          className={`chat-fab-btn ${dismissed ? "" : "chat-fab-pulse"}`}
+          onClick={() => {
+            setOpen(true);
+            try {
+              window.localStorage.setItem("nrcc.chatFab.tourSeen.v1", "true");
+            } catch {
+              // Ignore storage errors.
+            }
+          }}
+          title="AI Chat"
+          aria-label="AI Chat"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          {!dismissed && (
+            <span className="chat-fab-tour" role="tooltip">
+              Ask AI about this issue
+            </span>
+          )}
+        </button>
+      </>
     );
   }
 
