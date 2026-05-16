@@ -15,7 +15,7 @@ export function isRateLimited(input: {
   key: string;
   max: number;
   windowMs: number;
-}): { limited: boolean; remaining: number; resetInMs: number } {
+}): { limited: boolean; remaining: number; resetInMs: number; limit: number } {
   const now = Date.now();
   const current = prune(buckets.get(input.key) ?? [], input.windowMs, now);
 
@@ -25,6 +25,7 @@ export function isRateLimited(input: {
       limited: true,
       remaining: 0,
       resetInMs: Math.max(0, input.windowMs - (now - oldest)),
+      limit: input.max,
     };
   }
 
@@ -35,7 +36,30 @@ export function isRateLimited(input: {
     limited: false,
     remaining: Math.max(0, input.max - current.length),
     resetInMs: input.windowMs,
+    limit: input.max,
   };
+}
+
+/**
+ * Standard rate-limit headers derived from an `isRateLimited` result.
+ * Use when returning either a 429 or a successful response from a
+ * mutation endpoint that wants to advertise its limits.
+ */
+export function rateLimitHeaders(result: {
+  limited: boolean;
+  remaining: number;
+  resetInMs: number;
+  limit: number;
+}): Record<string, string> {
+  const headers: Record<string, string> = {
+    "X-RateLimit-Limit": String(result.limit),
+    "X-RateLimit-Remaining": String(result.remaining),
+    "X-RateLimit-Reset": String(Math.floor((Date.now() + result.resetInMs) / 1000)),
+  };
+  if (result.limited) {
+    headers["Retry-After"] = String(Math.max(1, Math.ceil(result.resetInMs / 1000)));
+  }
+  return headers;
 }
 
 export function clearRateLimitState(): void {

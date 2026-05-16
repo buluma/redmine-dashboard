@@ -1,6 +1,6 @@
 import { requireRedmineClient } from "@/src/lib/auth";
 import { jsonError, parseJson } from "@/src/lib/http";
-import { isRateLimited } from "@/src/lib/rate-limit";
+import { isRateLimited, rateLimitHeaders } from "@/src/lib/rate-limit";
 import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
 import { statusUpdateSchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
@@ -46,7 +46,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         durationMetricName: "issue_status_update_duration",
         durationMs: Date.now() - startedAt,
       });
-      return jsonError("Rate limit exceeded. Try again shortly.", 429);
+      return jsonError(
+        "Rate limit exceeded. Try again shortly.",
+        429,
+        rateLimitHeaders(limiter),
+      );
     }
 
     const detail = await client.getIssue(issueId, ["allowed_statuses"]);
