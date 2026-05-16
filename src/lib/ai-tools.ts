@@ -1,6 +1,7 @@
 import type { RedmineClient } from './redmine';
 import { prisma } from './db';
 import { logEvent } from './log';
+import { getUserRole, type UserRole } from './rbac';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -57,6 +58,31 @@ const mutatingTools = new Set([
 ]);
 
 /**
+ * Minimum role required to invoke each tool. Tools not listed default to
+ * VIEWER (read-only). Hierarchy: VIEWER < USER < EDITOR < ADMIN.
+ *
+ * Mutating tools start at USER because every employee with a Converge
+ * account is at least a USER; EDITOR is reserved for tools that affect
+ * issue lifecycle (close/update fields).
+ */
+const TOOL_ROLE_REQUIREMENTS: Record<string, UserRole> = {
+  // Read-only — VIEWER is the floor.
+  get_issue: 'VIEWER',
+  search_issues: 'VIEWER',
+  list_statuses: 'VIEWER',
+  list_activities: 'VIEWER',
+  // Routine mutations any user can perform.
+  log_time: 'USER',
+  add_comment: 'USER',
+  update_status: 'USER',
+  // Lifecycle-level changes.
+  close_issue: 'EDITOR',
+  update_issue: 'EDITOR',
+};
+
+const ROLE_HIERARCHY: UserRole[] = ['VIEWER', 'USER', 'EDITOR', 'ADMIN'];
+
+/**
  * Returns true when the given tool name requires explicit user confirmation
  * before execution.
  * @param {string} name - Tool function name.
@@ -64,6 +90,19 @@ const mutatingTools = new Set([
  */
 export function requiresConfirmation(name: string): boolean {
   return mutatingTools.has(name);
+}
+
+/**
+ * Minimum role required to invoke a tool. Unknown tools default to ADMIN
+ * (fail closed) so a future tool added without a role entry cannot be
+ * called by lower-privileged users.
+ */
+export function getRequiredRole(name: string): UserRole {
+  return TOOL_ROLE_REQUIREMENTS[name] ?? 'ADMIN';
+}
+
+function roleAtLeast(actual: UserRole, required: UserRole): boolean {
+  return ROLE_HIERARCHY.indexOf(actual) >= ROLE_HIERARCHY.indexOf(required);
 }
 
 // ---------------------------------------------------------------------------
@@ -298,6 +337,18 @@ export async function executeTool(
   const base = { toolCallId: call.id, name: call.name };
 
   try {
+    const required = getRequiredRole(call.name);
+    const actual = await getUserRole(userId);
+    if (!roleAtLeast(actual, required)) {
+      const message = `Insufficient role for tool ${call.name}: requires ${required}, user has ${actual}`;
+      logEvent(
+        'ai.tool.role_denied',
+        { tool: call.name, requiredRole: required, actualRole: actual, userId },
+        'warn',
+      );
+      return { ...base, success: false, result: null, error: message };
+    }
+
     const result = await runTool(call.name, call.arguments, client, userId);
     logEvent('ai.tool.executed', { tool: call.name, success: true }, 'info');
     return { ...base, success: true, result };
