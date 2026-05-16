@@ -1869,3 +1869,43 @@
 [data-theme="dark"] .lightbox-close:hover {
   background: var(--card);
 }
+
+/* ── Empty states ─────────────────────────────────── */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1.25rem 0.75rem;
+  text-align: center;
+}
+
+.empty-state-icon {
+  font-size: 1.6rem;
+  opacity: 0.85;
+  line-height: 1;
+}
+
+.empty-state-hint {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  margin: 0;
+  max-width: 360px;
+}
+
+.link-button {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  text-decoration: none;
+}

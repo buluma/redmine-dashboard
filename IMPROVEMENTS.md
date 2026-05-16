@@ -41,6 +41,10 @@ Completed during this session:
 | 1.6 SSE real-time updates | ✅ done | `src/lib/event-bus.ts` in-process emitter; `app/api/events/stream/route.ts` SSE with 25s heartbeat + per-user filter; `src/hooks/useEventStream.ts`; `src/lib/sync.ts` emits `issue.created`/`issue.updated`; dashboard subscribes (poll kept as backstop) |
 | 1.8 Pi Postgres migration runbook | ✅ done | `docs/POSTGRES_MIGRATION.md` (fresh-sync + pgloader strategies, rollback, verification checklist); `DOCKER.md` cross-links it |
 | 2.19 Heimdall log virtualization | ✅ done | `@tanstack/react-virtual`; `VirtualizedLogList` with `measureElement` variable-height; replaces 100-row cap in `app/heimdall/heimdall-logs-client.tsx` |
+| 1.13 AI tool-call RBAC | ✅ done | `TOOL_ROLE_REQUIREMENTS` per-tool in `src/lib/ai-tools.ts`; `getRequiredRole` defaults unknown tools to ADMIN; `executeTool` gates on `getUserRole`; 8 new tests |
+| 1.20 Rate-limit headers (partial) | ⏳ done on 6 routes | `rateLimitHeaders` helper + `jsonError(..., headers)` overload; wired into `bulk-status`, `bulk-update`, `[id]/status`, `[id]/comment`, `[id]/timelog`, `sync/manual-pull`. Mobile + github-links still bare |
+| 2.10 Empty states with CTAs | ✅ done | `.empty-state` block on ops-alerts, status-mix, priority-mix; "Force refresh" link-button in ops-alerts empty path |
+| 2.22 Toast stacking + dismiss-all | ✅ done | `MAX_VISIBLE=3` newest-first; `+N more` pill + Clear all; `clearAll()` on context; aria-live polite |
 
 Verification at session end:
 - `npx tsc --noEmit` → 2 pre-existing errors in `mobile/v1/reports` only.
@@ -108,11 +112,11 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Evidence:** `Relation` data fetched but rendered as a flat list on detail page.
 - **Action:** Render dependency tree (parent / blockers / blocks) as collapsible graph or breadcrumb. Helps planning.
 
-### 1.12 Offline conflict resolution — Medium
+### 1.12 Offline conflict resolution — Medium ⛔ deferred (design needed)
 - **Evidence:** `src/hooks/useOfflineAction.ts` queues mutations; on flush there's no UI when the server rejects a stale write.
 - **Action:** Add "conflict resolution" modal: server-side `409` returns latest state, user picks merge / keep mine / discard.
 
-### 1.13 AI tool-call permission scoping per role — Medium
+### 1.13 AI tool-call permission scoping per role — Medium ✅ done
 - **Evidence:** `src/lib/ai-tools.ts` dispatcher executes mutating tools after client confirmation, but no RBAC check on which tools each role can invoke.
 - **Action:** Add `requiredRole` field to each tool definition, check against session role in `/api/chat/execute-tools`.
 
@@ -139,7 +143,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Evidence:** `app/page.tsx:1216-1222` — three modes (`local | hybrid | fts`) plus a separate FTS panel toggle and AI search panel toggle. Easy to land in the wrong mode.
 - **Action:** Single segmented search bar with mode chips; remove separate FTS panel and AI panel toggles in favour of an inline mode switch.
 
-### 1.20 Rate-limit headers on mutation routes — Low
+### 1.20 Rate-limit headers on mutation routes — Low ⏳ partial (6 routes done; mobile + github-links left)
 - **Evidence:** `src/lib/rate-limit.ts` exists but uncertain whether routes return `Retry-After` / `X-RateLimit-*` headers.
 - **Action:** Verify and standardize across all mutation endpoints.
 
@@ -191,7 +195,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Evidence:** `SkeletonTable` used on dashboard; other pages (`reports`, `wakatime`, `slack`, `heimdall`) likely use spinners or nothing.
 - **Action:** Standardize loading skeletons across pages so layout doesn't shift.
 
-### 2.10 Empty states are bare text — Low
+### 2.10 Empty states are bare text — Low ✅ done
 - **Evidence:** `app/page.tsx:1337` — `No active risk alerts.`; `1263` — `No status data yet.`
 - **Action:** Add a small icon + suggestion CTA ("Sync from Redmine", "Create your first issue").
 
@@ -238,7 +242,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Evidence:** `app/wakatime/wakatime-client.tsx` (731 lines).
 - **Action:** "Today / This week / This month / Last 30 days / Custom" preset chips above charts.
 
-### 2.22 Toast stacking + dismiss-all — Low
+### 2.22 Toast stacking + dismiss-all — Low ✅ done
 - **Evidence:** `src/components/Toast.tsx` + `ToastProvider.tsx`.
 - **Action:** Cap visible toasts at 3 with `+N more`. Add "Clear all" when stacked.
 
@@ -262,7 +266,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 |-------|-------|
 | **Now (small, high payoff)** | ✅ 1.3, ⛔ 1.18 (blocked), ✅ 2.3, ✅ 2.4, ✅ 2.6, ✅ 2.7–2.8, ✅ 2.25 |
 | **Next (med)** | ⏳ 1.4 (partial: 1.4a–d), ⏳ 1.5 (partial: 1.5a–c), ✅ 1.7, ✅ 1.9, ✅ 2.1, ✅ 2.2, ✅ 2.5, ✅ 2.12, ✅ 2.18, ✅ 2.24 |
-| **After** | ✅ 1.1, ✅ 1.6, ✅ 1.8 (runbook), 1.12 (offline conflicts), 1.13 (AI RBAC), 1.17 (mobile strategy), ✅ 2.19 |
+| **After** | ✅ 1.1, ✅ 1.6, ✅ 1.8 (runbook), ⛔ 1.12 (design needed), ✅ 1.13, 1.17 (mobile strategy), ✅ 2.19 |
 | **Polish / opportunistic** | 1.11, 1.14–1.16, 1.19–1.22, 2.9–2.11, 2.13–2.17, 2.20–2.23 |
 
 Legend: ✅ done · ⏳ partial · ⛔ blocked
