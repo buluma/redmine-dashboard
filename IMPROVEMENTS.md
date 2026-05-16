@@ -38,6 +38,9 @@ Completed during this session:
 | 1.22 axe-core CI gate | ✅ done | `@axe-core/playwright`; `e2e/a11y.spec.ts` scans `/` + `/login`; CI `a11y` job in `.github/workflows/ci.yml` |
 | Hygiene: tests for new hooks + components | ✅ done | 47 tests in `src/hooks/__tests__/`, `src/components/dashboard/__tests__/`, `src/components/issue-detail/__tests__/` (403/403 suite pass) |
 | Hygiene: setState-in-effect lint | ✅ done | hydration-load comment + scoped disable in `usePageSize.ts:28`, `useDashboardSavedViews.ts:47` |
+| 1.6 SSE real-time updates | ✅ done | `src/lib/event-bus.ts` in-process emitter; `app/api/events/stream/route.ts` SSE with 25s heartbeat + per-user filter; `src/hooks/useEventStream.ts`; `src/lib/sync.ts` emits `issue.created`/`issue.updated`; dashboard subscribes (poll kept as backstop) |
+| 1.8 Pi Postgres migration runbook | ✅ done | `docs/POSTGRES_MIGRATION.md` (fresh-sync + pgloader strategies, rollback, verification checklist); `DOCKER.md` cross-links it |
+| 2.19 Heimdall log virtualization | ✅ done | `@tanstack/react-virtual`; `VirtualizedLogList` with `measureElement` variable-height; replaces 100-row cap in `app/heimdall/heimdall-logs-client.tsx` |
 
 Verification at session end:
 - `npx tsc --noEmit` → 2 pre-existing errors in `mobile/v1/reports` only.
@@ -81,7 +84,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Evidence:** 2117 lines. Mix of: rendering, comment posting, GitHub link mgmt, time entries, allowed statuses, edit mode, offline queue, AI panel.
 - **Action:** Sectionalize: `<IssueHeader>`, `<IssueDescription>`, `<IssueComments>`, `<IssueAttachments>`, `<IssueRelations>`, `<IssueGithubLinks>`, `<IssueTimeLog>`. Each owns its own fetch/mutation hook.
 
-### 1.6 Real-time updates (SSE/WebSocket) — Medium (already in TODO)
+### 1.6 Real-time updates (SSE/WebSocket) — Medium (already in TODO) ✅ done
 - **Evidence:** `TODO.md` flags. Today the page polls every `POLL_INTERVAL_MS = 90_000`. After a Redmine update users wait up to 90 s.
 - **Action:** Add `/api/events/stream` SSE endpoint fed by the poller. Client subscribes for delta events (`issue.updated`, `issue.created`). Keep polling as fallback.
 
@@ -89,7 +92,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Evidence:** `TODO.md` notes unbounded growth, Pi disk at 73%.
 - **Action:** Add Prisma deleteMany cron in `src/lib/streamline-log-poller.ts` keyed on `createdAt < now() - 30d` (configurable env). Wire metric `streamline_log_pruned`.
 
-### 1.8 Migrate Pi from SQLite to PostgreSQL — High (TODO carry-over)
+### 1.8 Migrate Pi from SQLite to PostgreSQL — High (TODO carry-over) ✅ runbook done
 - **Evidence:** SQLite locks under concurrent writes. `docker-compose.postgres.yml` already prepared.
 - **Action:** Document migration runbook (pg_dumpall import? prisma migrate deploy with new DATABASE_URL?). Test on staging Pi first.
 
@@ -223,7 +226,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 ### 2.18 Reports page — drill-down interactivity — Medium ✅ already shipped
 - **Evidence:** `src/components/reports/charts.tsx` (668 lines). Verify clicking a bar/segment filters the underlying issue list. If not, add it — biggest UX win for a reporting screen.
 
-### 2.19 Heimdall log table virtualization — Medium
+### 2.19 Heimdall log table virtualization — Medium ✅ done
 - **Evidence:** `app/heimdall/heimdall-logs-client.tsx` (299 lines) — likely renders all rows. With unbounded retention (see 1.7), tables grow.
 - **Action:** Add `react-window` or `@tanstack/react-virtual`. Already a TODO-adjacent need.
 
@@ -259,7 +262,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 |-------|-------|
 | **Now (small, high payoff)** | ✅ 1.3, ⛔ 1.18 (blocked), ✅ 2.3, ✅ 2.4, ✅ 2.6, ✅ 2.7–2.8, ✅ 2.25 |
 | **Next (med)** | ⏳ 1.4 (partial: 1.4a–d), ⏳ 1.5 (partial: 1.5a–c), ✅ 1.7, ✅ 1.9, ✅ 2.1, ✅ 2.2, ✅ 2.5, ✅ 2.12, ✅ 2.18, ✅ 2.24 |
-| **After** | ✅ 1.1, 1.6 (SSE), 1.8 (Postgres on Pi), 1.12 (offline conflicts), 1.13 (AI RBAC), 1.17 (mobile strategy), 2.19 (log virtualization) |
+| **After** | ✅ 1.1, ✅ 1.6, ✅ 1.8 (runbook), 1.12 (offline conflicts), 1.13 (AI RBAC), 1.17 (mobile strategy), ✅ 2.19 |
 | **Polish / opportunistic** | 1.11, 1.14–1.16, 1.19–1.22, 2.9–2.11, 2.13–2.17, 2.20–2.23 |
 
 Legend: ✅ done · ⏳ partial · ⛔ blocked

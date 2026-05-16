@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/src/lib/db";
 import { env } from "@/src/lib/env";
+import { emitEvent } from "@/src/lib/event-bus";
 import { logEvent } from "@/src/lib/log";
 import { trackFailure } from "@/src/lib/telemetry";
 import { RedmineClient } from "@/src/lib/redmine";
@@ -596,13 +597,40 @@ export async function syncSingleIssue(
   // Track changes if notifications are enabled
   const trackChanges = options?.sendNotifications ?? false;
   const upsertResult = await upsertIssueFromRemote(
-    userId, 
-    client.normalizedBaseUrl, 
+    userId,
+    client.normalizedBaseUrl,
     detail.issue,
     trackChanges
   );
   const issue = upsertResult.issue;
-  
+
+  if (typeof issue.redmineIssueId === "number" && issue.redmineIssueId > 0) {
+    if (upsertResult.wasCreated) {
+      emitEvent({
+        type: "issue.created",
+        userId,
+        redmineIssueId: issue.redmineIssueId,
+        issueId: issue.id,
+      });
+    } else {
+      const oldState = upsertResult.oldState;
+      const changes: { statusName?: { from: string | null; to: string | null }; priorityName?: { from: string | null; to: string | null } } = {};
+      if (oldState && oldState.statusName !== issue.statusName) {
+        changes.statusName = { from: oldState.statusName, to: issue.statusName };
+      }
+      if (oldState && oldState.priorityName !== issue.priority) {
+        changes.priorityName = { from: oldState.priorityName, to: issue.priority };
+      }
+      emitEvent({
+        type: "issue.updated",
+        userId,
+        redmineIssueId: issue.redmineIssueId,
+        issueId: issue.id,
+        changes: Object.keys(changes).length > 0 ? changes : undefined,
+      });
+    }
+  }
+
   await upsertJournals(issue.id, detail.issue);
   await upsertAttachmentsForIssue(issue.id, detail.issue, options?.pruneAttachments ?? true);
   await upsertRelationsForIssue(issue.id, detail.issue, options?.pruneRelations ?? true);
