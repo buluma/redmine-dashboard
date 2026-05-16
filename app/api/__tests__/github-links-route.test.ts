@@ -1,15 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { clearRateLimitState } from "@/src/lib/rate-limit";
 
-const mockRequireCurrentUser = vi.fn();
-const mockIssueFindFirst = vi.fn();
-const mockIssueFindUnique = vi.fn();
-const mockIssueUpdate = vi.fn();
-const mockLinkFindMany = vi.fn();
-const mockLinkUpsert = vi.fn();
-const mockLinkDeleteMany = vi.fn();
-const mockIssueActivityEventUpsert = vi.fn();
-const mockIssueActivityEventFindFirst = vi.fn();
+const {
+  mockRequireCurrentUser,
+  mockIssueFindFirst,
+  mockIssueFindUnique,
+  mockIssueUpdate,
+  mockLinkFindMany,
+  mockLinkUpsert,
+  mockLinkDeleteMany,
+  mockIssueActivityEventUpsert,
+  mockIssueActivityEventFindFirst,
+} = vi.hoisted(() => ({
+  mockRequireCurrentUser: vi.fn(),
+  mockIssueFindFirst: vi.fn(),
+  mockIssueFindUnique: vi.fn(),
+  mockIssueUpdate: vi.fn(),
+  mockLinkFindMany: vi.fn(),
+  mockLinkUpsert: vi.fn(),
+  mockLinkDeleteMany: vi.fn(),
+  mockIssueActivityEventUpsert: vi.fn(),
+  mockIssueActivityEventFindFirst: vi.fn(),
+}));
 
 vi.mock("@/src/lib/auth", () => ({
   requireCurrentUser: mockRequireCurrentUser,

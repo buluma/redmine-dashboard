@@ -1,4 +1,5 @@
 import { WebClient, Block, KnownBlock } from "@slack/web-api";
+import { trackFailure } from "@/src/lib/telemetry";
 
 export interface SlackNotifierConfig {
   enabled: boolean;
@@ -69,7 +70,7 @@ export class SlackNotifier {
         unfurl_links: false,
       });
     } catch (error) {
-      console.error("Failed to send Slack notification:", error);
+      trackFailure({ event: "slack.notification.failed", error, metricName: "slack_notification_failed" });
       throw error;
     }
   }

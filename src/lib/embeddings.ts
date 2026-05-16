@@ -1,5 +1,6 @@
 import { getOllamaClient } from "./ollama";
 import { prisma } from "./db";
+import { trackFailure } from "./telemetry";
 
 export interface EmbeddedIssue {
   issueId: string;
@@ -123,7 +124,7 @@ export async function rebuildAllEmbeddings(issues: Array<{ id: string; subject: 
       await upsertEmbeddingForIssue(issue.id, text);
       count++;
     } catch (error) {
-      console.error(`Failed to embed issue ${issue.id}:`, error);
+      trackFailure({ event: "embeddings.issue.failed", error, metricName: "embedding_issue_failed", metricTags: { issue_type: "issue" } });
     }
   }
   

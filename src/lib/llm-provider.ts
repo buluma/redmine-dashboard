@@ -2,6 +2,7 @@ import { env } from "./env";
 import { getOllamaClient } from "./ollama";
 import type { ToolDefinition } from "./ai-tools";
 import { toAnthropicTools } from "./ai-tools";
+import { trackWarn } from "./telemetry";
 
 export type LLMProvider = "ollama" | "openai" | "anthropic" | "openrouter" | "aperture";
 
@@ -309,7 +310,7 @@ export class LLMProviderManager {
     } catch (error) {
       // Try Ollama as fallback if another provider fails
       if (this.provider !== "ollama") {
-        console.warn(`Primary provider ${this.provider} failed, trying Ollama fallback...`);
+        trackWarn("llm.provider.fallback", { provider: this.provider, fallback: "ollama" });
         try {
           return await this.ollamaChat(messages, { stream, temperature, maxTokens, tools });
         } catch {
@@ -520,7 +521,7 @@ export class LLMProviderManager {
     } catch (primaryError) {
       // If primary fails and we have a fallback, try it
       if (env.openrouterChatModelFallback && env.openrouterChatModelFallback !== env.openrouterChatModel) {
-        console.warn(`OpenRouter primary model failed, trying fallback: ${env.openrouterChatModelFallback}`);
+        trackWarn("llm.openrouter.fallback", { fallbackModel: env.openrouterChatModelFallback });
         try {
           return await this.openrouterChatWithModel(messages, env.openrouterChatModelFallback, options);
         } catch (fallbackError) {
@@ -752,7 +753,7 @@ export class LLMProviderManager {
           }
         }
       } catch (error) {
-        console.warn(`${this.provider} embeddings failed, falling back to Ollama:`, error);
+        trackWarn("llm.embeddings.fallback", { provider: this.provider, fallback: "ollama" });
       }
     }
     

@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/src/lib/db";
 import { env } from "@/src/lib/env";
 import { logEvent } from "@/src/lib/log";
+import { trackFailure } from "@/src/lib/telemetry";
 import { RedmineClient } from "@/src/lib/redmine";
 import { recordIssueActivityEvent, recomputeIssueActivityIndex } from "@/src/lib/activity-index";
 
@@ -645,7 +646,7 @@ export async function syncSingleIssue(
         }
       }
     } catch (pushError) {
-      console.error("[Sync] PWA Push notification failed:", pushError);
+      trackFailure({ event: "sync.push.failed", error: pushError, metricName: "sync_push_failed" });
     }
 
     // Send Slack notification if enabled

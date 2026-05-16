@@ -1,6 +1,7 @@
 import webpush from "web-push";
 import { env } from "./env";
 import { prisma } from "./db";
+import { trackInfo, trackFailure } from "./telemetry";
 
 // Initialize VAPID
 webpush.setVapidDetails(
@@ -53,10 +54,10 @@ export async function sendPushNotification(
       } catch (error: unknown) {
         const pushError = error as { statusCode?: number };
         if (pushError.statusCode === 404 || pushError.statusCode === 410) {
-          console.log(`[Push] Subscription expired for user ${userId}, deleting:`, sub.endpoint);
+          trackInfo("push.subscription.expired", { userId });
           await prisma.pushSubscription.delete({ where: { id: sub.id } });
         } else {
-          console.error(`[Push] Failed to send to ${sub.endpoint}:`, error);
+          trackFailure({ event: "push.send.failed", error, metricName: "push_send_failed" });
         }
       }
     })

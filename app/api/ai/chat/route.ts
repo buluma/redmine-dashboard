@@ -5,6 +5,7 @@ import { env } from "@/src/lib/env";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { extractAttachmentSnippetsForAi } from "@/src/lib/attachment-ai";
+import { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 
@@ -152,7 +153,7 @@ export async function POST(request: Request) {
             issueId: issue.id,
             role: "user",
             content: lastUserMsg.content,
-          } as any,
+          } satisfies Prisma.AiChatMessageUncheckedCreateInput,
         });
       }
     }
@@ -217,7 +218,7 @@ export async function POST(request: Request) {
           promptEvalDuration: toBigInt(metrics?.promptEvalDuration ?? null),
           evalCount: metrics?.evalCount ?? usage?.totalTokens ?? null,
           evalDuration: toBigInt(metrics?.evalDuration ?? null),
-        } as any,
+        } satisfies Prisma.AiChatMessageUncheckedCreateInput,
       });
     }
 

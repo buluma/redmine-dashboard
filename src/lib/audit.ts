@@ -6,6 +6,7 @@
  */
 
 import { prisma } from "@/src/lib/db";
+import { trackFailure } from "@/src/lib/telemetry";
 
 export type AuditAction = "CREATE" | "READ" | "UPDATE" | "DELETE";
 
@@ -104,7 +105,7 @@ export class AuditService {
       });
     } catch (error) {
       // Don't fail the main operation if audit logging fails
-      console.error("Failed to write audit log:", error);
+      trackFailure({ event: "audit.log.failed", error, metricName: "audit_log_failed" });
     }
   }
 

@@ -1,6 +1,7 @@
 import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 const reportConfigSchema = z.object({
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
         userId: user.id,
         name,
         type,
-        config: config as any,
+        config: (config ?? {}) as Prisma.InputJsonValue,
       },
     });
     
