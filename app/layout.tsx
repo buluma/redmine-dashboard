@@ -12,6 +12,7 @@ import { OfflineBanner } from "@/src/components/OfflineBanner";
 import { SyncQueueInitializer } from "@/src/components/SyncQueueInitializer";
 import { ServiceWorkerRegistrar } from "@/src/components/ServiceWorkerRegistrar";
 import { AppNav } from "@/src/components/AppNav";
+import { NotificationsPanel } from "@/src/components/NotificationsPanel";
 import { ToastProvider } from "@/src/components/ToastProvider";
 import { I18nProvider, useI18n } from "@/src/components/I18nProvider";
 import { ThemeProvider } from "@/src/components/ThemeProvider";
@@ -81,6 +82,11 @@ export default async function RootLayout({
               <SyncQueueInitializer />
               <ServiceWorkerRegistrar />
               {isAuthenticated && <AppNav />}
+              {isAuthenticated && (
+                <div className="global-notif-shell">
+                  <NotificationsPanel />
+                </div>
+              )}
               <div className={isAuthenticated ? "main-content" : "main-content main-content--full"}>
                 {children}
               </div>
@@ -107,6 +113,20 @@ export default async function RootLayout({
 
           .main-content--full {
             margin-left: 0;
+          }
+
+          .global-notif-shell {
+            position: fixed;
+            top: 0.75rem;
+            right: 1rem;
+            z-index: 200;
+          }
+
+          @media (max-width: 768px) {
+            .global-notif-shell {
+              top: 0.5rem;
+              right: 0.5rem;
+            }
           }
 
           @media (max-width: 768px) {

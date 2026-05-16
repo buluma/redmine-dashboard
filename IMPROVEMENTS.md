@@ -45,6 +45,14 @@ Completed during this session:
 | 1.20 Rate-limit headers (partial) | ⏳ done on 6 routes | `rateLimitHeaders` helper + `jsonError(..., headers)` overload; wired into `bulk-status`, `bulk-update`, `[id]/status`, `[id]/comment`, `[id]/timelog`, `sync/manual-pull`. Mobile + github-links still bare |
 | 2.10 Empty states with CTAs | ✅ done | `.empty-state` block on ops-alerts, status-mix, priority-mix; "Force refresh" link-button in ops-alerts empty path |
 | 2.22 Toast stacking + dismiss-all | ✅ done | `MAX_VISIBLE=3` newest-first; `+N more` pill + Clear all; `clearAll()` on context; aria-live polite |
+| 1.11 Issue relations on detail | ✅ done | `RelationsSection` (grouped by type) at `src/components/issue-detail/RelationsSection.tsx` |
+| 1.16 Audit log filters + export | ✅ done | action/entity/text filters + CSV export at `app/ops/audit-logs/audit-logs-view.tsx` |
+| 2.11 Filter chip overflow scroll | ✅ done | `.chip-row` `flex-wrap: nowrap` + scroll-snap-x on ≤540px |
+| 2.13 ChatFab tour pulse | ✅ done | `chat-fab-pulse` keyframes + `.chat-fab-tour` tooltip; dismiss persisted in `nrcc.chatFab.tourSeen.v1` |
+| 2.14 Theme tri-state | ✅ already shipped | `ThemeProvider` already supports light/dark/system |
+| 2.16 Saved view active styling | ✅ done | filled accent background + ✓ check marker; both themes |
+| 2.21 Wakatime date presets | ✅ already shipped | `WAKATIME_RANGE_OPTIONS` at `app/wakatime/wakatime-client.tsx:450` |
+| 2.23 Notification bell global | ✅ done | moved `NotificationsPanel` into `app/layout.tsx` (auth-gated) as fixed top-right bell |
 
 Verification at session end:
 - `npx tsc --noEmit` → 2 pre-existing errors in `mobile/v1/reports` only.
@@ -108,7 +116,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Evidence:** `app/page.tsx:1559-1617` writes preset to local `filterPresets` state.
 - **Action:** Persist via `/api/saved-views` schema (or new `/api/filter-presets`). Roles-aware so admins share presets.
 
-### 1.11 Issue dependencies / blockers visual — Low
+### 1.11 Issue dependencies / blockers visual — Low ✅ done (flat grouped list)
 - **Evidence:** `Relation` data fetched but rendered as a flat list on detail page.
 - **Action:** Render dependency tree (parent / blockers / blocks) as collapsible graph or breadcrumb. Helps planning.
 
@@ -120,15 +128,15 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Evidence:** `src/lib/ai-tools.ts` dispatcher executes mutating tools after client confirmation, but no RBAC check on which tools each role can invoke.
 - **Action:** Add `requiredRole` field to each tool definition, check against session role in `/api/chat/execute-tools`.
 
-### 1.14 Per-user push notification preferences — Medium
+### 1.14 Per-user push notification preferences — Medium ⛔ deferred (design needed)
 - **Evidence:** `app/api/push/*` exists but no preference matrix (assigned-only vs. all updates vs. mentions only).
 - **Action:** Add `NotificationPreference` model + settings page under `/ops/preferences`.
 
-### 1.15 Webhook retry config + delivery transparency — Medium
+### 1.15 Webhook retry config + delivery transparency — Medium ⛔ deferred (design needed)
 - **Evidence:** `app/webhooks/deliveries/page.tsx` shows history; no UI to configure retries/backoff or replay individual failed deliveries.
 - **Action:** Per-subscription `retryStrategy`, `maxAttempts`. Replay button on `deliveries` page.
 
-### 1.16 Audit log filtering and export — Low
+### 1.16 Audit log filtering and export — Low ✅ done
 - **Evidence:** `app/ops/audit-logs/audit-logs-view.tsx` (154 lines) — verify search/filter is present; otherwise add actor/action/date filters and CSV export.
 
 ### 1.17 Mobile app strategy — High (already in TODO)
@@ -139,7 +147,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Evidence:** `app/page.tsx:71` — `SAVED_VIEWS_KEY = "nrcc.savedViews.v1"` (localStorage), although a server-side panel exists (`SavedViewsPanel`). Two sources of truth.
 - **Action:** Drop localStorage path, server-side only with optimistic update.
 
-### 1.19 Search-mode UX is muddled — Low
+### 1.19 Search-mode UX is muddled — Low ⛔ deferred
 - **Evidence:** `app/page.tsx:1216-1222` — three modes (`local | hybrid | fts`) plus a separate FTS panel toggle and AI search panel toggle. Easy to land in the wrong mode.
 - **Action:** Single segmented search bar with mode chips; remove separate FTS panel and AI panel toggles in favour of an inline mode switch.
 
@@ -191,7 +199,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Evidence:** Quick-filter buttons (`app/page.tsx:1495-1524`) use `🟢/🔵/🛑/⚠️` as the visual anchor; queue stats use `⚠️ 🛑 🕐`. Screen readers may announce them inconsistently.
 - **Action:** Pair every emoji with a text label and `aria-hidden="true"` on the glyph. Already partially done; sweep for consistency.
 
-### 2.9 Loading state inconsistencies — Low
+### 2.9 Loading state inconsistencies — Low ⏳ partial
 - **Evidence:** `SkeletonTable` used on dashboard; other pages (`reports`, `wakatime`, `slack`, `heimdall`) likely use spinners or nothing.
 - **Action:** Standardize loading skeletons across pages so layout doesn't shift.
 
@@ -199,7 +207,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Evidence:** `app/page.tsx:1337` — `No active risk alerts.`; `1263` — `No status data yet.`
 - **Action:** Add a small icon + suggestion CTA ("Sync from Redmine", "Create your first issue").
 
-### 2.11 Filter chips overflow narrow viewports — Low
+### 2.11 Filter chips overflow narrow viewports — Low ✅ done
 - **Evidence:** `app/page.tsx:1262-1273` — `chip-row` of status chips. With 8+ statuses it wraps multiple lines.
 - **Action:** Horizontal scroll with momentum, or "show all / show less" toggle past N chips.
 
@@ -207,23 +215,23 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Evidence:** `IssueQuickPeek.tsx` — single issue at a time, `Escape` to close.
 - **Action:** Add `j / k` (or `←/→`) to move to prev/next issue in the filtered list without closing the panel. Already common in Linear/Jira.
 
-### 2.13 ChatFab discoverability — Low
+### 2.13 ChatFab discoverability — Low ✅ done
 - **Evidence:** `src/components/ai/ChatFab.tsx` floats over content; not announced to first-time users.
 - **Action:** First-run tooltip / pulse animation tied to a `dismissedTour` flag. Reuse it later for new feature highlights.
 
-### 2.14 Theme toggle: add "system" option — Low
+### 2.14 Theme toggle: add "system" option — Low ✅ already shipped
 - **Evidence:** `ThemeToggle.tsx` likely binary light/dark.
 - **Action:** Tri-state `light | dark | system` honoring `prefers-color-scheme`.
 
-### 2.15 Login page split — Low
+### 2.15 Login page split — Low ⛔ deferred
 - **Evidence:** `app/login/page.tsx` 305 lines; mixes manual connect + env bootstrap + error display.
 - **Action:** Wizard with steps (connect → verify → confirm). Two components.
 
-### 2.16 Saved view active-state styling — Low
+### 2.16 Saved view active-state styling — Low ✅ done
 - **Evidence:** `app/page.tsx:1226-1237` — active view id passed; verify the rendered chip clearly highlights and that re-applying the same view re-syncs filters.
 - **Action:** Visual treatment for the active saved view (filled chip, check icon).
 
-### 2.17 Inline edit other columns in issues table — Low
+### 2.17 Inline edit other columns in issues table — Low ⛔ deferred
 - **Evidence:** `app/page.tsx:1825-1846` — status is inline-edited via `<select>`. Assignee, priority, due date are read-only.
 - **Action:** Add inline edit affordance on hover (pencil icon) for priority + due + assignee. Keep status as the dominant interaction.
 
@@ -238,7 +246,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Evidence:** `app/slack/slack-client.tsx` (1097 lines). Likely renders the activity stream linearly.
 - **Action:** Add channel filter + keyword search + per-channel mute.
 
-### 2.21 Wakatime — date range presets — Low
+### 2.21 Wakatime — date range presets — Low ✅ already shipped
 - **Evidence:** `app/wakatime/wakatime-client.tsx` (731 lines).
 - **Action:** "Today / This week / This month / Last 30 days / Custom" preset chips above charts.
 
@@ -246,7 +254,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Evidence:** `src/components/Toast.tsx` + `ToastProvider.tsx`.
 - **Action:** Cap visible toasts at 3 with `+N more`. Add "Clear all" when stacked.
 
-### 2.23 Notifications panel trigger — Low
+### 2.23 Notifications panel trigger — Low ✅ done
 - **Evidence:** `NotificationsPanel.tsx` exists (238 lines) but no obvious trigger in the nav.
 - **Action:** Bell icon in `AppNav` top-right with unread count badge; opens the panel as a slide-in.
 

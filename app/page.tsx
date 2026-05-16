@@ -12,7 +12,6 @@ import { AdvancedFilters, applyFilters, type FilterState } from "@/src/component
 import { ProjectFilter } from "@/src/components/ProjectFilter";
 import { ExportButton } from "@/src/components/ExportButton";
 import { ShortcutHelp } from "@/src/components/ShortcutHelp";
-import { NotificationsPanel } from "@/src/components/NotificationsPanel";
 import { FtsSearch } from "@/src/components/FtsSearch";
 import { SavedViewsPanel } from "@/src/components/SavedViewsPanel";
 import { useToast } from "@/src/components/ToastProvider";
@@ -1162,9 +1161,6 @@ export default function Home() {
                 {t(aiStatus.usingFallback ? 'hero.aiFallback' : 'hero.aiCloud')}
               </div>
             )}
-            <div className="notif-shell">
-              <NotificationsPanel />
-            </div>
           </div>
         </div>
         {syncState?.lastSyncStatus === "failed" && (

@@ -858,8 +858,20 @@ label {
 }
 
 .saved-view-pill.active {
-  border-color: rgba(0, 109, 119, 0.35);
-  background: #dbecf0;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0, 109, 119, 0.25);
+}
+
+.saved-view-pill.active .saved-view-apply,
+.saved-view-pill.active .saved-view-delete {
+  color: #fff;
+}
+
+.saved-view-pill.active .saved-view-apply::before {
+  content: "✓ ";
+  font-weight: 700;
 }
 
 .saved-view-apply,
@@ -1233,6 +1245,24 @@ label {
   flex-wrap: wrap;
   gap: 0.45rem;
   margin-top: 0.55rem;
+}
+
+/* On narrow viewports, switch to a horizontal scroll strip so a long
+ * status list does not consume vertical space by wrapping. */
+@media (max-width: 540px) {
+  .chip-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding-bottom: 0.25rem;
+    margin-right: -0.75rem;
+    padding-right: 0.75rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  .chip-row > * {
+    flex-shrink: 0;
+    scroll-snap-align: start;
+  }
 }
 
 .status-chip {

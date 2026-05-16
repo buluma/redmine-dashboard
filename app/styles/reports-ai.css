@@ -1171,6 +1171,56 @@
   box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
 }
 
+@keyframes chat-fab-pulse {
+  0%, 100% {
+    box-shadow: 0 4px 16px rgba(0, 109, 119, 0.35);
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(0, 109, 119, 0.35), 0 0 0 10px rgba(0, 109, 119, 0.18);
+  }
+}
+
+.chat-fab-pulse {
+  animation: chat-fab-pulse 2.4s ease-in-out infinite;
+}
+
+.chat-fab-tour {
+  position: absolute;
+  right: 70px;
+  bottom: 50%;
+  transform: translateY(50%);
+  background: var(--ink, #1d2a3a);
+  color: #fff;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  animation: chat-fab-tour-in 240ms ease-out 600ms backwards;
+}
+
+.chat-fab-tour::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -5px;
+  transform: translateY(-50%) rotate(45deg);
+  width: 10px;
+  height: 10px;
+  background: var(--ink, #1d2a3a);
+}
+
+@keyframes chat-fab-tour-in {
+  from { opacity: 0; transform: translate(8px, 50%); }
+  to   { opacity: 1; transform: translate(0, 50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-fab-pulse { animation: none; }
+  .chat-fab-tour { animation: none; }
+}
+
 .chat-panel {
   position: fixed;
   bottom: 1.5rem;

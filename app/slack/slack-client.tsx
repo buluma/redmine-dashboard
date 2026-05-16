@@ -1041,7 +1041,7 @@ export function SlackMessagesClient({
         )}
 
         {isLoadingThread && (
-          <div className="loading-indicator">
+          <div className="loading-indicator" role="status" aria-busy="true" aria-live="polite">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="2" strokeDasharray="50" strokeDashoffset="25">
                 <animateTransform attributeName="transform" type="rotate" from="0 10 10" to="360 10 10" dur="1s" repeatCount="indefinite"/>
