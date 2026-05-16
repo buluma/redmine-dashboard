@@ -96,7 +96,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
           : (redmineStatusFromError(error) ?? 400);
     
     // Log error locally
-    console.error("attachment_download_error:", error);
+    trackFailure({ event: "issues.attachment.download.failed", error, metricName: "issues_attachment_download_failed" });
     
     trackFailure({
       event: "attachment.download.failed",

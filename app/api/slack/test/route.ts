@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { env } from "@/src/lib/env";
 import { SlackNotifier } from "@/src/lib/slack-notifier";
+import { trackFailure } from "@/src/lib/telemetry";
 
 export async function POST() {
   if (!env.slackBotToken) {
@@ -32,7 +33,7 @@ export async function POST() {
       );
     }
   } catch (error) {
-    console.error("Slack test notification error:", error);
+    trackFailure({ event: "slack.test_notification.failed", error, metricName: "slack_test_notification_failed" });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }

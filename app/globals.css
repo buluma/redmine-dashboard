@@ -761,6 +761,10 @@ label {
   gap: 0.7rem;
 }
 
+.metrics-grid.metrics-grid-compact {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
 .metric-card {
   padding: 0.75rem;
   background: linear-gradient(180deg, #fffefb 0%, #fdf8ef 100%);
@@ -1360,6 +1364,11 @@ label {
   align-items: end;
 }
 
+.bulk-toolbar-hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+}
+
 .bulk-controls {
   display: flex;
   gap: 0.5rem;
@@ -1429,6 +1438,16 @@ label {
 
 .issue-row.selected {
   background: #eaf3f4;
+}
+
+.issue-row:focus-visible {
+  outline: 2px solid var(--accent, #2f6f8a);
+  outline-offset: -2px;
+  background: #eaf3f4;
+}
+
+.issue-row:focus {
+  outline: none;
 }
 
 .subject-cell {
@@ -2488,4 +2507,36 @@ kbd {
 
 [data-theme="dark"] .favorite-btn.favorited:hover {
   background: color-mix(in srgb, var(--warn-soft), var(--warn) 15%);
+}
+
+/* ── A11y: focus rings and reduced motion ─────────────────── */
+
+/*
+ * Keyboard-only focus ring. Many components reset outline to none for
+ * mouse-driven focus; this re-asserts a visible indicator for keyboard
+ * users via :focus-visible without re-introducing focus rings on click.
+ */
+:where(button, a, [role="button"], [tabindex]:not([tabindex="-1"]),
+       input:not([type="checkbox"]):not([type="radio"]),
+       select, textarea, summary):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

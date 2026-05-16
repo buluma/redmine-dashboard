@@ -14,6 +14,10 @@ import { ChatFab } from "@/src/components/ai/ChatFab";
 import { TimeTrackingPanel } from "@/src/components/TimeTrackingPanel";
 import { QuickActionsPanel } from "@/src/components/QuickActionsPanel";
 import { useOfflineAction } from "@/src/hooks/useOfflineAction";
+import { useInternalNotes } from "@/src/hooks/useInternalNotes";
+import { InternalNotesSection } from "@/src/components/issue-detail/InternalNotesSection";
+import { AttachmentsSection } from "@/src/components/issue-detail/AttachmentsSection";
+import { GithubLinksSection, type GithubLinkCreatePayload } from "@/src/components/issue-detail/GithubLinksSection";
 
 type Journal = {
   id: string;
@@ -464,11 +468,6 @@ export default function IssueDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [githubBusy, setGithubBusy] = useState(false);
-  const [githubRepo, setGithubRepo] = useState("");
-  const [githubIssueNumber, setGithubIssueNumber] = useState("");
-  const [githubPrNumber, setGithubPrNumber] = useState("");
-  const [githubUrl, setGithubUrl] = useState("");
-  const [githubTitle, setGithubTitle] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionInfo, setActionInfo] = useState<string | null>(null);
   const [comment, setComment] = useState("");
@@ -486,17 +485,6 @@ export default function IssueDetailPage() {
     possibleValues: Array<{ value: string }> | null;
     required: boolean;
   }>>([]);
-  const [internalNotes, setInternalNotes] = useState<Array<{
-    id: string;
-    issueId: string;
-    content: string;
-    createdAt: string;
-    updatedAt: string;
-    authorId: string;
-    authorName: string;
-  }>>([]);
-  const [newNoteContent, setNewNoteContent] = useState("");
-  const [noteBusy, setNoteBusy] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [refreshBusy, setRefreshBusy] = useState(false);
   const [hydratedRelatedIds, setHydratedRelatedIds] = useState<Set<number>>(new Set());
@@ -506,9 +494,19 @@ export default function IssueDetailPage() {
   const { performAction } = useOfflineAction();
   const { t, locale } = useI18n();
 
-  // State for editing internal notes
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const [editNoteContent, setEditNoteContent] = useState<string>("");
+  const {
+    notes: internalNotes,
+    create: createInternalNote,
+    update: updateInternalNote,
+    remove: deleteInternalNote,
+    busy: noteBusy,
+  } = useInternalNotes({
+    enabled: activeTab === "internal-notes",
+    issueId: issue?.id ?? null,
+    onError: (msg) => setActionError(msg),
+    onInfo: (msg) => setActionInfo(msg),
+    t,
+  });
 
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
@@ -736,19 +734,6 @@ export default function IssueDetailPage() {
     };
   }, [issue]);
 
-  const loadInternalNotes = useCallback(async () => {
-    try {
-      if (!issue) return;
-      const res = await fetch(`/api/internal/notes?issueId=${issue.id}`, { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        setInternalNotes(data.notes ?? []);
-      }
-    } catch {
-      // Ignore errors
-    }
-  }, [issue]);
-
   // Load activities and assignable users
   useEffect(() => {
     void (async () => {
@@ -781,28 +766,11 @@ export default function IssueDetailPage() {
     })();
   }, []);
 
-  useEffect(() => {
-    if (activeTab !== "internal-notes") {
-      return;
-    }
-    void loadInternalNotes();
-  }, [activeTab, loadInternalNotes]);
-
-  async function submitGithubLink(event: React.FormEvent) {
-    event.preventDefault();
+  async function submitGithubLink(payload: GithubLinkCreatePayload): Promise<boolean> {
     setGithubBusy(true);
     setActionError(null);
     setActionInfo(null);
     try {
-      const issueNo = githubIssueNumber.trim();
-      const prNo = githubPrNumber.trim();
-      const payload = {
-        repositoryFullName: githubRepo.trim(),
-        githubIssueNumber: issueNo ? Number(issueNo) : undefined,
-        githubPrNumber: prNo ? Number(prNo) : undefined,
-        url: githubUrl.trim() || undefined,
-        title: githubTitle.trim() || undefined,
-      };
       const res = await fetch(`/api/issues/${issueId}/github-links`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -813,13 +781,11 @@ export default function IssueDetailPage() {
         throw new Error(data.error ?? "Unable to link GitHub reference");
       }
       await reloadIssue();
-      setGithubIssueNumber("");
-      setGithubPrNumber("");
-      setGithubUrl("");
-      setGithubTitle("");
       setActionInfo(t("issues.messages.githubLinked"));
+      return true;
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Unable to link GitHub reference");
+      return false;
     } finally {
       setGithubBusy(false);
     }
@@ -843,63 +809,6 @@ export default function IssueDetailPage() {
       setActionError(e instanceof Error ? e.message : "Unable to remove GitHub link");
     } finally {
       setGithubBusy(false);
-    }
-  }
-
-  async function submitInternalNote(event: React.FormEvent) {
-    event.preventDefault();
-    if (!newNoteContent.trim() || noteBusy) return;
-    setNoteBusy(true);
-    try {
-      if (!issue) { setNoteBusy(false); return; }
-      const res = await fetch("/api/internal/notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ issueId: issue.id, content: newNoteContent.trim() }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || t("issues.messages.noteFailed"));
-      }
-      setNewNoteContent("");
-      await loadInternalNotes();
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Failed to add note");
-    } finally {
-      setNoteBusy(false);
-    }
-  }
-
-  async function deleteInternalNote(noteId: string) {
-    try {
-      const res = await fetch(`/api/internal/notes/${noteId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(t("issues.messages.noteFailed"));
-      await loadInternalNotes();
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Failed to delete note");
-    }
-  }
-
-  async function updateInternalNote(noteId: string, newContent: string) {
-    setNoteBusy(true);
-    try {
-      const res = await fetch(`/api/internal/notes/${noteId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: newContent.trim() }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || t("issues.messages.noteUpdateFailed"));
-      }
-      setEditingNoteId(null);
-      setEditNoteContent("");
-      await loadInternalNotes();
-      setActionInfo(t("issues.messages.noteUpdated"));
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : t("issues.messages.noteUpdateFailed"));
-    } finally {
-      setNoteBusy(false);
     }
   }
 
@@ -1707,150 +1616,20 @@ export default function IssueDetailPage() {
           </details>
         </article>
 
-        <article className="report-card">
-          <details className="issue-collapsible">
-            <summary>
-              {t("issues.sections.attachments")} <span className="muted">({issue.attachments.length})</span>
-            </summary>
-            <div className="timeline">
-              {issue.attachments.length === 0 && <p className="muted">{t("issues.empty.attachments")}</p>}
-              {issue.attachments.map((attachment) => (
-                <div key={attachment.id} className="timeline-item timeline-item-attachment">
-                  <div className="entry-head">
-                    <a href={attachmentUrl(issue.redmineIssueId, attachment.redmineAttachmentId)} target="_blank" rel="noreferrer">
-                      {attachment.filename}
-                    </a>
-                    <span className="muted">{(attachment.filesize / 1024).toFixed(1)} KB</span>
-                  </div>
-                  {isImageAttachment(attachment) && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      className="attachment-preview-image clickable"
-                      src={attachmentUrl(issue.redmineIssueId, attachment.redmineAttachmentId)}
-                      alt={attachment.filename}
-                      loading="lazy"
-                      style={{ maxWidth: "520px", height: "auto", cursor: "zoom-in" }}
-                      onClick={() => setLightboxImage({
-                        src: attachmentUrl(issue.redmineIssueId, attachment.redmineAttachmentId),
-                        alt: attachment.filename,
-                      })}
-                      onError={(e) => {
-                        const target = e.currentTarget;
-                        target.style.display = 'none';
-                        const link = target.parentElement?.querySelector('a');
-                        if (link) {
-                          link.textContent = `${attachment.filename} (click to view)`;
-                        }
-                      }}
-                    />
-                  )}
-                  {isPdfAttachment(attachment) && (
-                    <iframe
-                      className="attachment-preview-pdf"
-                      src={attachmentUrl(issue.redmineIssueId, attachment.redmineAttachmentId)}
-                      title={`Preview ${attachment.filename}`}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          </details>
-        </article>
+        <AttachmentsSection
+          attachments={issue.attachments}
+          redmineIssueId={issue.redmineIssueId}
+          onImageClick={(src, alt) => setLightboxImage({ src, alt })}
+        />
 
-        <article className="report-card">
-          <details className="issue-collapsible">
-            <summary>
-              {t("issues.sections.github")}
-              <span className="muted">({issue.githubLinks.length})</span>
-            </summary>
-            {actionError && <p className="error-banner">{actionError}</p>}
-            {actionInfo && <p className="muted">{actionInfo}</p>}
-            <form className="form" onSubmit={submitGithubLink}>
-              <label>
-                Repository (`owner/repo`)
-                <input
-                  value={githubRepo}
-                  onChange={(e) => setGithubRepo(e.target.value)}
-                  placeholder="acme/platform"
-                  required
-                />
-              </label>
-              <label>
-                GitHub Issue #
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={githubIssueNumber}
-                  onChange={(e) => setGithubIssueNumber(e.target.value)}
-                  placeholder="123"
-                />
-              </label>
-              <label>
-                GitHub PR #
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={githubPrNumber}
-                  onChange={(e) => setGithubPrNumber(e.target.value)}
-                  placeholder="456"
-                />
-              </label>
-              <label>
-                Direct URL (optional)
-                <input
-                  value={githubUrl}
-                  onChange={(e) => setGithubUrl(e.target.value)}
-                  placeholder="https://github.com/acme/platform/issues/123"
-                />
-              </label>
-              <label>
-                {t("issues.fields.titleLabel")} (optional)
-                <input
-                  value={githubTitle}
-                  onChange={(e) => setGithubTitle(e.target.value)}
-                  placeholder="Investigate API timeout"
-                />
-              </label>
-              <button type="submit" disabled={githubBusy}>
-                {githubBusy ? t("common.loading") : t("issues.actions.linkGithub")}
-              </button>
-            </form>
-
-            <div className="timeline">
-              {issue.githubLinks.length === 0 && <p className="muted">{t("issues.empty.github")}</p>}
-              {issue.githubLinks.map((link) => (
-                <article key={link.id} className="timeline-item timeline-item-github">
-                  <div className="entry-head">
-                    <a href={link.url} target="_blank" rel="noreferrer">
-                      {link.title
-                        ?? (link.githubPrNumber
-                          ? `${link.repositoryFullName}#PR-${link.githubPrNumber}`
-                          : link.githubIssueNumber
-                            ? `${link.repositoryFullName}#${link.githubIssueNumber}`
-                            : link.repositoryFullName)}
-                    </a>
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      onClick={() => void deleteGithubLink(link.id)}
-                      disabled={githubBusy}
-                    >
-                      {t("issues.actions.delete")}
-                    </button>
-                  </div>
-                  <p className="muted entry-meta">
-                    {link.repositoryFullName}
-                    {link.githubIssueNumber ? ` • Issue #${link.githubIssueNumber}` : ""}
-                    {link.githubPrNumber ? ` • PR #${link.githubPrNumber}` : ""}
-                  </p>
-                  <p className="muted">{link.url}</p>
-                </article>
-              ))}
-            </div>
-          </details>
-        </article>
+        <GithubLinksSection
+          links={issue.githubLinks}
+          busy={githubBusy}
+          actionError={actionError}
+          actionInfo={actionInfo}
+          onCreate={submitGithubLink}
+          onDelete={deleteGithubLink}
+        />
 
         <article className="report-card comment-card">
           <div className="comment-card-head">
@@ -1959,99 +1738,23 @@ export default function IssueDetailPage() {
             </div>
           )}
           {activeTab === "internal-notes" && (
-            <div className="internal-notes-section">
-              {actionError && <p className="error-banner">{actionError}</p>}
-              <form className="form" onSubmit={submitInternalNote}>
-                <label>
-                  {t("issues.tabs.internalNotes")}
-                  <textarea
-                    value={newNoteContent}
-                    onChange={(e) => setNewNoteContent(e.target.value)}
-                    placeholder={t("issues.placeholders.internalNote")}
-                    rows={3}
-                  />
-                </label>
-                <button type="submit" disabled={noteBusy || newNoteContent.trim().length === 0}>
-                  {noteBusy ? t("common.loading") : t("issues.actions.save")}
-                </button>
-              </form>
-              <div className="internal-notes-list">
-                {internalNotes.length === 0 && <p className="muted">{t("issues.empty.notes")}</p>}
-                {internalNotes.map((note) => (
-                  <article key={note.id} className="internal-note-item">
-                    <div className="internal-note-head">
-                      <span className="internal-note-author">{note.authorName}</span>
-                      <span className="internal-note-date">{formatAgo(new Date(note.createdAt).toISOString(), t)}</span>
-                      <div className="internal-note-actions">
-                        {editingNoteId !== note.id && (
-                          <button
-                            type="button"
-                            className="secondary-button"
-                            onClick={() => {
-                              setEditingNoteId(note.id);
-                              setEditNoteContent(note.content);
-                            }}
-                          >
-                            {t("common.edit")}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="internal-note-delete"
-                          onClick={() => {
-                            if (confirm(t("issues.actions.confirmDeleteNote"))) {
-                              void deleteInternalNote(note.id);
-                            }
-                          }}
-                          title={t("common.delete")}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                    <div className="internal-note-content">
-                      {editingNoteId === note.id ? (
-                        <div className="edit-note-form">
-                          <textarea
-                            value={editNoteContent}
-                            onChange={(e) => setEditNoteContent(e.target.value)}
-                            rows={5}
-                          />
-                          <div className="edit-note-actions">
-                            <button
-                              type="button"
-                              className="primary-button"
-                              onClick={() => void updateInternalNote(note.id, editNoteContent)}
-                              disabled={noteBusy || editNoteContent.trim().length === 0}
-                            >
-                              {noteBusy ? t("common.loading") : t("common.save")}
-                            </button>
-                            <button
-                              type="button"
-                              className="secondary-button"
-                              onClick={() => {
-                                setEditingNoteId(null);
-                                setEditNoteContent("");
-                              }}
-                              disabled={noteBusy}
-                            >
-                              {t("common.cancel")}
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <MarkdownBlock
-                          content={note.content}
-                          attachments={issue.attachments}
-                          issueId={issue.redmineIssueId ?? undefined}
-                          onImageClick={(src, alt) => setLightboxImage({ src, alt })}
-                        />
-                      )}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
+            <InternalNotesSection
+              notes={internalNotes}
+              busy={noteBusy}
+              onCreate={createInternalNote}
+              onUpdate={updateInternalNote}
+              onDelete={deleteInternalNote}
+              renderMarkdown={(content) => (
+                <MarkdownBlock
+                  content={content}
+                  attachments={issue.attachments}
+                  issueId={issue.redmineIssueId ?? undefined}
+                  onImageClick={(src, alt) => setLightboxImage({ src, alt })}
+                />
+              )}
+              formatAgo={(iso) => formatAgo(iso, t)}
+              actionError={actionError}
+            />
           )}
           {activeTab === "properties" && (
             <div className="timeline">

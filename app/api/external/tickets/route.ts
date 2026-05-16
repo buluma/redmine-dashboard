@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
+import { trackFailure } from "@/src/lib/telemetry";
 
 export const runtime = "nodejs";
 
@@ -161,7 +162,7 @@ export async function GET(request: NextRequest) {
       offset,
     });
   } catch (error) {
-    console.error("External API error:", error);
+    trackFailure({ event: "external.tickets.list.failed", error, metricName: "external_tickets_list_failed" });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

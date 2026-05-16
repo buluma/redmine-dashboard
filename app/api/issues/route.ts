@@ -4,6 +4,7 @@ import { prisma } from "@/src/lib/db";
 import { toIssueView } from "@/src/lib/issue-shape";
 import { issueQuerySchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
+import { trackFailure } from "@/src/lib/telemetry";
 
 type SortMode = "updated_desc" | "updated_asc" | "priority" | "due_date";
 const RELATION_PREVIEW_LIMIT = 5;
@@ -251,7 +252,7 @@ export async function POST(request: Request) {
       issue: toIssueView(issue),
     });
   } catch (error) {
-    console.error("Issue creation failed:", error);
+    trackFailure({ event: "issues.create.failed", error, metricName: "issues_create_failed" });
     const status = error instanceof Error && error.message === "Unauthorized" ? 401 : 500;
     return Response.json({ error: error instanceof Error ? error.message : "Server error" }, { status });
   }

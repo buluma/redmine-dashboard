@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
 import { requireRole, getRoleDisplayName } from "@/src/lib/rbac";
+import { trackFailure } from "@/src/lib/telemetry";
 import { z } from "zod";
 
 const updateRoleSchema = z.object({
@@ -57,7 +58,7 @@ export async function PATCH(
         { status: 403 }
       );
     }
-    console.error("Failed to update user role:", error);
+    trackFailure({ event: "admin.user_role.update.failed", error, metricName: "admin_user_role_update_failed" });
     return NextResponse.json(
       { error: "Failed to update role" },
       { status: 500 }

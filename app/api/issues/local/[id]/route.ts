@@ -3,6 +3,7 @@ import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { trackFailure } from "@/src/lib/telemetry";
 
 const updateLocalIssueSchema = z.object({
   subject: z.string().min(1).max(500).optional(),
@@ -85,7 +86,7 @@ export async function PATCH(
 
     return NextResponse.json({ issue });
   } catch (error) {
-    console.error("Failed to update local issue:", error);
+    trackFailure({ event: "issues.local.update.failed", error, metricName: "issues_local_update_failed" });
     return NextResponse.json(
       { error: "Failed to update local issue", message: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
@@ -127,7 +128,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to delete local issue:", error);
+    trackFailure({ event: "issues.local.delete.failed", error, metricName: "issues_local_delete_failed" });
     return NextResponse.json(
       { error: "Failed to delete local issue", message: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }

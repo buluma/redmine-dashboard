@@ -1,6 +1,7 @@
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { requireRole } from "@/src/lib/rbac";
+import { trackFailure } from "@/src/lib/telemetry";
 
 export const runtime = "nodejs";
 
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
 
     return jsonError(`Unknown action: ${action}`, 400);
   } catch (error) {
-    console.error("Job action error:", error);
+    trackFailure({ event: "ops.job.action.failed", error, metricName: "ops_job_action_failed" });
     return jsonError(
       `Failed: ${error instanceof Error ? error.message : "Unknown error"}`,
       500

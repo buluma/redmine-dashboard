@@ -3,6 +3,7 @@ import type { LLMChatMessage } from '@/src/lib/llm-provider';
 import { requireCurrentUser, requireRedmineClientForUser } from '@/src/lib/auth';
 import { prisma } from '@/src/lib/db';
 import { jsonError } from '@/src/lib/http';
+import { trackFailure } from '@/src/lib/telemetry';
 import { z } from 'zod';
 
 const summarizeSchema = z.object({
@@ -128,7 +129,7 @@ Description: ${issue.description?.substring(0, 500) || 'No description'}`;
               success: true,
             };
           } catch (error) {
-            console.error(`Failed to summarize issue ${issue.id}:`, error);
+            trackFailure({ event: 'ai.summarize_stale.item.failed', error, data: { issueId: issue.id }, metricName: 'ai_summarize_stale_item_failed' });
             return {
               issueId: issue.id,
               summary: '',
@@ -156,7 +157,7 @@ Description: ${issue.description?.substring(0, 500) || 'No description'}`;
     if (error instanceof Error && error.message === 'Unauthorized') {
       return jsonError('Unauthorized', 401);
     }
-    console.error('Bulk summarize error:', error);
+    trackFailure({ event: 'ai.summarize_stale.failed', error, metricName: 'ai_summarize_stale_failed' });
     return jsonError('Failed to generate summaries', 500);
   }
 }

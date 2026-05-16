@@ -6,6 +6,7 @@ import { getSlackNotificationService } from "@/src/lib/slack-notification-servic
 import { getAuditService, extractClientIp, extractUserAgent } from "@/src/lib/audit";
 import { checkRateLimit, addRateLimitHeaders } from "@/src/lib/rate-limit";
 import { hasPermission } from "@/src/lib/rbac";
+import { trackFailure } from "@/src/lib/telemetry";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -142,7 +143,7 @@ export async function POST(request: Request) {
       user.displayName
     );
     if (!slackResult.success) {
-      console.error("Slack notification failed:", slackResult.error);
+      trackFailure({ event: "internal_notes.slack_notification.failed", error: slackResult.error, metricName: "internal_notes_slack_notification_failed" });
     }
 
     return addRateLimitHeaders(

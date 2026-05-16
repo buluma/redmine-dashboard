@@ -33,6 +33,19 @@ export const bulkStatusUpdateSchema = z.object({
   note: z.string().trim().max(5000).optional(),
 });
 
+export const bulkIssueUpdateSchema = z
+  .object({
+    issueIds: z.array(z.number().int().positive()).min(1).max(50),
+    priorityId: z.number().int().positive().optional(),
+    assignedToId: z.number().int().nonnegative().optional(),
+    doneRatio: z.number().int().min(0).max(100).optional(),
+    note: z.string().trim().max(5000).optional(),
+  })
+  .refine(
+    (data) => data.priorityId !== undefined || data.assignedToId !== undefined || data.doneRatio !== undefined,
+    { message: "At least one field (priorityId, assignedToId, doneRatio) is required" },
+  );
+
 export const issueQuerySchema = z.object({
   status: z.string().optional(),
   priority: z.string().optional(),

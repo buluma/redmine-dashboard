@@ -5,6 +5,7 @@ import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { requireCurrentUser, requireMobileUser, requireRedmineClientForUser } from "@/src/lib/auth";
 import { getLLMProviderManager } from "@/src/lib/llm-provider";
+import { trackFailure } from "@/src/lib/telemetry";
 
 export const runtime = "nodejs";
 
@@ -290,7 +291,7 @@ export async function POST(request: Request) {
     } catch {
       // Ignore logging errors
     }
-    console.error("Summarize error:", error);
+    trackFailure({ event: "ai.summarize.failed", error, metricName: "ai_summarize_failed" });
     return jsonError(
       `Failed to summarize issue: ${error instanceof Error ? error.message : "Unknown error"}`,
       500

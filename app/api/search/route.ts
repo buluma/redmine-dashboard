@@ -1,6 +1,7 @@
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { getSessionUserId } from "@/src/lib/session";
+import { trackFailure } from "@/src/lib/telemetry";
 
 export const runtime = "nodejs";
 
@@ -143,7 +144,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Search error:", error);
+    trackFailure({ event: "search.query.failed", error, metricName: "search_query_failed" });
     return jsonError(
       `Search failed: ${error instanceof Error ? error.message : "Unknown error"}`,
       500

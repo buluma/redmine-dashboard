@@ -5,6 +5,7 @@ import { env } from "@/src/lib/env";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { extractAttachmentSnippetsForAi } from "@/src/lib/attachment-ai";
+import { trackFailure } from "@/src/lib/telemetry";
 import { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -252,7 +253,7 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return jsonError("Unauthorized", 401);
     }
-    console.error("Chat error:", error);
+    trackFailure({ event: "ai.chat.failed", error, metricName: "ai_chat_failed" });
     return jsonError(
       `Failed to chat: ${error instanceof Error ? error.message : "Unknown error"}`,
       500,

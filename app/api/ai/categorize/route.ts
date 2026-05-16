@@ -4,6 +4,7 @@ import { env } from "@/src/lib/env";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { requireCurrentUser, requireMobileUser } from "@/src/lib/auth";
+import { trackFailure } from "@/src/lib/telemetry";
 
 export const runtime = "nodejs";
 
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
       provider: result.provider,
     });
   } catch (error) {
-    console.error("Categorize error:", error);
+    trackFailure({ event: "ai.categorize.failed", error, metricName: "ai_categorize_failed" });
     return jsonError(
       `Failed to categorize issue: ${error instanceof Error ? error.message : "Unknown error"}`,
       500

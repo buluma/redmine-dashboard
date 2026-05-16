@@ -3,6 +3,7 @@ import { requireCurrentUser, requireRedmineClient } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { trackFailure } from "@/src/lib/telemetry";
 
 const createLocalIssueSchema = z.object({
   subject: z.string().min(1).max(500),
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
     if (message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    console.error("Failed to create local issue:", error);
+    trackFailure({ event: "issues.local.create.failed", error, metricName: "issues_local_create_failed" });
     return NextResponse.json(
       { error: "Failed to create local issue", message },
       { status: 500 }
@@ -165,7 +166,7 @@ export async function GET(request: Request) {
     if (message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    console.error("Failed to list local issues:", error);
+    trackFailure({ event: "issues.local.list.failed", error, metricName: "issues_local_list_failed" });
     return NextResponse.json(
       { error: "Failed to list local issues", message },
       { status: 500 }

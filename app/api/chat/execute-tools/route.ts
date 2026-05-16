@@ -3,6 +3,7 @@ import type { LLMChatMessage } from '@/src/lib/llm-provider';
 import { requireCurrentUser, requireRedmineClientForUser } from '@/src/lib/auth';
 import { jsonError } from '@/src/lib/http';
 import { logEvent } from '@/src/lib/log';
+import { trackFailure } from '@/src/lib/telemetry';
 import {
   executeTool,
   requiresConfirmation,
@@ -158,7 +159,7 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message === 'Unauthorized') {
       return jsonError('Unauthorized', 401);
     }
-    console.error('Execute-tools error:', error);
+    trackFailure({ event: 'chat.execute_tools.failed', error, metricName: 'chat_execute_tools_failed' });
     return jsonError('Failed to execute tool calls', 500);
   }
 }

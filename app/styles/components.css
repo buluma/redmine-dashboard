@@ -1346,6 +1346,23 @@
   text-align: center;
 }
 
+.pagination-page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.pagination-page-size select {
+  padding: 0.25rem 0.4rem;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 0.85rem;
+}
+
 
 /* ── Skeleton loading ─────────────────────────────── */
 .skel {
@@ -1469,6 +1486,40 @@
   font-size: 0.78rem;
   padding: 0.3rem 0.65rem;
   white-space: nowrap;
+}
+
+.peek-nav {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.peek-nav-btn {
+  width: 1.85rem;
+  height: 1.85rem;
+  border: 0;
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: grid;
+  place-items: center;
+  transition: background 0.12s, color 0.12s;
+}
+
+.peek-nav-btn + .peek-nav-btn {
+  border-left: 1px solid var(--line);
+}
+
+.peek-nav-btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.peek-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .peek-close {

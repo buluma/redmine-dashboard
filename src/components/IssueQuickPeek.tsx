@@ -9,9 +9,13 @@ type Props = {
   issueId: number | null;
   onClose: () => void;
   onOpenFullPage: (issue: Issue) => void;
+  onPrev?: () => void;
+  onNext?: () => void;
+  hasPrev?: boolean;
+  hasNext?: boolean;
 };
 
-export function IssueQuickPeek({ issueId, onClose, onOpenFullPage }: Props) {
+export function IssueQuickPeek({ issueId, onClose, onOpenFullPage, onPrev, onNext, hasPrev, hasNext }: Props) {
   const [issue, setIssue] = useState<Issue | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,11 +46,16 @@ export function IssueQuickPeek({ issueId, onClose, onOpenFullPage }: Props) {
   useEffect(() => {
     if (!issueId) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+      if (e.key === "Escape") { onClose(); return; }
+      if ((e.key === "j" || e.key === "ArrowDown") && hasNext && onNext) { e.preventDefault(); onNext(); return; }
+      if ((e.key === "k" || e.key === "ArrowUp") && hasPrev && onPrev) { e.preventDefault(); onPrev(); return; }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [issueId, onClose]);
+  }, [issueId, onClose, onNext, onPrev, hasNext, hasPrev]);
 
   useEffect(() => {
     if (issueId) {
@@ -88,6 +97,30 @@ export function IssueQuickPeek({ issueId, onClose, onOpenFullPage }: Props) {
             )}
           </div>
           <div className="peek-header-actions">
+            {(onPrev || onNext) && (
+              <div className="peek-nav" role="group" aria-label="Navigate issues">
+                <button
+                  type="button"
+                  className="peek-nav-btn"
+                  onClick={onPrev}
+                  disabled={!hasPrev}
+                  aria-label="Previous issue (k)"
+                  title="Previous (k / ↑)"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  className="peek-nav-btn"
+                  onClick={onNext}
+                  disabled={!hasNext}
+                  aria-label="Next issue (j)"
+                  title="Next (j / ↓)"
+                >
+                  ↓
+                </button>
+              </div>
+            )}
             {issue && (
               <button
                 type="button"

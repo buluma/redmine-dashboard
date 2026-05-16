@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
+import { trackFailure } from "@/src/lib/telemetry";
 
 export async function POST(
   _request: NextRequest,
@@ -39,7 +40,7 @@ export async function POST(
 
     return NextResponse.json({ favorited: true, favorite });
   } catch (error) {
-    console.error("Error adding favorite:", error);
+    trackFailure({ event: "issues.favorite.add.failed", error, metricName: "issues_favorite_add_failed" });
     return NextResponse.json({ error: "Failed to add favorite" }, { status: 500 });
   }
 }
@@ -66,7 +67,7 @@ export async function DELETE(
 
     return NextResponse.json({ favorited: false });
   } catch (error) {
-    console.error("Error removing favorite:", error);
+    trackFailure({ event: "issues.favorite.remove.failed", error, metricName: "issues_favorite_remove_failed" });
     return NextResponse.json({ error: "Failed to remove favorite" }, { status: 500 });
   }
 }
@@ -95,7 +96,7 @@ export async function GET(
 
     return NextResponse.json({ favorited: !!favorite });
   } catch (error) {
-    console.error("Error checking favorite:", error);
+    trackFailure({ event: "issues.favorite.check.failed", error, metricName: "issues_favorite_check_failed" });
     return NextResponse.json({ error: "Failed to check favorite" }, { status: 500 });
   }
 }

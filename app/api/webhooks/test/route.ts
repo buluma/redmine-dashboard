@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/src/lib/rbac";
 import { dispatchWebhook } from "@/src/lib/webhook-subscription";
+import { trackFailure } from "@/src/lib/telemetry";
 
 export const runtime = "nodejs";
 
@@ -40,7 +41,7 @@ export async function POST() {
       message: "Test webhook dispatched to all active subscribers",
     });
   } catch (err) {
-    console.error("Error sending test webhook:", err);
+    trackFailure({ event: "webhooks.test.failed", error: err, metricName: "webhooks_test_failed" });
     return NextResponse.json(
       { error: "Failed to send test webhook" },
       { status: 500 }

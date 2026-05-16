@@ -5,6 +5,7 @@ import {
   listSubscriptions,
   WebhookEvent,
 } from "@/src/lib/webhook-subscription";
+import { trackFailure } from "@/src/lib/telemetry";
 
 export const runtime = "nodejs";
 
@@ -26,7 +27,7 @@ export async function GET() {
       }))
     );
   } catch (err) {
-    console.error("Error listing webhook subscriptions:", err);
+    trackFailure({ event: "webhooks.subscriptions.list.failed", error: err, metricName: "webhooks_subscriptions_list_failed" });
     return NextResponse.json(
       { error: "Failed to list subscriptions" },
       { status: 500 }
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (err) {
-    console.error("Error creating webhook subscription:", err);
+    trackFailure({ event: "webhooks.subscriptions.create.failed", error: err, metricName: "webhooks_subscriptions_create_failed" });
     return NextResponse.json(
       { error: "Failed to create subscription" },
       { status: 500 }
