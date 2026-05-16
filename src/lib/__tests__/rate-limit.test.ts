@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { isRateLimited, clearRateLimitState } from "@/src/lib/rate-limit";
+import { isRateLimited, clearRateLimitState, rateLimitHeaders } from "@/src/lib/rate-limit";
 
 describe("rate limiting", () => {
   beforeEach(() => {
@@ -153,6 +153,42 @@ describe("rate limiting", () => {
       const afterClear = isRateLimited({ key, max, windowMs: 60000 });
       expect(afterClear.limited).toBe(false);
       expect(afterClear.remaining).toBe(0);
+    });
+  });
+
+  describe("rateLimitHeaders", () => {
+    it("emits Limit/Remaining/Reset for allowed requests", () => {
+      const headers = rateLimitHeaders({
+        limited: false,
+        remaining: 4,
+        resetInMs: 60_000,
+        limit: 5,
+      });
+      expect(headers["X-RateLimit-Limit"]).toBe("5");
+      expect(headers["X-RateLimit-Remaining"]).toBe("4");
+      expect(headers["X-RateLimit-Reset"]).toMatch(/^\d+$/);
+      expect(headers["Retry-After"]).toBeUndefined();
+    });
+
+    it("adds Retry-After when limited", () => {
+      const headers = rateLimitHeaders({
+        limited: true,
+        remaining: 0,
+        resetInMs: 12_500,
+        limit: 5,
+      });
+      expect(headers["X-RateLimit-Remaining"]).toBe("0");
+      expect(headers["Retry-After"]).toBe("13");
+    });
+
+    it("clamps Retry-After to a minimum of 1 second", () => {
+      const headers = rateLimitHeaders({
+        limited: true,
+        remaining: 0,
+        resetInMs: 0,
+        limit: 5,
+      });
+      expect(headers["Retry-After"]).toBe("1");
     });
   });
 });

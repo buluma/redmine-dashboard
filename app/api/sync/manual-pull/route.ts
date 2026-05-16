@@ -1,6 +1,6 @@
 import { requireCurrentUser } from "@/src/lib/auth";
 import { jsonError } from "@/src/lib/http";
-import { isRateLimited } from "@/src/lib/rate-limit";
+import { isRateLimited, rateLimitHeaders } from "@/src/lib/rate-limit";
 import { runSyncJob } from "@/src/lib/sync";
 import { trackFailure, trackInfo, trackSuccess } from "@/src/lib/telemetry";
 
@@ -29,7 +29,11 @@ export async function POST() {
         durationMetricName: "sync_manual_pull_duration",
         durationMs: Date.now() - startedAt,
       });
-      return jsonError("Manual pull is rate-limited. Please wait a minute.", 429);
+      return jsonError(
+        "Manual pull is rate-limited. Please wait a minute.",
+        429,
+        rateLimitHeaders(limiter),
+      );
     }
     const job = await runSyncJob(user.id, "full_manual");
     trackSuccess({

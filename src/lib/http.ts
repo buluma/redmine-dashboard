@@ -1,7 +1,11 @@
 import { ZodSchema } from "zod";
 
-export function jsonError(message: string, status = 400): Response {
-  return Response.json({ error: message }, { status });
+export function jsonError(
+  message: string,
+  status = 400,
+  headers?: Record<string, string>,
+): Response {
+  return Response.json({ error: message }, { status, headers });
 }
 
 export async function parseJson<T>(request: Request, schema: ZodSchema<T>): Promise<T> {
