@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useI18n } from "@/src/components/I18nProvider";
 
 type LogEntry = {
@@ -144,133 +145,188 @@ export function HeimdallLogsClient({ type, logs }: HeimdallLogsClientProps) {
         </p>
       ) : null}
 
-      {/* Log list */}
+      {/* Log list — virtualized to keep DOM small for large datasets */}
       {filteredLogs.length === 0 ? (
         <p className="muted" style={{ padding: "1rem 0" }}>
           {t("heimdall.noLogsMatch")}
         </p>
       ) : (
-        <div className="summaries-list">
-          {filteredLogs.slice(0, 100).map((log) => {
-            const isExpanded = expandedId === log.id;
-            return (
-              <article
-                key={log.id}
-                className="summary-card"
-                style={{ cursor: "pointer" }}
-                onClick={() => toggleExpand(log.id)}
-              >
-                <div className="summary-header">
-                  <div className="summary-header-left">
-                    <span
-                      className="summary-status"
-                      style={{
-                        background: levelColor(log.logLevel),
-                        color: "#fff",
-                      }}
-                    >
-                      {log.logLevel}
+        <VirtualizedLogList
+          logs={filteredLogs}
+          expandedId={expandedId}
+          onToggle={toggleExpand}
+          levelColor={levelColor}
+          t={t}
+        />
+      )}
+    </div>
+  );
+}
+
+interface VirtualizedLogListProps {
+  logs: LogEntry[];
+  expandedId: string | null;
+  onToggle: (id: string) => void;
+  levelColor: (level: string) => string;
+  t: ReturnType<typeof useI18n>["t"];
+}
+
+function VirtualizedLogList({
+  logs,
+  expandedId,
+  onToggle,
+  levelColor,
+  t,
+}: VirtualizedLogListProps) {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: logs.length,
+    getScrollElement: () => parentRef.current,
+    // Estimate: collapsed rows are roughly 110px, expanded ones grow via
+    // measureElement after mount.
+    estimateSize: (index) => (expandedId === logs[index]?.id ? 260 : 110),
+    overscan: 6,
+    getItemKey: (index) => logs[index]?.id ?? index,
+  });
+
+  return (
+    <div
+      ref={parentRef}
+      className="summaries-list"
+      style={{
+        height: "min(75vh, 800px)",
+        overflowY: "auto",
+        position: "relative",
+        contain: "strict",
+      }}
+    >
+      <div
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+          width: "100%",
+          position: "relative",
+        }}
+      >
+        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+          const log = logs[virtualRow.index];
+          if (!log) return null;
+          const isExpanded = expandedId === log.id;
+          return (
+            <article
+              key={virtualRow.key}
+              ref={rowVirtualizer.measureElement}
+              data-index={virtualRow.index}
+              className="summary-card"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${virtualRow.start}px)`,
+                cursor: "pointer",
+              }}
+              onClick={() => onToggle(log.id)}
+            >
+              <div className="summary-header">
+                <div className="summary-header-left">
+                  <span
+                    className="summary-status"
+                    style={{ background: levelColor(log.logLevel), color: "#fff" }}
+                  >
+                    {log.logLevel}
+                  </span>
+                  <span className="summary-project">{log.traceType}</span>
+                  {log.extra?.scriptName && (
+                    <span className="summary-priority" title={String(log.extra.scriptName)}>
+                      {truncate(String(log.extra.scriptName), 35)}
                     </span>
-                    <span className="summary-project">{log.traceType}</span>
-                    {log.extra?.scriptName && (
-                      <span className="summary-priority" title={String(log.extra.scriptName)}>
-                        {truncate(String(log.extra.scriptName), 35)}
+                  )}
+                  {log.extra?.resourceType && (
+                    <span className="summary-priority" title={String(log.extra.resourceType)}>
+                      {truncate(String(log.extra.resourceType), 35)}
+                    </span>
+                  )}
+                </div>
+                <time className="muted" style={{ fontSize: "0.75rem" }}>
+                  {formatDate(log.createdAt)}
+                </time>
+              </div>
+
+              <div className="ai-result" style={{ position: "relative" }}>
+                <p
+                  style={{
+                    fontSize: "0.85rem",
+                    margin: 0,
+                    lineHeight: 1.5,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {isExpanded
+                    ? log.backtrace
+                    : log.backtrace.length > 250
+                      ? log.backtrace.slice(0, 250) + "…"
+                      : log.backtrace}
+                </p>
+
+                {log.extra && isExpanded && (
+                  <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                    {log.extra.duration && (
+                      <span className="ai-confidence" style={{ fontSize: "0.72rem" }}>
+                        ⏱ {log.extra.duration}s
                       </span>
                     )}
-                    {log.extra?.resourceType && (
-                      <span className="summary-priority" title={String(log.extra.resourceType)}>
-                        {truncate(String(log.extra.resourceType), 35)}
+                    {log.extra.cpuUsage != null && (
+                      <span className="ai-confidence" style={{ fontSize: "0.72rem" }}>
+                        {t("heimdall.cpu", { count: Number(log.extra.cpuUsage) })}
+                      </span>
+                    )}
+                    {log.extra.ramUsage != null && (
+                      <span className="ai-confidence" style={{ fontSize: "0.72rem" }}>
+                        {t("heimdall.ram", { size: formatBytes(Number(log.extra.ramUsage)) })}
+                      </span>
+                    )}
+                    {log.extra.resourceId != null && (
+                      <span className="ai-confidence" style={{ fontSize: "0.72rem" }}>
+                        {t("heimdall.resource", { id: String(log.extra.resourceId) })}
                       </span>
                     )}
                   </div>
-                  <time className="muted" style={{ fontSize: "0.75rem" }}>
-                    {formatDate(log.createdAt)}
-                  </time>
-                </div>
+                )}
 
-                <div className="ai-result" style={{ position: "relative" }}>
-                  <p
-                    style={{
-                      fontSize: "0.85rem",
-                      margin: 0,
-                      lineHeight: 1.5,
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                    }}
-                  >
-                    {isExpanded
-                      ? log.backtrace
-                      : log.backtrace.length > 250
-                        ? log.backtrace.slice(0, 250) + "…"
-                        : log.backtrace}
-                  </p>
-
-                  {/* Extra details for SSR / Trace */}
-                  {log.extra && isExpanded && (
-                    <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                      {log.extra.duration && (
-                        <span className="ai-confidence" style={{ fontSize: "0.72rem" }}>
-                          ⏱ {log.extra.duration}s
-                        </span>
-                      )}
-                      {log.extra.cpuUsage != null && (
-                        <span className="ai-confidence" style={{ fontSize: "0.72rem" }}>
-                          {t("heimdall.cpu", { count: Number(log.extra.cpuUsage) })}
-                        </span>
-                      )}
-                      {log.extra.ramUsage != null && (
-                        <span className="ai-confidence" style={{ fontSize: "0.72rem" }}>
-                          {t("heimdall.ram", { size: formatBytes(Number(log.extra.ramUsage)) })}
-                        </span>
-                      )}
-                      {log.extra.resourceId != null && (
-                        <span className="ai-confidence" style={{ fontSize: "0.72rem" }}>
-                          {t("heimdall.resource", { id: String(log.extra.resourceId) })}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: "0.5rem",
-                      right: "0.75rem",
-                      fontSize: "0.7rem",
-                      color: "var(--muted, #888)",
-                    }}
-                  >
-                    {isExpanded ? t("heimdall.collapse") : t("heimdall.expand")}
-                  </span>
-                </div>
-
-                <div
+                <span
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "0.72rem",
+                    position: "absolute",
+                    top: "0.5rem",
+                    right: "0.75rem",
+                    fontSize: "0.7rem",
                     color: "var(--muted, #888)",
-                    marginTop: "0.5rem",
-                    gap: "0.5rem",
                   }}
                 >
-                  <span>
-                    {t("heimdall.idPrefix")}{log.id}{t("heimdall.tracePrefix")}{log.traceId}
-                  </span>
-                  <span>
-                    {log.host ? truncateHost(log.host) : log.environment}
-                  </span>
-                </div>
-              </article>
-            );
-          })}
-          {filteredLogs.length > 100 && (
-            <p className="muted" style={{ padding: "0.5rem 0", textAlign: "center" }}>
-              {t("common.showingXofY", { count: 100, total: filteredLogs.length })}
-            </p>
-          )}
-        </div>
-      )}
+                  {isExpanded ? t("heimdall.collapse") : t("heimdall.expand")}
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: "0.72rem",
+                  color: "var(--muted, #888)",
+                  marginTop: "0.5rem",
+                  gap: "0.5rem",
+                }}
+              >
+                <span>
+                  {t("heimdall.idPrefix")}{log.id}{t("heimdall.tracePrefix")}{log.traceId}
+                </span>
+                <span>{log.host ? truncateHost(log.host) : log.environment}</span>
+              </div>
+            </article>
+          );
+        })}
+      </div>
     </div>
   );
 }
