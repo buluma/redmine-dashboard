@@ -38,12 +38,16 @@ export function useDashboardSavedViews(): UseDashboardSavedViewsResult {
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [viewDraftName, setViewDraftName] = useState("");
 
+  // Hydration-safe load: SSR renders []; client mounts and reads
+  // localStorage. setState in effect is intentional — lazy init would
+  // cause an SSR/client HTML mismatch.
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(SAVED_VIEWS_KEY);
       if (!raw) return;
       const parsed = JSON.parse(raw) as SavedView[];
       if (Array.isArray(parsed)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSavedViews(
           parsed.filter(
             (item) => typeof item?.id === "string" && typeof item?.name === "string",
