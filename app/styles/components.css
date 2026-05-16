@@ -1870,6 +1870,57 @@
   background: var(--card);
 }
 
+/* ── Issue relations ──────────────────────────────── */
+
+.relations-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.5rem 0 0;
+}
+
+.relations-group-label {
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+.relations-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.relations-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: var(--surface-2, var(--bg-soft));
+  border: 1px solid var(--line);
+  font-size: 0.82rem;
+}
+
+.relations-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.relations-link:hover {
+  text-decoration: underline;
+}
+
+.relations-delay {
+  font-size: 0.72rem;
+}
+
 /* ── Empty states ─────────────────────────────────── */
 
 .empty-state {

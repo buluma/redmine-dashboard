@@ -18,6 +18,7 @@ import { useInternalNotes } from "@/src/hooks/useInternalNotes";
 import { InternalNotesSection } from "@/src/components/issue-detail/InternalNotesSection";
 import { AttachmentsSection } from "@/src/components/issue-detail/AttachmentsSection";
 import { GithubLinksSection, type GithubLinkCreatePayload } from "@/src/components/issue-detail/GithubLinksSection";
+import { RelationsSection } from "@/src/components/issue-detail/RelationsSection";
 
 type Journal = {
   id: string;
@@ -1615,6 +1616,8 @@ export default function IssueDetailPage() {
             )}
           </details>
         </article>
+
+        <RelationsSection relations={issue.relations} />
 
         <AttachmentsSection
           attachments={issue.attachments}
