@@ -20,11 +20,15 @@ export interface UsePageSizeResult {
 export function usePageSize(defaultSize: PageSize = 20): UsePageSizeResult {
   const [pageSize, setPageSizeState] = useState<PageSize>(defaultSize);
 
+  // Hydration-safe load: SSR renders defaultSize, client mounts and reads
+  // localStorage. setState in effect is intentional — lazy init in useState
+  // would cause an SSR/client HTML mismatch.
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       const n = raw ? Number(raw) : NaN;
       if (isPageSize(n)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPageSizeState(n);
       }
     } catch {
