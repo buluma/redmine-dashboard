@@ -10,10 +10,11 @@ import {
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
 
-const { mockLogEvent, mockIssueFindFirst, mockIssueFindMany } = vi.hoisted(() => ({
+const { mockLogEvent, mockIssueFindFirst, mockIssueFindMany, mockUserFindUnique } = vi.hoisted(() => ({
   mockLogEvent: vi.fn(),
   mockIssueFindFirst: vi.fn(),
   mockIssueFindMany: vi.fn(),
+  mockUserFindUnique: vi.fn(),
 }));
 
 vi.mock('@/src/lib/log', () => ({ logEvent: mockLogEvent }));
@@ -23,6 +24,9 @@ vi.mock('@/src/lib/db', () => ({
     issue: {
       findFirst: mockIssueFindFirst,
       findMany: mockIssueFindMany,
+    },
+    user: {
+      findUnique: mockUserFindUnique,
     },
   },
 }));
@@ -116,6 +120,8 @@ describe('executeTool', () => {
     vi.clearAllMocks();
     mockIssueFindFirst.mockResolvedValue(null);
     mockIssueFindMany.mockResolvedValue([]);
+    // Default: ADMIN — allows every tool. Individual RBAC tests override.
+    mockUserFindUnique.mockResolvedValue({ id: USER_ID, role: 'ADMIN' });
   });
 
   it('returns success result for a valid read-only tool', async () => {
@@ -571,5 +577,80 @@ describe('summarizeToolCall', () => {
     const call = makeCall('mystery_tool', { foo: 'bar' });
     const summary = summarizeToolCall(call);
     expect(summary).toBe('mystery_tool({"foo":"bar"})');
+  });
+});
+
+// ── RBAC: getRequiredRole + executeTool role gating ──────────────────────
+
+import { getRequiredRole } from '../ai-tools';
+
+describe('getRequiredRole', () => {
+  it.each([
+    ['get_issue', 'VIEWER'],
+    ['search_issues', 'VIEWER'],
+    ['list_statuses', 'VIEWER'],
+    ['log_time', 'USER'],
+    ['add_comment', 'USER'],
+    ['update_status', 'USER'],
+    ['close_issue', 'EDITOR'],
+    ['update_issue', 'EDITOR'],
+  ])('%s requires %s', (name, role) => {
+    expect(getRequiredRole(name)).toBe(role);
+  });
+
+  it('fails closed for unknown tool names (defaults to ADMIN)', () => {
+    expect(getRequiredRole('mystery_tool')).toBe('ADMIN');
+  });
+});
+
+describe('executeTool RBAC', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIssueFindFirst.mockResolvedValue(null);
+    mockIssueFindMany.mockResolvedValue([]);
+  });
+
+  it('denies USER attempting an EDITOR-only close_issue', async () => {
+    mockUserFindUnique.mockResolvedValue({ id: USER_ID, role: 'USER' });
+    const client = makeClient();
+    const result = await executeTool(
+      makeCall('close_issue', { issue_id: 1 }),
+      client as any,
+      USER_ID,
+    );
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/Insufficient role/);
+    expect(client.updateIssueStatus).not.toHaveBeenCalled();
+  });
+
+  it('allows VIEWER to call read-only get_issue', async () => {
+    mockUserFindUnique.mockResolvedValue({ id: USER_ID, role: 'VIEWER' });
+    const client = makeClient();
+    const result = await executeTool(makeCall('get_issue', { issue_id: 1 }), client as any, USER_ID);
+    expect(result.success).toBe(true);
+  });
+
+  it('denies VIEWER attempting a USER-level log_time', async () => {
+    mockUserFindUnique.mockResolvedValue({ id: USER_ID, role: 'VIEWER' });
+    const client = makeClient();
+    const result = await executeTool(
+      makeCall('log_time', { issue_id: 1, hours: 1, activity_id: 9 }),
+      client as any,
+      USER_ID,
+    );
+    expect(result.success).toBe(false);
+    expect(client.addTimeEntry).not.toHaveBeenCalled();
+  });
+
+  it('allows ADMIN to call every mutating tool', async () => {
+    mockUserFindUnique.mockResolvedValue({ id: USER_ID, role: 'ADMIN' });
+    const client = makeClient();
+    const result = await executeTool(
+      makeCall('update_issue', { issue_id: 1, due_date: '2026-12-31' }),
+      client as any,
+      USER_ID,
+    );
+    expect(result.success).toBe(true);
+    expect(client.updateIssue).toHaveBeenCalled();
   });
 });
