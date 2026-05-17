@@ -15,6 +15,7 @@ services:
       # Force local SQLite inside Docker (host-mapped prisma folder), never Supabase.
       - DATABASE_URL=file:./prisma/dev.db
       - DIRECT_URL=
+      - SECURE_COOKIES=${SECURE_COOKIES:-false}
       - ENABLE_SYNC_POLLER=${ENABLE_SYNC_POLLER:-true}
       - ENABLE_STREAMLINE_LOG_POLLER=${ENABLE_STREAMLINE_LOG_POLLER:-false}
       - POLL_INTERVAL_MS=${POLL_INTERVAL_MS:-300000}

@@ -34,6 +34,7 @@ services:
       NODE_ENV: production
       DATABASE_URL: ${DOCKER_POSTGRES_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/redmine_dashboard}
       DIRECT_URL: ${DOCKER_POSTGRES_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/redmine_dashboard}
+      SECURE_COOKIES: ${SECURE_COOKIES:-false}
       ENABLE_SYNC_POLLER: ${ENABLE_SYNC_POLLER:-true}
       ENABLE_STREAMLINE_LOG_POLLER: ${ENABLE_STREAMLINE_LOG_POLLER:-false}
       POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-300000}
