@@ -53,6 +53,9 @@ Completed during this session:
 | 2.16 Saved view active styling | ✅ done | filled accent background + ✓ check marker; both themes |
 | 2.21 Wakatime date presets | ✅ already shipped | `WAKATIME_RANGE_OPTIONS` at `app/wakatime/wakatime-client.tsx:450` |
 | 2.23 Notification bell global | ✅ done | moved `NotificationsPanel` into `app/layout.tsx` (auth-gated) as fixed top-right bell |
+| 1.20 Rate-limit headers (closeout) | ✅ done | mobile + github-links routes now use `rateLimitHeaders` on 429: comment, internal-notes/[noteId], github-links + [linkId], pair/connect, web github-links + [linkId] |
+| 2.20 Slack channel + keyword filter | ✅ done | keyword search across text + author cached name; per-channel mute persisted to `nrcc.slack.mutedChannels.v1`; muted channels pause auto-refresh + show banner |
+| Design pass: 1.12 / 1.14 / 1.15 | ✅ done | `docs/DESIGN_NOTES.md` with contracts, data models, sequencing, and open questions for each |
 
 Verification at session end:
 - `npx tsc --noEmit` → 2 pre-existing errors in `mobile/v1/reports` only.
@@ -120,7 +123,7 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Evidence:** `Relation` data fetched but rendered as a flat list on detail page.
 - **Action:** Render dependency tree (parent / blockers / blocks) as collapsible graph or breadcrumb. Helps planning.
 
-### 1.12 Offline conflict resolution — Medium ⛔ deferred (design needed)
+### 1.12 Offline conflict resolution — Medium ⏳ design landed (see `docs/DESIGN_NOTES.md`)
 - **Evidence:** `src/hooks/useOfflineAction.ts` queues mutations; on flush there's no UI when the server rejects a stale write.
 - **Action:** Add "conflict resolution" modal: server-side `409` returns latest state, user picks merge / keep mine / discard.
 
@@ -128,11 +131,11 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Evidence:** `src/lib/ai-tools.ts` dispatcher executes mutating tools after client confirmation, but no RBAC check on which tools each role can invoke.
 - **Action:** Add `requiredRole` field to each tool definition, check against session role in `/api/chat/execute-tools`.
 
-### 1.14 Per-user push notification preferences — Medium ⛔ deferred (design needed)
+### 1.14 Per-user push notification preferences — Medium ⏳ design landed (see `docs/DESIGN_NOTES.md`)
 - **Evidence:** `app/api/push/*` exists but no preference matrix (assigned-only vs. all updates vs. mentions only).
 - **Action:** Add `NotificationPreference` model + settings page under `/ops/preferences`.
 
-### 1.15 Webhook retry config + delivery transparency — Medium ⛔ deferred (design needed)
+### 1.15 Webhook retry config + delivery transparency — Medium ⏳ design landed (see `docs/DESIGN_NOTES.md`)
 - **Evidence:** `app/webhooks/deliveries/page.tsx` shows history; no UI to configure retries/backoff or replay individual failed deliveries.
 - **Action:** Per-subscription `retryStrategy`, `maxAttempts`. Replay button on `deliveries` page.
 
@@ -208,7 +211,7 @@ Bonus gaps not in a–h but worth tracking:
 - **Evidence:** `app/page.tsx:1216-1222` — three modes (`local | hybrid | fts`) plus a separate FTS panel toggle and AI search panel toggle. Easy to land in the wrong mode.
 - **Action:** Single segmented search bar with mode chips; remove separate FTS panel and AI panel toggles in favour of an inline mode switch.
 
-### 1.20 Rate-limit headers on mutation routes — Low ⏳ partial (6 routes done; mobile + github-links left)
+### 1.20 Rate-limit headers on mutation routes — Low ✅ done
 - **Evidence:** `src/lib/rate-limit.ts` exists but uncertain whether routes return `Retry-After` / `X-RateLimit-*` headers.
 - **Action:** Verify and standardize across all mutation endpoints.
 
@@ -299,7 +302,7 @@ Bonus gaps not in a–h but worth tracking:
 - **Evidence:** `app/heimdall/heimdall-logs-client.tsx` (299 lines) — likely renders all rows. With unbounded retention (see 1.7), tables grow.
 - **Action:** Add `react-window` or `@tanstack/react-virtual`. Already a TODO-adjacent need.
 
-### 2.20 Slack monitor — channel/keyword filter — Low
+### 2.20 Slack monitor — channel/keyword filter — Low ✅ done
 - **Evidence:** `app/slack/slack-client.tsx` (1097 lines). Likely renders the activity stream linearly.
 - **Action:** Add channel filter + keyword search + per-channel mute.
 
