@@ -23,6 +23,10 @@ COPY . .
 # Build the application
 RUN npm run build
 
+# Copy public assets and static chunks into standalone output so they are served
+RUN cp -r public .next/standalone/public && \
+    cp -r .next/static .next/standalone/.next/static
+
 # Expose port
 EXPOSE 3000
 
@@ -30,5 +34,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1
 
-# Run database init and start the app
-CMD ["sh", "-c", "npm run db:init && exec npm run start"]
+# Run database init and start the app via the standalone server
+CMD ["sh", "-c", "npm run db:init && exec node .next/standalone/server.js"]
