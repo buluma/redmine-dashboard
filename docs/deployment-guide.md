@@ -32,6 +32,7 @@ Open the `.env` file and set the following variables:
 - `DATABASE_URL`: The connection string for the database. For local development, the default is `file:./dev.db`.
 - `APP_ENCRYPTION_KEY`: A secret key used for encrypting stored Redmine API keys. Generate a secure random string for this.
 - `SESSION_SECRET`: A secret key used for signing session cookies. Generate a secure random string for this.
+- `SECURE_COOKIES`: Set to `false` for plain-HTTP Docker/Pi/homelab access so browsers keep the login cookie. Omit or set to `true` only when users always access the app over HTTPS.
 
 **Recommended (Sentry error/performance/logs/profiling):**
 

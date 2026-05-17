@@ -29,6 +29,7 @@ RUN cp -r public .next/standalone/public && \
 
 # Expose port
 EXPOSE 3000
+ENV HOSTNAME "0.0.0.0"
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
