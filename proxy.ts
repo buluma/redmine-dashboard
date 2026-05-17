@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 const SESSION_COOKIE = "rd_session";
 
-const PUBLIC_PREFIXES = ["/login", "/api/", "/_next/", "/icons/", "/monitoring"];
+const PUBLIC_PREFIXES = ["/login", "/api/", "/_next/", "/icons/", "/scripts/", "/monitoring"];
 const PUBLIC_FILES = ["/favicon.ico", "/manifest.json", "/sw.js"];
 
 export function proxy(request: NextRequest) {
