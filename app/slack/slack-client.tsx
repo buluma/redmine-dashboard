@@ -205,6 +205,8 @@ export function SlackMessagesClient({
   const [isClient, setIsClient] = useState(false);
   const [currentChannelId, setCurrentChannelId] = useState(initialChannelId);
   const [isLoadingChannel, setIsLoadingChannel] = useState(false);
+  const [keywordFilter, setKeywordFilter] = useState("");
+  const [mutedChannels, setMutedChannels] = useState<Set<string>>(new Set());
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -215,7 +217,41 @@ export function SlackMessagesClient({
   useEffect(() => {
     setLastUpdated(new Date());
     setIsClient(true);
+    try {
+      const raw = window.localStorage.getItem("nrcc.slack.mutedChannels.v1");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setMutedChannels(new Set(parsed.filter((v): v is string => typeof v === "string")));
+        }
+      }
+    } catch {
+      // Ignore storage errors.
+    }
   }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        "nrcc.slack.mutedChannels.v1",
+        JSON.stringify(Array.from(mutedChannels)),
+      );
+    } catch {
+      // Ignore storage errors.
+    }
+  }, [mutedChannels]);
+
+  const toggleMute = (channelId: string) => {
+    setMutedChannels((prev) => {
+      const next = new Set(prev);
+      if (next.has(channelId)) next.delete(channelId);
+      else next.add(channelId);
+      return next;
+    });
+  };
+
+  const isCurrentMuted = mutedChannels.has(currentChannelId);
 
   // Build user cache from messages
   const buildUserCache = useCallback((msgs: SlackMessage[]) => {
@@ -328,9 +364,10 @@ export function SlackMessagesClient({
     }
   }, []);
 
-  // Auto-refresh setup
+  // Auto-refresh setup. Skip entirely when the channel is muted so we
+  // do not hammer Slack for a feed the user explicitly turned off.
   useEffect(() => {
-    if (isAutoRefreshEnabled && refreshIntervalMs > 0) {
+    if (isAutoRefreshEnabled && refreshIntervalMs > 0 && !mutedChannels.has(currentChannelId)) {
       // Countdown timer
       countdownRef.current = setInterval(() => {
         setNextRefreshIn(prev => Math.max(0, prev - 1));
@@ -346,7 +383,7 @@ export function SlackMessagesClient({
         if (countdownRef.current) clearInterval(countdownRef.current);
       };
     }
-  }, [isAutoRefreshEnabled, refreshIntervalMs, handleRefresh]);
+  }, [isAutoRefreshEnabled, refreshIntervalMs, handleRefresh, mutedChannels, currentChannelId]);
 
   const handleThreadClick = useCallback(async (threadTs: string) => {
     if (activeThread === threadTs) {
@@ -398,8 +435,16 @@ export function SlackMessagesClient({
     return acc;
   }, {} as Record<string, SlackMessage[]>);
 
-  // Separate thread parent messages from regular messages
-  const mainMessages = messages.filter(m => !m.threadTs || m.threadTs === m.ts);
+  // Separate thread parent messages from regular messages, then apply the
+  // keyword filter across text + cached display name.
+  const keywordQ = keywordFilter.trim().toLowerCase();
+  const mainMessages = messages
+    .filter(m => !m.threadTs || m.threadTs === m.ts)
+    .filter((m) => {
+      if (!keywordQ) return true;
+      const author = (m.user ? userNames[m.user] ?? m.user : "").toLowerCase();
+      return m.text.toLowerCase().includes(keywordQ) || author.includes(keywordQ);
+    });
   const mainMessagesByDate = mainMessages.reduce((acc, msg) => {
     const date = new Date(parseFloat(msg.ts) * 1000).toLocaleDateString("en-US", {
       weekday: "long",
@@ -1008,6 +1053,60 @@ export function SlackMessagesClient({
           opacity: 0.5;
           cursor: not-allowed;
         }
+
+        .slack-mute-btn {
+          background: transparent;
+          border: 1px solid var(--border-color, #e5e7eb);
+          border-radius: 999px;
+          padding: 0.25rem 0.65rem;
+          font-size: 0.75rem;
+          cursor: pointer;
+          color: var(--text-primary, #111827);
+        }
+
+        .slack-mute-btn[aria-pressed="true"] {
+          background: var(--warn-soft, #fef3c7);
+          border-color: var(--warn, #d97706);
+          color: var(--warn-strong, #b45309);
+        }
+
+        .slack-search {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+        }
+
+        .slack-keyword-input {
+          padding: 0.3rem 0.55rem;
+          border: 1px solid var(--border-color, #e5e7eb);
+          border-radius: 0.375rem;
+          font-size: 0.85rem;
+          min-width: 200px;
+        }
+
+        .slack-clear-search {
+          background: transparent;
+          border: 0;
+          color: var(--text-muted, #6b7280);
+          cursor: pointer;
+          font-size: 0.85rem;
+          line-height: 1;
+        }
+
+        .slack-muted-banner {
+          background: var(--warn-soft, #fef3c7);
+          border: 1px solid var(--warn, #d97706);
+          color: var(--warn-strong, #b45309);
+          padding: 0.5rem 0.75rem;
+          border-radius: 0.375rem;
+          font-size: 0.85rem;
+          margin: 0.5rem 0;
+        }
+
+        .slack-filter-summary {
+          margin: 0.25rem 0 0.5rem;
+          font-size: 0.78rem;
+        }
       `}</style>
 
       <section className="card">
@@ -1023,10 +1122,41 @@ export function SlackMessagesClient({
             >
               {channels.map((channel) => (
                 <option key={channel.id} value={channel.id}>
-                  #{channel.name}
+                  {mutedChannels.has(channel.id) ? "🔕 " : ""}#{channel.name}
                 </option>
               ))}
             </select>
+            <button
+              type="button"
+              className="slack-mute-btn"
+              onClick={() => toggleMute(currentChannelId)}
+              aria-pressed={isCurrentMuted}
+              title={isCurrentMuted ? "Unmute this channel" : "Mute this channel"}
+            >
+              {isCurrentMuted ? "🔕 Unmute" : "🔔 Mute"}
+            </button>
+          </div>
+
+          <div className="slack-search">
+            <label htmlFor="slack-keyword" className="muted">Search:</label>
+            <input
+              id="slack-keyword"
+              type="text"
+              value={keywordFilter}
+              onChange={(e) => setKeywordFilter(e.target.value)}
+              placeholder="text or user…"
+              className="slack-keyword-input"
+            />
+            {keywordFilter && (
+              <button
+                type="button"
+                className="slack-clear-search"
+                onClick={() => setKeywordFilter("")}
+                aria-label="Clear search"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
           <div className="refresh-info">
@@ -1049,6 +1179,21 @@ export function SlackMessagesClient({
             </svg>
             {t("slack.loadingThread")}
           </div>
+        )}
+
+        {isCurrentMuted && (
+          <div className="slack-muted-banner" role="status">
+            🔕 This channel is muted. Messages still render but auto-refresh stays paused.{" "}
+            <button type="button" className="link-button" onClick={() => toggleMute(currentChannelId)}>
+              Unmute
+            </button>
+          </div>
+        )}
+
+        {keywordFilter && (
+          <p className="muted slack-filter-summary">
+            Showing {mainMessages.length} matches for &quot;{keywordFilter}&quot;.
+          </p>
         )}
 
         {mainMessages.length === 0 ? (
