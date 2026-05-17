@@ -12,17 +12,18 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-function readInitialTheme(): Theme {
-  if (typeof window === "undefined") {
-    return "system";
-  }
-  const saved = localStorage.getItem("theme");
-  return saved === "light" || saved === "dark" || saved === "system" ? saved : "system";
-}
-
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(readInitialTheme);
+  // Always start with "system" so SSR and initial client render match.
+  // useEffect below syncs from localStorage after hydration.
+  const [theme, setThemeState] = useState<Theme>("system");
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved === "light" || saved === "dark" || saved === "system") {
+      setThemeState(saved);
+    }
+  }, []);
 
   useEffect(() => {
     // Resolve theme
