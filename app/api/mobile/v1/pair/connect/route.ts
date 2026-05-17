@@ -3,7 +3,7 @@ import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
 import { jsonError, parseJson } from "@/src/lib/http";
 import { logEvent } from "@/src/lib/log";
 import { connectRedmineAccount } from "@/src/lib/redmine-connect";
-import { isRateLimited } from "@/src/lib/rate-limit";
+import { isRateLimited, rateLimitHeaders } from "@/src/lib/rate-limit";
 import { mobilePairConnectSchema } from "@/src/lib/schemas";
 import { runSyncJob } from "@/src/lib/sync";
 
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       windowMs: 60_000,
     });
     if (limiter.limited) {
-      return jsonError("Pairing is rate-limited. Please wait a minute.", 429);
+      return jsonError("Pairing is rate-limited. Please wait a minute.", 429, rateLimitHeaders(limiter));
     }
 
     const user = await connectRedmineAccount(payload.baseUrl, payload.apiKey);

@@ -2,7 +2,7 @@ import { requireCurrentUser } from "@/src/lib/auth";
 import { recomputeIssueActivityIndex, recordIssueActivityEvent } from "@/src/lib/activity-index";
 import { prisma } from "@/src/lib/db";
 import { jsonError, parseJson } from "@/src/lib/http";
-import { isRateLimited } from "@/src/lib/rate-limit";
+import { isRateLimited, rateLimitHeaders } from "@/src/lib/rate-limit";
 import { githubLinkCreateSchema } from "@/src/lib/schemas";
 import { trackFailure, trackInfo, trackSuccess } from "@/src/lib/telemetry";
 
@@ -103,7 +103,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         durationMetricName: "issue_github_link_create_duration",
         durationMs: Date.now() - startedAt,
       });
-      return jsonError("Rate limit exceeded. Try again shortly.", 429);
+      return jsonError("Rate limit exceeded. Try again shortly.", 429, rateLimitHeaders(limiter));
     }
 
     const issue = await prisma.issue.findFirst({
