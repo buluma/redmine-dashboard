@@ -16,18 +16,22 @@ export async function GET(request: Request) {
     const now = new Date();
     const soonCutoff = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 
-    const [issues, syncInfo] = await Promise.all([
+    const [issues, favorites, syncInfo] = await Promise.all([
       prisma.issue.findMany({
         where: { userId: user.id, source: { not: 'local' } },
         select: {
+          redmineIssueId: true,
           statusName: true,
           statusId: true,
           priority: true,
           projectName: true,
           dueDate: true,
-          isFavorited: true,
           updatedOnRemote: true,
         },
+      }),
+      prisma.favorite.findMany({
+        where: { userId: user.id },
+        select: { issueId: true },
       }),
       prisma.syncJob.findFirst({
         where: { userId: user.id, status: 'completed' },
@@ -35,6 +39,8 @@ export async function GET(request: Request) {
         select: { endedAt: true },
       }),
     ]);
+
+    const favoritedIds = new Set(favorites.map((f) => f.issueId));
 
     const CLOSED_STATUSES = ['closed', 'rejected', 'resolved', 'done'];
     const isOpen = (s: { statusName: string }) =>
@@ -55,7 +61,7 @@ export async function GET(request: Request) {
       return d >= now && d <= soonCutoff;
     }).length;
 
-    const favorited = issues.filter((i) => i.isFavorited).length;
+    const favorited = issues.filter((i) => i.redmineIssueId != null && favoritedIds.has(i.redmineIssueId)).length;
 
     // By priority
     const priorityMap = new Map<string, number>();
