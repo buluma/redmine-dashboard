@@ -139,9 +139,66 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 ### 1.16 Audit log filtering and export — Low ✅ done
 - **Evidence:** `app/ops/audit-logs/audit-logs-view.tsx` (154 lines) — verify search/filter is present; otherwise add actor/action/date filters and CSV export.
 
-### 1.17 Mobile app strategy — High (already in TODO)
-- **Evidence:** TODO flags Flutter app broken.
-- **Action:** Decide: invest in PWA-only path (the service worker is solid), Capacitor/Ionic wrapping around the existing Next.js, or restart Flutter. Recommend PWA-first since `app/sw.ts` and offline queue already work.
+### 1.17 Mobile app — harden Compose client to production — High (rescoped 2026-05-17)
+
+Original framing ("Flutter broken, pick PWA/Capacitor/Flutter") is stale.
+The team has already shipped `mobile/android-native` — a native Kotlin +
+Jetpack Compose client (~6469 LOC, 27 .kt files) wired against 41
+endpoints under `/api/mobile/v1/*`, with Room-backed offline queue
+(`OfflineSyncWorker`), Firebase Messaging, encrypted `SecureTokenStore`,
+CommonMark+GFM rendering, Coil 3 images, and Sentry. The old
+`mobile/converge` Flutter tree is no longer in the repo.
+
+Two clients run in parallel: the web PWA (anyone-with-a-browser) and
+the native Android app (team-member power tool). 1.17 is now about
+**production-hardening the existing Compose app**, not about choosing
+a framework.
+
+Open subtasks (a–h):
+
+- **1.17a Android CI job** — add `assembleDebug + lintDebug + ./gradlew test`
+  to `.github/workflows/ci.yml`. A backend schema change that breaks
+  `ConvergeApi.kt` must be caught at PR time, not in Android Studio.
+- **1.17b Release build hardening** — `buildTypes.release {
+  isMinifyEnabled = true; isShrinkResources = true }` in
+  `app/build.gradle.kts`; ProGuard rules for Retrofit/Moshi/OkHttp/Room;
+  signing config; release-flavour `network_security_config` that drops
+  cleartext; refuse-to-launch guard when `BuildConfig.DEFAULT_SERVER_URL`
+  starts with `10.0.2.2` or `http://` on the release variant.
+- **1.17c Sentry profile split** — flip `send-default-pii` to `false`,
+  drop `traces.sample-rate` to `0.1`, screenshots crash-only, narrow
+  `user-interaction.enable` for release. Debug build keeps current
+  settings. Customer Redmine subjects must not leak.
+- **1.17d Test floor** — JVM unit tests for `ConvergeRepository`,
+  `SecureTokenStore`, `OfflineSyncWorker`; one Compose UI test per
+  primary screen (IssueList, IssueDetail, Settings).
+  Current count: 0.
+- **1.17e BiometricPrompt gate** — gate `SecureTokenStore.readToken`
+  with `androidx.biometric:biometric` so a stolen unlocked device
+  cannot drain the bearer.
+- **1.17f Adaptive + round icons** — current manifest references only
+  `ic_launcher_foreground`. Add adaptive XML + round mipmap. Required
+  for Play submission.
+- **1.17g Wire 1.12 conflict contract into `OfflineSyncWorker`** —
+  once the server adds `expectedUpdatedAt` checks (see 1.12),
+  `OfflineSyncWorker.dispatch` must surface the 409 + serverState to
+  the same conflict store the PWA uses.
+- **1.17h Token lifecycle UX** — verify Settings exposes both rotate
+  (`/api/mobile/v1/tokens/rotate`) and revoke
+  (`/api/mobile/v1/tokens/current` DELETE). Confirm push subscriptions
+  are cleared server-side on rotate.
+
+Bonus gaps not in a–h but worth tracking:
+
+- `ConvergeApplication` is a one-line stub — needs a real `onCreate`
+  for WorkManager init, Sentry options, ImageLoader config.
+- AI endpoints (`/api/ai/summarize`, `/api/ai/categorize`) are not
+  prefixed with `/api/mobile/v1/*` and share web rate limits. Either
+  add mobile-prefixed aliases or document the asymmetry.
+- Local-only issues are silently read-only on mobile (per README) —
+  add a banner instead of dead controls.
+- `versionCode=1, versionName=0.1.0` — Play submission needs a
+  versioning policy.
 
 ### 1.18 Saved-view sync across devices — Low ⛔ blocked on Prisma schema mismatch
 - **Evidence:** `app/page.tsx:71` — `SAVED_VIEWS_KEY = "nrcc.savedViews.v1"` (localStorage), although a server-side panel exists (`SavedViewsPanel`). Two sources of truth.
