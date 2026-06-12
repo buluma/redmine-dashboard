@@ -2,6 +2,7 @@
 
 ## Pending
 - [ ] **Mobile Application** — Broken, explore alternative approaches using Electron, Ionic framework or Apache Cordova
+- [ ] **Later: Odysseus calendar-to-time-log workflow** — Infer Redmine time logs from calendar meetings in Odysseus, then submit approved entries through Converge APIs.
 
 ### 🔧 Technical Debt
 - [x] **Split `app/page.tsx`** — Extracted types → `src/types/dashboard.ts`, utils → `src/lib/issue-utils.ts`, MarkdownBlock → `src/components/MarkdownBlock.tsx`. Deleted 630+ lines of dead drawer code and dead state/handlers. Page down from 3026 → 1926 lines.
