@@ -37,6 +37,7 @@ yarn-error.log*
 !.env.example
 
 # local sqlite data
+*.db.bak
 *.db
 
 # vercel
