@@ -153,6 +153,50 @@ async function ensureRuntimeTables(): Promise<void> {
     CREATE INDEX IF NOT EXISTS "IssueActivityEvent_issueId_eventType_idx"
     ON "IssueActivityEvent"("issueId", "eventType");
   `);
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "WebhookSubscription" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "name" TEXT NOT NULL,
+      "url" TEXT NOT NULL,
+      "secret" TEXT NOT NULL DEFAULT '',
+      "events" TEXT NOT NULL DEFAULT '[]',
+      "active" BOOLEAN NOT NULL DEFAULT true,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "createdBy" TEXT NOT NULL,
+      "lastTriggeredAt" DATETIME,
+      "lastStatus" INTEGER,
+      "failureCount" INTEGER NOT NULL DEFAULT 0
+    );
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS "WebhookSubscription_active_idx"
+    ON "WebhookSubscription"("active");
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "WebhookDelivery" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "subscriptionId" TEXT NOT NULL,
+      "event" TEXT NOT NULL,
+      "payload" TEXT NOT NULL,
+      "responseStatus" INTEGER,
+      "responseBody" TEXT,
+      "error" TEXT,
+      "durationMs" INTEGER,
+      "attempt" INTEGER NOT NULL DEFAULT 1,
+      "deliveredAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "WebhookDelivery_subscriptionId_fkey"
+        FOREIGN KEY ("subscriptionId") REFERENCES "WebhookSubscription" ("id")
+        ON DELETE CASCADE ON UPDATE CASCADE
+    );
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS "WebhookDelivery_subscriptionId_idx"
+    ON "WebhookDelivery"("subscriptionId");
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS "WebhookDelivery_deliveredAt_idx"
+    ON "WebhookDelivery"("deliveredAt");
+  `);
 }
 
 void ensureRuntimeTables().catch((error) => {
