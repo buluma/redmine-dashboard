@@ -11,7 +11,7 @@ vi.mock("@prisma/client", () => {
 
 describe("database utilities", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     vi.resetModules();
   });
 
@@ -64,6 +64,18 @@ describe("database utilities", () => {
       // We're testing that it doesn't throw during module load
       const { prisma } = await import("@/src/lib/db");
       expect(prisma).toBeDefined();
+    });
+
+    it("creates WebhookSubscription and WebhookDelivery tables for SQLite", async () => {
+      await import("@/src/lib/db");
+      // ensureRuntimeTables is fire-and-forget with many awaits; drain the microtask queue
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const sqlCalls: string[] = mockExecuteRawUnsafe.mock.calls.map(
+        (c: unknown[]) => String(c[0])
+      );
+      expect(sqlCalls.some((sql) => sql.includes("WebhookSubscription"))).toBe(true);
+      expect(sqlCalls.some((sql) => sql.includes("WebhookDelivery"))).toBe(true);
     });
   });
 });
