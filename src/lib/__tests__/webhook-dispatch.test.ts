@@ -197,5 +197,63 @@ describe('Webhook Dispatch', () => {
 
       expect(mockFetch).not.toHaveBeenCalled();
     });
+
+    it('auto-disables a subscription that reaches the consecutive failure threshold', async () => {
+      mockPrisma.webhookSubscription.findMany.mockResolvedValue([
+        {
+          id: 'sub-failing',
+          name: 'Flaky Endpoint',
+          url: 'https://dead.example.com/hook',
+          events: ['ticket.created'],
+          active: true,
+          secret: '',
+          failureCount: 4,
+        },
+      ]);
+      mockPrisma.webhookSubscription.update.mockResolvedValue({});
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        status: 503,
+        text: async () => 'Service Unavailable',
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      await dispatchWebhook('ticket.created', mockPayload.ticket);
+
+      const updateCalls = mockPrisma.webhookSubscription.update.mock.calls;
+      const disableCall = updateCalls.find(
+        (call: any[]) => call[0]?.data?.active === false
+      );
+      expect(disableCall).toBeDefined();
+    });
+
+    it('does not disable a subscription below the failure threshold', async () => {
+      mockPrisma.webhookSubscription.findMany.mockResolvedValue([
+        {
+          id: 'sub-recovering',
+          name: 'Almost Flaky',
+          url: 'https://shaky.example.com/hook',
+          events: ['ticket.created'],
+          active: true,
+          secret: '',
+          failureCount: 2,
+        },
+      ]);
+      mockPrisma.webhookSubscription.update.mockResolvedValue({});
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        status: 500,
+        text: async () => 'error',
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      await dispatchWebhook('ticket.created', mockPayload.ticket);
+
+      const updateCalls = mockPrisma.webhookSubscription.update.mock.calls;
+      const disableCall = updateCalls.find(
+        (call: any[]) => call[0]?.data?.active === false
+      );
+      expect(disableCall).toBeUndefined();
+    });
   });
 });

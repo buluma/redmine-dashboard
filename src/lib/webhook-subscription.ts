@@ -15,6 +15,9 @@ import { prisma } from './db';
 import { getAuditService } from './audit';
 import { trackInfo, trackSuccess, trackFailure } from './telemetry';
 
+// Auto-disable a subscription after this many consecutive delivery failures.
+const FAILURE_THRESHOLD = 5;
+
 // ─── Types ───────────────────────────────────────────────────────────────
 
 export interface WebhookSubscription {
@@ -298,7 +301,15 @@ export async function dispatchWebhook(
         const durationMs = Date.now() - startTime;
         
         await updateSubscriptionFailure(sub.id, result.status ?? null, result.success);
-        
+
+        if (!result.success && sub.failureCount + 1 >= FAILURE_THRESHOLD) {
+          await prisma.webhookSubscription.update({
+            where: { id: sub.id },
+            data: { active: false },
+          });
+          trackFailure({ event: "webhook.subscription.auto_disabled", error: `${sub.failureCount + 1} consecutive failures`, metricName: "webhook_subscription_auto_disabled" });
+        }
+
         // Log delivery to database
         await prisma.webhookDelivery.create({
           data: {
@@ -324,7 +335,15 @@ export async function dispatchWebhook(
       } catch (err) {
         trackFailure({ event: "webhook.delivery.error", error: err, metricName: "webhook_delivery_error" });
         await updateSubscriptionFailure(sub.id, null, false);
-        
+
+        if (sub.failureCount + 1 >= FAILURE_THRESHOLD) {
+          await prisma.webhookSubscription.update({
+            where: { id: sub.id },
+            data: { active: false },
+          });
+          trackFailure({ event: "webhook.subscription.auto_disabled", error: `${sub.failureCount + 1} consecutive failures`, metricName: "webhook_subscription_auto_disabled" });
+        }
+
         // Log failed delivery
         await prisma.webhookDelivery.create({
           data: {
