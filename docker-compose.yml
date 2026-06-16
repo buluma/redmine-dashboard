@@ -13,7 +13,7 @@ services:
     environment:
       - NODE_ENV=production
       # Force local SQLite inside Docker (host-mapped prisma folder), never Supabase.
-      - DATABASE_URL=file:./prisma/dev.db
+      - DATABASE_URL=file:///app/prisma/dev.db
       - DIRECT_URL=
       - SECURE_COOKIES=${SECURE_COOKIES:-false}
       - ENABLE_SYNC_POLLER=${ENABLE_SYNC_POLLER:-true}
@@ -25,6 +25,7 @@ services:
       - PRISMA_SCHEMA_PATH=prisma/schema.dev.sqlite.prisma
     volumes:
       - ./prisma:/app/prisma
+      
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
       interval: 30s
@@ -36,7 +37,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
   # Optional: Redis for caching (future use)
   # redis:
   #   image: redis:7-alpine
@@ -50,6 +50,5 @@ services:
   #     interval: 10s
   #     timeout: 5s
   #     retries: 3
-
 # volumes:
 #   redis-data:
