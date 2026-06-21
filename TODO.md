@@ -7,6 +7,8 @@
 ### 🎫 Ticket Management
 - [x] **Auto-reassign on resolve/close** — When resolving a ticket not created by you, reassign to original author. When closing your own ticket, assign to Nobody (ID 25). Applied in both internal status API and external PATCH endpoint.
 - [ ] **Promote personal ticket to Redmine** — Action button on local/personal tickets to push them to Redmine as real issues, mapping subject, description, status, priority, and time entries.
+- [x] **Time logs/events correlation** — WakaTime↔personal ticket correlation via GitHub repo links. View at `/correlation`, Preview + Apply to auto-log time entries. Idempotent (unique on issueId + wakaTimeDate). API: `GET/POST /api/correlation`, `POST /api/correlation/apply`. External: `GET/POST /api/external/correlation`.
+- [ ] **Push correlated time to Redmine** — After promoting a personal ticket to Redmine, push locally-logged WakaTime time entries upstream as Redmine time entries.
 - [x] **Notifications don't clear on mark as read** — Fixed: read IDs persisted in localStorage (24h TTL), applied on each fetch.
 
 ### 🔧 Technical Debt

@@ -325,9 +325,12 @@ model TimeEntry {
   authorName         String?
   comments           String?
   spentOn            DateTime
+  source             String?
+  wakaTimeDate       String?
   createdAt          DateTime  @default(now())
 
   @@unique([issueId, redmineTimeEntryId])
+  @@unique([issueId, wakaTimeDate])
   @@index([userId, spentOn])
   @@index([issueId])
 }
