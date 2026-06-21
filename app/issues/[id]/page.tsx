@@ -1227,13 +1227,25 @@ export default function IssueDetailPage() {
             }
           }}
           onAssign={async (userId) => {
-            await performAction({
-              type: "assign",
-              issueId,
-              payload: { userId },
-              onSuccess: reloadIssue,
-              successMessage: t("issues.messages.assigned"),
-            });
+            if (issue.source === "local") {
+              const user = users.find((u) => u.id === userId);
+              const res = await fetch(`/api/issues/local/${issue.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ assignedToId: userId, assignedToName: user?.name ?? null }),
+              });
+              if (!res.ok) throw new Error("Failed to assign");
+              await reloadIssue();
+              setActionInfo(t("issues.messages.assigned"));
+            } else {
+              await performAction({
+                type: "assign",
+                issueId,
+                payload: { userId },
+                onSuccess: reloadIssue,
+                successMessage: t("issues.messages.assigned"),
+              });
+            }
           }}
           onAddTime={async (hours, comment) => {
             await performAction({
