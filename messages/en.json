@@ -35,6 +35,7 @@
     "ops": "System Ops",
     "slack": "Slack",
     "wakatime": "WakaTime",
+    "correlation": "Time Correlation",
     "webhooks": "Webhooks",
     "apiDocs": "API Docs",
     "groups": {

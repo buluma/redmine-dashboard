@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
   { href: "/heimdall", labelKey: "nav.heimdall", icon: "🔍", group: "Team Ops", mobilePrimary: true },
   { href: "/slack", labelKey: "nav.slack", icon: "💬", group: "Team Ops" },
   { href: "/wakatime", labelKey: "nav.wakatime", icon: "⏱️", group: "Team Ops" },
+  { href: "/correlation", labelKey: "nav.correlation", icon: "⚡", group: "Team Ops" },
   { href: "/reports", labelKey: "nav.reports", icon: "📊", group: "Reporting", mobilePrimary: true },
   { href: "/webhooks", labelKey: "nav.webhooks", icon: "🔗", group: "Integrations" },
   { href: "/api-docs", labelKey: "nav.apiDocs", icon: "📚", group: "Integrations" },

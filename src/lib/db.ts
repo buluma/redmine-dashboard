@@ -197,6 +197,18 @@ async function ensureRuntimeTables(): Promise<void> {
     CREATE INDEX IF NOT EXISTS "WebhookDelivery_deliveredAt_idx"
     ON "WebhookDelivery"("deliveredAt");
   `);
+
+  // TimeEntry correlation columns
+  await executeRawIgnoreDuplicate(`
+    ALTER TABLE "TimeEntry" ADD COLUMN "source" TEXT;
+  `);
+  await executeRawIgnoreDuplicate(`
+    ALTER TABLE "TimeEntry" ADD COLUMN "wakaTimeDate" TEXT;
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE UNIQUE INDEX IF NOT EXISTS "TimeEntry_issueId_wakaTimeDate_key"
+    ON "TimeEntry"("issueId", "wakaTimeDate");
+  `);
 }
 
 void ensureRuntimeTables().catch((error) => {
