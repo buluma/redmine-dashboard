@@ -37,9 +37,10 @@ export async function syncWakaTimeSummaries(
       userId,
       date: { gte: formatDate(start), lte: formatDate(end) },
     },
-    select: { date: true },
+    select: { date: true, totalSeconds: true },
   });
   const existingDates = new Set(existing.map((r) => r.date));
+  const existingSeconds = new Map(existing.map((r) => [r.date, r.totalSeconds]));
 
   let synced = 0;
   let skipped = 0;
@@ -65,6 +66,12 @@ export async function syncWakaTimeSummaries(
         continue;
       }
       if (day.grand_total.total_seconds === 0 && !existingDates.has(date)) {
+        skipped++;
+        continue;
+      }
+      // Don't overwrite higher-quality data from a previous source
+      const priorSeconds = existingSeconds.get(date) ?? 0;
+      if (isRecent && day.grand_total.total_seconds < priorSeconds) {
         skipped++;
         continue;
       }
