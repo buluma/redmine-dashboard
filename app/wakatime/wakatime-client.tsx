@@ -462,6 +462,30 @@ export function WakatimeChartsClient({
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              setError(null);
+              try {
+                const res = await fetch("/api/wakatime/history", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ days: 14 }),
+                });
+                if (!res.ok) throw new Error("Sync failed");
+                await handleRangeChange(selectedRange);
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "Sync failed");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {busy ? "Syncing..." : "Sync WakaTime"}
+          </button>
         </div>
         {error && <p className="error-banner" style={{ marginTop: "0.65rem" }}>{error}</p>}
       </section>
