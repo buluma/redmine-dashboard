@@ -6,6 +6,7 @@
  */
 
 import https from 'https';
+import http from 'http';
 import { trackInfo, trackFailure } from '@/src/lib/telemetry';
 
 export const WAKATIME_RANGE_OPTIONS = [
@@ -288,30 +289,31 @@ export function isWakaTimeApiError(err: unknown): err is WakaTimeApiError {
 
 // ─── Client ──────────────────────────────────────────────────────────────
 
-const BASE = "https://api.wakatime.com/api/v1";
+const DEFAULT_BASE = "https://api.wakatime.com/api/v1";
 
 export class WakaTimeClient {
   private apiKey: string;
+  private baseUrl: string;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, baseUrl?: string) {
     if (!apiKey) {
       throw new Error("WakaTime API key not configured. Set WAKATIME_API_KEY in your environment.");
     }
     this.apiKey = apiKey;
+    this.baseUrl = (baseUrl ?? process.env.WAKATIME_BASE_URL ?? DEFAULT_BASE).replace(/\/+$/, "");
   }
 
   private async get<T>(path: string, options?: { quiet?: boolean }): Promise<T> {
     const quiet = Boolean(options?.quiet);
     // Build URL - if path already has query params, use &, otherwise use ?
     const separator = path.includes('?') ? '&' : '?';
-    const url = `${BASE}${path}${separator}api_key=${this.apiKey}`;
+    const url = `${this.baseUrl}${path}${separator}api_key=${this.apiKey}`;
     if (!quiet) {
       trackInfo("wakatime.fetch.started", { path });
     }
 
     try {
-      // Force IPv4 by using Node's https module directly with family=4
-      const result = await this.httpsGet(url);
+      const result = await this.httpGet(url);
       if (!quiet) {
         trackInfo("wakatime.fetch.completed", { status: result.status });
       }
@@ -378,22 +380,24 @@ export class WakaTimeClient {
     }
   }
 
-  /**
-   * Helper method to make HTTP requests using Node.js https with IPv4 forcing
-   */
-  private httpsGet(url: string): Promise<{ status: number; body: string }> {
+  private httpGet(url: string): Promise<{ status: number; body: string }> {
+    const isHttps = url.startsWith("https://");
+    const mod = isHttps ? https : http;
     return new Promise((resolve, reject) => {
-      // Create a custom agent with IPv4 only and proper TLS settings
-      const agent = new https.Agent({
-        family: 4,  // Force IPv4 only
+      const agentOpts: Record<string, unknown> = {
         keepAlive: true,
         keepAliveMsecs: 30000,
         timeout: 15000,
-        // Allow older TLS versions that some servers might need
-        secureProtocol: 'TLSv1_2_method',
-      });
+      };
+      if (isHttps) {
+        agentOpts.family = 4;
+        agentOpts.secureProtocol = 'TLSv1_2_method';
+      }
+      const agent = isHttps
+        ? new https.Agent(agentOpts as https.AgentOptions)
+        : new http.Agent(agentOpts as http.AgentOptions);
 
-      const req = https.get(url, {
+      const req = mod.get(url, {
         agent,
         headers: {
           'Content-Type': 'application/json',
@@ -403,14 +407,14 @@ export class WakaTimeClient {
         timeout: 15000,
       }, (res) => {
         let body = '';
-        res.on('data', (chunk) => { body += chunk; });
+        res.on('data', (chunk: string) => { body += chunk; });
         res.on('end', () => {
-          agent.destroy();  // Close the agent when done
+          agent.destroy();
           resolve({ status: res.statusCode || 0, body });
         });
       });
-      
-      req.on('error', (e) => { agent.destroy(); reject(e); });
+
+      req.on('error', (e: Error) => { agent.destroy(); reject(e); });
       req.on('timeout', () => { req.destroy(); agent.destroy(); reject(new Error('Request timeout')); });
       req.end();
     });
