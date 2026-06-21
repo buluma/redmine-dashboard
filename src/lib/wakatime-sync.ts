@@ -1,5 +1,5 @@
 import { prisma } from "@/src/lib/db";
-import { WakaTimeClient, type WakaTimeBreakdown, type WakaTimeSummaryDay, type WakaTimeGoalsResponse } from "@/src/lib/wakatime";
+import { WakaTimeClient, type WakaTimeBreakdown, type WakaTimeSummaryDay, type WakaTimeGoalsResponse, type WakaTimeTodayResponse } from "@/src/lib/wakatime";
 import { trackInfo, trackFailure } from "@/src/lib/telemetry";
 
 function toBreakdownJson(items: WakaTimeBreakdown[]) {
@@ -165,5 +165,22 @@ export function buildGoalsFromDb(
       is_enabled: true,
       chart_data: chartData,
     }],
+  };
+}
+
+export function buildTodayFromDb(todaySeconds: number, date: string): WakaTimeTodayResponse {
+  const hrs = Math.floor(todaySeconds / 3600);
+  const mins = Math.floor((todaySeconds % 3600) / 60);
+  return {
+    data: {
+      id: date,
+      kind: "day",
+      user_id: "",
+      range: { date, start: date, end: date },
+      total_seconds: todaySeconds,
+      text: `${hrs} hrs ${mins} mins`,
+      digital: `${hrs}:${String(mins).padStart(2, "0")}`,
+      decimal: (todaySeconds / 3600).toFixed(2),
+    },
   };
 }

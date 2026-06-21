@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionUserId } from '@/src/lib/session';
 import { prisma } from '@/src/lib/db';
-import { buildGoalsFromDb } from '@/src/lib/wakatime-sync';
+import { buildGoalsFromDb, buildTodayFromDb } from '@/src/lib/wakatime-sync';
 import {
   DEFAULT_WAKATIME_RANGE,
   getSummaryDateWindow,
@@ -119,7 +119,12 @@ export async function GET(request: Request) {
         summaries: summaryDays,
       } },
       allTime: null,
-      today: null,
+      today: (() => {
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const todayRow = rows.find((r) => r.date === todayStr);
+        return buildTodayFromDb(todayRow?.totalSeconds ?? 0, todayStr);
+      })(),
       insights: { weekday: null },
       goals: buildGoalsFromDb(rows.map((r) => ({ date: r.date, totalSeconds: r.totalSeconds }))),
       heartbeats: { start, end, days: [] },

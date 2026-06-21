@@ -5,7 +5,7 @@ import {
   DEFAULT_WAKATIME_RANGE,
   getSummaryDateWindow,
 } from "@/src/lib/wakatime";
-import { buildGoalsFromDb } from "@/src/lib/wakatime-sync";
+import { buildGoalsFromDb, buildTodayFromDb } from "@/src/lib/wakatime-sync";
 import { WakatimeChartsClient } from "./wakatime-client";
 import { WakatimeErrorView } from "./error-view";
 import { WakatimeHeader } from "./wakatime-header";
@@ -130,7 +130,12 @@ export default async function WakatimePage() {
         stats={stats}
         summaries={summaries}
         allTime={{ data: { id: 'all', user_id: userId, total_seconds: allTimeSeconds, text: formatDuration(allTimeSeconds), decimal: (allTimeSeconds / 3600).toFixed(2), digital: '', is_up_to_date: true, is_including_today: true, range: { start: '', end: '' }, timeout: 15 } }}
-        today={null}
+        today={(() => {
+          const now = new Date();
+          const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+          const todayRow = rows.find((r) => r.date === todayStr);
+          return buildTodayFromDb(todayRow?.totalSeconds ?? 0, todayStr);
+        })()}
         weekdayInsight={null}
         goals={buildGoalsFromDb(rows.map((r) => ({ date: r.date, totalSeconds: r.totalSeconds })))}
         heartbeatDays={[]}
