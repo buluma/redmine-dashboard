@@ -4,6 +4,11 @@
 - [ ] **Mobile Application** — Broken, explore alternative approaches using Electron, Ionic framework or Apache Cordova
 - [ ] **Later: Odysseus calendar-to-time-log workflow** — Infer Redmine time logs from calendar meetings in Odysseus, then submit approved entries through Converge APIs.
 
+### 🎫 Ticket Management
+- [ ] **Auto-reassign on resolve/close** — When resolving a ticket not created by you, reassign it back to the original author. When closing a ticket you created, set assignee to Nobody (user ID 25).
+- [ ] **Promote personal ticket to Redmine** — Action button on local/personal tickets to push them to Redmine as real issues, mapping subject, description, status, priority, and time entries.
+- [ ] **Notifications don't clear on mark as read** — Marking notifications as read does not visually clear them from the list.
+
 ### 🔧 Technical Debt
 - [x] **Split `app/page.tsx`** — Extracted types → `src/types/dashboard.ts`, utils → `src/lib/issue-utils.ts`, MarkdownBlock → `src/components/MarkdownBlock.tsx`. Deleted 630+ lines of dead drawer code and dead state/handlers. Page down from 3026 → 1926 lines.
 - [x] **Enable TypeScript strict build** — Fixed all 6 TS errors. Removed `ignoreBuildErrors` flag from `next.config.ts`.
