@@ -84,10 +84,18 @@ function parseChildren(value: JsonValue | null): IssueChildView[] {
   return result;
 }
 
-export function toIssueView<T extends { allowedStatusesJson: JsonValue | null; childrenJson: JsonValue | null }>(issue: T) {
-  const { allowedStatusesJson, childrenJson, ...rest } = issue;
+function mapJournals(journals: Array<{ detailsJson?: JsonValue | null; [key: string]: unknown }>) {
+  return journals.map(({ detailsJson, ...rest }) => ({
+    ...rest,
+    details: Array.isArray(detailsJson) ? detailsJson : [],
+  }));
+}
+
+export function toIssueView<T extends { allowedStatusesJson: JsonValue | null; childrenJson: JsonValue | null; journals?: Array<{ detailsJson?: JsonValue | null; [key: string]: unknown }> }>(issue: T) {
+  const { allowedStatusesJson, childrenJson, journals, ...rest } = issue;
   return {
     ...rest,
+    ...(journals ? { journals: mapJournals(journals) } : {}),
     allowedStatuses: parseAllowedStatuses(allowedStatusesJson),
     children: parseChildren(childrenJson),
   };

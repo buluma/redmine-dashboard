@@ -20,10 +20,18 @@ import { AttachmentsSection } from "@/src/components/issue-detail/AttachmentsSec
 import { GithubLinksSection, type GithubLinkCreatePayload } from "@/src/components/issue-detail/GithubLinksSection";
 import { RelationsSection } from "@/src/components/issue-detail/RelationsSection";
 
+type JournalDetail = {
+  property: string;
+  name: string;
+  old_value: string;
+  new_value: string;
+};
+
 type Journal = {
   id: string;
   author: string | null;
   notes: string | null;
+  details?: JournalDetail[];
   createdOnRemote: string;
 };
 
@@ -960,7 +968,7 @@ export default function IssueDetailPage() {
 
   const historyJournals = useMemo(() => {
     if (!issue) return [];
-    return issue.journals.filter((journal) => Boolean(journal.notes?.trim()));
+    return issue.journals.filter((journal) => Boolean(journal.notes?.trim()) || (Array.isArray(journal.details) && journal.details.length > 0));
   }, [issue]);
 
   const noteJournals = historyJournals;
@@ -1724,12 +1732,23 @@ export default function IssueDetailPage() {
                   <p className="muted">
                     <strong>{journal.author ?? t("issues.empty.unknown")}</strong> • {formatAgo(journal.createdOnRemote, t)}
                   </p>
-                  <MarkdownBlock
-                    content={journal.notes ?? ""}
-                    attachments={issue.attachments}
-                    issueId={issue.redmineIssueId ?? undefined}
-                    onImageClick={(src, alt) => setLightboxImage({ src, alt })}
-                  />
+                  {journal.notes?.trim() ? (
+                    <MarkdownBlock
+                      content={journal.notes}
+                      attachments={issue.attachments}
+                      issueId={issue.redmineIssueId ?? undefined}
+                      onImageClick={(src, alt) => setLightboxImage({ src, alt })}
+                    />
+                  ) : null}
+                  {Array.isArray(journal.details) && journal.details.length > 0 && (
+                    <ul className="journal-details">
+                      {journal.details.map((d, i) => (
+                        <li key={i}>
+                          <strong>{d.name}</strong> changed from <em>{d.old_value || "(none)"}</em> to <em>{d.new_value || "(none)"}</em>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </article>
               ))}
             </div>
