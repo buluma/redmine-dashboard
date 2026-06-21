@@ -325,7 +325,7 @@ export default function Home() {
 
       if (openState) {
         open += 1;
-        openUpdateAgeDays += ageDays;
+        if (!blockedState) openUpdateAgeDays += ageDays;
       }
       if (isInProgressStatus(issue.statusName)) inProgress += 1;
       if (isDoneStatus(issue.statusName)) done += 1;
@@ -420,7 +420,7 @@ export default function Home() {
       dueToday,
       completion,
       avgDoneRatio,
-      avgOpenAgeDays: open > 0 ? Math.round(openUpdateAgeDays / open) : 0,
+      avgOpenAgeDays: (open - blocked) > 0 ? Math.round(openUpdateAgeDays / (open - blocked)) : 0,
       topStatuses,
       priorityMix,
       atRisk,
