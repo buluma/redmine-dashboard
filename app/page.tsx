@@ -239,7 +239,7 @@ export default function Home() {
     return priorities.map((name, index) => ({ id: index + 1, name }));
   }, [issues, priorities]);
 
-  const visibleIssues = useMemo(() => {
+  const baseFilteredIssues = useMemo(() => {
     let filtered = issues;
 
     if (selectedProject) {
@@ -254,6 +254,22 @@ export default function Home() {
 
     return filtered;
   }, [advancedFilters, favoriteIssueIds, issues, selectedProject, showFavoritesOnly]);
+
+  const visibleIssues = useMemo(() => {
+    if (statusFilter === "Open") {
+      return baseFilteredIssues.filter((issue) => isOpenStatus(issue.statusName));
+    }
+    if (statusFilter === "Blocked") {
+      return baseFilteredIssues.filter((issue) => isBlockedStatus(issue.statusName));
+    }
+    if (statusFilter === "Overdue") {
+      return baseFilteredIssues.filter((issue) => issueUrgency(issue) === "overdue");
+    }
+    if (statusFilter) {
+      return baseFilteredIssues.filter((issue) => issue.statusName === statusFilter);
+    }
+    return baseFilteredIssues;
+  }, [baseFilteredIssues, statusFilter]);
 
 
   const allVisibleIssueIds = useMemo(
@@ -297,7 +313,7 @@ export default function Home() {
     let totalProgress = 0;
     let openUpdateAgeDays = 0;
 
-    for (const issue of visibleIssues) {
+    for (const issue of baseFilteredIssues) {
       byStatus.set(issue.statusName, (byStatus.get(issue.statusName) ?? 0) + 1);
       byPriority.set(issue.priority ?? "Unspecified", (byPriority.get(issue.priority ?? "Unspecified") ?? 0) + 1);
 
@@ -376,7 +392,7 @@ export default function Home() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
 
-    const count = visibleIssues.length || 1;
+    const count = baseFilteredIssues.length || 1;
     const completion = Math.round((done / count) * 100);
     const avgDoneRatio = Math.round(totalProgress / count);
 
@@ -392,7 +408,7 @@ export default function Home() {
       .slice(0, 12);
 
     return {
-      totalVisible: visibleIssues.length,
+      totalVisible: baseFilteredIssues.length,
       total,
       open,
       inProgress,
@@ -410,11 +426,10 @@ export default function Home() {
       atRisk,
       recentActivity,
     };
-  }, [total, visibleIssues]);
+  }, [total, baseFilteredIssues]);
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
-    if (statusFilter) params.set("status", statusFilter);
     if (priorityFilter) params.set("priority", priorityFilter);
     if (search) params.set("search", search);
     if (advancedFilters.assignedToMe) params.set("assignedToMe", "true");
@@ -423,7 +438,7 @@ export default function Home() {
     if (sort) params.set("sort", sort);
     params.set("page", "1");
     return params.toString();
-  }, [priorityFilter, search, searchMode, sort, statusFilter, advancedFilters.assignedToMe]);
+  }, [priorityFilter, search, searchMode, sort, advancedFilters.assignedToMe]);
 
   useEffect(() => {
     if (!heroRef.current) return;
