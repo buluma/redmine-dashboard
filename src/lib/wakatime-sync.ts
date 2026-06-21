@@ -58,7 +58,7 @@ export async function syncWakaTimeSummaries(
     const raw = resp.data as unknown;
     const summaries = Array.isArray(raw) ? raw as WakaTimeSummaryDay[] : (raw as { summaries?: WakaTimeSummaryDay[] }).summaries ?? [];
     for (const day of summaries) {
-      const date = day.range.start.split("T")[0];
+      const date = day.range.end.split("T")[0];
       const isRecent = recentDates.has(date);
       if (!isRecent && existingDates.has(date)) {
         skipped++;
