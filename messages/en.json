@@ -151,7 +151,10 @@
       "noProject": "No Project",
       "noPriority": "No Priority",
       "unassigned": "Unassigned",
-      "unset": "Unset"
+      "unset": "Unset",
+      "history": "No history yet",
+      "notes": "No notes",
+      "properties": "No properties"
     },
     "placeholders": {
       "comment": "Add a comment...",
