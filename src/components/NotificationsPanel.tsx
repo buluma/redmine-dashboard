@@ -45,17 +45,22 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
     }
   }, []);
 
-  // Initial fetch and polling
+  // Initial fetch and polling — pause when tab is hidden to avoid fetch errors
   useEffect(() => {
     const initialLoad = window.setTimeout(() => {
       void fetchNotifications();
     }, 0);
-    const interval = window.setInterval(() => {
-      void fetchNotifications();
+    let interval = window.setInterval(() => {
+      if (!document.hidden) void fetchNotifications();
     }, pollingInterval);
+    const onVisibility = () => {
+      if (!document.hidden) void fetchNotifications();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.clearTimeout(initialLoad);
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [fetchNotifications, pollingInterval]);
 
