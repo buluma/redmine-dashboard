@@ -11,6 +11,9 @@
 - [x] **Split `globals.css`** — Split 7569-line monolith into `globals.css` (2161 lines, foundation) + `app/styles/components.css`, `dashboard-detail.css`, `reports-ai.css`, `issue-ui.css`. Imported in order from `layout.tsx`.
 - [x] **Login page + auth redirect** — `/login` page with manual connect + env bootstrap. Middleware redirects unauthenticated requests.
 
+### 📊 Data
+- [ ] **Store WakaTime history locally** — Sync daily summaries (projects, languages, editors) into a local DB table so historical queries don't depend on the WakaTime API. Enables correlating coding activity with Redmine tickets without live API calls or date-range limits.
+
 ### 🏗️ Infrastructure
 - [ ] **Migrate Pi from SQLite to PostgreSQL** — Architecture doc flags SQLite as MVP-only. Concurrent writes lock. Docker Compose Postgres config already exists (`docker-compose.postgres.yml`).
 - [ ] **Streamline log pruning** — Poller ingests 300 records every 5 min with no retention policy. Unbounded DB growth on Pi (disk already at 73%).
