@@ -21,6 +21,27 @@ interface NotificationsPanelProps {
   pollingInterval?: number; // ms, default 30000 (30s)
 }
 
+const READ_IDS_KEY = "converge:notifications:read";
+
+function getReadIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(READ_IDS_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as { ids: string[]; ts: number };
+    if (Date.now() - parsed.ts > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(READ_IDS_KEY);
+      return new Set();
+    }
+    return new Set(parsed.ids);
+  } catch { return new Set(); }
+}
+
+function persistReadIds(ids: Set<string>) {
+  try {
+    localStorage.setItem(READ_IDS_KEY, JSON.stringify({ ids: [...ids], ts: Date.now() }));
+  } catch { /* ignore */ }
+}
+
 export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPanelProps) {
   const { t } = useI18n();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -29,6 +50,9 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
   const [isPushSupported, setIsPushSupported] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isPushLoading, setIsPushLoading] = useState(false);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => { setReadIds(getReadIds()); }, []);
 
   const fetchNotifications = useCallback(async () => {
     setIsLoading(true);
@@ -36,7 +60,12 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
       const res = await fetch("/api/notifications");
       if (res.ok) {
         const data = await res.json();
-        setNotifications(data.notifications || []);
+        const saved = getReadIds();
+        const items = (data.notifications || []).map((n: Notification) => ({
+          ...n,
+          read: n.read || saved.has(n.id),
+        }));
+        setNotifications(items);
       }
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
@@ -132,12 +161,24 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAsRead = (id: string) => {
+    setReadIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      persistReadIds(next);
+      return next;
+    });
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
   };
 
   const markAllRead = () => {
+    setReadIds((prev) => {
+      const next = new Set(prev);
+      for (const n of notifications) next.add(n.id);
+      persistReadIds(next);
+      return next;
+    });
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
