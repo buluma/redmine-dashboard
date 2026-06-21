@@ -7,7 +7,7 @@
 ### 🎫 Ticket Management
 - [ ] **Auto-reassign on resolve/close** — When resolving a ticket not created by you, reassign it back to the original author. When closing a ticket you created, set assignee to Nobody (user ID 25).
 - [ ] **Promote personal ticket to Redmine** — Action button on local/personal tickets to push them to Redmine as real issues, mapping subject, description, status, priority, and time entries.
-- [ ] **Notifications don't clear on mark as read** — Marking notifications as read does not visually clear them from the list.
+- [x] **Notifications don't clear on mark as read** — Fixed: read IDs persisted in localStorage (24h TTL), applied on each fetch.
 
 ### 🔧 Technical Debt
 - [x] **Split `app/page.tsx`** — Extracted types → `src/types/dashboard.ts`, utils → `src/lib/issue-utils.ts`, MarkdownBlock → `src/components/MarkdownBlock.tsx`. Deleted 630+ lines of dead drawer code and dead state/handlers. Page down from 3026 → 1926 lines.
