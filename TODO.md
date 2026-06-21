@@ -5,7 +5,7 @@
 - [ ] **Later: Odysseus calendar-to-time-log workflow** — Infer Redmine time logs from calendar meetings in Odysseus, then submit approved entries through Converge APIs.
 
 ### 🎫 Ticket Management
-- [ ] **Auto-reassign on resolve/close** — When resolving a ticket not created by you, reassign it back to the original author. When closing a ticket you created, set assignee to Nobody (user ID 25).
+- [x] **Auto-reassign on resolve/close** — When resolving a ticket not created by you, reassign to original author. When closing your own ticket, assign to Nobody (ID 25). Applied in both internal status API and external PATCH endpoint.
 - [ ] **Promote personal ticket to Redmine** — Action button on local/personal tickets to push them to Redmine as real issues, mapping subject, description, status, priority, and time entries.
 - [x] **Notifications don't clear on mark as read** — Fixed: read IDs persisted in localStorage (24h TTL), applied on each fetch.
 
