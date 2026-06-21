@@ -59,7 +59,7 @@ SQL
 
     SQLITE_SCHEMA_PATH="${PRISMA_SCHEMA_PATH:-prisma/schema.dev.sqlite.prisma}"
     echo "Applying Prisma schema to SQLite DB using ${SQLITE_SCHEMA_PATH}..."
-    npx prisma db push --skip-generate --schema="$SQLITE_SCHEMA_PATH"
+    npx prisma db push --skip-generate --accept-data-loss --schema="$SQLITE_SCHEMA_PATH"
     ;;
   *)
     echo "Unsupported DATABASE_URL format: $DATABASE_URL_VALUE" >&2
