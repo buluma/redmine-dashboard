@@ -69,34 +69,27 @@ export async function GET(request: Request) {
       }
     });
     
-    // Also get WakaTime data for the period (if WakaTime model exists)
-    let byWakaProject = new Map<string, number>();
+    // WakaTime data from daily summaries
+    const byWakaProject = new Map<string, number>();
     let totalWakaHours = 0;
-    
-    try {
-      // @ts-ignore - WakaTime model may not exist
-      const wakaTimeData = await prisma.wakaTimeEntry?.findMany?.({
-        where: {
-          userId: user.id,
-          date: {
-            gte: start,
-            lte: end,
-          },
-        },
-        select: {
-          hours: true,
-          projectName: true,
-        },
-      }) ?? [];
-      
-      wakaTimeData.forEach((entry: any) => {
-        const project = entry.projectName || "Untracked";
-        const existing = byWakaProject.get(project) || 0;
-        byWakaProject.set(project, existing + entry.hours);
-        totalWakaHours += entry.hours;
-      });
-    } catch {
-      // WakaTime not configured, skip
+
+    const startStr = start.toISOString().split("T")[0];
+    const endStr = end.toISOString().split("T")[0];
+    const wakaRows = await prisma.wakaTimeDailySummary.findMany({
+      where: {
+        userId: user.id,
+        date: { gte: startStr, lte: endStr },
+      },
+      select: { projectsJson: true },
+    });
+
+    type WakaBreakdown = { name: string; total_seconds: number };
+    for (const row of wakaRows) {
+      for (const proj of (row.projectsJson as WakaBreakdown[] | null) ?? []) {
+        const hours = proj.total_seconds / 3600;
+        byWakaProject.set(proj.name, (byWakaProject.get(proj.name) ?? 0) + hours);
+        totalWakaHours += hours;
+      }
     }
     
     // Format output
