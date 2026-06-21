@@ -69,6 +69,8 @@ export async function PATCH(
 
     const data = parsed.data;
 
+    const before = await prisma.issue.findUnique({ where: { id }, select: { statusName: true, statusId: true, priority: true, assignedToName: true, doneRatio: true } });
+
     const issue = await prisma.issue.update({
       where: { id },
       data: {
@@ -83,6 +85,38 @@ export async function PATCH(
         lastActivityType: "local_update",
       },
     });
+
+    const details: Array<{ property: string; name: string; old_value: string; new_value: string }> = [];
+    if (before && data.statusName && data.statusName !== before.statusName) {
+      details.push({ property: "attr", name: "status", old_value: before.statusName, new_value: data.statusName });
+    }
+    if (before && data.priority && data.priority !== before.priority) {
+      details.push({ property: "attr", name: "priority", old_value: before.priority ?? "", new_value: data.priority });
+    }
+    if (before && data.assignedToName !== undefined && data.assignedToName !== before.assignedToName) {
+      details.push({ property: "attr", name: "assigned_to", old_value: before.assignedToName ?? "", new_value: data.assignedToName ?? "" });
+    }
+    if (before && data.doneRatio !== undefined && data.doneRatio !== before.doneRatio) {
+      details.push({ property: "attr", name: "done_ratio", old_value: String(before.doneRatio ?? 0), new_value: String(data.doneRatio ?? 0) });
+    }
+
+    if (details.length > 0) {
+      const maxJournal = await prisma.issueJournal.aggregate({
+        where: { issueId: id },
+        _max: { redmineJournalId: true },
+      });
+      const nextJournalId = (maxJournal._max.redmineJournalId ?? 0) + 1;
+      await prisma.issueJournal.create({
+        data: {
+          issueId: id,
+          redmineJournalId: nextJournalId,
+          author: user.displayName ?? user.emailOrUsername ?? "You",
+          notes: null,
+          detailsJson: details as unknown as Prisma.InputJsonValue,
+          createdOnRemote: new Date(),
+        },
+      });
+    }
 
     return NextResponse.json({ issue });
   } catch (error) {
