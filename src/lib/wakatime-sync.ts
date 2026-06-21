@@ -1,5 +1,5 @@
 import { prisma } from "@/src/lib/db";
-import { WakaTimeClient, type WakaTimeBreakdown, type WakaTimeSummaryDay } from "@/src/lib/wakatime";
+import { WakaTimeClient, type WakaTimeBreakdown, type WakaTimeSummaryDay, type WakaTimeGoalsResponse } from "@/src/lib/wakatime";
 import { trackInfo, trackFailure } from "@/src/lib/telemetry";
 
 function toBreakdownJson(items: WakaTimeBreakdown[]) {
@@ -126,4 +126,42 @@ export async function queryWakaTimeHistory(
     languages: row.languagesJson,
     editors: row.editorsJson,
   }));
+}
+
+const DAILY_GOAL_SECONDS = 5 * 3600;
+
+export function buildGoalsFromDb(
+  rows: Array<{ date: string; totalSeconds: number }>
+): WakaTimeGoalsResponse {
+  const chartData = rows.map((r) => {
+    const status = r.totalSeconds >= DAILY_GOAL_SECONDS ? "success" : "fail";
+    const hrs = Math.floor(r.totalSeconds / 3600);
+    const mins = Math.floor((r.totalSeconds % 3600) / 60);
+    const goalHrs = Math.floor(DAILY_GOAL_SECONDS / 3600);
+    return {
+      actual_seconds: r.totalSeconds,
+      actual_seconds_text: `${hrs} hrs ${mins} mins`,
+      goal_seconds: DAILY_GOAL_SECONDS,
+      goal_seconds_text: `${goalHrs} hrs`,
+      range_status: status as "success" | "fail",
+      range_status_reason: status === "success" ? "Goal met" : `${goalHrs}h goal not reached`,
+      range: { date: r.date },
+    };
+  });
+
+  const successDays = chartData.filter((d) => d.range_status === "success").length;
+  const overallStatus = chartData.length > 0 && successDays === chartData.length ? "success" : successDays > 0 ? "fail" : "pending";
+
+  return {
+    data: [{
+      id: "local-daily-coding-goal",
+      title: "Code 5 hrs per day",
+      custom_title: "Code 5 hrs per day",
+      type: "coding",
+      delta: "day",
+      status: overallStatus,
+      is_enabled: true,
+      chart_data: chartData,
+    }],
+  };
 }

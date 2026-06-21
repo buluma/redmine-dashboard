@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionUserId } from '@/src/lib/session';
 import { prisma } from '@/src/lib/db';
+import { buildGoalsFromDb } from '@/src/lib/wakatime-sync';
 import {
   DEFAULT_WAKATIME_RANGE,
   getSummaryDateWindow,
@@ -120,7 +121,7 @@ export async function GET(request: Request) {
       allTime: null,
       today: null,
       insights: { weekday: null },
-      goals: null,
+      goals: buildGoalsFromDb(rows.map((r) => ({ date: r.date, totalSeconds: r.totalSeconds }))),
       heartbeats: { start, end, days: [] },
     };
 
