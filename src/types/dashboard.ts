@@ -8,10 +8,18 @@ export type User = {
   displayName: string;
 };
 
+export type JournalDetail = {
+  property: string;
+  name: string;
+  old_value: string;
+  new_value: string;
+};
+
 export type Journal = {
   id: string;
   author: string | null;
   notes: string | null;
+  details: JournalDetail[];
   createdOnRemote: string;
 };
 
