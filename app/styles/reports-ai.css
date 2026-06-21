@@ -763,7 +763,7 @@
 }
 
 .reports-v2 .wakatime-bottom-grid {
-  align-items: start;
+  align-items: stretch;
 }
 
 .reports-v2 .wakatime-empty-state {
