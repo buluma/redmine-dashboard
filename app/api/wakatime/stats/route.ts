@@ -120,10 +120,8 @@ export async function GET(request: Request) {
       } },
       allTime: null,
       today: (() => {
-        const now = new Date();
-        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        const todayRow = rows.find((r) => r.date === todayStr);
-        return buildTodayFromDb(todayRow?.totalSeconds ?? 0, todayStr);
+        const lastRow = rows.length > 0 ? rows[rows.length - 1] : null;
+        return buildTodayFromDb(lastRow?.totalSeconds ?? 0, lastRow?.date ?? end);
       })(),
       insights: { weekday: null },
       goals: buildGoalsFromDb(rows.map((r) => ({ date: r.date, totalSeconds: r.totalSeconds }))),
