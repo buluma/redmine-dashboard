@@ -1248,13 +1248,27 @@ export default function IssueDetailPage() {
             }
           }}
           onAddTime={async (hours, comment) => {
-            await performAction({
-              type: "log_time",
-              issueId,
-              payload: { hours, comments: comment },
-              onSuccess: reloadIssue,
-              successMessage: t("issues.messages.timeLogged"),
-            });
+            if (issue.source === "local") {
+              const res = await fetch(`/api/issues/local/${issue.id}/time`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ hours, comments: comment }),
+              });
+              if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || "Failed to log time");
+              }
+              await reloadIssue();
+              setActionInfo(t("issues.messages.timeLogged"));
+            } else {
+              await performAction({
+                type: "log_time",
+                issueId,
+                payload: { hours, comments: comment },
+                onSuccess: reloadIssue,
+                successMessage: t("issues.messages.timeLogged"),
+              });
+            }
           }}
           statuses={transitionStatuses}
           users={users}
