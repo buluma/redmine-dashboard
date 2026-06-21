@@ -46,6 +46,13 @@ export async function POST(request: Request) {
 
     const data = parsed.data;
 
+    if (data.allowedStatusesJson === undefined || data.allowedStatusesJson === null) {
+      const catalog = await prisma.statusCatalog.findMany({ orderBy: { id: "asc" } });
+      data.allowedStatusesJson = catalog.length > 0
+        ? catalog.map((s) => ({ id: s.id, name: s.name, isClosed: s.isClosed }))
+        : [{ id: 1, name: "New" }, { id: 2, name: "In Progress" }, { id: 4, name: "Feedback" }, { id: 3, name: "Resolved" }, { id: 5, name: "Closed" }, { id: 6, name: "Pause" }, { id: 7, name: "Hold" }];
+    }
+
     // Auto-generate localIssueNumber (max + 1 for this user)
     const maxNumber = await prisma.issue.aggregate({
       where: { userId: user.id, source: "local" },
