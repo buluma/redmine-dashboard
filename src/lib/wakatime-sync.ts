@@ -1,5 +1,5 @@
 import { prisma } from "@/src/lib/db";
-import { WakaTimeClient, type WakaTimeBreakdown } from "@/src/lib/wakatime";
+import { WakaTimeClient, type WakaTimeBreakdown, type WakaTimeSummaryDay } from "@/src/lib/wakatime";
 import { trackInfo, trackFailure } from "@/src/lib/telemetry";
 
 function toBreakdownJson(items: WakaTimeBreakdown[]) {
@@ -35,37 +35,48 @@ export async function syncWakaTimeSummaries(
   });
   const existingDates = new Set(existing.map((r) => r.date));
 
-  const resp = await client.getSummaries({
-    start: formatDate(start),
-    end: formatDate(end),
-  });
-
   let synced = 0;
   let skipped = 0;
+  const BATCH_DAYS = 28;
 
-  for (const day of resp.data.summaries) {
-    const date = day.range.start.split("T")[0];
-    if (existingDates.has(date)) {
-      skipped++;
-      continue;
-    }
-    if (day.grand_total.total_seconds === 0) {
-      skipped++;
-      continue;
-    }
+  for (let batchStart = new Date(start); batchStart <= end; ) {
+    const batchEnd = new Date(batchStart);
+    batchEnd.setDate(batchEnd.getDate() + BATCH_DAYS - 1);
+    if (batchEnd > end) batchEnd.setTime(end.getTime());
 
-    await prisma.wakaTimeDailySummary.create({
-      data: {
-        userId,
-        date,
-        totalSeconds: day.grand_total.total_seconds,
-        projectsJson: toBreakdownJson(day.projects),
-        languagesJson: toBreakdownJson(day.languages),
-        editorsJson: toBreakdownJson(day.editors),
-        categoriesJson: toBreakdownJson(day.categories),
-      },
+    const resp = await client.getSummaries({
+      start: formatDate(batchStart),
+      end: formatDate(batchEnd),
     });
-    synced++;
+
+    const raw = resp.data as unknown;
+    const summaries = Array.isArray(raw) ? raw as WakaTimeSummaryDay[] : (raw as { summaries?: WakaTimeSummaryDay[] }).summaries ?? [];
+    for (const day of summaries) {
+      const date = day.range.start.split("T")[0];
+      if (existingDates.has(date)) {
+        skipped++;
+        continue;
+      }
+      if (day.grand_total.total_seconds === 0) {
+        skipped++;
+        continue;
+      }
+
+      await prisma.wakaTimeDailySummary.create({
+        data: {
+          userId,
+          date,
+          totalSeconds: day.grand_total.total_seconds,
+          projectsJson: toBreakdownJson(day.projects),
+          languagesJson: toBreakdownJson(day.languages),
+          editorsJson: toBreakdownJson(day.editors),
+          categoriesJson: toBreakdownJson(day.categories),
+        },
+      });
+      synced++;
+    }
+
+    batchStart.setDate(batchStart.getDate() + BATCH_DAYS);
   }
 
   trackInfo("wakatime.sync.completed", { userId, synced, skipped, days });
