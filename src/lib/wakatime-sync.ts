@@ -26,6 +26,12 @@ export async function syncWakaTimeSummaries(
   const start = new Date();
   start.setDate(start.getDate() - days + 1);
 
+  const today = formatDate(end);
+  const yesterdayDate = new Date(end);
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterday = formatDate(yesterdayDate);
+  const recentDates = new Set([today, yesterday]);
+
   const existing = await prisma.wakaTimeDailySummary.findMany({
     where: {
       userId,
@@ -53,25 +59,30 @@ export async function syncWakaTimeSummaries(
     const summaries = Array.isArray(raw) ? raw as WakaTimeSummaryDay[] : (raw as { summaries?: WakaTimeSummaryDay[] }).summaries ?? [];
     for (const day of summaries) {
       const date = day.range.start.split("T")[0];
-      if (existingDates.has(date)) {
+      const isRecent = recentDates.has(date);
+      if (!isRecent && existingDates.has(date)) {
         skipped++;
         continue;
       }
-      if (day.grand_total.total_seconds === 0) {
+      if (day.grand_total.total_seconds === 0 && !existingDates.has(date)) {
         skipped++;
         continue;
       }
 
-      await prisma.wakaTimeDailySummary.create({
-        data: {
-          userId,
-          date,
-          totalSeconds: day.grand_total.total_seconds,
-          projectsJson: toBreakdownJson(day.projects),
-          languagesJson: toBreakdownJson(day.languages),
-          editorsJson: toBreakdownJson(day.editors),
-          categoriesJson: toBreakdownJson(day.categories),
-        },
+      const data = {
+        userId,
+        date,
+        totalSeconds: day.grand_total.total_seconds,
+        projectsJson: toBreakdownJson(day.projects),
+        languagesJson: toBreakdownJson(day.languages),
+        editorsJson: toBreakdownJson(day.editors),
+        categoriesJson: toBreakdownJson(day.categories),
+      };
+
+      await prisma.wakaTimeDailySummary.upsert({
+        where: { userId_date: { userId, date } },
+        update: data,
+        create: data,
       });
       synced++;
     }
