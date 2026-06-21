@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionUserId } from '@/src/lib/session';
+import { prisma } from '@/src/lib/db';
 import {
   DEFAULT_WAKATIME_RANGE,
   getSummaryDateWindow,
@@ -63,6 +64,61 @@ export async function GET(request: Request) {
   const rawRange = url.searchParams.get('range');
   const range = isWakaTimeRange(rawRange) ? rawRange : DEFAULT_WAKATIME_RANGE;
   const { start, end } = getSummaryDateWindow(range);
+
+  if (range === 'today' || range === 'yesterday') {
+    try {
+      const row = await prisma.wakaTimeDailySummary.findUnique({
+        where: { userId_date: { userId, date: start } },
+      });
+      type Breakdown = { name: string; total_seconds: number; percent: number; text: string };
+      const projects = (row?.projectsJson as Breakdown[]) ?? [];
+      const languages = (row?.languagesJson as Breakdown[]) ?? [];
+      const editors = (row?.editorsJson as Breakdown[]) ?? [];
+      const categories = (row?.categoriesJson as Breakdown[]) ?? [];
+      const totalSeconds = row?.totalSeconds ?? 0;
+      const toBreakdown = (items: Breakdown[]) => items.map((b) => ({
+        name: b.name, total_seconds: b.total_seconds, percent: b.percent,
+        hours: Math.floor(b.total_seconds / 3600), minutes: Math.floor((b.total_seconds % 3600) / 60),
+        digital: `${Math.floor(b.total_seconds / 3600)}:${String(Math.floor((b.total_seconds % 3600) / 60)).padStart(2, '0')}`,
+        decimal: (b.total_seconds / 3600).toFixed(2), text: b.text,
+      }));
+      const hrs = Math.floor(totalSeconds / 3600);
+      const mins = Math.floor((totalSeconds % 3600) / 60);
+      const payload: WakaTimeReportPayload = {
+        range, generatedAt: new Date().toISOString(),
+        stats: { data: {
+          id: start, username: '', timeout: 15, writes_only: false, timezone: '',
+          range: { start, end, date_index: 0 }, holidays: 0,
+          total_seconds: totalSeconds, daily_average: totalSeconds,
+          daily_average_including_other_language: totalSeconds,
+          days_including_holidays: 1, days_minus_holidays: 1, edited_at: '',
+          languages: toBreakdown(languages), projects: toBreakdown(projects),
+          editors: toBreakdown(editors), operating_systems: [], categories: toBreakdown(categories), machines: [],
+        } },
+        summaries: { data: {
+          start, end, range, timeout: 15, writes_only: false, holidays: 0,
+          days_including_holidays: 1, days_minus_holidays: 1, total_seconds: totalSeconds,
+          daily_average: totalSeconds,
+          best_day: { id: start, total_seconds: totalSeconds, text: `${hrs} hrs ${mins} mins`, digital: `${hrs}:${String(mins).padStart(2, '0')}` },
+          average_days_including_holidays: totalSeconds, days_without_logging: totalSeconds > 0 ? 0 : 1,
+          human_readable_total: `${hrs} hrs ${mins} mins`,
+          human_readable_daily_average: `${hrs} hrs ${mins} mins`,
+          sum_of_daily_averages: totalSeconds,
+          summaries: [{
+            id: start, range: { start, end, date_index: 0 },
+            grand_total: { total_seconds: totalSeconds, text: `${hrs} hrs ${mins} mins`, digital: `${hrs}:${String(mins).padStart(2, '0')}` },
+            categories: toBreakdown(categories), projects: toBreakdown(projects),
+            languages: toBreakdown(languages), editors: toBreakdown(editors), operating_systems: [],
+          }],
+        } },
+        allTime: null, today: null, insights: { weekday: null }, goals: null,
+        heartbeats: { start, end, days: [] },
+      };
+      return NextResponse.json(payload);
+    } catch (err: unknown) {
+      return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed to load local stats' }, { status: 500 });
+    }
+  }
 
   try {
     const client = new WakaTimeClient(apiKey);

@@ -9,6 +9,8 @@ import https from 'https';
 import { trackInfo, trackFailure } from '@/src/lib/telemetry';
 
 export const WAKATIME_RANGE_OPTIONS = [
+  { label: "Today", value: "today", days: 1 },
+  { label: "Yesterday", value: "yesterday", days: 1 },
   { label: "Last 7 Days", value: "last_7_days", days: 7 },
   { label: "Last 30 Days", value: "last_30_days", days: 30 },
   { label: "Last 6 Months", value: "last_6_months", days: 180 },
@@ -40,9 +42,19 @@ function asDateOnlyLocal(date: Date): string {
 }
 
 export function getSummaryDateWindow(range: WakaTimeRange, now = new Date()): { start: string; end: string; days: number } {
-  const days = WAKATIME_RANGE_DAYS[range] ?? 7;
   const end = new Date(now);
   end.setHours(0, 0, 0, 0);
+
+  if (range === "yesterday") {
+    const yesterday = new Date(end);
+    yesterday.setDate(yesterday.getDate() - 1);
+    return { start: asDateOnlyLocal(yesterday), end: asDateOnlyLocal(yesterday), days: 1 };
+  }
+  if (range === "today") {
+    return { start: asDateOnlyLocal(end), end: asDateOnlyLocal(end), days: 1 };
+  }
+
+  const days = WAKATIME_RANGE_DAYS[range] ?? 7;
   const start = new Date(end);
   start.setDate(end.getDate() - (days - 1));
   return {
