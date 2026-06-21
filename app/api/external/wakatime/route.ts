@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: "No users" }, { status: 503 });
 
     const body = await request.json().catch(() => ({}));
-    const days = typeof body.days === "number" ? Math.min(body.days, 365) : 14;
+    const days = typeof body.days === "number" ? Math.min(body.days, 3650) : 14;
     const result = await syncWakaTimeSummaries(user.id, apiKey, { days });
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
