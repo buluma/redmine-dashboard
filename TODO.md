@@ -17,9 +17,12 @@
 - [x] **Resolve conflicting `.dashboard` CSS rules** — `dashboard.css` was never imported (dead file). Deleted.
 - [x] **Split `globals.css`** — Split 7569-line monolith into `globals.css` (2161 lines, foundation) + `app/styles/components.css`, `dashboard-detail.css`, `reports-ai.css`, `issue-ui.css`. Imported in order from `layout.tsx`.
 - [x] **Login page + auth redirect** — `/login` page with manual connect + env bootstrap. Middleware redirects unauthenticated requests.
+- [x] **Fix localStorage test failures** — Node 25's built-in `localStorage` lacks `.clear()` and conflicts with jsdom. Added Storage polyfill in `test-setup.ts`. All 456 tests pass (was 12 failing).
+- [x] **Fix broken time-export WakaTime query** — `time-export/route.ts` queried non-existent `wakaTimeEntry` model (silently returned `[]`). Replaced with `WakaTimeDailySummary.projectsJson` aggregation.
 
 ### 📊 Data
 - [x] **Store WakaTime history locally** — `WakaTimeDailySummary` model stores daily breakdowns (projects, languages, editors, categories). Sync via `POST /api/wakatime/history` or `POST /api/external/wakatime`. Query via GET with `?start=&end=&project=` filters.
+- [x] **Wakapi (self-hosted WakaTime)** — Converge syncs from Wakapi on Heimdal instead of WakaTime Cloud. Configurable base URL via `WAKATIME_BASE_URL`. Sync guard prevents overwriting higher-quality data. Full history since Feb 2018 (~2055h) backfilled.
 
 ### 🏗️ Infrastructure
 - [ ] **Migrate Pi from SQLite to PostgreSQL** — Architecture doc flags SQLite as MVP-only. Concurrent writes lock. Docker Compose Postgres config already exists (`docker-compose.postgres.yml`).
