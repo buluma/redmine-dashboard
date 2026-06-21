@@ -4,8 +4,8 @@ import { prisma } from "@/src/lib/db";
 import {
   DEFAULT_WAKATIME_RANGE,
   getSummaryDateWindow,
-  type WakaTimeReportPayload,
 } from "@/src/lib/wakatime";
+import { buildGoalsFromDb } from "@/src/lib/wakatime-sync";
 import { WakatimeChartsClient } from "./wakatime-client";
 import { WakatimeErrorView } from "./error-view";
 import { WakatimeHeader } from "./wakatime-header";
@@ -132,7 +132,7 @@ export default async function WakatimePage() {
         allTime={{ data: { id: 'all', user_id: userId, total_seconds: allTimeSeconds, text: formatDuration(allTimeSeconds), decimal: (allTimeSeconds / 3600).toFixed(2), digital: '', is_up_to_date: true, is_including_today: true, range: { start: '', end: '' }, timeout: 15 } }}
         today={null}
         weekdayInsight={null}
-        goals={null}
+        goals={buildGoalsFromDb(rows.map((r) => ({ date: r.date, totalSeconds: r.totalSeconds })))}
         heartbeatDays={[]}
         initialRange={range}
       />
