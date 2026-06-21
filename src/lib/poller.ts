@@ -4,6 +4,7 @@ import { env } from "@/src/lib/env";
 import { logEvent } from "@/src/lib/log";
 import { acquireLeaderLock } from "@/src/lib/leader-lock";
 import { runSyncJob } from "@/src/lib/sync";
+import { syncWakaTimeSummaries } from "@/src/lib/wakatime-sync";
 
 declare global {
   var __poller_started__: boolean | undefined;
@@ -35,6 +36,16 @@ async function pollTick(): Promise<void> {
     for (const u of users) {
       await runSyncJob(u.userId, "incremental");
     }
+
+    const wakaKey = process.env.WAKATIME_API_KEY;
+    if (wakaKey && users.length > 0) {
+      try {
+        await syncWakaTimeSummaries(users[0].userId, wakaKey, { days: 2 });
+      } catch (err) {
+        logEvent("poller.wakatime.failed", { error: err }, "warn");
+      }
+    }
+
     logEvent("poller.tick.completed", { ownerId, activeUserCount: users.length });
   } catch (error) {
     logEvent("poller.tick.failed", { ownerId, error }, "error");
