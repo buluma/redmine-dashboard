@@ -17,7 +17,7 @@
 - [x] **Login page + auth redirect** — `/login` page with manual connect + env bootstrap. Middleware redirects unauthenticated requests.
 
 ### 📊 Data
-- [ ] **Store WakaTime history locally** — Sync daily summaries (projects, languages, editors) into a local DB table so historical queries don't depend on the WakaTime API. Enables correlating coding activity with Redmine tickets without live API calls or date-range limits.
+- [x] **Store WakaTime history locally** — `WakaTimeDailySummary` model stores daily breakdowns (projects, languages, editors, categories). Sync via `POST /api/wakatime/history` or `POST /api/external/wakatime`. Query via GET with `?start=&end=&project=` filters.
 
 ### 🏗️ Infrastructure
 - [ ] **Migrate Pi from SQLite to PostgreSQL** — Architecture doc flags SQLite as MVP-only. Concurrent writes lock. Docker Compose Postgres config already exists (`docker-compose.postgres.yml`).
