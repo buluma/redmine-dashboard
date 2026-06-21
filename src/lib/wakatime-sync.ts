@@ -150,16 +150,18 @@ export function buildGoalsFromDb(
   });
 
   const successDays = chartData.filter((d) => d.range_status === "success").length;
-  const overallStatus = chartData.length > 0 && successDays === chartData.length ? "success" : successDays > 0 ? "fail" : "pending";
+  const successRate = chartData.length > 0 ? successDays / chartData.length : 0;
+  const overallStatus = successRate >= 0.8 ? "success" : successDays > 0 ? "fail" : "pending";
 
   return {
     data: [{
       id: "local-daily-coding-goal",
-      title: "Code 5 hrs per day",
-      custom_title: "Code 5 hrs per day",
+      title: `Code 5 hrs per day (${successDays}/${chartData.length} days)`,
+      custom_title: `Code 5 hrs per day (${successDays}/${chartData.length} days)`,
       type: "coding",
       delta: "day",
       status: overallStatus,
+      status_percent_calculated: Math.round(successRate * 100),
       is_enabled: true,
       chart_data: chartData,
     }],
