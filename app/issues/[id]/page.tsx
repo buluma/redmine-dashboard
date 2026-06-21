@@ -1192,19 +1192,31 @@ export default function IssueDetailPage() {
       </header>
 
       {/* Quick Actions Panel — only for Redmine issues */}
-      {issue.redmineIssueId && (
+      {(issue.redmineIssueId || issue.source === "local") && (
         <QuickActionsPanel
-          issueId={issue.redmineIssueId}
+          issueId={issue.redmineIssueId ?? 0}
             currentStatus={translateStatusLabel(issue.statusName, t)}
           currentAssignee={issue.assignedToName ?? undefined}
           onStatusChange={async (statusId) => {
-            await performAction({
-              type: "update_status",
-              issueId,
-              payload: { statusId },
-              onSuccess: reloadIssue,
-              successMessage: t("issues.messages.statusUpdated"),
-            });
+            if (issue.source === "local") {
+              const statusEntry = transitionStatuses.find((s) => s.id === statusId);
+              const res = await fetch(`/api/issues/local/${issue.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ statusId, statusName: statusEntry?.name ?? issue.statusName }),
+              });
+              if (!res.ok) throw new Error("Failed to update status");
+              await reloadIssue();
+              setActionInfo(t("issues.messages.statusUpdated"));
+            } else {
+              await performAction({
+                type: "update_status",
+                issueId,
+                payload: { statusId },
+                onSuccess: reloadIssue,
+                successMessage: t("issues.messages.statusUpdated"),
+              });
+            }
           }}
           onAssign={async (userId) => {
             await performAction({
