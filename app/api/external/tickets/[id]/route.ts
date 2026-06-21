@@ -144,6 +144,19 @@ export async function PATCH(
 
     await client.updateIssue(issue.redmineIssueId, updates as Parameters<typeof client.updateIssue>[1]);
 
+    const NOBODY_ID = 25;
+    const CLOSED_ID = 5;
+    const RESOLVED_ID = 3;
+    const targetStatus = updates.statusId as number | undefined;
+    if (targetStatus === CLOSED_ID || targetStatus === RESOLVED_ID) {
+      const detail = await client.getIssue(issue.redmineIssueId);
+      const issueData = detail.issue as { author?: { id: number } };
+      const authorId = issueData.author?.id;
+      const currentUserId = (await client.getCurrentUser()).id;
+      const reassignTo = authorId === currentUserId ? NOBODY_ID : (authorId ?? NOBODY_ID);
+      await client.updateIssue(issue.redmineIssueId, { assignedToId: reassignTo });
+    }
+
     const synced = await syncSingleIssue(user.id, client, issue.redmineIssueId, {
       pruneAttachments: false,
       pruneRelations: false,

@@ -61,7 +61,26 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return jsonError("Status transition is not allowed for this issue", 400);
     }
 
+    const NOBODY_ID = 25;
+    const CLOSED_STATUS_ID = 5;
+    const RESOLVED_STATUS_ID = 3;
+    const isClosingOrResolving = body.statusId === CLOSED_STATUS_ID || body.statusId === RESOLVED_STATUS_ID;
+
     await client.updateIssueStatus(issueId, body.statusId, body.note);
+
+    if (isClosingOrResolving) {
+      const issueData = detail.issue as { author?: { id: number }; assigned_to?: { id: number } };
+      const authorId = issueData.author?.id;
+      const currentUserId = (await client.getCurrentUser()).id;
+      const isAuthor = authorId === currentUserId;
+
+      if (isAuthor) {
+        await client.updateIssue(issueId, { assignedToId: NOBODY_ID });
+      } else if (authorId) {
+        await client.updateIssue(issueId, { assignedToId: authorId });
+      }
+    }
+
     const issue = await syncSingleIssue(user.id, client, issueId);
     trackSuccess({
       event: "issue.status.update.succeeded",
