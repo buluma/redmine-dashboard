@@ -148,7 +148,9 @@
       "subtickets": "No subtickets",
       "github": "No GitHub references linked yet",
       "noCategory": "No Category",
+      "noProject": "No Project",
       "noPriority": "No Priority",
+      "unassigned": "Unassigned",
       "unset": "Unset"
     },
     "placeholders": {
