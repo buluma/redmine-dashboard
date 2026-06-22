@@ -1739,6 +1739,17 @@
   font-size: 0.875rem;
 }
 
+.peek-journal-item .markdown h1,
+.peek-journal-item .markdown h2,
+.peek-journal-item .markdown h3,
+.peek-journal-item .markdown h4,
+.peek-journal-item .markdown h5,
+.peek-journal-item .markdown h6 {
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 700;
+}
+
 .peek-journal-meta {
   display: flex;
   justify-content: space-between;

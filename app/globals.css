@@ -1607,6 +1607,35 @@ label {
   gap: 0.35rem;
 }
 
+.timeline-item .markdown {
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.timeline-item .markdown h1,
+.timeline-item .markdown h2,
+.timeline-item .markdown h3,
+.timeline-item .markdown h4,
+.timeline-item .markdown h5,
+.timeline-item .markdown h6,
+.timeline-item .markdown p,
+.timeline-item .markdown li,
+.timeline-item .markdown td,
+.timeline-item .markdown th,
+.timeline-item .markdown blockquote {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.timeline-item .markdown h1,
+.timeline-item .markdown h2,
+.timeline-item .markdown h3,
+.timeline-item .markdown h4,
+.timeline-item .markdown h5,
+.timeline-item .markdown h6 {
+  font-weight: 700;
+}
+
 .issue-overview-grid {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
