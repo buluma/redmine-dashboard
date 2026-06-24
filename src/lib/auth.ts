@@ -4,6 +4,7 @@ import { logEvent } from "@/src/lib/log";
 import { verifyMobileToken } from "@/src/lib/mobile-auth";
 import { RedmineClient } from "@/src/lib/redmine";
 import { getSessionUserId, requireCsrf } from "@/src/lib/session";
+import { headers } from "next/headers";
 
 /**
  * HTTP methods that require CSRF protection (mutating operations)
@@ -17,21 +18,28 @@ export function isMutatingRequest(method: string | null): boolean {
   return method ? CSRF_PROTECTED_METHODS.includes(method.toUpperCase()) : false;
 }
 
-/**
- * Require authenticated user, optionally validating CSRF for mutating requests
- */
 export async function requireCurrentUser(validateCsrf = false) {
-  // Validate CSRF for mutating requests if requested
-  if (validateCsrf) {
-    await requireCsrf();
+  const sessionUserId = await getSessionUserId();
+
+  if (sessionUserId) {
+    if (validateCsrf) {
+      await requireCsrf();
+    }
+    const user = await prisma.user.findUnique({ where: { id: sessionUserId } });
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+    return user;
   }
-  
-  const userId = await getSessionUserId();
-  if (!userId) {
+
+  const headerStore = await headers();
+  const authHeader = headerStore.get("authorization");
+  const verified = authHeader ? await verifyMobileToken(authHeader) : null;
+  if (!verified) {
     throw new Error("Unauthorized");
   }
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.user.findUnique({ where: { id: verified.userId } });
   if (!user) {
     throw new Error("Unauthorized");
   }
