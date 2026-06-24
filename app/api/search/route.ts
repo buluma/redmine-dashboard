@@ -1,6 +1,6 @@
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
-import { getSessionUserId } from "@/src/lib/session";
+import { getAuthenticatedUserId } from "@/src/lib/auth";
 import { trackFailure } from "@/src/lib/telemetry";
 
 export const runtime = "nodejs";
@@ -27,7 +27,7 @@ const RECENCY_DAYS = 7;
 const OPEN_STATUSES = ['New', 'In Progress', 'Feedback', 'Assigned'];
 
 export async function GET(request: Request) {
-  const userId = await getSessionUserId();
+  const userId = await getAuthenticatedUserId();
   if (!userId) {
     return jsonError("Unauthorized", 401);
   }

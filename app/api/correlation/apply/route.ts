@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSessionUserId } from "@/src/lib/session";
+import { getAuthenticatedUserId } from "@/src/lib/auth";
 import { applyTimeEntries } from "@/src/lib/correlation";
 import { isRateLimited } from "@/src/lib/rate-limit";
 import { trackFailure } from "@/src/lib/telemetry";
@@ -14,7 +14,7 @@ const applySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const userId = await getSessionUserId();
+  const userId = await getAuthenticatedUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

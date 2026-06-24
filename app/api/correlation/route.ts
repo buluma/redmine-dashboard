@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSessionUserId } from "@/src/lib/session";
+import { getAuthenticatedUserId } from "@/src/lib/auth";
 import { correlateWakaTime } from "@/src/lib/correlation";
 import { getSummaryDateWindow, isWakaTimeRange, DEFAULT_WAKATIME_RANGE } from "@/src/lib/wakatime";
 import { trackFailure } from "@/src/lib/telemetry";
@@ -7,7 +7,7 @@ import { trackFailure } from "@/src/lib/telemetry";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const userId = await getSessionUserId();
+  const userId = await getAuthenticatedUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

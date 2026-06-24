@@ -91,6 +91,54 @@ describe("requireCurrentUser", () => {
   });
 });
 
+describe("getAuthenticatedUserId", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns userId from session cookie when present", async () => {
+    mockGetSessionUserId.mockResolvedValue("user_123");
+
+    const { getAuthenticatedUserId } = await import("@/src/lib/auth");
+    const result = await getAuthenticatedUserId();
+
+    expect(result).toBe("user_123");
+    expect(mockVerifyMobileToken).not.toHaveBeenCalled();
+  });
+
+  it("returns userId from Bearer token when no cookie", async () => {
+    mockGetSessionUserId.mockResolvedValue(null);
+    mockHeadersGet.mockReturnValue("Bearer mrt_test");
+    mockVerifyMobileToken.mockResolvedValue({ userId: "user_456", tokenRecordId: "t1" });
+
+    const { getAuthenticatedUserId } = await import("@/src/lib/auth");
+    const result = await getAuthenticatedUserId();
+
+    expect(result).toBe("user_456");
+  });
+
+  it("returns null when no cookie and no Bearer token", async () => {
+    mockGetSessionUserId.mockResolvedValue(null);
+    mockHeadersGet.mockReturnValue(null);
+
+    const { getAuthenticatedUserId } = await import("@/src/lib/auth");
+    const result = await getAuthenticatedUserId();
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null when Bearer token is invalid", async () => {
+    mockGetSessionUserId.mockResolvedValue(null);
+    mockHeadersGet.mockReturnValue("Bearer mrt_bad");
+    mockVerifyMobileToken.mockResolvedValue(null);
+
+    const { getAuthenticatedUserId } = await import("@/src/lib/auth");
+    const result = await getAuthenticatedUserId();
+
+    expect(result).toBeNull();
+  });
+});
+
 describe("requireCurrentUser Bearer token fallback", () => {
   beforeEach(() => {
     vi.clearAllMocks();

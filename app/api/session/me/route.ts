@@ -1,9 +1,10 @@
 import { prisma } from "@/src/lib/db";
-import { getSessionUserId, clearSessionCookie } from "@/src/lib/session";
+import { getAuthenticatedUserId } from "@/src/lib/auth";
+import { clearSessionCookie } from "@/src/lib/session";
 
 export async function GET() {
   try {
-    const userId = await getSessionUserId();
+    const userId = await getAuthenticatedUserId();
     if (!userId) {
       return Response.json({ user: null });
     }

@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { clearRateLimitState } from "@/src/lib/rate-limit";
 
 const {
-  mockGetSessionUserId,
+  mockGetAuthenticatedUserId,
   mockIssueFindMany,
   mockIssueUpdate,
   mockWakaFindMany,
   mockTimeEntryFindMany,
   mockTimeEntryCreate,
 } = vi.hoisted(() => ({
-  mockGetSessionUserId: vi.fn(),
+  mockGetAuthenticatedUserId: vi.fn(),
   mockIssueFindMany: vi.fn(),
   mockIssueUpdate: vi.fn(),
   mockWakaFindMany: vi.fn(),
@@ -17,8 +17,8 @@ const {
   mockTimeEntryCreate: vi.fn(),
 }));
 
-vi.mock("@/src/lib/session", () => ({
-  getSessionUserId: mockGetSessionUserId,
+vi.mock("@/src/lib/auth", () => ({
+  getAuthenticatedUserId: mockGetAuthenticatedUserId,
 }));
 
 vi.mock("@/src/lib/db", () => ({
@@ -61,7 +61,7 @@ describe("Correlation API routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearRateLimitState();
-    mockGetSessionUserId.mockResolvedValue("u1");
+    mockGetAuthenticatedUserId.mockResolvedValue("u1");
   });
 
   describe("GET /api/correlation", () => {
@@ -81,7 +81,7 @@ describe("Correlation API routes", () => {
     });
 
     it("returns 401 when unauthenticated", async () => {
-      mockGetSessionUserId.mockResolvedValue(null);
+      mockGetAuthenticatedUserId.mockResolvedValue(null);
 
       const { GET } = await import("@/app/api/correlation/route");
       const response = await GET(new Request("http://localhost/api/correlation"));

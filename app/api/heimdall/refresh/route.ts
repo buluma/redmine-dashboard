@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/db';
-import { getSessionUserId } from '@/src/lib/session';
+import { getAuthenticatedUserId } from '@/src/lib/auth';
 import { importStreamlineLogsFromAPI } from '@/src/lib/streamline-import';
 
 export const runtime = 'nodejs';
@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
  */
 export async function POST() {
   try {
-    const userId = await getSessionUserId();
+    const userId = await getAuthenticatedUserId();
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }

@@ -18,6 +18,18 @@ export function isMutatingRequest(method: string | null): boolean {
   return method ? CSRF_PROTECTED_METHODS.includes(method.toUpperCase()) : false;
 }
 
+export async function getAuthenticatedUserId(): Promise<string | null> {
+  const sessionUserId = await getSessionUserId();
+  if (sessionUserId) return sessionUserId;
+
+  const headerStore = await headers();
+  const authHeader = headerStore.get("authorization");
+  if (!authHeader) return null;
+
+  const verified = await verifyMobileToken(authHeader);
+  return verified?.userId ?? null;
+}
+
 export async function requireCurrentUser(validateCsrf = false) {
   const sessionUserId = await getSessionUserId();
 

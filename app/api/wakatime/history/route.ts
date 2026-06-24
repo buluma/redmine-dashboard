@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionUserId } from "@/src/lib/session";
+import { getAuthenticatedUserId } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { syncWakaTimeSummaries, queryWakaTimeHistory } from "@/src/lib/wakatime-sync";
 import { trackFailure } from "@/src/lib/telemetry";
@@ -7,7 +7,7 @@ import { trackFailure } from "@/src/lib/telemetry";
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
-  const userId = await getSessionUserId();
+  const userId = await getAuthenticatedUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const userId = await getSessionUserId();
+  const userId = await getAuthenticatedUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

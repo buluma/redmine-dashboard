@@ -100,8 +100,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user ID from session for audit logging
-    const { getSessionUserId } = await import("@/src/lib/session");
-    const userId = await getSessionUserId();
+    const { getAuthenticatedUserId } = await import("@/src/lib/auth");
+    const userId = await getAuthenticatedUserId();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
