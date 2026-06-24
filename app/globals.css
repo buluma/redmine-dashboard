@@ -2044,27 +2044,6 @@ label {
   margin: 0.35rem 0 0.35rem 1.15rem;
 }
 
-.markdown .contains-task-list {
-  list-style: none;
-  padding-left: 0.2rem;
-}
-
-.markdown .task-list-item {
-  position: relative;
-  padding-left: 1.4rem;
-}
-
-.markdown .task-list-item > input[type="checkbox"] {
-  position: absolute;
-  left: 0;
-  top: 0.3rem;
-  margin: 0;
-}
-
-.markdown .task-list-item > p {
-  margin: 0.2rem 0;
-  display: inline;
-}
 
 .markdown code {
   font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
