@@ -45,7 +45,9 @@ vi.mock("@/src/lib/sync", () => ({
   syncSingleIssue: mockSyncSingleIssue,
 }));
 
+const mockRequireCurrentUser = vi.fn();
 vi.mock("@/src/lib/auth", () => ({
+  requireCurrentUser: mockRequireCurrentUser,
   requireMobileUser: mockRequireMobileUser,
   requireRedmineClientForUser: mockRequireRedmineClientForUser,
 }));
@@ -274,5 +276,48 @@ describe("mobile v1 routes", () => {
     expect(mockRevokeMobileToken).toHaveBeenCalledWith("old-token-id");
     const body = await response.json();
     expect(body.token).toBe("mrt_new");
+  });
+
+  it("POST /api/mobile/tokens creates a new token for authenticated user", async () => {
+    mockRequireCurrentUser.mockResolvedValue({
+      id: "u1",
+      emailOrUsername: "alice",
+      displayName: "Alice",
+    });
+    mockCreateMobileToken.mockResolvedValue({
+      token: "mrt_cli_tok",
+      tokenRecordId: "cli-tok-id",
+      tokenPrefix: "mrt_cli_tok_",
+      expiresAt: null,
+    });
+
+    const { POST } = await import("@/app/api/mobile/tokens/route");
+    const response = await POST(
+      new Request("http://localhost/api/mobile/tokens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "cli" }),
+      })
+    );
+
+    expect(response.status).toBe(201);
+    const body = await response.json();
+    expect(body.token).toBe("mrt_cli_tok");
+    expect(mockCreateMobileToken).toHaveBeenCalledWith("u1", "cli");
+  });
+
+  it("POST /api/mobile/tokens returns 401 when not authenticated", async () => {
+    mockRequireCurrentUser.mockRejectedValue(new Error("Unauthorized"));
+
+    const { POST } = await import("@/app/api/mobile/tokens/route");
+    const response = await POST(
+      new Request("http://localhost/api/mobile/tokens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "test" }),
+      })
+    );
+
+    expect(response.status).toBe(401);
   });
 });
