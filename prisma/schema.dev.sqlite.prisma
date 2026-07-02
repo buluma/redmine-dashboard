@@ -139,7 +139,7 @@ model Issue {
   categoryName     String?
   startDate        DateTime?
   estimatedHours   Float?
-  spentHours       Float?
+  spentHours       Float?  @default(0)
   customFieldsJson  Json?
   updatedOnRemote  DateTime
   dueDate          DateTime?
