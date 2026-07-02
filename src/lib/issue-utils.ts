@@ -210,7 +210,9 @@ export function issueDisplayId(issue: Pick<Issue, "redmineIssueId" | "localIssue
     return `#${remote}`;
   }
   if (typeof issue.localIssueNumber === "number" && issue.localIssueNumber > 0) {
-    return `#${issue.localIssueNumber}`;
+    // Matches the external API's local-ticket convention (L-5), and keeps
+    // local numbering visually distinct from Redmine's #<id> space.
+    return `L-${issue.localIssueNumber}`;
   }
   return "#";
 }

@@ -1103,7 +1103,12 @@ export default function IssueDetailPage() {
             <p className="kicker">{translateTrackerLabel(issue.tracker, t)}</p>
             <div className="issue-title-line">
               {issue.source === "local" ? (
-                <span className="source-badge source-local">{t("issues.badges.local")}</span>
+                <>
+                  <span className="source-badge source-local">{t("issues.badges.local")}</span>
+                  {issue.localIssueNumber != null && (
+                    <span className="redmine-issue-link muted">L-{issue.localIssueNumber}</span>
+                  )}
+                </>
               ) : (
                 externalIssueUrl ? (
                   <a className="redmine-issue-link" href={externalIssueUrl} target="_blank" rel="noopener noreferrer">

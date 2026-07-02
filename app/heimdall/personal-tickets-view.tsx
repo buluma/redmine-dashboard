@@ -60,7 +60,7 @@ export function PersonalTicketsView({ issues }: PersonalTicketsViewProps) {
                   <div className="activity-body">
                     <div className="activity-head">
                       <span className="activity-issue">
-                        #{issue.localIssueNumber ?? "—"} {issue.subject}
+                        {issue.localIssueNumber != null ? `L-${issue.localIssueNumber}` : "—"} {issue.subject}
                       </span>
                       <span className="activity-time">{formatTimeAgo(issue.updatedAt)}</span>
                     </div>
