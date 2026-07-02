@@ -162,12 +162,14 @@ export async function correlateWakaTime(
     existingEntries.map((e) => `${e.issueId}:${e.wakaTimeDate}`)
   );
 
-  // Accumulate per-ticket, per-day data
+  // Accumulate per-ticket, per-day data. Keyed by date so a ticket with
+  // multiple matched repos active on the same day gets one summed entry
+  // per day, not one per repo (TimeEntry is unique on issueId+wakaTimeDate).
   const matchedMap = new Map<string, {
     match: TicketMatch;
-    perDay: Array<{ date: string; seconds: number }>;
+    perDayMap: Map<string, number>;
     totalSeconds: number;
-    alreadyLoggedDates: string[];
+    alreadyLoggedDates: Set<string>;
   }>();
 
   const unmatchedMap = new Map<string, {
@@ -185,22 +187,20 @@ export async function correlateWakaTime(
 
       if (match) {
         const key = match.ticket.id;
-        const existing = matchedMap.get(key);
         const loggedKey = `${match.ticket.id}:${row.date}`;
-        if (existing) {
-          existing.perDay.push({ date: row.date, seconds: proj.total_seconds });
-          existing.totalSeconds += proj.total_seconds;
-          if (loggedSet.has(loggedKey)) {
-            existing.alreadyLoggedDates.push(row.date);
-          }
-        } else {
-          matchedMap.set(key, {
-            match,
-            perDay: [{ date: row.date, seconds: proj.total_seconds }],
-            totalSeconds: proj.total_seconds,
-            alreadyLoggedDates: loggedSet.has(loggedKey) ? [row.date] : [],
-          });
+        const existing = matchedMap.get(key);
+        const entry = existing ?? {
+          match,
+          perDayMap: new Map<string, number>(),
+          totalSeconds: 0,
+          alreadyLoggedDates: new Set<string>(),
+        };
+        entry.perDayMap.set(row.date, (entry.perDayMap.get(row.date) ?? 0) + proj.total_seconds);
+        entry.totalSeconds += proj.total_seconds;
+        if (loggedSet.has(loggedKey)) {
+          entry.alreadyLoggedDates.add(row.date);
         }
+        if (!existing) matchedMap.set(key, entry);
       } else {
         const uKey = proj.name;
         const existing = unmatchedMap.get(uKey);
@@ -224,8 +224,10 @@ export async function correlateWakaTime(
     subject: m.match.ticket.subject,
     repo: m.match.link.repositoryFullName,
     totalSeconds: m.totalSeconds,
-    perDay: m.perDay,
-    alreadyLoggedDates: m.alreadyLoggedDates,
+    perDay: Array.from(m.perDayMap.entries())
+      .map(([date, seconds]) => ({ date, seconds }))
+      .sort((a, b) => a.date.localeCompare(b.date)),
+    alreadyLoggedDates: Array.from(m.alreadyLoggedDates),
   }));
 
   const unmatched: UnmatchedProject[] = Array.from(unmatchedMap.values());

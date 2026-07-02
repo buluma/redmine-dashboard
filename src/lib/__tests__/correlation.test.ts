@@ -191,6 +191,26 @@ describe("correlateWakaTime", () => {
     expect(result.matched[0].totalSeconds).toBe(10800);
     expect(result.matched[0].perDay).toHaveLength(2);
   });
+
+  it("merges same-day activity when a ticket has multiple linked repos", async () => {
+    mockIssueFindMany.mockResolvedValue([
+      localIssue("t1", 1, "Dashboard", ["buluma/redmine-dashboard", "buluma/openclaw-config", "buluma/odysseus"]),
+    ]);
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-30", [
+        { name: "redmine-dashboard", total_seconds: 138 },
+        { name: ".openclaw", total_seconds: 141 },
+        { name: "odysseus", total_seconds: 288 },
+      ]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([]);
+
+    const result = await correlateWakaTime(USER_ID, { start: "2026-06-30", end: "2026-06-30" });
+
+    expect(result.matched).toHaveLength(1);
+    expect(result.matched[0].totalSeconds).toBe(567);
+    expect(result.matched[0].perDay).toEqual([{ date: "2026-06-30", seconds: 567 }]);
+  });
 });
 
 describe("applyTimeEntries", () => {
@@ -256,6 +276,27 @@ describe("applyTimeEntries", () => {
     expect(result.totalHours).toBeCloseTo(2.0);
     expect(mockTimeEntryCreate).not.toHaveBeenCalled();
     expect(mockIssueUpdate).not.toHaveBeenCalled();
+  });
+
+  it("creates one entry per day even when multiple linked repos match the same date", async () => {
+    mockIssueFindMany.mockResolvedValue([
+      localIssue("t1", 1, "Dashboard", ["buluma/redmine-dashboard", "buluma/odysseus"]),
+    ]);
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-30", [
+        { name: "redmine-dashboard", total_seconds: 138 },
+        { name: "odysseus", total_seconds: 288 },
+      ]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([]);
+    mockTimeEntryCreate.mockResolvedValue({ id: "te-1" });
+    mockIssueUpdate.mockResolvedValue({});
+
+    const result = await applyTimeEntries(USER_ID, { start: "2026-06-30", end: "2026-06-30" });
+
+    expect(mockTimeEntryCreate).toHaveBeenCalledTimes(1);
+    expect(result.created).toBe(1);
+    expect(result.entries[0].hours).toBeCloseTo(0.12);
   });
 
   it("updates issue lastActivityAt and spentHours after logging", async () => {
