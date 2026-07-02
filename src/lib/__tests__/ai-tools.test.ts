@@ -10,23 +10,55 @@ import {
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
 
-const { mockLogEvent, mockIssueFindFirst, mockIssueFindMany, mockUserFindUnique } = vi.hoisted(() => ({
+const {
+  mockLogEvent,
+  mockIssueFindFirst,
+  mockIssueFindMany,
+  mockIssueUpdate,
+  mockUserFindUnique,
+  mockStatusCatalogFindMany,
+  mockJournalCreate,
+  mockJournalAggregate,
+  mockTimeEntryCreate,
+  mockCorrelateWakaTime,
+} = vi.hoisted(() => ({
   mockLogEvent: vi.fn(),
   mockIssueFindFirst: vi.fn(),
   mockIssueFindMany: vi.fn(),
+  mockIssueUpdate: vi.fn(),
   mockUserFindUnique: vi.fn(),
+  mockStatusCatalogFindMany: vi.fn(),
+  mockJournalCreate: vi.fn(),
+  mockJournalAggregate: vi.fn(),
+  mockTimeEntryCreate: vi.fn(),
+  mockCorrelateWakaTime: vi.fn(),
 }));
 
 vi.mock('@/src/lib/log', () => ({ logEvent: mockLogEvent }));
+
+vi.mock('@/src/lib/correlation', () => ({
+  correlateWakaTime: mockCorrelateWakaTime,
+}));
 
 vi.mock('@/src/lib/db', () => ({
   prisma: {
     issue: {
       findFirst: mockIssueFindFirst,
       findMany: mockIssueFindMany,
+      update: mockIssueUpdate,
     },
     user: {
       findUnique: mockUserFindUnique,
+    },
+    statusCatalog: {
+      findMany: mockStatusCatalogFindMany,
+    },
+    issueJournal: {
+      create: mockJournalCreate,
+      aggregate: mockJournalAggregate,
+    },
+    timeEntry: {
+      create: mockTimeEntryCreate,
     },
   },
 }));
@@ -96,8 +128,8 @@ describe('requiresConfirmation', () => {
 // ── toolDefinitions ───────────────────────────────────────────────────────
 
 describe('toolDefinitions', () => {
-  it('exports 9 tool definitions', () => {
-    expect(toolDefinitions).toHaveLength(9);
+  it('exports 10 tool definitions', () => {
+    expect(toolDefinitions).toHaveLength(10);
   });
 
   it('all definitions are type function', () => {
@@ -226,7 +258,7 @@ describe('get_issue handler', () => {
     const client = makeClient();
     const result = await executeTool(makeCall('get_issue', { issue_id: 1.5 }), client as any, USER_ID);
     expect(result.success).toBe(false);
-    expect(result.error).toContain('issue_id must be a positive integer');
+    expect(result.error).toContain('issue_id must be a Redmine issue ID');
   });
 
   it('rejects zero issue_id', async () => {
@@ -347,7 +379,7 @@ describe('update_status handler', () => {
       USER_ID,
     );
     expect(result.success).toBe(false);
-    expect(result.error).toContain('issue_id must be a positive integer');
+    expect(result.error).toContain('issue_id must be a Redmine issue ID');
   });
 
   it('rejects invalid status_id', async () => {
@@ -652,5 +684,231 @@ describe('executeTool RBAC', () => {
     );
     expect(result.success).toBe(true);
     expect(client.updateIssue).toHaveBeenCalled();
+  });
+});
+
+// ── Local ticket (L-N) support ────────────────────────────────────────────
+
+const LOCAL_ROW = {
+  id: 'cuid_local_5',
+  userId: USER_ID,
+  source: 'local',
+  localIssueNumber: 5,
+  redmineIssueId: null,
+  subject: 'Converge Dashboard Improvements',
+  statusId: 2,
+  statusName: 'In Progress',
+  priority: 'Normal',
+  assignedToName: 'MBU',
+  doneRatio: 20,
+  dueDate: null,
+  tracker: 'Task',
+  projectName: 'Personal',
+  description: 'Local ticket body',
+  updatedOnRemote: new Date('2026-07-01T00:00:00Z'),
+  spentHours: 3,
+  journals: [],
+  timeEntries: [],
+};
+
+describe('local ticket support', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUserFindUnique.mockResolvedValue({ id: USER_ID, role: 'ADMIN' });
+    mockIssueFindFirst.mockResolvedValue(LOCAL_ROW);
+    mockIssueUpdate.mockResolvedValue(LOCAL_ROW);
+    mockJournalAggregate.mockResolvedValue({ _max: { redmineJournalId: 3 } });
+    mockJournalCreate.mockResolvedValue({});
+    mockTimeEntryCreate.mockResolvedValue({ id: 'te1' });
+    mockStatusCatalogFindMany.mockResolvedValue([
+      { id: 1, name: 'New', isClosed: false },
+      { id: 2, name: 'In Progress', isClosed: false },
+      { id: 3, name: 'Resolved', isClosed: false },
+      { id: 5, name: 'Closed', isClosed: true },
+    ]);
+  });
+
+  it('get_issue resolves an L-N reference to the local ticket', async () => {
+    const client = makeClient();
+    const result = await executeTool(makeCall('get_issue', { issue_id: 'L-5' }), client as any, USER_ID);
+
+    expect(result.success).toBe(true);
+    expect(result.result).toMatchObject({ ref: 'L-5', subject: 'Converge Dashboard Improvements' });
+    expect(client.getIssue).not.toHaveBeenCalled();
+    expect(mockIssueFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ source: 'local', localIssueNumber: 5 }),
+      }),
+    );
+  });
+
+  it('search_issues returns L-N refs for local tickets', async () => {
+    mockIssueFindMany.mockResolvedValue([
+      { redmineIssueId: null, localIssueNumber: 5, source: 'local', subject: 'OpenWA', statusName: 'In Progress', priority: 'Normal', assignedToName: 'MBU', dueDate: null, updatedOnRemote: new Date() },
+      { redmineIssueId: 42, localIssueNumber: null, source: 'redmine', subject: 'Remote', statusName: 'New', priority: 'Normal', assignedToName: 'Alice', dueDate: null, updatedOnRemote: new Date() },
+    ]);
+    const result = await executeTool(makeCall('search_issues', { query: 'open' }), makeClient() as any, USER_ID);
+
+    expect(result.success).toBe(true);
+    const rows = (result.result as { issues: Array<{ ref: string }> }).issues;
+    expect(rows[0].ref).toBe('L-5');
+    expect(rows[1].ref).toBe('#42');
+  });
+
+  it('update_status on L-N updates the local row and writes a journal, without Redmine', async () => {
+    const client = makeClient();
+    const result = await executeTool(
+      makeCall('update_status', { issue_id: 'L-5', status_id: 3, note: 'done for now' }),
+      client as any,
+      USER_ID,
+    );
+
+    expect(result.success).toBe(true);
+    expect(client.updateIssueStatus).not.toHaveBeenCalled();
+    expect(mockIssueUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'cuid_local_5' },
+        data: expect.objectContaining({ statusId: 3, statusName: 'Resolved' }),
+      }),
+    );
+    expect(mockJournalCreate).toHaveBeenCalled();
+  });
+
+  it('log_time on L-N creates a TimeEntry and increments spentHours, without Redmine', async () => {
+    const client = makeClient();
+    const result = await executeTool(
+      makeCall('log_time', { issue_id: 'L-5', hours: 2.5, comment: 'pairing' }),
+      client as any,
+      USER_ID,
+    );
+
+    expect(result.success).toBe(true);
+    expect(client.addTimeEntry).not.toHaveBeenCalled();
+    expect(mockTimeEntryCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ issueId: 'cuid_local_5', hours: 2.5 }),
+      }),
+    );
+    expect(mockIssueUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ spentHours: { increment: 2.5 } }),
+      }),
+    );
+  });
+
+  it('add_comment on L-N writes a local journal entry, without Redmine', async () => {
+    const client = makeClient();
+    const result = await executeTool(
+      makeCall('add_comment', { issue_id: 'L-5', comment: 'note from chat' }),
+      client as any,
+      USER_ID,
+    );
+
+    expect(result.success).toBe(true);
+    expect(client.addComment).not.toHaveBeenCalled();
+    expect(mockJournalCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ issueId: 'cuid_local_5', notes: 'note from chat' }),
+      }),
+    );
+  });
+
+  it('close_issue on L-N sets the closed status from the catalog, without Redmine', async () => {
+    const client = makeClient();
+    const result = await executeTool(makeCall('close_issue', { issue_id: 'L-5' }), client as any, USER_ID);
+
+    expect(result.success).toBe(true);
+    expect(client.updateIssueStatus).not.toHaveBeenCalled();
+    expect(client.getIssueStatuses).not.toHaveBeenCalled();
+    expect(mockIssueUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ statusId: 5, statusName: 'Closed' }),
+      }),
+    );
+  });
+
+  it('update_issue on L-N updates local fields, without Redmine', async () => {
+    const client = makeClient();
+    const result = await executeTool(
+      makeCall('update_issue', { issue_id: 'L-5', done_ratio: 80 }),
+      client as any,
+      USER_ID,
+    );
+
+    expect(result.success).toBe(true);
+    expect(client.updateIssue).not.toHaveBeenCalled();
+    expect(mockIssueUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ doneRatio: 80 }),
+      }),
+    );
+  });
+
+  it('fails cleanly when the L-N ticket does not exist', async () => {
+    mockIssueFindFirst.mockResolvedValue(null);
+    const result = await executeTool(makeCall('get_issue', { issue_id: 'L-99' }), makeClient() as any, USER_ID);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/L-99/);
+  });
+});
+
+// ── get_time_summary ──────────────────────────────────────────────────────
+
+describe('get_time_summary handler', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUserFindUnique.mockResolvedValue({ id: USER_ID, role: 'VIEWER' });
+    mockCorrelateWakaTime.mockResolvedValue({
+      matched: [
+        {
+          ticketId: 'cuid_local_5',
+          localIssueNumber: 5,
+          subject: 'Converge Dashboard Improvements',
+          repo: 'buluma/odin',
+          totalSeconds: 7200,
+          perDay: [{ date: '2026-07-01', seconds: 7200 }],
+          alreadyLoggedDates: [],
+        },
+      ],
+      unmatched: [
+        { project: '.pi', totalSeconds: 3600, perDay: [{ date: '2026-07-01', seconds: 3600 }] },
+      ],
+    });
+  });
+
+  it('is a read-only VIEWER tool that needs no confirmation', () => {
+    expect(requiresConfirmation('get_time_summary')).toBe(false);
+    expect(toolDefinitions.some((t) => t.function.name === 'get_time_summary')).toBe(true);
+  });
+
+  it('summarizes tracked hours per ticket and unmatched projects for a range', async () => {
+    const result = await executeTool(
+      makeCall('get_time_summary', { start: '2026-06-26', end: '2026-07-02' }),
+      makeClient() as any,
+      USER_ID,
+    );
+
+    expect(result.success).toBe(true);
+    expect(mockCorrelateWakaTime).toHaveBeenCalledWith(USER_ID, { start: '2026-06-26', end: '2026-07-02' });
+    expect(result.result).toMatchObject({
+      start: '2026-06-26',
+      end: '2026-07-02',
+      totalTrackedHours: 2,
+      unmatchedHours: 1,
+    });
+    const summary = result.result as { perTicket: Array<{ ref: string; hours: number }> };
+    expect(summary.perTicket[0]).toMatchObject({ ref: 'L-5', hours: 2 });
+  });
+
+  it('rejects malformed date ranges', async () => {
+    const result = await executeTool(
+      makeCall('get_time_summary', { start: 'yesterday', end: '2026-07-02' }),
+      makeClient() as any,
+      USER_ID,
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/YYYY-MM-DD/);
   });
 });

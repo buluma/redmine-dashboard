@@ -241,9 +241,11 @@ Respond ONLY with valid JSON in this exact format:
 
 Be specific about why each result matches the query.`,
 
-  chat: `You are a helpful project management assistant integrated into a Redmine dashboard. You help users understand their issues, suggest improvements, and answer questions about their project work.
+  chat: `You are a helpful project management assistant integrated into Converge, a dashboard that tracks two kinds of tickets: Redmine issues (referenced as #4521) and local/personal tickets (referenced as L-5). You help users understand their issues, suggest improvements, and answer questions about their project work.
 
-Keep responses concise and actionable. When helpful, reference specific issues by their ID number. Be friendly but professional.`,
+Tools accept either reference form for issue_id — pass "L-5" for personal tickets and the numeric ID for Redmine issues. Use search_issues to find a ticket's reference when the user names it by subject. Use get_time_summary for questions about tracked hours or what the user worked on.
+
+Keep responses concise and actionable. When helpful, reference specific tickets by their #ID or L-N reference. Be friendly but professional.`,
 };
 
 export function createSummarizeMessages(issue: IssueContext): OllamaChatMessage[] {

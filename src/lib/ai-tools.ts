@@ -2,6 +2,7 @@ import type { RedmineClient } from './redmine';
 import { prisma } from './db';
 import { logEvent } from './log';
 import { getUserRole, type UserRole } from './rbac';
+import { correlateWakaTime } from './correlation';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -71,6 +72,7 @@ const TOOL_ROLE_REQUIREMENTS: Record<string, UserRole> = {
   search_issues: 'VIEWER',
   list_statuses: 'VIEWER',
   list_activities: 'VIEWER',
+  get_time_summary: 'VIEWER',
   // Routine mutations any user can perform.
   log_time: 'USER',
   add_comment: 'USER',
@@ -116,13 +118,13 @@ export const toolDefinitions: ToolDefinition[] = [
     function: {
       name: 'get_issue',
       description:
-        'Fetch full details of a Redmine issue by its Redmine issue ID. Returns subject, status, priority, assignee, due date, progress, and recent journals.',
+        'Fetch full details of a ticket by ID. Accepts a Redmine issue ID (e.g. 4521) or a local/personal ticket reference (e.g. "L-5"). Returns subject, status, priority, assignee, due date, progress, and recent journals.',
       parameters: {
         type: 'object',
         properties: {
           issue_id: {
-            type: 'number',
-            description: 'The Redmine issue ID (e.g. 4521).',
+            type: 'string',
+            description: 'The Redmine issue ID (e.g. "4521") or local ticket reference (e.g. "L-5").',
           },
         },
         required: ['issue_id'],
@@ -177,6 +179,28 @@ export const toolDefinitions: ToolDefinition[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'get_time_summary',
+      description:
+        'Summarize WakaTime-tracked coding hours for a date range: total hours, hours per ticket, and time on projects not yet linked to any ticket. Use for questions like "how many hours this week" or "what did I work on".',
+      parameters: {
+        type: 'object',
+        properties: {
+          start: {
+            type: 'string',
+            description: 'Range start date (YYYY-MM-DD). Defaults to 7 days ago.',
+          },
+          end: {
+            type: 'string',
+            description: 'Range end date (YYYY-MM-DD). Defaults to today.',
+          },
+        },
+        required: [],
+      },
+    },
+  },
 
   // --- Mutating tools (require confirmation) ------------------------------
   {
@@ -189,8 +213,8 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'object',
         properties: {
           issue_id: {
-            type: 'number',
-            description: 'The Redmine issue ID.',
+            type: 'string',
+            description: 'The Redmine issue ID (e.g. "4521") or local ticket reference (e.g. "L-5").',
           },
           status_id: {
             type: 'number',
@@ -215,8 +239,8 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'object',
         properties: {
           issue_id: {
-            type: 'number',
-            description: 'The Redmine issue ID.',
+            type: 'string',
+            description: 'The Redmine issue ID (e.g. "4521") or local ticket reference (e.g. "L-5").',
           },
           hours: {
             type: 'number',
@@ -224,7 +248,7 @@ export const toolDefinitions: ToolDefinition[] = [
           },
           activity_id: {
             type: 'number',
-            description: 'The activity type ID (use list_activities to find valid IDs).',
+            description: 'The activity type ID (use list_activities to find valid IDs). Required for Redmine issues; optional for local tickets (defaults to Development).',
           },
           comment: {
             type: 'string',
@@ -235,7 +259,7 @@ export const toolDefinitions: ToolDefinition[] = [
             description: 'Date the time was spent (YYYY-MM-DD). Defaults to today.',
           },
         },
-        required: ['issue_id', 'hours', 'activity_id'],
+        required: ['issue_id', 'hours'],
       },
     },
   },
@@ -248,8 +272,8 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'object',
         properties: {
           issue_id: {
-            type: 'number',
-            description: 'The Redmine issue ID.',
+            type: 'string',
+            description: 'The Redmine issue ID (e.g. "4521") or local ticket reference (e.g. "L-5").',
           },
           comment: {
             type: 'string',
@@ -270,8 +294,8 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'object',
         properties: {
           issue_id: {
-            type: 'number',
-            description: 'The Redmine issue ID.',
+            type: 'string',
+            description: 'The Redmine issue ID (e.g. "4521") or local ticket reference (e.g. "L-5").',
           },
           note: {
             type: 'string',
@@ -292,8 +316,8 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'object',
         properties: {
           issue_id: {
-            type: 'number',
-            description: 'The Redmine issue ID.',
+            type: 'string',
+            description: 'The Redmine issue ID (e.g. "4521") or local ticket reference (e.g. "L-5").',
           },
           due_date: {
             type: 'string',
@@ -377,19 +401,90 @@ async function runTool(
       return handleListStatuses(client);
     case 'list_activities':
       return handleListActivities(client);
+    case 'get_time_summary':
+      return handleGetTimeSummary(args, userId);
     case 'update_status':
-      return handleUpdateStatus(args, client);
+      return handleUpdateStatus(args, client, userId);
     case 'log_time':
-      return handleLogTime(args, client);
+      return handleLogTime(args, client, userId);
     case 'add_comment':
-      return handleAddComment(args, client);
+      return handleAddComment(args, client, userId);
     case 'close_issue':
-      return handleCloseIssue(args, client);
+      return handleCloseIssue(args, client, userId);
     case 'update_issue':
-      return handleUpdateIssue(args, client);
+      return handleUpdateIssue(args, client, userId);
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Ticket reference resolution (Redmine #ID vs local L-N)
+// ---------------------------------------------------------------------------
+
+type IssueRef =
+  | { kind: 'redmine'; id: number }
+  | { kind: 'local'; n: number };
+
+/** Parse "4521", 4521, "L-5", "l5" into a typed ticket reference. */
+function parseIssueRef(raw: unknown): IssueRef {
+  if (typeof raw === 'number' && Number.isInteger(raw) && raw > 0) {
+    return { kind: 'redmine', id: raw };
+  }
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    const localMatch = trimmed.match(/^[Ll]-?(\d+)$/);
+    if (localMatch) {
+      return { kind: 'local', n: parseInt(localMatch[1], 10) };
+    }
+    if (/^#?\d+$/.test(trimmed)) {
+      const id = parseInt(trimmed.replace('#', ''), 10);
+      if (id > 0) return { kind: 'redmine', id };
+    }
+  }
+  throw new Error('issue_id must be a Redmine issue ID (e.g. 4521) or a local ticket reference (e.g. "L-5")');
+}
+
+/** Fetch the local DB row for an L-N reference; throws when it does not exist. */
+async function requireLocalIssue(ref: { n: number }, userId: string) {
+  const issue = await prisma.issue.findFirst({
+    where: { userId, source: 'local', localIssueNumber: ref.n },
+  });
+  if (!issue) {
+    throw new Error(`Local ticket L-${ref.n} not found`);
+  }
+  return issue;
+}
+
+/**
+ * Append a journal entry to a local ticket, mirroring the conventions used
+ * by the external API's PATCH handler (sequential redmineJournalId).
+ */
+async function writeLocalJournal(
+  issueId: string,
+  notes: string | null,
+  details?: Array<{ property: string; name: string; old_value: string; new_value: string }>,
+) {
+  const maxJ = await prisma.issueJournal.aggregate({
+    where: { issueId },
+    _max: { redmineJournalId: true },
+  });
+  await prisma.issueJournal.create({
+    data: {
+      issueId,
+      redmineJournalId: (maxJ._max.redmineJournalId ?? 0) + 1,
+      author: 'AI',
+      notes,
+      detailsJson: details && details.length > 0 ? details : undefined,
+      createdOnRemote: new Date(),
+    },
+  });
+}
+
+/** Data common to every local-ticket mutation. */
+function localTouch() {
+  const now = new Date();
+  return { updatedOnRemote: now, lastActivityAt: now, lastActivityType: 'local_update' };
 }
 
 // ---------------------------------------------------------------------------
@@ -401,10 +496,47 @@ async function handleGetIssue(
   client: RedmineClient,
   userId: string,
 ) {
-  const issueId = Number(args.issue_id);
-  if (!Number.isInteger(issueId) || issueId <= 0) {
-    throw new Error('issue_id must be a positive integer');
+  const ref = parseIssueRef(args.issue_id);
+
+  if (ref.kind === 'local') {
+    const localTicket = await prisma.issue.findFirst({
+      where: { userId, source: 'local', localIssueNumber: ref.n },
+      include: {
+        journals: { orderBy: { createdOnRemote: 'desc' }, take: 10 },
+        timeEntries: { orderBy: { spentOn: 'desc' }, take: 5 },
+      },
+    });
+    if (!localTicket) {
+      throw new Error(`Local ticket L-${ref.n} not found`);
+    }
+    return {
+      ref: `L-${ref.n}`,
+      subject: localTicket.subject,
+      status: localTicket.statusName,
+      priority: localTicket.priority,
+      assignedTo: localTicket.assignedToName,
+      dueDate: localTicket.dueDate?.toISOString().slice(0, 10) ?? null,
+      doneRatio: localTicket.doneRatio,
+      tracker: localTicket.tracker,
+      project: localTicket.projectName,
+      spentHours: localTicket.spentHours,
+      description: localTicket.description?.slice(0, 2000) ?? null,
+      updatedOn: localTicket.updatedOnRemote.toISOString(),
+      recentJournals: localTicket.journals.slice(0, 5).map((j) => ({
+        author: j.author,
+        notes: j.notes?.slice(0, 500) ?? null,
+        createdOn: j.createdOnRemote?.toISOString() ?? null,
+      })),
+      recentTimeEntries: localTicket.timeEntries.slice(0, 5).map((t) => ({
+        hours: t.hours,
+        activity: t.activityName,
+        author: t.authorName,
+        spentOn: t.spentOn?.toISOString().slice(0, 10) ?? null,
+      })),
+    };
   }
+
+  const issueId = ref.id;
 
   // Try local DB first for richer data
   const local = await prisma.issue.findFirst({
@@ -483,6 +615,8 @@ async function handleSearchIssues(
     take: limit,
     select: {
       redmineIssueId: true,
+      localIssueNumber: true,
+      source: true,
       subject: true,
       statusName: true,
       priority: true,
@@ -496,6 +630,7 @@ async function handleSearchIssues(
   return {
     count: issues.length,
     issues: issues.map((i) => ({
+      ref: i.redmineIssueId != null ? `#${i.redmineIssueId}` : i.localIssueNumber != null ? `L-${i.localIssueNumber}` : null,
       issueId: i.redmineIssueId,
       subject: i.subject,
       status: i.statusName,
@@ -529,53 +664,134 @@ async function handleListActivities(client: RedmineClient) {
   };
 }
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function secondsToHours(seconds: number): number {
+  return Math.round((seconds / 3600) * 100) / 100;
+}
+
+async function handleGetTimeSummary(
+  args: Record<string, unknown>,
+  userId: string,
+) {
+  const today = new Date().toISOString().slice(0, 10);
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const start = typeof args.start === 'string' && args.start ? args.start : weekAgo;
+  const end = typeof args.end === 'string' && args.end ? args.end : today;
+
+  if (!DATE_RE.test(start) || !DATE_RE.test(end)) {
+    throw new Error('start and end must be YYYY-MM-DD dates');
+  }
+
+  const { matched, unmatched } = await correlateWakaTime(userId, { start, end });
+
+  const perTicket = matched
+    .map((m) => ({
+      ref: m.localIssueNumber != null ? `L-${m.localIssueNumber}` : null,
+      subject: m.subject,
+      repo: m.repo,
+      hours: secondsToHours(m.totalSeconds),
+    }))
+    .sort((a, b) => b.hours - a.hours);
+
+  const unmatchedProjects = [...unmatched]
+    .sort((a, b) => b.totalSeconds - a.totalSeconds)
+    .slice(0, 5)
+    .map((u) => ({ project: u.project, hours: secondsToHours(u.totalSeconds) }));
+
+  return {
+    start,
+    end,
+    totalTrackedHours: secondsToHours(matched.reduce((s, m) => s + m.totalSeconds, 0)),
+    perTicket,
+    unmatchedHours: secondsToHours(unmatched.reduce((s, u) => s + u.totalSeconds, 0)),
+    unmatchedProjects,
+    note: 'Hours come from WakaTime coding activity correlated to tickets via linked GitHub repos. Unmatched projects have no ticket link yet.',
+  };
+}
+
 async function handleUpdateStatus(
   args: Record<string, unknown>,
   client: RedmineClient,
+  userId: string,
 ) {
-  const issueId = Number(args.issue_id);
+  const ref = parseIssueRef(args.issue_id);
   const statusId = Number(args.status_id);
   const note = typeof args.note === 'string' ? args.note : undefined;
 
-  if (!Number.isInteger(issueId) || issueId <= 0) {
-    throw new Error('issue_id must be a positive integer');
-  }
   if (!Number.isInteger(statusId) || statusId <= 0) {
     throw new Error('status_id must be a positive integer');
   }
 
-  await client.updateIssueStatus(issueId, statusId, note);
-  return { issueId, statusId, note: note ?? null, updated: true };
+  if (ref.kind === 'local') {
+    const issue = await requireLocalIssue(ref, userId);
+    const catalog = await prisma.statusCatalog.findMany();
+    const status = catalog.find((s) => s.id === statusId);
+    if (!status) {
+      throw new Error(`Unknown status_id ${statusId} (use list_statuses)`);
+    }
+    await prisma.issue.update({
+      where: { id: issue.id },
+      data: { statusId: status.id, statusName: status.name, ...localTouch() },
+    });
+    await writeLocalJournal(issue.id, note ?? null, [
+      { property: 'attr', name: 'status', old_value: issue.statusName, new_value: status.name },
+    ]);
+    return { ref: `L-${ref.n}`, statusId: status.id, statusName: status.name, note: note ?? null, updated: true };
+  }
+
+  await client.updateIssueStatus(ref.id, statusId, note);
+  return { issueId: ref.id, statusId, note: note ?? null, updated: true };
 }
 
 async function handleLogTime(
   args: Record<string, unknown>,
   client: RedmineClient,
+  userId: string,
 ) {
-  const issueId = Number(args.issue_id);
+  const ref = parseIssueRef(args.issue_id);
   const hours = Number(args.hours);
-  const activityId = Number(args.activity_id);
   const comment = typeof args.comment === 'string' ? args.comment : undefined;
   const spentOn = typeof args.spent_on === 'string'
     ? args.spent_on
     : new Date().toISOString().slice(0, 10);
 
-  if (!Number.isInteger(issueId) || issueId <= 0) {
-    throw new Error('issue_id must be a positive integer');
-  }
   if (!Number.isFinite(hours) || hours <= 0 || hours > 24) {
     throw new Error('hours must be between 0 and 24');
   }
+
+  if (ref.kind === 'local') {
+    const issue = await requireLocalIssue(ref, userId);
+    const activityId = args.activity_id != null ? Number(args.activity_id) : 9;
+    await prisma.timeEntry.create({
+      data: {
+        issueId: issue.id,
+        userId,
+        hours,
+        spentOn: new Date(spentOn),
+        activityId,
+        activityName: 'Development',
+        comments: comment ?? null,
+      },
+    });
+    await prisma.issue.update({
+      where: { id: issue.id },
+      data: { spentHours: { increment: hours }, ...localTouch() },
+    });
+    return { ref: `L-${ref.n}`, hours, spentOn, comment: comment ?? null, logged: true };
+  }
+
+  const activityId = Number(args.activity_id);
   if (!Number.isInteger(activityId) || activityId <= 0) {
     throw new Error('activity_id must be a positive integer');
   }
 
   const res = await client.addTimeEntry({
-    issueId, hours, activityId, comments: comment, spentOn,
+    issueId: ref.id, hours, activityId, comments: comment, spentOn,
   });
 
   return {
-    issueId,
+    issueId: ref.id,
     hours,
     activityId,
     spentOn,
@@ -588,31 +804,52 @@ async function handleLogTime(
 async function handleAddComment(
   args: Record<string, unknown>,
   client: RedmineClient,
+  userId: string,
 ) {
-  const issueId = Number(args.issue_id);
+  const ref = parseIssueRef(args.issue_id);
   const comment = String(args.comment ?? '');
 
-  if (!Number.isInteger(issueId) || issueId <= 0) {
-    throw new Error('issue_id must be a positive integer');
-  }
   if (!comment.trim()) {
     throw new Error('comment is required');
   }
 
-  await client.addComment(issueId, comment);
-  return { issueId, comment, posted: true };
+  if (ref.kind === 'local') {
+    const issue = await requireLocalIssue(ref, userId);
+    await writeLocalJournal(issue.id, comment);
+    await prisma.issue.update({ where: { id: issue.id }, data: localTouch() });
+    return { ref: `L-${ref.n}`, comment, posted: true };
+  }
+
+  await client.addComment(ref.id, comment);
+  return { issueId: ref.id, comment, posted: true };
 }
 
 async function handleCloseIssue(
   args: Record<string, unknown>,
   client: RedmineClient,
+  userId: string,
 ) {
-  const issueId = Number(args.issue_id);
+  const ref = parseIssueRef(args.issue_id);
   const note = typeof args.note === 'string' ? args.note : undefined;
 
-  if (!Number.isInteger(issueId) || issueId <= 0) {
-    throw new Error('issue_id must be a positive integer');
+  if (ref.kind === 'local') {
+    const issue = await requireLocalIssue(ref, userId);
+    const catalog = await prisma.statusCatalog.findMany();
+    const closed = catalog.find((s) => s.name.toLowerCase() === 'closed') ?? catalog.find((s) => s.isClosed);
+    if (!closed) {
+      throw new Error('No closed status found in the status catalog. Use update_status with a specific status ID instead.');
+    }
+    await prisma.issue.update({
+      where: { id: issue.id },
+      data: { statusId: closed.id, statusName: closed.name, ...localTouch() },
+    });
+    await writeLocalJournal(issue.id, note ?? null, [
+      { property: 'attr', name: 'status', old_value: issue.statusName, new_value: closed.name },
+    ]);
+    return { ref: `L-${ref.n}`, statusId: closed.id, statusName: closed.name, note: note ?? null, closed: true };
   }
+
+  const issueId = ref.id;
 
   // Find the "Closed" status ID from the Redmine status catalog
   const statuses = await client.getIssueStatuses();
@@ -637,11 +874,9 @@ async function handleCloseIssue(
 async function handleUpdateIssue(
   args: Record<string, unknown>,
   client: RedmineClient,
+  userId: string,
 ) {
-  const issueId = Number(args.issue_id);
-  if (!Number.isInteger(issueId) || issueId <= 0) {
-    throw new Error('issue_id must be a positive integer');
-  }
+  const ref = parseIssueRef(args.issue_id);
 
   const updates: Record<string, unknown> = {};
   if (typeof args.due_date === 'string') updates.dueDate = args.due_date;
@@ -653,14 +888,27 @@ async function handleUpdateIssue(
     throw new Error('At least one field (due_date, done_ratio, estimated_hours) must be provided');
   }
 
-  await client.updateIssue(issueId, updates as {
+  if (ref.kind === 'local') {
+    const issue = await requireLocalIssue(ref, userId);
+    const data: Record<string, unknown> = { ...localTouch() };
+    if (typeof updates.dueDate === 'string') data.dueDate = new Date(updates.dueDate);
+    if (typeof updates.doneRatio === 'number') data.doneRatio = updates.doneRatio;
+    if (typeof updates.estimatedHours === 'number') data.estimatedHours = updates.estimatedHours;
+    await prisma.issue.update({ where: { id: issue.id }, data });
+    if (typeof updates.notes === 'string') {
+      await writeLocalJournal(issue.id, updates.notes);
+    }
+    return { ref: `L-${ref.n}`, ...updates, updated: true };
+  }
+
+  await client.updateIssue(ref.id, updates as {
     dueDate?: string;
     doneRatio?: number;
     estimatedHours?: number;
     notes?: string;
   });
 
-  return { issueId, ...updates, updated: true };
+  return { issueId: ref.id, ...updates, updated: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -685,32 +933,42 @@ export function toAnthropicTools(tools: ToolDefinition[]) {
  * @param {ToolCall} call - The tool call to summarise.
  * @returns {string}
  */
+/** Human-readable ticket reference: 42 → "#42", "L-5" → "L-5". */
+function fmtRef(value: unknown): string {
+  if (typeof value === 'string' && /^[Ll]-?\d+$/.test(value.trim())) {
+    return `L-${value.trim().replace(/^[Ll]-?/, '')}`;
+  }
+  return `#${value}`;
+}
+
 export function summarizeToolCall(call: ToolCall): string {
   const args = call.arguments;
   switch (call.name) {
     case 'update_status':
-      return `Update issue #${args.issue_id} to status ID ${args.status_id}${args.note ? ` with note: "${args.note}"` : ''}`;
+      return `Update issue ${fmtRef(args.issue_id)} to status ID ${args.status_id}${args.note ? ` with note: "${args.note}"` : ''}`;
     case 'log_time':
-      return `Log ${args.hours}h on issue #${args.issue_id} (activity ${args.activity_id})${args.comment ? ` — "${args.comment}"` : ''}`;
+      return `Log ${args.hours}h on issue ${fmtRef(args.issue_id)}${args.activity_id ? ` (activity ${args.activity_id})` : ''}${args.comment ? ` — "${args.comment}"` : ''}`;
     case 'add_comment':
-      return `Add comment to issue #${args.issue_id}: "${String(args.comment ?? '').slice(0, 80)}${String(args.comment ?? '').length > 80 ? '…' : ''}"`;
+      return `Add comment to issue ${fmtRef(args.issue_id)}: "${String(args.comment ?? '').slice(0, 80)}${String(args.comment ?? '').length > 80 ? '…' : ''}"`;
     case 'close_issue':
-      return `Close issue #${args.issue_id}${args.note ? ` with note: "${args.note}"` : ''}`;
+      return `Close issue ${fmtRef(args.issue_id)}${args.note ? ` with note: "${args.note}"` : ''}`;
     case 'update_issue': {
       const parts: string[] = [];
       if (args.due_date) parts.push(`due date → ${args.due_date}`);
       if (args.done_ratio !== undefined) parts.push(`progress → ${args.done_ratio}%`);
       if (args.estimated_hours !== undefined) parts.push(`estimate → ${args.estimated_hours}h`);
-      return `Update issue #${args.issue_id}: ${parts.join(', ')}`;
+      return `Update issue ${fmtRef(args.issue_id)}: ${parts.join(', ')}`;
     }
     case 'get_issue':
-      return `Fetch details for issue #${args.issue_id}`;
+      return `Fetch details for issue ${fmtRef(args.issue_id)}`;
     case 'search_issues':
       return `Search issues for "${args.query}"`;
     case 'list_statuses':
       return 'List available issue statuses';
     case 'list_activities':
       return 'List available time-entry activities';
+    case 'get_time_summary':
+      return `Summarize tracked time${args.start || args.end ? ` (${args.start ?? '…'} → ${args.end ?? 'today'})` : ''}`;
     default:
       return `${call.name}(${JSON.stringify(args)})`;
   }
