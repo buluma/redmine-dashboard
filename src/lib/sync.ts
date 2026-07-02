@@ -925,14 +925,44 @@ export async function runSyncJob(
         staleMessage,
       }, "warn");
     } else {
-      // Job is already running — reuse it regardless of duration.
-      logEvent("sync.job.reuse_existing", {
-        userId,
-        jobType,
-        existingJobId: existing.id,
-        existingStatus: existing.status,
+      // A "running" job is normally actively executing, but if its process
+      // died without updating the row (e.g. container restart mid-sync) it
+      // stays "running" forever and blocks every future sync. Treat running
+      // jobs past a generous threshold as orphaned and reset them.
+      const runningAgeMs = now.getTime() - (existing.startedAt ?? existing.createdAt).getTime();
+      if (runningAgeMs < env.syncJobRunningStaleMs) {
+        logEvent("sync.job.reuse_existing", {
+          userId,
+          jobType,
+          existingJobId: existing.id,
+          existingStatus: existing.status,
+        });
+        return { jobId: existing.id };
+      }
+
+      const orphanMessage = `Sync job was running for ${Math.round(runningAgeMs / 1000)}s without finishing and was reset as orphaned`;
+      await prisma.syncJob.update({
+        where: { id: existing.id },
+        data: {
+          status: "failed",
+          endedAt: now,
+          error: orphanMessage,
+        },
       });
-      return { jobId: existing.id };
+
+      await markSyncState(userId, {
+        status: "failed",
+        runningJobId: null,
+        error: orphanMessage,
+        full: false,
+        incremental: false,
+      });
+      logEvent("sync.job.orphan_reset", {
+        userId,
+        orphanJobId: existing.id,
+        orphanAgeMs: runningAgeMs,
+        orphanMessage,
+      }, "warn");
     }
   }
 

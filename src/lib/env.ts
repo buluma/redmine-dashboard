@@ -61,6 +61,9 @@ export const env = {
   pollIntervalMs: numberFromEnv("POLL_INTERVAL_MS", 300000),
   leaderLockTtlMs: numberFromEnv("LEADER_LOCK_TTL_MS", 90000),
   syncJobStaleMs: numberFromEnv("SYNC_JOB_STALE_MS", 10 * 60 * 1000),
+  // A "running" job older than this is treated as orphaned (its process died
+  // without marking the job failed, e.g. container restart mid-sync).
+  syncJobRunningStaleMs: numberFromEnv("SYNC_JOB_RUNNING_STALE_MS", 2 * 60 * 60 * 1000),
   enableSyncPoller: boolFromEnv("ENABLE_SYNC_POLLER", isProduction),
   // Streamline Log Poller Configuration
   enableStreamlineLogPoller: boolFromEnv("ENABLE_STREAMLINE_LOG_POLLER", false),
