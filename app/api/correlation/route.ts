@@ -22,7 +22,11 @@ export async function GET(request: Request) {
   const endParam = url.searchParams.get("end") ?? end;
 
   try {
-    const result = await correlateWakaTime(userId, { start: startParam, end: endParam });
+    const result = await correlateWakaTime(userId, {
+      start: startParam,
+      end: endParam,
+      catchAllIssueId: process.env.MISC_UNLINKED_ISSUE_ID,
+    });
     return NextResponse.json({ ...result, range, start: startParam, end: endParam });
   } catch (error) {
     trackFailure({ event: "correlation.query.failed", error, metricName: "correlation_query_failed" });

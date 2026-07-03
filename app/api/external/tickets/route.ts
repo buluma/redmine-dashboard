@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
 import { trackFailure } from "@/src/lib/telemetry";
+import { z } from "zod";
 
 export const runtime = "nodejs";
+
+// POST /api/external/tickets - Create a local (non-Redmine-synced) ticket
+// via API key, for scripted/automation use (e.g. provisioning a catch-all
+// bucket ticket for correlation.ts's MISC_UNLINKED_ISSUE_ID). Deliberately
+// a small subset of app/api/issues/local/route.ts's schema — that route's
+// full field set is for the UI form; this one is for scripts that just
+// need "create me a ticket to point other things at."
+const createExternalTicketSchema = z.object({
+  subject: z.string().min(1).max(500),
+  description: z.string().optional(),
+  tracker: z.string().optional(),
+  priority: z.string().optional(),
+});
 
 // GET /api/external/tickets - List or search tickets
 // Query params:
@@ -164,6 +178,62 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     trackFailure({ event: "external.tickets.list.failed", error, metricName: "external_tickets_list_failed" });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const apiKey = getApiKey(request);
+  if (!apiKey || !validateApiKey(apiKey)) {
+    return NextResponse.json({ error: "Valid API key required" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json().catch(() => ({}));
+    const parsed = createExternalTicketSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+    const data = parsed.data;
+
+    // Single-user app — same "the one user" resolution as
+    // app/api/external/correlation/route.ts, no per-request session to
+    // scope by.
+    const user = await prisma.user.findFirst({ orderBy: { createdAt: "asc" } });
+    if (!user) return NextResponse.json({ error: "No users" }, { status: 503 });
+
+    const maxNumber = await prisma.issue.aggregate({
+      where: { userId: user.id, source: "local" },
+      _max: { localIssueNumber: true },
+    });
+    const localIssueNumber = (maxNumber._max.localIssueNumber ?? 0) + 1;
+
+    const issue = await prisma.issue.create({
+      data: {
+        userId: user.id,
+        source: "local",
+        localIssueNumber,
+        redmineIssueId: null,
+        redmineBaseUrl: null,
+        subject: data.subject,
+        description: data.description,
+        tracker: data.tracker,
+        priority: data.priority,
+        statusId: 1,
+        statusName: "New",
+        updatedOnRemote: new Date(),
+        lastActivityAt: new Date(),
+        lastActivityType: "local_create",
+      },
+    });
+
+    return NextResponse.json({ ticket: formatTicket(issue) }, { status: 201 });
+  } catch (error) {
+    trackFailure({ event: "external.tickets.create.failed", error, metricName: "external_tickets_create_failed" });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: "Failed to create ticket", message }, { status: 500 });
   }
 }
 

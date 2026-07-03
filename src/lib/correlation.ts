@@ -132,13 +132,41 @@ function findMatch(
 }
 
 /**
+ * Look up the configured catch-all ("Misc / Unlinked") ticket, if any.
+ * Returns null when no id is configured, or when the id doesn't resolve to
+ * a real local ticket owned by this user (deleted, wrong user, typo'd env
+ * var) — callers fall back to normal unmatched behaviour in that case
+ * rather than silently misrouting time to someone else's ticket.
+ */
+async function getCatchAllTicket(
+  userId: string,
+  catchAllIssueId: string | undefined
+): Promise<TicketMatch["ticket"] | null> {
+  if (!catchAllIssueId) return null;
+  return prisma.issue.findFirst({
+    where: { id: catchAllIssueId, userId, source: "local" },
+    select: { id: true, localIssueNumber: true, subject: true, projectName: true, spentHours: true },
+  });
+}
+
+/**
  * Correlate WakaTime daily summaries with personal tickets for a date range.
+ *
+ * `catchAllIssueId`, when it resolves to a real local ticket, is the last
+ * resort for any project findMatch() can't place: rather than piling up
+ * forever in `unmatched` (and re-triggering the same "unmatched activity"
+ * alert every sync with no way to clear it — see sync-timelogs.sh), those
+ * hours get logged against this one ticket instead, with the original
+ * WakaTime project name preserved as the `repo` label so they're still
+ * traceable back to their source later. A real match always wins over the
+ * catch-all — this only fires when findMatch() truly finds nothing.
  */
 export async function correlateWakaTime(
   userId: string,
-  options: { start: string; end: string }
+  options: { start: string; end: string; catchAllIssueId?: string }
 ): Promise<CorrelationResult> {
   const index = await buildProjectTicketIndex(userId);
+  const catchAllTicket = await getCatchAllTicket(userId, options.catchAllIssueId);
 
   const wakaRows = await prisma.wakaTimeDailySummary.findMany({
     where: { userId, date: { gte: options.start, lte: options.end } },
@@ -146,9 +174,13 @@ export async function correlateWakaTime(
   });
 
   // Get existing wakatime time entries for the matched tickets in the range
-  const ticketIds = Array.from(new Set(
-    Array.from(index.values()).map((m) => m.ticket.id)
-  ));
+  // (includes the catch-all ticket so its already-logged dates are detected
+  // too — otherwise a re-run would try to re-create an existing TimeEntry
+  // and hit the issueId+wakaTimeDate unique constraint).
+  const ticketIds = Array.from(new Set([
+    ...Array.from(index.values()).map((m) => m.ticket.id),
+    ...(catchAllTicket ? [catchAllTicket.id] : []),
+  ]));
   const existingEntries = ticketIds.length > 0
     ? await prisma.timeEntry.findMany({
         where: {
@@ -183,7 +215,11 @@ export async function correlateWakaTime(
     for (const proj of projects) {
       if (proj.total_seconds <= 0) continue;
 
-      const match = findMatch(proj.name, index);
+      const match: TicketMatch | null =
+        findMatch(proj.name, index) ??
+        (catchAllTicket
+          ? { ticket: catchAllTicket, link: { id: "catchall", repositoryFullName: proj.name, url: "" } }
+          : null);
 
       if (match) {
         const key = match.ticket.id;
@@ -242,7 +278,7 @@ export async function correlateWakaTime(
  */
 export async function applyTimeEntries(
   userId: string,
-  options: { start: string; end: string; dryRun?: boolean }
+  options: { start: string; end: string; dryRun?: boolean; catchAllIssueId?: string }
 ): Promise<ApplyResult> {
   const correlation = await correlateWakaTime(userId, options);
 

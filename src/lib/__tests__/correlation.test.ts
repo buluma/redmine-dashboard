@@ -2,12 +2,14 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const {
   mockIssueFindMany,
+  mockIssueFindFirst,
   mockIssueUpdate,
   mockWakaFindMany,
   mockTimeEntryFindMany,
   mockTimeEntryCreate,
 } = vi.hoisted(() => ({
   mockIssueFindMany: vi.fn(),
+  mockIssueFindFirst: vi.fn(),
   mockIssueUpdate: vi.fn(),
   mockWakaFindMany: vi.fn(),
   mockTimeEntryFindMany: vi.fn(),
@@ -16,7 +18,7 @@ const {
 
 vi.mock("@/src/lib/db", () => ({
   prisma: {
-    issue: { findMany: mockIssueFindMany, update: mockIssueUpdate },
+    issue: { findMany: mockIssueFindMany, findFirst: mockIssueFindFirst, update: mockIssueUpdate },
     wakaTimeDailySummary: { findMany: mockWakaFindMany },
     timeEntry: { findMany: mockTimeEntryFindMany, create: mockTimeEntryCreate },
   },
@@ -190,6 +192,120 @@ describe("correlateWakaTime", () => {
 
     expect(result.matched[0].totalSeconds).toBe(10800);
     expect(result.matched[0].perDay).toHaveLength(2);
+  });
+
+  it("routes unmatched projects to the catch-all ticket when configured", async () => {
+    mockIssueFindMany.mockResolvedValue([]);
+    mockIssueFindFirst.mockResolvedValue({
+      id: "misc-1",
+      localIssueNumber: 999,
+      subject: "Misc / Unlinked",
+      projectName: "Misc",
+      spentHours: 0,
+    });
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-20", [{ name: "unknown", total_seconds: 1800 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([]);
+
+    const result = await correlateWakaTime(USER_ID, {
+      start: "2026-06-20",
+      end: "2026-06-20",
+      catchAllIssueId: "misc-1",
+    });
+
+    expect(result.unmatched).toHaveLength(0);
+    expect(result.matched).toHaveLength(1);
+    expect(result.matched[0].ticketId).toBe("misc-1");
+    expect(result.matched[0].repo).toBe("unknown"); // original project name preserved for traceability
+    expect(result.matched[0].totalSeconds).toBe(1800);
+  });
+
+  it("still prefers a real match over the catch-all when both are available", async () => {
+    mockIssueFindMany.mockResolvedValue([
+      localIssue("t1", 1, "SL2", ["buluma/SL2"]),
+    ]);
+    mockIssueFindFirst.mockResolvedValue({
+      id: "misc-1",
+      localIssueNumber: 999,
+      subject: "Misc / Unlinked",
+      projectName: "Misc",
+      spentHours: 0,
+    });
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-20", [{ name: "SL2", total_seconds: 3600 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([]);
+
+    const result = await correlateWakaTime(USER_ID, {
+      start: "2026-06-20",
+      end: "2026-06-20",
+      catchAllIssueId: "misc-1",
+    });
+
+    expect(result.matched).toHaveLength(1);
+    expect(result.matched[0].ticketId).toBe("t1"); // not swept into misc-1
+  });
+
+  it("falls back to unmatched when catchAllIssueId doesn't resolve to a real ticket", async () => {
+    mockIssueFindMany.mockResolvedValue([]);
+    mockIssueFindFirst.mockResolvedValue(null); // deleted ticket, wrong user, etc.
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-20", [{ name: "unknown", total_seconds: 1800 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([]);
+
+    const result = await correlateWakaTime(USER_ID, {
+      start: "2026-06-20",
+      end: "2026-06-20",
+      catchAllIssueId: "does-not-exist",
+    });
+
+    expect(result.matched).toHaveLength(0);
+    expect(result.unmatched).toHaveLength(1);
+  });
+
+  it("without catchAllIssueId, behaves exactly as before (no prisma.issue.findFirst call)", async () => {
+    mockIssueFindMany.mockResolvedValue([]);
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-20", [{ name: "unknown", total_seconds: 1800 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([]);
+
+    const result = await correlateWakaTime(USER_ID, { start: "2026-06-20", end: "2026-06-20" });
+
+    expect(result.unmatched).toHaveLength(1);
+    expect(mockIssueFindFirst).not.toHaveBeenCalled();
+  });
+
+  it("merges multiple distinct unmatched projects on the same day into one catch-all entry", async () => {
+    mockIssueFindMany.mockResolvedValue([]);
+    mockIssueFindFirst.mockResolvedValue({
+      id: "misc-1",
+      localIssueNumber: 999,
+      subject: "Misc / Unlinked",
+      projectName: "Misc",
+      spentHours: 0,
+    });
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-20", [
+        { name: "unknown", total_seconds: 1800 },
+        { name: ".pi", total_seconds: 900 },
+      ]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([]);
+
+    const result = await correlateWakaTime(USER_ID, {
+      start: "2026-06-20",
+      end: "2026-06-20",
+      catchAllIssueId: "misc-1",
+    });
+
+    // Same (issueId, date) constraint as any other ticket — one merged entry,
+    // not two, same simplification already accepted for multi-repo tickets.
+    expect(result.matched).toHaveLength(1);
+    expect(result.matched[0].ticketId).toBe("misc-1");
+    expect(result.matched[0].totalSeconds).toBe(2700);
   });
 
   it("merges same-day activity when a ticket has multiple linked repos", async () => {

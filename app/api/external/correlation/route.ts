@@ -37,7 +37,11 @@ export async function GET(request: NextRequest) {
     const user = await prisma.user.findFirst({ orderBy: { createdAt: "asc" } });
     if (!user) return NextResponse.json({ error: "No users" }, { status: 503 });
 
-    const result = await correlateWakaTime(user.id, { start, end });
+    const result = await correlateWakaTime(user.id, {
+      start,
+      end,
+      catchAllIssueId: process.env.MISC_UNLINKED_ISSUE_ID,
+    });
     return NextResponse.json({ ...result, start, end });
   } catch (error) {
     trackFailure({ event: "external.correlation.query.failed", error, metricName: "external_correlation_query_failed" });
@@ -62,7 +66,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "start and end required" }, { status: 400 });
     }
 
-    const result = await applyTimeEntries(user.id, { start, end, dryRun });
+    const result = await applyTimeEntries(user.id, {
+      start,
+      end,
+      dryRun,
+      catchAllIssueId: process.env.MISC_UNLINKED_ISSUE_ID,
+    });
     return NextResponse.json(result);
   } catch (error) {
     trackFailure({ event: "external.correlation.apply.failed", error, metricName: "external_correlation_apply_failed" });

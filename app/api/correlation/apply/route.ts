@@ -31,7 +31,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid request", details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const result = await applyTimeEntries(userId, parsed.data);
+    const result = await applyTimeEntries(userId, {
+      ...parsed.data,
+      catchAllIssueId: process.env.MISC_UNLINKED_ISSUE_ID,
+    });
     return NextResponse.json(result);
   } catch (error) {
     trackFailure({ event: "correlation.apply.failed", error, metricName: "correlation_apply_failed" });
