@@ -26,8 +26,12 @@ export async function GET(
   const { id } = await params;
   const apiKey = getApiKey(request);
 
-  // Require API key for external access
-  if (!apiKey) {
+  // Require a valid API key, or fall back to a logged-in session
+  if (apiKey) {
+    if (!validateApiKey(apiKey)) {
+      return NextResponse.json({ error: "Valid API key required" }, { status: 401 });
+    }
+  } else {
     try {
       const { getSessionUserId } = await import("@/src/lib/session");
       const userId = await getSessionUserId();
