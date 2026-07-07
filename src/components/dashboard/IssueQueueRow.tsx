@@ -53,7 +53,9 @@ export function IssueQueueRow({
 }: IssueQueueRowProps) {
   const urgency = issueUrgency(issue);
   const issueNumericId =
-    Number.isInteger(issue.redmineIssueId) && issue.redmineIssueId > 0
+    typeof issue.redmineIssueId === "number" &&
+    Number.isInteger(issue.redmineIssueId) &&
+    issue.redmineIssueId > 0
       ? issue.redmineIssueId
       : null;
   const selectableStatuses =

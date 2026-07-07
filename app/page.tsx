@@ -249,7 +249,9 @@ export default function Home() {
     filtered = applyFilters(filtered, advancedFilters);
 
     if (showFavoritesOnly) {
-      filtered = filtered.filter((issue) => favoriteIssueIds.includes(issue.redmineIssueId));
+      filtered = filtered.filter(
+        (issue) => issue.redmineIssueId !== null && favoriteIssueIds.includes(issue.redmineIssueId),
+      );
     }
 
     return filtered;
@@ -275,7 +277,7 @@ export default function Home() {
   const allVisibleIssueIds = useMemo(
     () => visibleIssues
       .map((i) => i.redmineIssueId)
-      .filter((id): id is number => Number.isInteger(id) && id > 0),
+      .filter((id): id is number => typeof id === "number" && Number.isInteger(id) && id > 0),
     [visibleIssues],
   );
 
@@ -830,7 +832,8 @@ export default function Home() {
   }
 
   async function updateStatus(issue: Issue, nextStatusId: number) {
-    const allowed = allowedStatusIdsByIssue[issue.redmineIssueId];
+    const allowed =
+      issue.redmineIssueId !== null ? allowedStatusIdsByIssue[issue.redmineIssueId] : undefined;
     if (allowed && allowed.length > 0 && !allowed.includes(nextStatusId)) {
       toast.error(t('toasts.statusNotAllowed'));
       return;
@@ -1886,7 +1889,9 @@ export default function Home() {
                     const paged = filtered.slice(start, start + pageSize);
                     return paged.map((issue) => {
                       const issueNumericId =
-                        Number.isInteger(issue.redmineIssueId) && issue.redmineIssueId > 0
+                        typeof issue.redmineIssueId === "number" &&
+                        Number.isInteger(issue.redmineIssueId) &&
+                        issue.redmineIssueId > 0
                           ? issue.redmineIssueId
                           : null;
                       return (

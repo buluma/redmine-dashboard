@@ -2,10 +2,12 @@
 
 import { useCallback } from "react";
 import { useI18n } from "./I18nProvider";
+import { issueDisplayId } from "@/src/lib/issue-utils";
 
 interface ExportOptions {
   issues: {
-    redmineIssueId: number;
+    redmineIssueId: number | null;
+    localIssueNumber?: number | null;
     subject: string;
     statusName: string;
     priorityName?: string | null;
@@ -47,7 +49,7 @@ function exportCSV(issues: ExportOptions["issues"], t: any, formatDate: any) {
     t("export.colUpdated")
   ];
   const rows = issues.map((i) => [
-    i.redmineIssueId,
+    issueDisplayId(i),
     `"${i.subject.replace(/"/g, '""')}"`,
     i.statusName,
     i.priorityName ?? "",
@@ -108,7 +110,7 @@ function printIssues(issues: ExportOptions["issues"], t: any, formatDate: any) {
     <tbody>
       ${issues.map((i) => `
         <tr>
-          <td>#${i.redmineIssueId}</td>
+          <td>${issueDisplayId(i)}</td>
           <td>${i.subject}</td>
           <td>${i.statusName}</td>
           <td>${i.priorityName ?? "-"}</td>

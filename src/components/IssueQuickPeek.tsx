@@ -208,7 +208,7 @@ export function IssueQuickPeek({ issueId, onClose, onOpenFullPage, onPrev, onNex
                     <MarkdownBlock
                       content={issue.description}
                       attachments={issue.attachments}
-                      issueId={issue.redmineIssueId}
+                      issueId={issue.redmineIssueId ?? undefined}
                     />
                   </div>
                 </section>
@@ -234,7 +234,7 @@ export function IssueQuickPeek({ issueId, onClose, onOpenFullPage, onPrev, onNex
                         <MarkdownBlock
                           content={j.notes ?? ""}
                           attachments={issue.attachments}
-                          issueId={issue.redmineIssueId}
+                          issueId={issue.redmineIssueId ?? undefined}
                         />
                       </div>
                     ))}

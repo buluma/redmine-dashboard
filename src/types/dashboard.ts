@@ -69,7 +69,7 @@ export type IssueChild = {
 
 export type Issue = {
   id: string;
-  redmineIssueId: number;
+  redmineIssueId: number | null;
   localIssueNumber?: number | null;
   redmineBaseUrl: string;
   subject: string;
