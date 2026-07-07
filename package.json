@@ -10,6 +10,7 @@
     "mem:start": "MEMORY_LOGGING=true next start -H 0.0.0.0",
     "postinstall": "prisma generate --schema=prisma/schema.dev.sqlite.prisma",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

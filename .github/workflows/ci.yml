@@ -19,6 +19,17 @@ jobs:
       - run: npm ci
       - run: npm run lint
 
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run typecheck
+
   test:
     runs-on: ubuntu-latest
     services:
@@ -80,3 +91,22 @@ jobs:
           DATABASE_URL: file:./test.db
           APP_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           SESSION_SECRET: ci-axe-secret
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx prisma db push --schema=prisma/schema.dev.sqlite.prisma
+        env:
+          DATABASE_URL: file:./test.db
+      - run: npx playwright test e2e/external-api.spec.ts
+        env:
+          DATABASE_URL: file:./test.db
+          APP_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+          SESSION_SECRET: ci-e2e-secret
