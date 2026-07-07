@@ -23,5 +23,14 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    env: {
+      ...(process.env as Record<string, string>),
+      // e2e/external-api.spec.ts authenticates with this key; keep the spec's
+      // fallback in sync. A real EXTERNAL_API_KEYS in the environment wins.
+      EXTERNAL_API_KEYS:
+        process.env.EXTERNAL_API_KEYS ||
+        process.env.E2E_EXTERNAL_API_KEY ||
+        'e2e-test-key',
+    },
   },
 });
