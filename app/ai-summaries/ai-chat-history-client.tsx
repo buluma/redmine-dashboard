@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useMemo } from "react";
 import { useI18n } from "@/src/components/I18nProvider";
+import { issueDisplayId, issueRouteId } from "@/src/lib/issue-utils";
 
 type AiChatMessageData = {
   id: string;
@@ -17,7 +18,9 @@ type AiChatMessageData = {
   evalDuration: bigint | string | null;
   createdAt: Date;
   issue: {
+    id: string;
     redmineIssueId: number | null;
+    localIssueNumber: number | null;
     redmineBaseUrl: string | null;
     subject: string;
     statusName: string;
@@ -353,12 +356,12 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
                   <div className="summary-header">
                     <div className="summary-issue-info">
                       <Link
-                        href={`/issues/${msg.issue!.redmineIssueId}`}
+                        href={`/issues/${issueRouteId(msg.issue!)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="summary-issue-link"
                       >
-                        #{msg.issue!.redmineIssueId} - {msg.issue!.subject}
+                        {issueDisplayId(msg.issue!)} - {msg.issue!.subject}
                       </Link>
                       <div className="summary-meta">
                         <span className={`chat-role-badge chat-role-${msg.role}`}>

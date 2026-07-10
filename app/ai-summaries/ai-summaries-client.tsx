@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useMemo } from "react";
+import { issueDisplayId, issueRouteId } from "@/src/lib/issue-utils";
 
 interface AiSummaryData {
   id: string;
@@ -15,7 +16,9 @@ interface AiSummaryData {
   evalCount: number | null;
   evalDuration: bigint | string | null;
   issue: {
+    id: string;
     redmineIssueId: number | null;
+    localIssueNumber: number | null;
     redmineBaseUrl: string | null;
     subject: string;
     statusName: string;
@@ -139,7 +142,7 @@ function CopyButton({ summary, parsed }: { summary: string; parsed: ParsedSummar
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    const text = buildExportText([{ id: "", summary, model: "", updatedAt: new Date(), totalDuration: null, loadDuration: null, promptEvalCount: null, promptEvalDuration: null, evalCount: null, evalDuration: null, issue: { redmineIssueId: 0, redmineBaseUrl: "", subject: "", statusName: "", priority: null, projectName: null, assignedToName: null } }]);
+    const text = buildExportText([{ id: "", summary, model: "", updatedAt: new Date(), totalDuration: null, loadDuration: null, promptEvalCount: null, promptEvalDuration: null, evalCount: null, evalDuration: null, issue: { id: "", redmineIssueId: 0, localIssueNumber: null, redmineBaseUrl: "", subject: "", statusName: "", priority: null, projectName: null, assignedToName: null } }]);
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -422,12 +425,12 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
                 <div className="summary-header">
                   <div className="summary-issue-info">
                     <Link
-                      href={`/issues/${summary.issue.redmineIssueId}`}
+                      href={`/issues/${issueRouteId(summary.issue)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="summary-issue-link"
                     >
-                      #{summary.issue.redmineIssueId} - {summary.issue.subject}
+                      {issueDisplayId(summary.issue)} - {summary.issue.subject}
                     </Link>
                     <div className="summary-meta">
                       <span className="summary-status">{summary.issue.statusName}</span>

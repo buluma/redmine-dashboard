@@ -22,6 +22,7 @@ export default async function AiSummariesPage() {
         select: {
           id: true,
           redmineIssueId: true,
+          localIssueNumber: true,
           redmineBaseUrl: true,
           subject: true,
           statusName: true,
@@ -44,7 +45,9 @@ export default async function AiSummariesPage() {
     include: {
       issue: {
         select: {
+          id: true,
           redmineIssueId: true,
+          localIssueNumber: true,
           redmineBaseUrl: true,
           subject: true,
           statusName: true,
