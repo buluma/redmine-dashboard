@@ -190,9 +190,16 @@ export function formatDurationFromMs(durationMs: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
+// Single definition of "valid remote Redmine id": local tickets carry
+// redmineIssueId null, so every numeric consumer must go through this guard.
+export function issueNumericId(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;
+}
+
 export function normalizeIssueRouteId(value: number | string | null | undefined): string | null {
-  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-    return String(value);
+  if (typeof value === "number") {
+    const numeric = issueNumericId(value);
+    return numeric === null ? null : String(numeric);
   }
   if (typeof value === "string" && value.trim().length > 0) {
     return value.trim();

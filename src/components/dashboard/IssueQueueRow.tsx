@@ -2,6 +2,7 @@
 
 import {
   issueDisplayId,
+  issueNumericId as toIssueNumericId,
   issueRouteId,
   issueUrgency,
   isOpenStatus,
@@ -16,7 +17,7 @@ import type { Issue, StatusCatalog } from "@/src/types/dashboard";
 import type { ColumnKey } from "@/src/components/ColumnPicker";
 
 export interface IssueQueueRowCallbacks {
-  onSelect: (issueId: number | null) => void;
+  onSelect: (issueId: number) => void;
   onOpenInNewTab: (issue: Issue) => void;
   onPrefetch: (routeId: string) => void;
   onToggleSelection: (issueNumericId: number) => void;
@@ -52,12 +53,7 @@ export function IssueQueueRow({
   onHoverLeave,
 }: IssueQueueRowProps) {
   const urgency = issueUrgency(issue);
-  const issueNumericId =
-    typeof issue.redmineIssueId === "number" &&
-    Number.isInteger(issue.redmineIssueId) &&
-    issue.redmineIssueId > 0
-      ? issue.redmineIssueId
-      : null;
+  const issueNumericId = toIssueNumericId(issue.redmineIssueId);
   const selectableStatuses =
     allowedStatusIds && allowedStatusIds.length > 0
       ? statuses.filter((s) => allowedStatusIds.includes(s.id))
@@ -70,7 +66,11 @@ export function IssueQueueRow({
       role="button"
       aria-label={`Open ${issueDisplayId(issue)} ${issue.subject}`}
       onMouseEnter={() => onPrefetch(issueRouteId(issue))}
-      onClick={() => onSelect(issue.redmineIssueId)}
+      onClick={() => {
+        // Local tickets have no numeric id for the QuickPeek to fetch;
+        // stay guarded like the Enter path below instead of deselecting.
+        if (issueNumericId !== null) onSelect(issueNumericId);
+      }}
       onKeyDown={(e) => {
         const target = e.target as HTMLElement;
         const tag = target?.tagName;

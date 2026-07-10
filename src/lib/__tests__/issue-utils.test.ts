@@ -1,5 +1,39 @@
 import { describe, expect, it } from "vitest";
-import { issueDisplayId } from "@/src/lib/issue-utils";
+import { issueDisplayId, issueNumericId, issueRouteId } from "@/src/lib/issue-utils";
+
+describe("issueNumericId", () => {
+  it("returns a positive integer Redmine id unchanged", () => {
+    expect(issueNumericId(42)).toBe(42);
+  });
+
+  it("returns null for null (local tickets)", () => {
+    expect(issueNumericId(null)).toBeNull();
+  });
+
+  it("returns null for undefined", () => {
+    expect(issueNumericId(undefined)).toBeNull();
+  });
+
+  it("returns null for zero and negative ids", () => {
+    expect(issueNumericId(0)).toBeNull();
+    expect(issueNumericId(-7)).toBeNull();
+  });
+
+  it("returns null for non-integer values", () => {
+    expect(issueNumericId(1.5)).toBeNull();
+    expect(issueNumericId(Number.NaN)).toBeNull();
+  });
+});
+
+describe("issueRouteId", () => {
+  it("routes Redmine tickets by their numeric id", () => {
+    expect(issueRouteId({ id: "cuid123", redmineIssueId: 42 })).toBe("42");
+  });
+
+  it("falls back to the local DB id for local tickets", () => {
+    expect(issueRouteId({ id: "cuid123", redmineIssueId: null })).toBe("cuid123");
+  });
+});
 
 describe("issueDisplayId", () => {
   it("renders Redmine tickets as #<id>", () => {

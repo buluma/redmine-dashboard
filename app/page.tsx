@@ -59,6 +59,7 @@ import {
   matchesView,
   formatDurationFromMs,
   normalizeIssueRouteId,
+  issueNumericId as toIssueNumericId,
   issueRouteId,
   issueDisplayId,
   openIssueIdInNewTab,
@@ -276,8 +277,8 @@ export default function Home() {
 
   const allVisibleIssueIds = useMemo(
     () => visibleIssues
-      .map((i) => i.redmineIssueId)
-      .filter((id): id is number => typeof id === "number" && Number.isInteger(id) && id > 0),
+      .map((i) => toIssueNumericId(i.redmineIssueId))
+      .filter((id): id is number => id !== null),
     [visibleIssues],
   );
 
@@ -1888,17 +1889,12 @@ export default function Home() {
                     const start = (page - 1) * pageSize;
                     const paged = filtered.slice(start, start + pageSize);
                     return paged.map((issue) => {
-                      const issueNumericId =
-                        typeof issue.redmineIssueId === "number" &&
-                        Number.isInteger(issue.redmineIssueId) &&
-                        issue.redmineIssueId > 0
-                          ? issue.redmineIssueId
-                          : null;
+                      const issueNumericId = toIssueNumericId(issue.redmineIssueId);
                       return (
                         <IssueQueueRow
                           key={issue.id}
                           issue={issue}
-                          selected={selectedIssueId === issue.redmineIssueId}
+                          selected={issueNumericId !== null && selectedIssueId === issueNumericId}
                           inBulkSelection={
                             issueNumericId ? selectedIssueIds.includes(issueNumericId) : false
                           }
