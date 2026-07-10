@@ -13,9 +13,10 @@ import path from "path";
  * use 2001 dates so they can never collide with real history (starts 2018).
  *
  * The valid-key tests need the server to know EXTERNAL_API_KEYS; playwright
- * config injects E2E_EXTERNAL_API_KEY into the webServer env. A manually
- * started dev server without that env var will fail the valid-key tests —
- * let playwright start the server itself.
+ * config is the single source of the key — it sets E2E_EXTERNAL_API_KEY at
+ * config-load and injects the matching EXTERNAL_API_KEYS into the webServer
+ * env. A manually started dev server without that env var will fail the
+ * valid-key tests — let playwright start the server itself.
  */
 
 // Fixtures are shared file-level state; parallel workers would each run
@@ -24,7 +25,8 @@ import path from "path";
 test.describe.configure({ mode: "serial", timeout: 120_000 });
 
 const BASE_URL = process.env.E2E_BASE_URL || "http://localhost:3000";
-const API_KEY = process.env.E2E_EXTERNAL_API_KEY || "e2e-test-key";
+// Always set by playwright.config.ts before workers fork.
+const API_KEY = process.env.E2E_EXTERNAL_API_KEY as string;
 const FIXTURE_REPO = "e2e/zzq-e2e-corr-fixture";
 const FIXTURE_DATES = ["2001-01-01", "2001-01-02"];
 
