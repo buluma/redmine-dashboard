@@ -60,7 +60,10 @@ debugging/logs/*.json
 /prisma/migrations
 /.openclaude
 /.gemini-tasks
-/.claude
+# Keep .claude private (settings may hold local paths/permissions),
+# but version the project skills.
+/.claude/*
+!/.claude/skills
 /backups
 /briefing
 CLAUDE.md
