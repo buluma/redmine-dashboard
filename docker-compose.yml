@@ -1,5 +1,6 @@
 services:
   dashboard:
+    container_name: redmine-dashboard
     build:
       context: .
       dockerfile: Dockerfile
