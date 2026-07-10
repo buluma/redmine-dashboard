@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
+import { requireExternalApiKey } from "@/src/lib/external-auth";
 import { trackFailure } from "@/src/lib/telemetry";
 
 export const runtime = "nodejs";
@@ -12,27 +13,9 @@ export const runtime = "nodejs";
 //   - env: filter by environment (default: all)
 //   - errorLimit: max error records returned (default 5, max 20)
 
-function getApiKey(request: NextRequest): string | null {
-  const headerKey = request.headers.get("x-api-key");
-  if (headerKey) return headerKey;
-  const sp = (request as any).nextUrl?.searchParams ?? new URL(request.url).searchParams;
-  return sp.get("api_key");
-}
-
-function validateApiKey(key: string): boolean {
-  const validKeys = (process.env.EXTERNAL_API_KEYS || "").split(",").filter(Boolean);
-  return validKeys.includes(key);
-}
-
 export async function GET(request: NextRequest) {
-  const apiKey = getApiKey(request);
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key required" }, { status: 401 });
-  }
-  const validKeys = (process.env.EXTERNAL_API_KEYS || "").split(",").filter(Boolean);
-  if (validKeys.length > 0 && !validateApiKey(apiKey)) {
-    return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
-  }
+  const authError = requireExternalApiKey(request);
+  if (authError) return authError;
 
   const searchParams = (request as any).nextUrl?.searchParams ?? new URL(request.url).searchParams;
   const env = searchParams.get("env") || undefined;

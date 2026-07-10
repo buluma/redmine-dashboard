@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
+import {
+  getExternalApiKey,
+  requireExternalApiKey,
+  validateExternalApiKey,
+} from "@/src/lib/external-auth";
 import { trackFailure } from "@/src/lib/telemetry";
 import { z } from "zod";
 
@@ -30,24 +35,6 @@ const createExternalTicketSchema = z.object({
 // For search, requires AI_SUMMARY_API_KEY or valid session
 // For direct queries, requires API key in header: X-API-Key
 
-function getApiKey(request: NextRequest): string | null {
-  // Check header
-  const headerKey = request.headers.get("x-api-key");
-  if (headerKey) return headerKey;
-  
-  // Check query param (for simpler integrations)
-  return request.nextUrl.searchParams.get("api_key");
-}
-
-function validateApiKey(key: string): boolean {
-  // Allow configured API keys
-  const validKeys = (process.env.EXTERNAL_API_KEYS || "").split(",").filter(Boolean);
-  if (validKeys.includes(key)) return true;
-  
-  // Also allow mobile API tokens
-  return false;
-}
-
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   
@@ -59,18 +46,21 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 100);
   const offset = parseInt(searchParams.get("offset") || "0");
 
-  const apiKey = getApiKey(request);
-  
+  const apiKey = getExternalApiKey(request);
+
   // If searching, check for AI summary API key
   if (search) {
     const aiKey = process.env.AI_SUMMARY_API_KEY;
     if (aiKey && aiKey !== "your-ai-summary-api-key" && apiKey !== aiKey) {
       return NextResponse.json({ error: "Invalid API key for search" }, { status: 401 });
     }
-  }
-
-  // For non-search queries, require API key
-  if (!search && !apiKey) {
+  } else if (apiKey) {
+    // Fail closed like every other external route: an unrecognized key is
+    // rejected even when no EXTERNAL_API_KEYS are configured.
+    if (!validateExternalApiKey(apiKey)) {
+      return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
+    }
+  } else {
     // Allow session-based access if logged in
     try {
       const { getSessionUserId } = await import("@/src/lib/session");
@@ -80,15 +70,6 @@ export async function GET(request: NextRequest) {
       }
     } catch {
       return NextResponse.json({ error: "API key required" }, { status: 401 });
-    }
-  }
-
-  // Validate API key if provided
-  if (apiKey && !validateApiKey(apiKey)) {
-    // For development, allow if no keys configured
-    const validKeys = (process.env.EXTERNAL_API_KEYS || "").split(",").filter(Boolean);
-    if (validKeys.length > 0) {
-      return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
     }
   }
 
@@ -182,10 +163,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const apiKey = getApiKey(request);
-  if (!apiKey || !validateApiKey(apiKey)) {
-    return NextResponse.json({ error: "Valid API key required" }, { status: 401 });
-  }
+  const authError = requireExternalApiKey(request);
+  if (authError) return authError;
 
   try {
     const body = await request.json().catch(() => ({}));

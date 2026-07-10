@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
 import { Prisma } from "@prisma/client";
 import { requireRedmineClientForUser } from "@/src/lib/auth";
+import {
+  getExternalApiKey,
+  requireExternalApiKey,
+  validateExternalApiKey,
+} from "@/src/lib/external-auth";
 import { syncSingleIssue } from "@/src/lib/sync";
 import { trackFailure, trackInfo } from "@/src/lib/telemetry";
 
@@ -15,20 +20,16 @@ export const runtime = "nodejs";
 // Query params:
 //   - api_key: API key for authentication
 
-function getApiKey(request: NextRequest): string | null {
-  return request.headers.get("x-api-key") || request.nextUrl.searchParams.get("api_key");
-}
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const apiKey = getApiKey(request);
+  const apiKey = getExternalApiKey(request);
 
   // Require a valid API key, or fall back to a logged-in session
   if (apiKey) {
-    if (!validateApiKey(apiKey)) {
+    if (!validateExternalApiKey(apiKey)) {
       return NextResponse.json({ error: "Valid API key required" }, { status: 401 });
     }
   } else {
@@ -175,21 +176,14 @@ async function patchLocalIssue(issue: LocalIssue, body: Record<string, unknown>)
   return NextResponse.json({ ok: true, id: issue.id, source: "local" });
 }
 
-function validateApiKey(key: string): boolean {
-  const validKeys = (process.env.EXTERNAL_API_KEYS || "").split(",").filter(Boolean);
-  return validKeys.includes(key);
-}
-
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const apiKey = getApiKey(request);
 
-  if (!apiKey || !validateApiKey(apiKey)) {
-    return NextResponse.json({ error: "Valid API key required" }, { status: 401 });
-  }
+  const authError = requireExternalApiKey(request);
+  if (authError) return authError;
 
   let body: Record<string, unknown>;
   try {

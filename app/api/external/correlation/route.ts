@@ -1,29 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
 import { correlateWakaTime, applyTimeEntries } from "@/src/lib/correlation";
+import { requireExternalApiKey } from "@/src/lib/external-auth";
 import { trackFailure } from "@/src/lib/telemetry";
 
 export const runtime = "nodejs";
 
-function getApiKey(request: NextRequest): string | null {
-  return request.headers.get("x-api-key") || request.nextUrl.searchParams.get("api_key");
-}
-
-function validateApiKey(key: string): boolean {
-  const validKeys = (process.env.EXTERNAL_API_KEYS || "").split(",").filter(Boolean);
-  return validKeys.includes(key);
-}
-
-function checkAuth(request: NextRequest): NextResponse | null {
-  const apiKey = getApiKey(request);
-  if (!apiKey || !validateApiKey(apiKey)) {
-    return NextResponse.json({ error: "Valid API key required" }, { status: 401 });
-  }
-  return null;
-}
-
 export async function GET(request: NextRequest) {
-  const authError = checkAuth(request);
+  const authError = requireExternalApiKey(request);
   if (authError) return authError;
 
   const { searchParams } = request.nextUrl;
@@ -50,7 +34,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authError = checkAuth(request);
+  const authError = requireExternalApiKey(request);
   if (authError) return authError;
 
   try {
