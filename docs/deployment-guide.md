@@ -207,15 +207,17 @@ Use this as a starting point and tune heap size based on GC behavior and request
 
 ## Continuous Integration (CI) and Branch Protection
 
-- **CI Workflow:** The CI pipeline is defined in [`.github/workflows/ci.yml`](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/.github/workflows/ci.yml).
-- **Required Status Check:** The `CI / validate` job must pass for pull requests to be mergeable.
+- **CI Workflow:** The CI pipeline is defined in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
+- **Job chain:** `lint → typecheck → test → build → a11y → e2e`, run sequentially via `needs:` so a failure early (e.g. lint) skips the rest instead of burning CI minutes on jobs that were never going to matter.
+- **Concurrency:** A new push to the same branch cancels any in-flight run for that branch (`concurrency:` block at the top of the workflow).
+- **Required Status Checks:** All six jobs (`lint`, `typecheck`, `test`, `build`, `a11y`, `e2e`) should be required for pull requests to be mergeable.
 
-### Recommended Branch Protection for `main`
+### Recommended Branch Protection for `master`
 
-To protect the `main` branch, it is recommended to configure the following rules in your GitHub repository settings:
+The default branch is `master`. To protect it, configure the following rules in your GitHub repository settings:
 
 - Require a pull request before merging.
 - Require status checks to pass before merging.
   - Enable strict mode: Require branches to be up to date before merging.
-- Add `CI / validate` as a required status check.
+- Add `lint`, `typecheck`, `test`, `build`, `a11y`, and `e2e` as required status checks.
 - Optionally, include administrators in the branch protection rules.

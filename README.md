@@ -121,6 +121,7 @@ The project uses **Vitest** with `jsdom` environment for React component testing
 | Library utilities | auth, crypto, db, rate-limit, session, mobile-auth, sync, schemas, redmine-text-format |
 | API routes | health, AI (summarize/categorize/chat), issues (assign/favorite), Slack (notify/thread/test), mobile v1, mutations, sync jobs, GitHub links |
 | React components | ChatFab, AiSearchBar, AiButton, ErrorBoundary, ThemeProvider, ThemeToggle |
+| Dashboard hooks/components (`src/hooks/`, `src/components/dashboard/`) | Everything `app/page.tsx` was split into 2026-07-11 — filtering/summary aggregation, bulk actions, keyboard shortcuts, hover preview, filter presets, all server-state loading, and every extracted UI panel |
 
 ### Test File Conventions
 
