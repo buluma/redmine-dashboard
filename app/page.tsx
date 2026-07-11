@@ -52,6 +52,7 @@ import { useIssueFiltering } from "@/src/hooks/useIssueFiltering";
 import { InsightsGrid } from "@/src/components/dashboard/InsightsGrid";
 import { OpsAlertsCard } from "@/src/components/dashboard/OpsAlertsCard";
 import { ActivityFeedCard } from "@/src/components/dashboard/ActivityFeedCard";
+import { useBulkIssueActions } from "@/src/hooks/useBulkIssueActions";
 
 const POLL_INTERVAL_MS = 90_000;
 const SHOW_ALL_METRICS_KEY = "nrcc.showAllMetrics.v1";
@@ -88,7 +89,6 @@ export default function Home() {
     new Set<ColumnKey>(["priority", "due", "progress", "updated"])
   );
   const [manualRefreshBusy, setManualRefreshBusy] = useState(false);
-  const [bulkUpdating, setBulkUpdating] = useState(false);
   const [allowedStatusIdsByIssue, setAllowedStatusIdsByIssue] = useState<Record<number, number[]>>({});
   const [bootstrapInfo, setBootstrapInfo] = useState<BootstrapInfo>(null);
   const [bootstrapBusy, setBootstrapBusy] = useState(false);
@@ -563,106 +563,20 @@ export default function Home() {
     return "";
   };
 
-  async function updateBulkStatus() {
-    if (selectedIssueIds.length === 0 || bulkStatusId <= 0) {
-      return;
-    }
-
-    setBulkUpdating(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/issues/bulk-status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ issueIds: selectedIssueIds, statusId: bulkStatusId }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? "Bulk status update failed");
-      }
-
-      const failedCount = Number(data.failedCount ?? 0);
-      const updatedCount = Number(data.updatedCount ?? 0);
-      if (failedCount > 0) {
-        toast.error(t('toasts.bulkFailedLog', { updated: updatedCount, failed: failedCount }));
-        // keep a compact breadcrumb for deeper troubleshooting.
-        console.error("Bulk update failures", data.failures ?? []);
-      } else {
-        toast.info(t('toasts.bulkSuccess', { updated: updatedCount }));
-      }
-
-      await refreshAll();
-      setSelectedIssueIds([]);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('toasts.bulkUpdateFailed'));
-    } finally {
-      setBulkUpdating(false);
-    }
-  }
-
-  async function runBulkUpdate(body: Record<string, unknown>, successKey: string) {
-    if (selectedIssueIds.length === 0) return;
-    setBulkUpdating(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/issues/bulk-update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ issueIds: selectedIssueIds, ...body }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? "Bulk update failed");
-      }
-      const failedCount = Number(data.failedCount ?? 0);
-      const updatedCount = Number(data.updatedCount ?? 0);
-      if (failedCount > 0) {
-        toast.error(t('toasts.bulkFailedLog', { updated: updatedCount, failed: failedCount }));
-      } else {
-        toast.info(t(successKey, { updated: updatedCount }));
-      }
-      await refreshAll();
-      setSelectedIssueIds([]);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('toasts.bulkUpdateFailed'));
-    } finally {
-      setBulkUpdating(false);
-    }
-  }
-
-  async function updateBulkPriority() {
-    if (bulkPriorityId <= 0) return;
-    await runBulkUpdate({ priorityId: bulkPriorityId }, 'toasts.bulkSuccess');
-    setBulkPriorityId(0);
-  }
-
-  async function handleBoardDrop(issueId: number, targetStatusId: number) {
-    try {
-      const res = await fetch("/api/issues/bulk-status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ issueIds: [issueId], statusId: targetStatusId }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? "Status update failed");
-      }
-      if (data.failures?.length > 0) {
-        throw new Error(data.failures[0].error || t('toasts.actionNotPermitted'));
-      }
-      toast.info(t('toasts.statusUpdated'));
-      await refreshAll();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('toasts.dropFailed'));
-      // Refetch to revert KanbanBoard's optimistic state.
-      await refreshAll();
-    }
-  }
-
-  async function updateBulkMarkDone() {
-    await runBulkUpdate({ doneRatio: 100 }, 'toasts.bulkSuccess');
-  }
+  const {
+    bulkUpdating,
+    updateBulkStatus,
+    updateBulkPriority,
+    updateBulkMarkDone,
+    handleBoardDrop,
+  } = useBulkIssueActions({
+    selectedIssueIds,
+    bulkStatusId,
+    bulkPriorityId,
+    refreshAll,
+    onClearSelection: () => setSelectedIssueIds([]),
+    onBulkPriorityApplied: () => setBulkPriorityId(0),
+  });
 
   async function loadAllowedStatuses(issueId: number) {
     if (allowedStatusIdsByIssue[issueId]) {
