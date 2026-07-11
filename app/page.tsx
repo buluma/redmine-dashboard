@@ -20,7 +20,6 @@ import { IssueQuickPeek } from "@/src/components/IssueQuickPeek";
 import { SkeletonTable } from "@/src/components/SkeletonTable";
 import type {
   Issue,
-  FilterPreset,
   SavedView,
 } from "@/src/types/dashboard";
 import {
@@ -48,6 +47,7 @@ import { ActivityFeedCard } from "@/src/components/dashboard/ActivityFeedCard";
 import { useBulkIssueActions } from "@/src/hooks/useBulkIssueActions";
 import { DashboardFiltersPanel } from "@/src/components/dashboard/DashboardFiltersPanel";
 import { useDashboardData } from "@/src/hooks/useDashboardData";
+import { useFilterPresets } from "@/src/hooks/useFilterPresets";
 
 const SHOW_ALL_METRICS_KEY = "nrcc.showAllMetrics.v1";
 const DEFAULT_ADVANCED_FILTERS: FilterState = {
@@ -100,9 +100,15 @@ export default function Home() {
     reorderViews,
     clearActiveIfDiverged,
   } = useDashboardSavedViews();
-  const [filterPresets, setFilterPresets] = useState<FilterPreset[]>([]);
-  const [savingPreset, setSavingPreset] = useState(false);
-  const [presetNameInput, setPresetNameInput] = useState("");
+  const {
+    filterPresets,
+    savingPreset,
+    presetNameInput,
+    setPresetNameInput,
+    startSaving: startSavingPreset,
+    cancelSaving: cancelSavingPreset,
+    confirmSaving: confirmSavingPreset,
+  } = useFilterPresets();
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [opsAlertsOpen, setOpsAlertsOpen] = useState(false);
   const [activityFeedOpen, setActivityFeedOpen] = useState(false);
@@ -876,17 +882,12 @@ export default function Home() {
                           onChange={(e) => setPresetNameInput(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" && presetNameInput.trim()) {
-                              setFilterPresets([...filterPresets, {
-                                id: Date.now().toString(),
-                                name: presetNameInput.trim(),
+                              confirmSavingPreset({
                                 statusFilter, priorityFilter, search, showFavoritesOnly,
                                 assignedToMe: advancedFilters.assignedToMe,
-                              }]);
-                              setSavingPreset(false);
-                              setPresetNameInput("");
+                              });
                             } else if (e.key === "Escape") {
-                              setSavingPreset(false);
-                              setPresetNameInput("");
+                              cancelSavingPreset();
                             }
                           }}
                         />
@@ -895,13 +896,7 @@ export default function Home() {
                           className="preset-confirm-btn"
                           disabled={!presetNameInput.trim()}
                           onClick={() => {
-                            setFilterPresets([...filterPresets, {
-                              id: Date.now().toString(),
-                              name: presetNameInput.trim(),
-                              statusFilter, priorityFilter, search, showFavoritesOnly,
-                            }]);
-                            setSavingPreset(false);
-                            setPresetNameInput("");
+                            confirmSavingPreset({ statusFilter, priorityFilter, search, showFavoritesOnly });
                           }}
                         >
                           Save
@@ -909,7 +904,7 @@ export default function Home() {
                         <button
                           type="button"
                           className="preset-cancel-btn"
-                          onClick={() => { setSavingPreset(false); setPresetNameInput(""); }}
+                          onClick={cancelSavingPreset}
                         >
                           ✕
                         </button>
@@ -918,7 +913,7 @@ export default function Home() {
                       <button
                         type="button"
                         className="preset-save-btn"
-                        onClick={() => setSavingPreset(true)}
+                        onClick={startSavingPreset}
                         title="Save current filters as preset"
                       >
                         Save preset
