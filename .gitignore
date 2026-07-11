@@ -64,7 +64,11 @@ debugging/logs/*.json
 # but version the project skills.
 /.claude/*
 !/.claude/skills
+# deploy-heimdal reveals internal Heimdal topology (Tailscale IP, ports,
+# container names) — not for a public repo.
+/.claude/skills/deploy-heimdal
 /backups
 /briefing
 CLAUDE.md
 docs/Ticket update template.pdf
+/TODO.md
