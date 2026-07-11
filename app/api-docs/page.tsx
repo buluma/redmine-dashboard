@@ -3,8 +3,6 @@
 import { useI18n } from "@/src/components/I18nProvider";
 
 import { useEffect } from "react";
-import Link from "next/link";
-import dynamic from "next/dynamic";
 import SwaggerUI from "swagger-ui-react";
 import "swagger-ui-react/swagger-ui.css";
 

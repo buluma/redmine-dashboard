@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { NextRequest } from "next/server";
 
 // ── shared mocks ──────────────────────────────────────────────────
 
@@ -45,15 +46,11 @@ vi.mock("@/src/lib/telemetry", () => ({
 
 // ── helpers ───────────────────────────────────────────────────────
 
-function req(url: string, opts: RequestInit = {}) {
-  return new Request(url, opts);
-}
-
-function withKey(url: string, opts: RequestInit = {}) {
+function withKey(url: string, opts: RequestInit = {}): NextRequest {
   return new Request(url, {
     ...opts,
     headers: { "x-api-key": "test-key", ...(opts.headers as Record<string, string> || {}) },
-  });
+  }) as unknown as NextRequest;
 }
 
 // ── GET /api/external/logs/digest ─────────────────────────────────
@@ -92,7 +89,7 @@ describe("GET /api/external/logs/digest", () => {
 
   it("returns 401 without API key", async () => {
     const { GET } = await import("@/app/api/external/logs/route");
-    const resp = await GET(new Request("http://localhost/api/external/logs/digest") as any);
+    const resp = await GET(new Request("http://localhost/api/external/logs/digest") as unknown as NextRequest);
     expect(resp.status).toBe(401);
   });
 
@@ -100,13 +97,13 @@ describe("GET /api/external/logs/digest", () => {
     const { GET } = await import("@/app/api/external/logs/route");
     const resp = await GET(new Request("http://localhost/api/external/logs/digest", {
       headers: { "x-api-key": "wrong-key" },
-    }) as any);
+    }) as unknown as NextRequest);
     expect(resp.status).toBe(401);
   });
 
   it("returns digest with counts by level and status", async () => {
     const { GET } = await import("@/app/api/external/logs/route");
-    const resp = await GET(withKey("http://localhost/api/external/logs/digest") as any);
+    const resp = await GET(withKey("http://localhost/api/external/logs/digest"));
     expect(resp.status).toBe(200);
 
     const body = await resp.json();
@@ -135,7 +132,7 @@ describe("GET /api/external/logs/digest", () => {
     }]);
 
     const { GET } = await import("@/app/api/external/logs/route");
-    const resp = await GET(withKey("http://localhost/api/external/logs/digest") as any);
+    const resp = await GET(withKey("http://localhost/api/external/logs/digest"));
     const body = await resp.json();
     expect(body.mbu_logs.recent_errors[0].backtrace.length).toBe(500);
   });
@@ -143,7 +140,7 @@ describe("GET /api/external/logs/digest", () => {
   it("returns null last_ingested_at when table is empty", async () => {
     mockMbuLogFindFirst.mockResolvedValue(null);
     const { GET } = await import("@/app/api/external/logs/route");
-    const resp = await GET(withKey("http://localhost/api/external/logs/digest") as any);
+    const resp = await GET(withKey("http://localhost/api/external/logs/digest"));
     const body = await resp.json();
     expect(body.mbu_logs.last_ingested_at).toBeNull();
   });
@@ -177,13 +174,13 @@ describe("GET /api/external/sync", () => {
 
   it("returns 401 without API key", async () => {
     const { GET } = await import("@/app/api/external/sync/route");
-    const resp = await GET(new Request("http://localhost/api/external/sync") as any);
+    const resp = await GET(new Request("http://localhost/api/external/sync") as unknown as NextRequest);
     expect(resp.status).toBe(401);
   });
 
   it("returns latest job and state", async () => {
     const { GET } = await import("@/app/api/external/sync/route");
-    const resp = await GET(withKey("http://localhost/api/external/sync") as any);
+    const resp = await GET(withKey("http://localhost/api/external/sync"));
     expect(resp.status).toBe(200);
 
     const body = await resp.json();
@@ -198,7 +195,7 @@ describe("GET /api/external/sync", () => {
     mockSyncStateFindUnique.mockResolvedValue(null);
 
     const { GET } = await import("@/app/api/external/sync/route");
-    const resp = await GET(withKey("http://localhost/api/external/sync") as any);
+    const resp = await GET(withKey("http://localhost/api/external/sync"));
     const body = await resp.json();
     expect(body.latest_job).toBeNull();
     expect(body.state).toBeNull();
@@ -227,13 +224,13 @@ describe("POST /api/external/sync", () => {
 
   it("returns 401 without API key", async () => {
     const { POST } = await import("@/app/api/external/sync/route");
-    const resp = await POST(new Request("http://localhost/api/external/sync", { method: "POST" }) as any);
+    const resp = await POST(new Request("http://localhost/api/external/sync", { method: "POST" }) as unknown as NextRequest);
     expect(resp.status).toBe(401);
   });
 
   it("triggers sync and returns job id", async () => {
     const { POST } = await import("@/app/api/external/sync/route");
-    const resp = await POST(withKey("http://localhost/api/external/sync", { method: "POST" }) as any);
+    const resp = await POST(withKey("http://localhost/api/external/sync", { method: "POST" }));
     expect(resp.status).toBe(200);
 
     const body = await resp.json();
@@ -247,7 +244,7 @@ describe("POST /api/external/sync", () => {
     mockUserFindFirst.mockResolvedValue(null);
 
     const { POST } = await import("@/app/api/external/sync/route");
-    const resp = await POST(withKey("http://localhost/api/external/sync", { method: "POST" }) as any);
+    const resp = await POST(withKey("http://localhost/api/external/sync", { method: "POST" }));
     expect(resp.status).toBe(503);
   });
 });

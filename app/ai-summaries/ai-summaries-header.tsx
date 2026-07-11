@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useI18n } from "@/src/components/I18nProvider";
 
 interface AiSummariesHeaderProps {

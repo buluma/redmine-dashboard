@@ -138,7 +138,7 @@ function buildExportText(summaries: AiSummaryData[]): string {
   return lines.join("\n");
 }
 
-function CopyButton({ summary, parsed }: { summary: string; parsed: ParsedSummary }) {
+function CopyButton({ summary }: { summary: string }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -458,7 +458,7 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
                         {parsed.confidence > 0 && (
                           <ConfidenceBar confidence={parsed.confidence} />
                         )}
-                        <CopyButton summary={summary.summary} parsed={parsed} />
+                        <CopyButton summary={summary.summary} />
                       </div>
                     </div>
 
