@@ -7,6 +7,15 @@ on:
     branches: [master, main]
   workflow_dispatch:
 
+# A new push on the same branch/PR cancels whatever CI run is already
+# in flight for it — no point finishing a run against code that's
+# already been superseded. workflow_dispatch runs get their own
+# per-run group (via github.run_id) so manual triggers never cancel
+# each other or a concurrent push-triggered run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     runs-on: ubuntu-latest
