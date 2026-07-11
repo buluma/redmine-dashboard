@@ -1,6 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { NextRequest } from "next/server";
 
-const mockEnv = {
+const mockEnv: {
+  slackBotToken: string | undefined;
+  slackNotifyChannelId: string | undefined;
+  slackDefaultChannelId: string | undefined;
+  slackNotifyOnCreate: boolean;
+  slackNotifyOnUpdate: boolean;
+  slackNotifyOnStatusChange: boolean;
+  slackNotifyOnAssignment: boolean;
+  slackNotifyFormat: string;
+  slackRefreshIntervalMs: number;
+  redmineBaseUrl: string;
+} = {
   slackBotToken: "xoxb-test-token",
   slackNotifyChannelId: "C123456",
   slackDefaultChannelId: "C789012",
@@ -63,7 +75,7 @@ describe("Slack test route", () => {
 
   describe("POST /api/slack/test", () => {
     it("returns 500 when slack bot token not configured", async () => {
-      mockEnv.slackBotToken = undefined as any;
+      mockEnv.slackBotToken = undefined;
 
       const { POST } = await import("@/app/api/slack/test/route");
       const response = await POST();
@@ -74,8 +86,8 @@ describe("Slack test route", () => {
 
     it("returns 400 when no slack channel configured", async () => {
       mockEnv.slackBotToken = "xoxb-test-token";
-      mockEnv.slackNotifyChannelId = undefined as any;
-      mockEnv.slackDefaultChannelId = undefined as any;
+      mockEnv.slackNotifyChannelId = undefined;
+      mockEnv.slackDefaultChannelId = undefined;
 
       const { POST } = await import("@/app/api/slack/test/route");
       const response = await POST();
@@ -104,14 +116,14 @@ describe("Slack thread route", () => {
   });
 
   describe("GET /api/slack/thread", () => {
-    const createNextRequest = (url: string) => {
-      const req = new Request(url) as any;
+    const createNextRequest = (url: string): NextRequest => {
+      const req = new Request(url) as unknown as { nextUrl: URL };
       req.nextUrl = new URL(url);
-      return req;
+      return req as unknown as NextRequest;
     };
 
     it("returns 500 when slack bot token not configured", async () => {
-      mockEnv.slackBotToken = undefined as any;
+      mockEnv.slackBotToken = undefined;
 
       const { GET } = await import("@/app/api/slack/thread/route");
       const request = createNextRequest("http://localhost/api/slack/thread?channelId=C123&threadTs=123");
@@ -167,7 +179,7 @@ describe("Slack notify route", () => {
         method: "POST",
         body: JSON.stringify({ invalid: "payload" }),
       });
-      const response = await POST(request as any);
+      const response = await POST(request as unknown as NextRequest);
       expect(response.status).toBe(400);
     });
 
@@ -194,7 +206,7 @@ describe("Slack notify route", () => {
           },
         }),
       });
-      const response = await POST(request as any);
+      const response = await POST(request as unknown as NextRequest);
       expect(response.status).toBe(200);
     });
 
@@ -220,7 +232,7 @@ describe("Slack notify route", () => {
           },
         }),
       });
-      const response = await POST(request as any);
+      const response = await POST(request as unknown as NextRequest);
       expect(response.status).toBe(200);
     });
 
@@ -250,7 +262,7 @@ describe("Slack notify route", () => {
           ],
         }),
       });
-      const response = await POST(request as any);
+      const response = await POST(request as unknown as NextRequest);
       expect(response.status).toBe(200);
     });
   });

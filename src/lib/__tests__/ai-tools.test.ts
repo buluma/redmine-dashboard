@@ -6,7 +6,25 @@ import {
   summarizeToolCall,
   toolDefinitions,
   type ToolCall,
+  type ToolResult,
 } from '../ai-tools';
+import type { RedmineClient } from '../redmine';
+
+// makeClient() builds a plain mock object with vi.fn() methods, which can
+// never structurally satisfy RedmineClient (it has private fields) — this
+// cast is the one place that's unavoidable, done once here instead of at
+// each of the 40+ call sites below.
+function asClient(client: ReturnType<typeof makeClient>): RedmineClient {
+  return client as unknown as RedmineClient;
+}
+
+// Tool results are per-tool dynamic JSON (ToolResult.result is `unknown`);
+// asserting on their shape in tests needs an escape hatch rather than
+// exhaustively typing every tool's return shape.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function asData(result: ToolResult): any {
+  return result.result;
+}
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
 
@@ -160,7 +178,7 @@ describe('executeTool', () => {
     const client = makeClient();
     const call = makeCall('list_statuses');
 
-    const result = await executeTool(call, client as any, USER_ID);
+    const result = await executeTool(call, asClient(client), USER_ID);
 
     expect(result.success).toBe(true);
     expect(result.toolCallId).toBe('call_1');
@@ -173,7 +191,7 @@ describe('executeTool', () => {
     const client = makeClient();
     const call = makeCall('does_not_exist');
 
-    const result = await executeTool(call, client as any, USER_ID);
+    const result = await executeTool(call, asClient(client), USER_ID);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('Unknown tool: does_not_exist');
@@ -187,7 +205,7 @@ describe('executeTool', () => {
     });
     const call = makeCall('list_statuses');
 
-    const result = await executeTool(call, client as any, USER_ID);
+    const result = await executeTool(call, asClient(client), USER_ID);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('Network error');
@@ -198,7 +216,7 @@ describe('executeTool', () => {
       getIssueStatuses: vi.fn().mockRejectedValue('string error'),
     });
 
-    const result = await executeTool(makeCall('list_statuses'), client as any, USER_ID);
+    const result = await executeTool(makeCall('list_statuses'), asClient(client), USER_ID);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('Tool execution failed');
@@ -232,10 +250,10 @@ describe('get_issue handler', () => {
     const client = makeClient();
     const call = makeCall('get_issue', { issue_id: 100 });
 
-    const result = await executeTool(call, client as any, USER_ID);
+    const result = await executeTool(call, asClient(client), USER_ID);
 
     expect(result.success).toBe(true);
-    const data = result.result as any;
+    const data = asData(result);
     expect(data.subject).toBe('Local Issue');
     expect(data.status).toBe('In Progress');
     expect(client.getIssue).not.toHaveBeenCalled();
@@ -246,30 +264,30 @@ describe('get_issue handler', () => {
     const client = makeClient();
     const call = makeCall('get_issue', { issue_id: 42 });
 
-    const result = await executeTool(call, client as any, USER_ID);
+    const result = await executeTool(call, asClient(client), USER_ID);
 
     expect(result.success).toBe(true);
     expect(client.getIssue).toHaveBeenCalledWith(42, ['journals']);
-    const data = result.result as any;
+    const data = asData(result);
     expect(data.subject).toBe('Remote Issue');
   });
 
   it('rejects non-integer issue_id', async () => {
     const client = makeClient();
-    const result = await executeTool(makeCall('get_issue', { issue_id: 1.5 }), client as any, USER_ID);
+    const result = await executeTool(makeCall('get_issue', { issue_id: 1.5 }), asClient(client), USER_ID);
     expect(result.success).toBe(false);
     expect(result.error).toContain('issue_id must be a Redmine issue ID');
   });
 
   it('rejects zero issue_id', async () => {
     const client = makeClient();
-    const result = await executeTool(makeCall('get_issue', { issue_id: 0 }), client as any, USER_ID);
+    const result = await executeTool(makeCall('get_issue', { issue_id: 0 }), asClient(client), USER_ID);
     expect(result.success).toBe(false);
   });
 
   it('rejects negative issue_id', async () => {
     const client = makeClient();
-    const result = await executeTool(makeCall('get_issue', { issue_id: -5 }), client as any, USER_ID);
+    const result = await executeTool(makeCall('get_issue', { issue_id: -5 }), asClient(client), USER_ID);
     expect(result.success).toBe(false);
   });
 });
@@ -297,30 +315,30 @@ describe('search_issues handler', () => {
     ]);
     const client = makeClient();
 
-    const result = await executeTool(makeCall('search_issues', { query: 'login' }), client as any, USER_ID);
+    const result = await executeTool(makeCall('search_issues', { query: 'login' }), asClient(client), USER_ID);
 
     expect(result.success).toBe(true);
-    const data = result.result as any;
+    const data = asData(result);
     expect(data.count).toBe(1);
     expect(data.issues[0].subject).toBe('Login bug');
   });
 
   it('rejects empty query', async () => {
     const client = makeClient();
-    const result = await executeTool(makeCall('search_issues', { query: '   ' }), client as any, USER_ID);
+    const result = await executeTool(makeCall('search_issues', { query: '   ' }), asClient(client), USER_ID);
     expect(result.success).toBe(false);
     expect(result.error).toContain('query is required');
   });
 
   it('clamps limit to 25', async () => {
     const client = makeClient();
-    await executeTool(makeCall('search_issues', { query: 'bug', limit: 999 }), client as any, USER_ID);
+    await executeTool(makeCall('search_issues', { query: 'bug', limit: 999 }), asClient(client), USER_ID);
     expect(mockIssueFindMany).toHaveBeenCalledWith(expect.objectContaining({ take: 25 }));
   });
 
   it('uses default limit 10 when not provided', async () => {
     const client = makeClient();
-    await executeTool(makeCall('search_issues', { query: 'bug' }), client as any, USER_ID);
+    await executeTool(makeCall('search_issues', { query: 'bug' }), asClient(client), USER_ID);
     expect(mockIssueFindMany).toHaveBeenCalledWith(expect.objectContaining({ take: 10 }));
   });
 });
@@ -330,10 +348,10 @@ describe('search_issues handler', () => {
 describe('list_statuses handler', () => {
   it('returns statuses from Redmine client', async () => {
     const client = makeClient();
-    const result = await executeTool(makeCall('list_statuses'), client as any, USER_ID);
+    const result = await executeTool(makeCall('list_statuses'), asClient(client), USER_ID);
 
     expect(result.success).toBe(true);
-    const data = result.result as any;
+    const data = asData(result);
     expect(data.statuses).toHaveLength(2);
     expect(data.statuses[0]).toEqual({ id: 1, name: 'New', isClosed: false });
   });
@@ -344,10 +362,10 @@ describe('list_statuses handler', () => {
 describe('list_activities handler', () => {
   it('returns activities from Redmine client', async () => {
     const client = makeClient();
-    const result = await executeTool(makeCall('list_activities'), client as any, USER_ID);
+    const result = await executeTool(makeCall('list_activities'), asClient(client), USER_ID);
 
     expect(result.success).toBe(true);
-    const data = result.result as any;
+    const data = asData(result);
     expect(data.activities).toHaveLength(2);
     expect(data.activities[0]).toEqual({ id: 9, name: 'Development' });
   });
@@ -360,13 +378,13 @@ describe('update_status handler', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('update_status', { issue_id: 10, status_id: 3, note: 'In review' }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
 
     expect(result.success).toBe(true);
     expect(client.updateIssueStatus).toHaveBeenCalledWith(10, 3, 'In review');
-    const data = result.result as any;
+    const data = asData(result);
     expect(data.updated).toBe(true);
     expect(data.note).toBe('In review');
   });
@@ -375,7 +393,7 @@ describe('update_status handler', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('update_status', { issue_id: 0, status_id: 3 }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
     expect(result.success).toBe(false);
@@ -386,7 +404,7 @@ describe('update_status handler', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('update_status', { issue_id: 10, status_id: -1 }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
     expect(result.success).toBe(false);
@@ -401,7 +419,7 @@ describe('log_time handler', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('log_time', { issue_id: 5, hours: 2.5, activity_id: 9, comment: 'Debugging', spent_on: '2026-05-15' }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
 
@@ -409,7 +427,7 @@ describe('log_time handler', () => {
     expect(client.addTimeEntry).toHaveBeenCalledWith({
       issueId: 5, hours: 2.5, activityId: 9, comments: 'Debugging', spentOn: '2026-05-15',
     });
-    const data = result.result as any;
+    const data = asData(result);
     expect(data.timeEntryId).toBe(42);
     expect(data.logged).toBe(true);
   });
@@ -418,10 +436,10 @@ describe('log_time handler', () => {
     const client = makeClient();
     await executeTool(
       makeCall('log_time', { issue_id: 5, hours: 1, activity_id: 9 }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
-    const callArg = (client.addTimeEntry as any).mock.calls[0][0];
+    const callArg = client.addTimeEntry.mock.calls[0][0];
     expect(callArg.spentOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
@@ -429,7 +447,7 @@ describe('log_time handler', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('log_time', { issue_id: 5, hours: 25, activity_id: 9 }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
     expect(result.success).toBe(false);
@@ -440,7 +458,7 @@ describe('log_time handler', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('log_time', { issue_id: 5, hours: 0, activity_id: 9 }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
     expect(result.success).toBe(false);
@@ -454,13 +472,13 @@ describe('add_comment handler', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('add_comment', { issue_id: 7, comment: 'Fixed in PR #88' }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
 
     expect(result.success).toBe(true);
     expect(client.addComment).toHaveBeenCalledWith(7, 'Fixed in PR #88');
-    const data = result.result as any;
+    const data = asData(result);
     expect(data.posted).toBe(true);
   });
 
@@ -468,7 +486,7 @@ describe('add_comment handler', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('add_comment', { issue_id: 7, comment: '   ' }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
     expect(result.success).toBe(false);
@@ -483,13 +501,13 @@ describe('close_issue handler', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('close_issue', { issue_id: 3 }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
 
     expect(result.success).toBe(true);
     expect(client.updateIssueStatus).toHaveBeenCalledWith(3, 5, undefined);
-    const data = result.result as any;
+    const data = asData(result);
     expect(data.closed).toBe(true);
     expect(data.statusName).toBe('Closed');
   });
@@ -498,7 +516,7 @@ describe('close_issue handler', () => {
     const client = makeClient();
     await executeTool(
       makeCall('close_issue', { issue_id: 3, note: 'Done!' }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
     expect(client.updateIssueStatus).toHaveBeenCalledWith(3, 5, 'Done!');
@@ -510,7 +528,7 @@ describe('close_issue handler', () => {
     });
     const result = await executeTool(
       makeCall('close_issue', { issue_id: 3 }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
     expect(result.success).toBe(false);
@@ -525,13 +543,13 @@ describe('update_issue handler', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('update_issue', { issue_id: 8, due_date: '2026-12-31', done_ratio: 75 }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
 
     expect(result.success).toBe(true);
     expect(client.updateIssue).toHaveBeenCalledWith(8, { dueDate: '2026-12-31', doneRatio: 75 });
-    const data = result.result as any;
+    const data = asData(result);
     expect(data.updated).toBe(true);
   });
 
@@ -539,7 +557,7 @@ describe('update_issue handler', () => {
     const client = makeClient();
     await executeTool(
       makeCall('update_issue', { issue_id: 8, done_ratio: 150 }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
     expect(client.updateIssue).toHaveBeenCalledWith(8, expect.objectContaining({ doneRatio: 100 }));
@@ -549,7 +567,7 @@ describe('update_issue handler', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('update_issue', { issue_id: 8 }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
     expect(result.success).toBe(false);
@@ -647,7 +665,7 @@ describe('executeTool RBAC', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('close_issue', { issue_id: 1 }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
     expect(result.success).toBe(false);
@@ -658,7 +676,7 @@ describe('executeTool RBAC', () => {
   it('allows VIEWER to call read-only get_issue', async () => {
     mockUserFindUnique.mockResolvedValue({ id: USER_ID, role: 'VIEWER' });
     const client = makeClient();
-    const result = await executeTool(makeCall('get_issue', { issue_id: 1 }), client as any, USER_ID);
+    const result = await executeTool(makeCall('get_issue', { issue_id: 1 }), asClient(client), USER_ID);
     expect(result.success).toBe(true);
   });
 
@@ -667,7 +685,7 @@ describe('executeTool RBAC', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('log_time', { issue_id: 1, hours: 1, activity_id: 9 }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
     expect(result.success).toBe(false);
@@ -679,7 +697,7 @@ describe('executeTool RBAC', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('update_issue', { issue_id: 1, due_date: '2026-12-31' }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
     expect(result.success).toBe(true);
@@ -730,7 +748,7 @@ describe('local ticket support', () => {
 
   it('get_issue resolves an L-N reference to the local ticket', async () => {
     const client = makeClient();
-    const result = await executeTool(makeCall('get_issue', { issue_id: 'L-5' }), client as any, USER_ID);
+    const result = await executeTool(makeCall('get_issue', { issue_id: 'L-5' }), asClient(client), USER_ID);
 
     expect(result.success).toBe(true);
     expect(result.result).toMatchObject({ ref: 'L-5', subject: 'Converge Dashboard Improvements' });
@@ -747,7 +765,7 @@ describe('local ticket support', () => {
       { redmineIssueId: null, localIssueNumber: 5, source: 'local', subject: 'OpenWA', statusName: 'In Progress', priority: 'Normal', assignedToName: 'MBU', dueDate: null, updatedOnRemote: new Date() },
       { redmineIssueId: 42, localIssueNumber: null, source: 'redmine', subject: 'Remote', statusName: 'New', priority: 'Normal', assignedToName: 'Alice', dueDate: null, updatedOnRemote: new Date() },
     ]);
-    const result = await executeTool(makeCall('search_issues', { query: 'open' }), makeClient() as any, USER_ID);
+    const result = await executeTool(makeCall('search_issues', { query: 'open' }), asClient(makeClient()), USER_ID);
 
     expect(result.success).toBe(true);
     const rows = (result.result as { issues: Array<{ ref: string }> }).issues;
@@ -759,7 +777,7 @@ describe('local ticket support', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('update_status', { issue_id: 'L-5', status_id: 3, note: 'done for now' }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
 
@@ -778,7 +796,7 @@ describe('local ticket support', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('log_time', { issue_id: 'L-5', hours: 2.5, comment: 'pairing' }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
 
@@ -800,7 +818,7 @@ describe('local ticket support', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('add_comment', { issue_id: 'L-5', comment: 'note from chat' }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
 
@@ -815,7 +833,7 @@ describe('local ticket support', () => {
 
   it('close_issue on L-N sets the closed status from the catalog, without Redmine', async () => {
     const client = makeClient();
-    const result = await executeTool(makeCall('close_issue', { issue_id: 'L-5' }), client as any, USER_ID);
+    const result = await executeTool(makeCall('close_issue', { issue_id: 'L-5' }), asClient(client), USER_ID);
 
     expect(result.success).toBe(true);
     expect(client.updateIssueStatus).not.toHaveBeenCalled();
@@ -831,7 +849,7 @@ describe('local ticket support', () => {
     const client = makeClient();
     const result = await executeTool(
       makeCall('update_issue', { issue_id: 'L-5', done_ratio: 80 }),
-      client as any,
+      asClient(client),
       USER_ID,
     );
 
@@ -846,7 +864,7 @@ describe('local ticket support', () => {
 
   it('fails cleanly when the L-N ticket does not exist', async () => {
     mockIssueFindFirst.mockResolvedValue(null);
-    const result = await executeTool(makeCall('get_issue', { issue_id: 'L-99' }), makeClient() as any, USER_ID);
+    const result = await executeTool(makeCall('get_issue', { issue_id: 'L-99' }), asClient(makeClient()), USER_ID);
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/L-99/);
@@ -885,7 +903,7 @@ describe('get_time_summary handler', () => {
   it('summarizes tracked hours per ticket and unmatched projects for a range', async () => {
     const result = await executeTool(
       makeCall('get_time_summary', { start: '2026-06-26', end: '2026-07-02' }),
-      makeClient() as any,
+      asClient(makeClient()),
       USER_ID,
     );
 
@@ -904,7 +922,7 @@ describe('get_time_summary handler', () => {
   it('rejects malformed date ranges', async () => {
     const result = await executeTool(
       makeCall('get_time_summary', { start: 'yesterday', end: '2026-07-02' }),
-      makeClient() as any,
+      asClient(makeClient()),
       USER_ID,
     );
 

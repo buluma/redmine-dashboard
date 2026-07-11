@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getLLMProviderManager, type LLMModel } from "@/src/lib/llm-provider";
-import { getOllamaClient, type OllamaModel } from "@/src/lib/ollama";
+import type { OllamaModel } from "@/src/lib/ollama";
 import { env } from "@/src/lib/env";
 
 export const runtime = "nodejs";
@@ -14,7 +14,6 @@ export async function GET() {
     let models: LLMModel[] = status.models;
     if (status.provider === "ollama") {
       try {
-        const ollama = getOllamaClient();
         const response = await fetch(`${env.ollamaBaseUrl}/api/tags`);
         if (response.ok) {
           const data = await response.json();

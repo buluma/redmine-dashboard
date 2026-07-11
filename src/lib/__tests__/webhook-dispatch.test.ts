@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { dispatchWebhook, getActiveSubscriptions } from '../webhook-subscription';
 import type { WebhookPayload, WebhookEvent } from '../webhook-subscription';
 
-vi.mock('@/src/lib/db', () => ({
-  prisma: {
+const { mockPrismaImpl } = vi.hoisted(() => ({
+  mockPrismaImpl: {
     webhookSubscription: {
       findMany: vi.fn(),
       update: vi.fn(),
@@ -15,9 +15,13 @@ vi.mock('@/src/lib/db', () => ({
   },
 }));
 
+vi.mock('@/src/lib/db', () => ({
+  prisma: mockPrismaImpl,
+}));
+
 import { prisma } from '@/src/lib/db';
 
-const mockPrisma = prisma as any;
+const mockPrisma = prisma as unknown as typeof mockPrismaImpl;
 
 describe('Webhook Dispatch', () => {
   beforeEach(() => {
@@ -222,7 +226,7 @@ describe('Webhook Dispatch', () => {
 
       const updateCalls = mockPrisma.webhookSubscription.update.mock.calls;
       const disableCall = updateCalls.find(
-        (call: any[]) => call[0]?.data?.active === false
+        (call) => call[0]?.data?.active === false
       );
       expect(disableCall).toBeDefined();
     });
@@ -251,7 +255,7 @@ describe('Webhook Dispatch', () => {
 
       const updateCalls = mockPrisma.webhookSubscription.update.mock.calls;
       const disableCall = updateCalls.find(
-        (call: any[]) => call[0]?.data?.active === false
+        (call) => call[0]?.data?.active === false
       );
       expect(disableCall).toBeUndefined();
     });

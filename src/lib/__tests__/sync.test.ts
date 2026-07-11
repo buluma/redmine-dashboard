@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock dependencies
-vi.mock('../db', () => ({
-  prisma: {
+const { mockPrismaImpl } = vi.hoisted(() => ({
+  mockPrismaImpl: {
     issue: {
       findMany: vi.fn(),
       findUnique: vi.fn(),
@@ -24,6 +24,10 @@ vi.mock('../db', () => ({
   },
 }));
 
+vi.mock('../db', () => ({
+  prisma: mockPrismaImpl,
+}));
+
 vi.mock('../redmine', () => ({
   RedmineClient: vi.fn().mockImplementation(() => ({
     listIssues: vi.fn().mockResolvedValue({
@@ -42,7 +46,7 @@ vi.mock('../log', () => ({
 
 import { prisma } from '../db';
 
-const mockPrisma = prisma as any;
+const mockPrisma = prisma as unknown as typeof mockPrismaImpl;
 
 describe('Sync Module', () => {
   beforeEach(() => {

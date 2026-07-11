@@ -353,7 +353,7 @@ describe("requireMobileUser", () => {
         get: vi.fn().mockReturnValue("Bearer mrt_token"),
       },
     };
-    const result = await requireMobileUser(mockRequest as any);
+    const result = await requireMobileUser(mockRequest as unknown as Request);
 
     expect(result.user.id).toBe("user_123");
     expect(result.tokenRecordId).toBe("token_456");
@@ -368,7 +368,7 @@ describe("requireMobileUser", () => {
         get: vi.fn().mockReturnValue("Bearer invalid_token"),
       },
     };
-    await expect(requireMobileUser(mockRequest as any)).rejects.toThrow(
+    await expect(requireMobileUser(mockRequest as unknown as Request)).rejects.toThrow(
       "Unauthorized"
     );
   });
@@ -386,7 +386,7 @@ describe("requireMobileUser", () => {
         get: vi.fn().mockReturnValue("Bearer mrt_valid_token"),
       },
     };
-    await expect(requireMobileUser(mockRequest as any)).rejects.toThrow(
+    await expect(requireMobileUser(mockRequest as unknown as Request)).rejects.toThrow(
       "Unauthorized"
     );
   });
@@ -400,7 +400,7 @@ describe("requireMobileUser", () => {
         get: vi.fn().mockReturnValue(null),
       },
     };
-    await expect(requireMobileUser(mockRequest as any)).rejects.toThrow(
+    await expect(requireMobileUser(mockRequest as unknown as Request)).rejects.toThrow(
       "Unauthorized"
     );
   });
