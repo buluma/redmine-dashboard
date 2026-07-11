@@ -12,6 +12,7 @@
  */
 
 import crypto from 'crypto';
+import type { Prisma, WebhookSubscription as PrismaWebhookSubscription } from '@prisma/client';
 import { prisma } from './db';
 import { getAuditService } from './audit';
 import { trackInfo, trackSuccess, trackFailure } from './telemetry';
@@ -151,7 +152,7 @@ export async function updateSubscription(
   id: string,
   data: { name?: string; url?: string; secret?: string; events?: string[] }
 ): Promise<WebhookSubscription> {
-  const updateData: Record<string, any> = {};
+  const updateData: Prisma.WebhookSubscriptionUpdateInput = {};
   if (data.name !== undefined) updateData.name = data.name;
   if (data.url !== undefined) updateData.url = data.url;
   if (data.secret !== undefined) updateData.secret = data.secret;
@@ -196,7 +197,7 @@ export async function updateSubscriptionFailure(
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
-function toSubscription(row: any): WebhookSubscription {
+function toSubscription(row: PrismaWebhookSubscription): WebhookSubscription {
   return {
     id: row.id,
     name: row.name,
@@ -315,7 +316,7 @@ export async function dispatchWebhook(
           data: {
             subscriptionId: sub.id,
             event,
-            payload: payload as any,
+            payload: payload as unknown as Prisma.InputJsonValue,
             responseStatus: result.status,
             responseBody: result.responseBody?.slice(0, 1000),
             error: result.error,
@@ -349,7 +350,7 @@ export async function dispatchWebhook(
           data: {
             subscriptionId: sub.id,
             event,
-            payload: payload as any,
+            payload: payload as unknown as Prisma.InputJsonValue,
             error: err instanceof Error ? err.message : "Unknown error",
             attempt: 1,
             deliveredAt: new Date(),

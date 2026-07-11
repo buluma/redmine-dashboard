@@ -3,10 +3,10 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useMemo } from "react";
 import enMessagesRaw from "../../messages/en.json";
 
-// Handle potential .default wrapping from different bundler behaviors
-const enMessages = (enMessagesRaw as any).default || enMessagesRaw;
+type Messages = Record<string, Record<string, unknown>>;
 
-type Messages = Record<string, Record<string, any>>;
+// Handle potential .default wrapping from different bundler behaviors
+const enMessages = ((enMessagesRaw as { default?: unknown }).default ?? enMessagesRaw) as Messages[string];
 
 const translations: Messages = {
   en: enMessages
@@ -32,7 +32,7 @@ if (typeof window !== "undefined") {
   loadAllMessages();
 }
 
-type I18nContextType = {
+export type I18nContextType = {
   locale: string;
   setLocale: (l: string) => void;
   t: (key: string, variables?: Record<string, string | number> | string, fallback?: string) => string;
@@ -50,7 +50,6 @@ const I18nContext = createContext<I18nContextType>({
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocale] = useState("en");
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     // localStorage read + SSR-hydration guard — client-side-only sync.
@@ -58,7 +57,6 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocale(stored);
     document.documentElement.lang = stored;
-    setMounted(true);
   }, []);
 
   const handleSetLocale = (l: string) => {
@@ -73,9 +71,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       const resolvedFallback = typeof variables === "string" ? variables : fallback;
       const keys = key.split(".");
       
-      // Use current locale if available, else fallback to English
+      // Arbitrary-depth walk over an untyped translation JSON tree (string
+      // leaf, nested object, or {zero,one,other} pluralization record) —
+      // genuinely dynamic, not worth a recursive type for a tree-walk.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let value: any = translations[locale] || translations.en;
-      
+
       for (const k of keys) {
         value = value?.[k];
       }

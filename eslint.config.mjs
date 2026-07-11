@@ -12,11 +12,21 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // 163 pre-existing violations across the codebase as of 2026-07-11 (CI's
-    // first real run since being disabled in April). Downgraded to unblock
-    // the pipeline; tighten back to "error" once the backlog is paid down.
     rules: {
+      // In-progress: still paying down a pre-existing any-typing backlog
+      // (see git log). Tighten back to "error" once it's fully clear.
       "@typescript-eslint/no-explicit-any": "warn",
+      // Intentionally-unused bindings prefixed with `_` (destructuring
+      // placeholders, ignored catch params) shouldn't warn.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
     },
   },
   // Override default ignores of eslint-config-next.

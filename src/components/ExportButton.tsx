@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useI18n } from "./I18nProvider";
+import { useI18n, type I18nContextType } from "./I18nProvider";
 import { issueDisplayId } from "@/src/lib/issue-utils";
 
 interface ExportOptions {
@@ -37,7 +37,7 @@ export function ExportButton({ issues, format }: ExportOptions) {
   );
 }
 
-function exportCSV(issues: ExportOptions["issues"], t: any, formatDate: any) {
+function exportCSV(issues: ExportOptions["issues"], t: I18nContextType["t"], formatDate: I18nContextType["formatDate"]) {
   const headers = [
     t("export.colId"),
     t("export.colSubject"),
@@ -72,7 +72,7 @@ function exportCSV(issues: ExportOptions["issues"], t: any, formatDate: any) {
   URL.revokeObjectURL(url);
 }
 
-function printIssues(issues: ExportOptions["issues"], t: any, formatDate: any) {
+function printIssues(issues: ExportOptions["issues"], t: I18nContextType["t"], formatDate: I18nContextType["formatDate"]) {
   const html = `
 <!DOCTYPE html>
 <html>

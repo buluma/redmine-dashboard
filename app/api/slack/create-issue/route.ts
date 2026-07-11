@@ -1,17 +1,8 @@
 import { getLLMProviderManager } from '@/src/lib/llm-provider';
-import type { LLMChatMessage } from '@/src/lib/llm-provider';
 import { requireCurrentUser, requireRedmineClientForUser } from '@/src/lib/auth';
-import { prisma } from '@/src/lib/db';
 import { jsonError } from '@/src/lib/http';
 import { trackFailure } from '@/src/lib/telemetry';
-import { z } from 'zod';
 import type { RedmineClient } from '@/src/lib/redmine';
-
-const slackMessageSchema = z.object({
-  channelId: z.string().optional(),  // defaults to SLACK_DEFAULT_CHANNEL_ID
-  threadTs: z.string().optional(),
-  limit: z.number().min(1).max(50).default(20),
-});
 
 interface ParsedIssue {
   subject: string;
@@ -100,9 +91,6 @@ async function createRedmineIssueFromSlack(
   if (parsed.priorityName) {
     priorityId = priorityMap[parsed.priorityName.toLowerCase()];
   }
-
-  // Project ID from parsed name (or undefined to use default)
-  const projectId = parsed.projectName ? undefined : undefined; // Let Redmine handle project validation
 
   // Get assignee ID - skip for now, let Redmine handle it
   let assignedToId: number | undefined;
@@ -307,8 +295,8 @@ async function fetchSlackMessages(
     throw new Error(`Slack API error: ${data.error}`);
   }
 
-  const messages = threadTs ? data.messages : data.messages;
-  return messages.map((m: any) => ({
+  const messages = data.messages;
+  return messages.map((m: { ts: string; text: string; user?: string; subtype?: string }) => ({
     ts: m.ts,
     text: m.text,
     user: m.user,

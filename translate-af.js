@@ -1,5 +1,4 @@
 const fs = require('fs');
-const path = require('path');
 
 // Configuration
 const CONFIG = {
@@ -115,37 +114,6 @@ function isEnglishOnly(text) {
 
 // Apply translations to the target file
 function applyTranslations(targetData, translations) {
-  function applyToPath(obj, path, value) {
-    const keys = path.split('.');
-    let current = obj;
-    
-    for (let i = 0; i < keys.length - 1; i++) {
-      if (!current[keys[i]]) {
-        current[keys[i]] = {};
-      }
-      current = current[keys[i]];
-    }
-    
-    const key = keys[keys.length - 1];
-    const originalValue = current[key];
-    
-    if (typeof originalValue === 'string') {
-      const translation = translations.find(t => t.original === originalValue);
-      if (translation && translation.translated) {
-        current[key] = translation.translated;
-      }
-    } else if (typeof originalValue === 'object' && originalValue !== null) {
-      // For nested objects, we need to handle them differently
-      Object.keys(originalValue).forEach(subKey => {
-        const subPath = `${path}.${subKey}`;
-        const subTranslation = translations.find(t => t.original === originalValue[subKey]);
-        if (subTranslation && subTranslation.translated) {
-          current[key][subKey] = subTranslation.translated;
-        }
-      });
-    }
-  }
-  
   translations.forEach(({ original, translated }) => {
     // Find the path for this original text
     const pathEntry = Object.entries(targetData).find(([_, value]) => 
