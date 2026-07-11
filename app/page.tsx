@@ -55,6 +55,10 @@ import { useEventStream } from "@/src/hooks/useEventStream";
 import { PAGE_SIZE_OPTIONS, usePageSize } from "@/src/hooks/usePageSize";
 import { DashboardHero } from "@/src/components/dashboard/DashboardHero";
 import { IssueQueueRow } from "@/src/components/dashboard/IssueQueueRow";
+import { DashboardLoginScreen } from "@/src/components/dashboard/DashboardLoginScreen";
+import { IssueHoverTooltip } from "@/src/components/dashboard/IssueHoverTooltip";
+import { useIssueHoverPreview } from "@/src/hooks/useIssueHoverPreview";
+import { useDashboardKeyboardShortcuts } from "@/src/hooks/useDashboardKeyboardShortcuts";
 
 const POLL_INTERVAL_MS = 90_000;
 const SHOW_ALL_METRICS_KEY = "nrcc.showAllMetrics.v1";
@@ -124,8 +128,6 @@ export default function Home() {
   const [savingPreset, setSavingPreset] = useState(false);
   const [presetNameInput, setPresetNameInput] = useState("");
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
-  const [hoveredIssue, setHoveredIssue] = useState<Issue | null>(null);
-  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   const [opsAlertsOpen, setOpsAlertsOpen] = useState(false);
   const [activityFeedOpen, setActivityFeedOpen] = useState(false);
   const [issueQueueOpen, setIssueQueueOpen] = useState(true);
@@ -142,44 +144,8 @@ export default function Home() {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const prefetchedIssueIdsRef = useRef<Set<string>>(new Set());
   const heroRef = useRef<HTMLElement>(null);
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const scheduleHoverPreview = useCallback((issue: Issue, anchor: HTMLElement) => {
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current);
-    }
-    hoverTimerRef.current = setTimeout(() => {
-      const rect = anchor.getBoundingClientRect();
-      const TOOLTIP_WIDTH = 360;
-      const margin = 12;
-      let left = rect.right + 8;
-      if (left + TOOLTIP_WIDTH + margin > window.innerWidth) {
-        left = Math.max(margin, rect.left - TOOLTIP_WIDTH - 8);
-      }
-      const top = Math.min(
-        Math.max(margin, rect.top),
-        window.innerHeight - 200,
-      );
-      setPreviewPosition({ x: left, y: top });
-      setHoveredIssue(issue);
-    }, 300);
-  }, []);
-
-  const cancelHoverPreview = useCallback(() => {
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = null;
-    }
-    setHoveredIssue(null);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (hoverTimerRef.current) {
-        clearTimeout(hoverTimerRef.current);
-      }
-    };
-  }, []);
+  const { hoveredIssue, previewPosition, scheduleHoverPreview, cancelHoverPreview } = useIssueHoverPreview();
 
   const prefetchIssueDetail = useCallback((targetIssueId: number | string | null | undefined) => {
     const routeId = normalizeIssueRouteId(targetIssueId);
@@ -612,95 +578,18 @@ export default function Home() {
     },
   });
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const inTypingField = Boolean(
-        target
-        && (target.tagName === "INPUT"
-          || target.tagName === "TEXTAREA"
-          || target.tagName === "SELECT"
-          || target.isContentEditable),
-      );
-
-      if (event.key === "Escape") {
-        if (showShortcutHelp) {
-          setShowShortcutHelp(false);
-          return;
-        }
-        if (selectedIssueId) {
-          setSelectedIssueId(null);
-        }
-        return;
-      }
-
-      if (inTypingField) {
-        return;
-      }
-
-      if (event.key === "/") {
-        event.preventDefault();
-        searchInputRef.current?.focus();
-        return;
-      }
-
-      if (event.key.toLowerCase() === "f") {
-        event.preventDefault();
-        resetFilters();
-        return;
-      }
-
-      if (event.key.toLowerCase() === "r" && !manualRefreshBusy) {
-        event.preventDefault();
-        void handleManualPull();
-        return;
-      }
-
-      if (event.key.toLowerCase() === "g") {
-        event.preventDefault();
-        window.location.assign("/reports");
-        return;
-      }
-
-      if (event.key.toLowerCase() === "o") {
-        event.preventDefault();
-        window.location.assign("/ops");
-        return;
-      }
-
-      if (event.key === "?") {
-        event.preventDefault();
-        setShowShortcutHelp((current) => !current);
-        return;
-      }
-
-      if (event.key.toLowerCase() === "a" && aiStatus?.available) {
-        event.preventDefault();
-        setAiSearchOpen((current) => !current);
-        return;
-      }
-
-      const navigateTo = (id: string) => {
-        const el = document.getElementById(id);
-        if (el) {
-          event.preventDefault();
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      };
-
-      if (event.altKey) {
-        if (event.key === "1") navigateTo("summary-insights");
-        if (event.key === "2") navigateTo("ops-alerts");
-        if (event.key === "3") navigateTo("activity-feed");
-        if (event.key === "4") navigateTo("issue-queue");
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-    // keyboard handlers intentionally bind to latest reactive state snapshot.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [manualRefreshBusy, selectedIssueId, showShortcutHelp]);
+  useDashboardKeyboardShortcuts({
+    showShortcutHelp,
+    setShowShortcutHelp,
+    selectedIssueId,
+    setSelectedIssueId,
+    searchInputRef,
+    resetFilters,
+    manualRefreshBusy,
+    onManualPull: handleManualPull,
+    aiAvailable: Boolean(aiStatus?.available),
+    setAiSearchOpen,
+  });
 
   useEffect(() => {
     if (statuses.length === 0) return;
@@ -1056,58 +945,18 @@ export default function Home() {
 
   if (!user) {
     return (
-      <main className="dashboard auth-shell">
-        <section className="card auth-panel">
-          <div className="auth-grid">
-            <div>
-              <p className="kicker">{t('login.kickerOps')}</p>
-              <h1>{t('login.missionControl')}</h1>
-              <p className="muted">
-                {t('login.connectRedmineDescription')}
-              </p>
-            </div>
-            <form className="form" onSubmit={connectRedmine}>
-              <label>
-                {t('login.baseUrlLabel')}
-                <input
-                  value={baseUrl}
-                  onChange={(e) => setBaseUrl(e.target.value)}
-                  placeholder={t('login.baseUrlPlaceholder')}
-                  required
-                />
-              </label>
-              <label>
-                {t('login.apiKeyLabel')}
-                <input
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={t('login.apiKeyPlaceholder')}
-                  required
-                />
-              </label>
-              <button type="submit" disabled={loading}>
-                {loading ? t('login.connecting') : t('login.launchDashboard')}
-              </button>
-              {bootstrapInfo?.configured && (
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={bootstrapFromEnv}
-                  disabled={bootstrapBusy || !bootstrapInfo.canBootstrap}
-                >
-                  {bootstrapBusy ? t('login.usingEnv') : t('login.useEnvConfig')}
-                </button>
-              )}
-              {bootstrapInfo?.configured && !bootstrapInfo.canBootstrap && (
-                <p className="muted">
-                  {t('login.envBootstrapHelp', { activeCredentials: bootstrapInfo.activeCredentials })}.
-                </p>
-              )}
-            </form>
-          </div>
-          {error && <p className="error-banner">{error}</p>}
-        </section>
-      </main>
+      <DashboardLoginScreen
+        baseUrl={baseUrl}
+        apiKey={apiKey}
+        onBaseUrlChange={setBaseUrl}
+        onApiKeyChange={setApiKey}
+        onSubmit={connectRedmine}
+        loading={loading}
+        bootstrapInfo={bootstrapInfo}
+        bootstrapBusy={bootstrapBusy}
+        onBootstrapFromEnv={bootstrapFromEnv}
+        error={error}
+      />
     );
   }
 
@@ -1973,39 +1822,7 @@ export default function Home() {
         </article>
 
         {/* Issue Preview Tooltip — anchored to row right edge with 300ms delay */}
-        {hoveredIssue && (
-          <div
-            className="issue-preview-tooltip"
-            role="tooltip"
-            style={{
-              left: previewPosition.x,
-              top: previewPosition.y,
-            }}
-          >
-            <div className="preview-header">
-              <span className="preview-id">{issueDisplayId(hoveredIssue)}</span>
-              <span className={`priority-badge priority-${(hoveredIssue.priority ?? "").toLowerCase().replace(/\s+/g, "-")}`}>
-                {hoveredIssue.priority}
-              </span>
-            </div>
-            <p className="preview-subject">{hoveredIssue.subject}</p>
-            <div className="preview-meta">
-              <span>{t('preview.status', { name: hoveredIssue.statusName })}</span>
-              <span>{t('preview.progress', { ratio: hoveredIssue.doneRatio ?? 0 })}</span>
-            </div>
-            {hoveredIssue.dueDate && (
-              <div className="preview-due">
-                {t('preview.due', { date: new Date(hoveredIssue.dueDate).toLocaleDateString() })}
-              </div>
-            )}
-            {hoveredIssue.description && (
-              <p className="preview-desc">
-                {hoveredIssue.description.slice(0, 200)}
-                {hoveredIssue.description.length > 200 && "..."}
-              </p>
-            )}
-          </div>
-        )}
+        <IssueHoverTooltip issue={hoveredIssue} position={previewPosition} />
       </section>
 
 
