@@ -11,7 +11,6 @@ import { ProjectFilter } from "@/src/components/ProjectFilter";
 import { ExportButton } from "@/src/components/ExportButton";
 import { ShortcutHelp } from "@/src/components/ShortcutHelp";
 import { FtsSearch } from "@/src/components/FtsSearch";
-import { SavedViewsPanel } from "@/src/components/SavedViewsPanel";
 import { useToast } from "@/src/components/ToastProvider";
 import { IssueCreateModal } from "@/src/components/IssueCreateModal";
 import { ColumnPicker, ColumnKey } from "@/src/components/ColumnPicker";
@@ -53,6 +52,7 @@ import { InsightsGrid } from "@/src/components/dashboard/InsightsGrid";
 import { OpsAlertsCard } from "@/src/components/dashboard/OpsAlertsCard";
 import { ActivityFeedCard } from "@/src/components/dashboard/ActivityFeedCard";
 import { useBulkIssueActions } from "@/src/hooks/useBulkIssueActions";
+import { DashboardFiltersPanel } from "@/src/components/dashboard/DashboardFiltersPanel";
 
 const POLL_INTERVAL_MS = 90_000;
 const SHOW_ALL_METRICS_KEY = "nrcc.showAllMetrics.v1";
@@ -737,95 +737,34 @@ export default function Home() {
         aiStatusIndicator={<AiStatusIndicator />}
       />
 
-      <section className="card filters-panel">
-        <div className="filters-grid home-filters-grid">
-          <label className="filter-field">
-            {t('filters.status')}
-            <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); resetPage(); }}>
-              <option value="">{t('filters.allStatuses')}</option>
-              {statuses.map((s) => (
-                <option key={s.id} value={s.name}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="filter-field">
-            {t('filters.priority')}
-            <select value={priorityFilter} onChange={(e) => { setPriorityFilter(e.target.value); resetPage(); }}>
-              <option value="">{t('filters.allPriorities')}</option>
-              {priorities.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="filter-field">
-            {t('filters.sort')}
-            <select value={sort} onChange={(e) => setSort(e.target.value)}>
-              <option value="updated_desc">{t('filters.sortNewest')}</option>
-              <option value="updated_asc">{t('filters.sortOldest')}</option>
-              <option value="priority">{t('filters.sortPriority')}</option>
-              <option value="due_date">{t('filters.sortDueDate')}</option>
-            </select>
-          </label>
-
-          <label className="filter-field search-field">
-            {t('filters.search')}
-            <input
-              ref={searchInputRef}
-              placeholder={t('filters.searchPlaceholder')}
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); resetPage(); }}
-            />
-          </label>
-
-          <label className="filter-field">
-            {t('filters.searchSource')}
-            <select value={searchMode} onChange={(e) => setSearchMode((e.target.value as "local" | "hybrid" | "fts"))}>
-              <option value="local">{t('filters.sourceLocal')}</option>
-              <option value="hybrid">{t('filters.sourceHybrid')}</option>
-              <option value="fts">{t('filters.sourceFts')}</option>
-            </select>
-            <span className="muted">{t('filters.mode' + (searchMode === "local" ? "Local" : searchMode === "fts" ? "Fts" : "Hybrid"))}</span>
-          </label>
-        </div>
-
-        <SavedViewsPanel
-          savedViews={savedViews}
-          activeViewId={activeViewId}
-          onApply={(view) => applySavedView(view as SavedView)}
-          onDelete={deleteSavedView}
-          onReorder={reorderViews}
-          onSave={(name) => {
-            setViewDraftName(name);
-            saveCurrentView();
-          }}
-          viewDraftName={viewDraftName}
-          setViewDraftName={setViewDraftName}
-        />
-
-        <div className="home-filters-footer">
-          <button
-            type="button"
-            className={`ai-toggle ${aiSearchOpen ? "active" : ""}`}
-            onClick={() => setAiSearchOpen(!aiSearchOpen)}
-            disabled={!aiStatus?.available}
-          >
-            🤖 {t('ai.askAI')} {aiStatus?.available ? "" : `(${t('ai.statusOffline')})`}
-          </button>
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => setFtsSearchOpen(true)}
-          >
-            🔍 {t('filters.sourceFts')}
-          </button>
-        </div>
-      </section>
+      <DashboardFiltersPanel
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        statuses={statuses}
+        priorityFilter={priorityFilter}
+        onPriorityFilterChange={setPriorityFilter}
+        priorities={priorities}
+        sort={sort}
+        onSortChange={setSort}
+        search={search}
+        onSearchChange={setSearch}
+        searchInputRef={searchInputRef}
+        searchMode={searchMode}
+        onSearchModeChange={setSearchMode}
+        onResetPage={resetPage}
+        savedViews={savedViews}
+        activeViewId={activeViewId}
+        onApplySavedView={applySavedView}
+        onDeleteSavedView={deleteSavedView}
+        onReorderSavedViews={reorderViews}
+        onSaveCurrentView={saveCurrentView}
+        viewDraftName={viewDraftName}
+        setViewDraftName={setViewDraftName}
+        aiSearchOpen={aiSearchOpen}
+        aiAvailable={Boolean(aiStatus?.available)}
+        onToggleAiSearch={() => setAiSearchOpen(!aiSearchOpen)}
+        onOpenFtsSearch={() => setFtsSearchOpen(true)}
+      />
 
       <InsightsGrid
         topStatuses={summary.topStatuses}
