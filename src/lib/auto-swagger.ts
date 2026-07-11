@@ -5,8 +5,6 @@
  * Do not edit manually - run: node scripts/generate-openapi.js
  */
 
-import swaggerJsdoc from "swagger-jsdoc";
-
 export const autoOpenApiOptions = {
   "openapi": "3.0.3",
   "info": {

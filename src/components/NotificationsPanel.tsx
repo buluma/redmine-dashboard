@@ -50,10 +50,6 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
   const [isPushSupported, setIsPushSupported] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isPushLoading, setIsPushLoading] = useState(false);
-  const [readIds, setReadIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => { setReadIds(getReadIds()); }, []);
-
   const fetchNotifications = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -161,24 +157,18 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAsRead = (id: string) => {
-    setReadIds((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      persistReadIds(next);
-      return next;
-    });
+    const next = getReadIds();
+    next.add(id);
+    persistReadIds(next);
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
   };
 
   const markAllRead = () => {
-    setReadIds((prev) => {
-      const next = new Set(prev);
-      for (const n of notifications) next.add(n.id);
-      persistReadIds(next);
-      return next;
-    });
+    const next = getReadIds();
+    for (const n of notifications) next.add(n.id);
+    persistReadIds(next);
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 

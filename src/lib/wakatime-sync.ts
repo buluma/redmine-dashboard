@@ -1,6 +1,6 @@
 import { prisma } from "@/src/lib/db";
 import { WakaTimeClient, type WakaTimeBreakdown, type WakaTimeSummaryDay, type WakaTimeGoalsResponse, type WakaTimeTodayResponse } from "@/src/lib/wakatime";
-import { trackInfo, trackFailure } from "@/src/lib/telemetry";
+import { trackInfo } from "@/src/lib/telemetry";
 
 function toBreakdownJson(items: WakaTimeBreakdown[]) {
   return items.map((b) => ({

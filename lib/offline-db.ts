@@ -140,8 +140,11 @@ export async function enqueueSync(
   // Try to trigger background sync if supported
   if (typeof window !== "undefined" && "serviceWorker" in navigator && "SyncManager" in window) {
     try {
-      const registration = await navigator.serviceWorker.ready;
-      await (registration as any).sync.register("sync-queue");
+      // Background Sync API isn't in standard DOM lib types yet.
+      const registration = await navigator.serviceWorker.ready as ServiceWorkerRegistration & {
+        sync: { register(tag: string): Promise<void> };
+      };
+      await registration.sync.register("sync-queue");
     } catch (err) {
       console.warn("[OfflineDB] Background sync registration failed:", err);
     }

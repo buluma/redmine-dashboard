@@ -90,7 +90,7 @@ function inferResponses(content) {
   return responses;
 }
 
-function processRouteFile(filePath, basePath) {
+function processRouteFile(filePath) {
   const content = fs.readFileSync(filePath, "utf-8");
   const methods = ["GET", "POST", "PUT", "PATCH", "DELETE"];
   const paths = {};
@@ -153,7 +153,7 @@ function walkDir(dir, basePath = "") {
       Object.assign(paths, subPaths);
     } else if (item === "route.ts" || (item.endsWith("]") && item.endsWith(".ts"))) {
       // Process route files
-      const filePaths = processRouteFile(fullPath, basePath);
+      const filePaths = processRouteFile(fullPath);
       Object.assign(paths, filePaths);
     }
   });

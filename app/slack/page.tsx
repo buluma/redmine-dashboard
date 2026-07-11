@@ -1,6 +1,6 @@
 import { requireCurrentUser } from "@/src/lib/auth";
 import { env } from "@/src/lib/env";
-import { SlackClient } from "@/src/lib/slack";
+import { SlackClient, type SlackMessage } from "@/src/lib/slack";
 import { SlackMessagesClient } from "./slack-client";
 import { SlackErrorView } from "./error-view";
 
@@ -11,7 +11,7 @@ export default async function SlackPage() {
   await requireCurrentUser();
 
   let error: string | null = null;
-  let messages: any[] = [];
+  let messages: SlackMessage[] = [];
   let initialUserNames: Record<string, string> = {};
   let channels: Array<{ id: string; name: string }> = [];
   const defaultChannelId = env.slackDefaultChannelId || "";

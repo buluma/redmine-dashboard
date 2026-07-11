@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LLMProviderManager } from '../llm-provider';
 
 vi.mock('@/src/lib/db', () => ({

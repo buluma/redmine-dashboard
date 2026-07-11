@@ -3,9 +3,13 @@
 import React from "react";
 import { useI18n } from "@/src/components/I18nProvider";
 import { PersonalTicketCreateForm } from "./personal-ticket-create-form";
+import type { Issue } from "@/src/types/dashboard";
 
 interface PersonalTicketsViewProps {
-  issues: any[];
+  issues: Pick<
+    Issue,
+    "id" | "localIssueNumber" | "subject" | "statusName" | "updatedAt" | "tracker" | "priority" | "doneRatio" | "dueDate"
+  >[];
 }
 
 export function PersonalTicketsView({ issues }: PersonalTicketsViewProps) {

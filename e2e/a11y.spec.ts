@@ -32,7 +32,6 @@ for (const target of TARGETS) {
 
     if (blocking.length > 0) {
       // Print a compact summary so CI logs surface the offenders.
-      // eslint-disable-next-line no-console
       console.log(
         blocking
           .map((v) => `${v.id} (${v.impact}): ${v.nodes.length} node(s) — ${v.helpUrl}`)

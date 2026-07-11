@@ -46,9 +46,9 @@ export function RefreshButton() {
         errors: data.errors || [],
         guardLimit: data.guardLimit,
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error("Refresh failed:", err);
-      setError(err.message || "An unexpected error occurred");
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
       setBusy(false);
     }

@@ -299,7 +299,7 @@ export class OllamaClient {
     try {
       const result = await this.chat(messages, { ...options, useFallback: false });
       return { ...result, usedFallback: false };
-    } catch (error) {
+    } catch {
       trackWarn("ollama.model.fallback", { primaryModel: env.ollamaChatModel, fallbackModel: env.ollamaChatModelFallback });
     }
 

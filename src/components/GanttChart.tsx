@@ -31,7 +31,7 @@ function dayDiff(start: Date, end: Date) {
 
 export function GanttChart({ issues, onClick }: GanttChartProps) {
   // 1. Calculate boundaries
-  const { minDate, maxDate, totalDays, dates } = useMemo(() => {
+  const { minDate, totalDays, dates } = useMemo(() => {
     let minT = Number.MAX_SAFE_INTEGER;
     let maxT = 0;
 

@@ -178,8 +178,15 @@ function VirtualizedLogList({
   levelColor,
   t,
 }: VirtualizedLogListProps) {
+  // @tanstack/react-virtual's useVirtualizer is a known React
+  // Compiler-incompatible hook (mutates refs the compiler can't safely
+  // reason about) — "use no memo" opts the component out explicitly
+  // instead of an implicit bail-out; the lint rule still flags the call
+  // site itself regardless, so it's disabled there too.
+  "use no memo";
   const parentRef = useRef<HTMLDivElement>(null);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: logs.length,
     getScrollElement: () => parentRef.current,

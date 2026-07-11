@@ -49,7 +49,7 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
     } finally {
       setLoading(false);
     }
-  }, [onStatusChange]);
+  }, [onStatusChange, t]);
 
   useEffect(() => {
     void fetchStatus();

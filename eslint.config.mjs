@@ -13,13 +13,14 @@ const eslintConfig = defineConfig([
   },
   {
     rules: {
-      // In-progress: still paying down a pre-existing any-typing backlog
-      // (see git log). Tighten back to "error" once it's fully clear.
-      "@typescript-eslint/no-explicit-any": "warn",
+      // 2026-07-11: the pre-existing 163-instance any-typing backlog (first
+      // real CI run since being disabled in April) is fully paid down —
+      // back to error so it can't silently regrow.
+      "@typescript-eslint/no-explicit-any": "error",
       // Intentionally-unused bindings prefixed with `_` (destructuring
       // placeholders, ignored catch params) shouldn't warn.
       "@typescript-eslint/no-unused-vars": [
-        "warn",
+        "error",
         {
           argsIgnorePattern: "^_",
           varsIgnorePattern: "^_",

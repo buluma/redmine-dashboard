@@ -4,7 +4,6 @@ import {
   getAuditService,
   extractClientIp,
   extractUserAgent,
-  type AuditLogEntry,
 } from '../audit';
 
 const { mockAuditLogCreate, mockTrackFailure } = vi.hoisted(() => ({

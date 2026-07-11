@@ -10,7 +10,7 @@ const langNames: Record<string, string> = {
 };
 
 export function LocaleIndicator() {
-  const { locale, t } = useI18n();
+  const { locale } = useI18n();
   
   return (
     <div style={{

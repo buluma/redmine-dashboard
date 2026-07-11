@@ -47,7 +47,7 @@ export function UsersClient({ initialUsers, currentUserId }: { initialUsers: Use
       setUsers(users.map(u => 
         u.id === userId ? { ...u, role: data.user.role } : u
       ));
-    } catch (e) {
+    } catch {
       alert(t("common.error"));
     } finally {
       setUpdating(null);
