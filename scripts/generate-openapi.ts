@@ -72,18 +72,6 @@ const DIR_TO_TAG: Record<string, string> = {
   "chat": "Chat",
 };
 
-// Common responses
-const COMMON_RESPONSES = {
-  "200": { description: "Success" },
-  "201": { description: "Created" },
-  "400": { description: "Bad Request" },
-  "401": { description: "Unauthorized" },
-  "403": { description: "Forbidden" },
-  "404": { description: "Not Found" },
-  "429": { description: "Rate Limited" },
-  "500": { description: "Internal Server Error" },
-};
-
 function getRouteSummary(filePath: string): string {
   const content = fs.readFileSync(filePath, "utf-8");
   
@@ -199,43 +187,6 @@ function inferResponses(filePath: string): OpenAPIResponses {
   }
   
   return responses;
-}
-
-function processRouteFile(filePath: string, dir: string): OpenAPIPath {
-  const methods = ["GET", "POST", "PUT", "PATCH", "DELETE"];
-  const paths: OpenAPIPath = {};
-  const content = fs.readFileSync(filePath, "utf-8");
-  
-  // Extract route path from file
-  const fileName = path.basename(filePath, ".ts");
-  let routePath = "/" + fileName;
-  
-  // Handle dynamic routes
-  if (fileName.includes("[")) {
-    routePath = "/" + fileName.replace(/\[/g, "{").replace(/\]/g, "}");
-  }
-  
-  methods.forEach(method => {
-    // Check if this method is exported
-    const methodRegex = new RegExp(`export\\s+async\\s+function\\s+${method}\\s*\\(`, "i");
-    if (methodRegex.test(content)) {
-      const tag = DIR_TO_TAG[dir] || dir.charAt(0).toUpperCase() + dir.slice(1);
-      
-      paths[routePath] = {
-        ...paths[routePath],
-        [method.toLowerCase()]: {
-          tags: [tag],
-          summary: getRouteSummary(filePath),
-          description: getRouteDescription(filePath),
-          parameters: inferParameters(filePath),
-          requestBody: inferRequestBody(filePath),
-          responses: inferResponses(filePath),
-        },
-      };
-    }
-  });
-  
-  return paths;
 }
 
 function processDirectory(dir: string): OpenAPIPath {

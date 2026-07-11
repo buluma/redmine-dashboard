@@ -26,8 +26,6 @@ const notifyPayloadSchema = z.object({
   previousAssignee: z.string().nullable().optional(),
 });
 
-type NotifyPayload = z.infer<typeof notifyPayloadSchema>;
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

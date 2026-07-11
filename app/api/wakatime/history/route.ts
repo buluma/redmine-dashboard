@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/src/lib/auth";
-import { prisma } from "@/src/lib/db";
 import { syncWakaTimeSummaries, queryWakaTimeHistory } from "@/src/lib/wakatime-sync";
 import { trackFailure } from "@/src/lib/telemetry";
 

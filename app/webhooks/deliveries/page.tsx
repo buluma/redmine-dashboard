@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/src/lib/session";
-import { requireRole } from "@/src/lib/rbac";
 import { prisma } from "@/src/lib/db";
 
 export const runtime = "nodejs";
@@ -27,12 +26,6 @@ export default async function WebhookDeliveriesPage() {
     },
     orderBy: { deliveredAt: "desc" },
     take: 50,
-  });
-
-  // Fetch subscriptions for filter
-  const subscriptions = await prisma.webhookSubscription.findMany({
-    select: { id: true, name: true, active: true },
-    orderBy: { name: "asc" },
   });
 
   // Calculate stats

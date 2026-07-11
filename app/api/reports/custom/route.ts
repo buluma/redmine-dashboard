@@ -26,7 +26,7 @@ const reportConfigSchema = z.object({
  * 
  * Returns saved custom reports for current user
  */
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const user = await requireCurrentUser();
     

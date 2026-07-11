@@ -12,14 +12,6 @@ type IssueDetailPayload = {
 };
 const issueDetailCache = new Map<string, { expiresAt: number; payload: IssueDetailPayload }>();
 
-function parseIssueId(id: string): number {
-  const n = Number(id);
-  if (!Number.isInteger(n) || n <= 0) {
-    throw new Error("Invalid issue id");
-  }
-  return n;
-}
-
 function pruneIssueDetailCache(nowMs: number) {
   for (const [key, entry] of issueDetailCache.entries()) {
     if (entry.expiresAt <= nowMs) {

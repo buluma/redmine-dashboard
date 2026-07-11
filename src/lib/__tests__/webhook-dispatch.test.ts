@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { dispatchWebhook, getActiveSubscriptions } from '../webhook-subscription';
-import type { WebhookPayload, WebhookEvent } from '../webhook-subscription';
+import type { WebhookPayload } from '../webhook-subscription';
 
 const { mockPrismaImpl } = vi.hoisted(() => ({
   mockPrismaImpl: {

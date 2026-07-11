@@ -231,6 +231,7 @@ export async function POST(request: Request) {
       description,
       projectId,
       priorityId,
+      trackerId,
       assignedToId,
       dueDate,
     });

@@ -47,7 +47,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    const searchTerms = query.split(/\s+/).filter((t) => t.length > 0);
     const recencyCutoff = new Date(Date.now() - RECENCY_DAYS * 24 * 60 * 60 * 1000);
     
     // Full-text search with smarter ranking:

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useI18n } from "@/src/components/I18nProvider";
+import { useI18n, type I18nContextType } from "@/src/components/I18nProvider";
 
 type User = {
   id: string;
@@ -103,7 +103,7 @@ function formatDateTime(value: string | null, locale: string): string {
   return new Date(value).toLocaleString(locale);
 }
 
-function formatDuration(ms: number | null, t: any): string {
+function formatDuration(ms: number | null, t: I18nContextType["t"]): string {
   if (ms === null) return "-";
   const sec = Math.floor(ms / 1000);
   if (sec < 60) return t("ops.durationSec", { sec });
@@ -205,7 +205,7 @@ export default function OpsPage() {
       void loadData().catch(() => {});
     }, 30_000);
     return () => clearInterval(id);
-  }, []);
+  }, [t]);
 
   async function retryFullSync() {
     setRetrying(true);

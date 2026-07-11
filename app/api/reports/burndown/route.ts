@@ -2,6 +2,7 @@ import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { trackFailure } from "@/src/lib/telemetry";
+import type { Prisma } from "@prisma/client";
 
 /**
  * GET /api/reports/burndown
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
     const start = startDate ? new Date(startDate) : new Date(end.getTime() - 14 * 24 * 60 * 60 * 1000);
     
     // Get user's issues with status changes in the period
-    const where: any = {
+    const where: Prisma.IssueWhereInput = {
       userId: user.id,
       updatedAt: { gte: start },
     };
@@ -68,8 +69,6 @@ export async function GET(request: Request) {
     let cumulativeClosed = 0;
     
     const points = sortedDates.map((dateKey, idx) => {
-      const dateData = dailyData.get(dateKey)!;
-      
       // Count closed/completed issues on this date
       const issuesOnDate = issues.filter(i => {
         const updated = i.updatedAt instanceof Date 

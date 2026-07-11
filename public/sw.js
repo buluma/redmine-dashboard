@@ -2,9 +2,7 @@
 // No caching logic — just enables install prompt
 // Full offline caching is handled client-side via IndexedDB
 
-const CACHE_NAME = "converge-shell-v1";
-
-self.addEventListener("install", (event) => {
+self.addEventListener("install", () => {
   console.log("[SW] Installed");
   self.skipWaiting();
 });
