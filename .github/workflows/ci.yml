@@ -20,6 +20,7 @@ jobs:
       - run: npm run lint
 
   typecheck:
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -31,6 +32,7 @@ jobs:
       - run: npm run typecheck
 
   test:
+    needs: typecheck
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: file:./test.db
@@ -47,6 +49,7 @@ jobs:
       - run: npm run test
 
   build:
+    needs: test
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: file:./test.db
@@ -64,6 +67,7 @@ jobs:
       - run: npm run build
 
   a11y:
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -81,6 +85,7 @@ jobs:
           SESSION_SECRET: ci-axe-secret
 
   e2e:
+    needs: a11y
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
