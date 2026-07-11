@@ -19,16 +19,11 @@ import { GanttChart } from "@/src/components/GanttChart";
 import { IssueQuickPeek } from "@/src/components/IssueQuickPeek";
 import { SkeletonTable } from "@/src/components/SkeletonTable";
 import type {
-  User,
   Issue,
-  StatusCatalog,
-  SyncState,
-  BootstrapInfo,
   FilterPreset,
   SavedView,
 } from "@/src/types/dashboard";
 import {
-  uniqueStrings,
   syncTone,
   summarizeSyncError,
   latestSyncTimestamp,
@@ -39,7 +34,6 @@ import {
   openIssueInNewTab,
 } from "@/src/lib/issue-utils";
 import { useDashboardSavedViews } from "@/src/hooks/useDashboardSavedViews";
-import { useEventStream } from "@/src/hooks/useEventStream";
 import { PAGE_SIZE_OPTIONS, usePageSize } from "@/src/hooks/usePageSize";
 import { DashboardHero } from "@/src/components/dashboard/DashboardHero";
 import { IssueQueueRow } from "@/src/components/dashboard/IssueQueueRow";
@@ -53,8 +47,8 @@ import { OpsAlertsCard } from "@/src/components/dashboard/OpsAlertsCard";
 import { ActivityFeedCard } from "@/src/components/dashboard/ActivityFeedCard";
 import { useBulkIssueActions } from "@/src/hooks/useBulkIssueActions";
 import { DashboardFiltersPanel } from "@/src/components/dashboard/DashboardFiltersPanel";
+import { useDashboardData } from "@/src/hooks/useDashboardData";
 
-const POLL_INTERVAL_MS = 90_000;
 const SHOW_ALL_METRICS_KEY = "nrcc.showAllMetrics.v1";
 const DEFAULT_ADVANCED_FILTERS: FilterState = {
   search: "",
@@ -68,21 +62,13 @@ const DEFAULT_ADVANCED_FILTERS: FilterState = {
 export default function Home() {
   const router = useRouter();
   const { t } = useI18n();
-  const [user, setUser] = useState<User | null>(null);
-  const [issues, setIssues] = useState<Issue[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const { pageSize, setPageSize } = usePageSize();
-  const fetchPageSize = 200;
-  const [statuses, setStatuses] = useState<StatusCatalog[]>([]);
-  const [priorities, setPriorities] = useState<string[]>([]);
   const [selectedIssueId, setSelectedIssueId] = useState<number | null>(null);
   const [selectedIssueIds, setSelectedIssueIds] = useState<number[]>([]);
   const [bulkStatusId, setBulkStatusId] = useState(0);
   const [bulkPriorityId, setBulkPriorityId] = useState(0);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
-  const [syncState, setSyncState] = useState<SyncState>(null);
-  const [loading, setLoading] = useState(true);
   const toast = useToast();
   const [showIssueCreateModal, setShowIssueCreateModal] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(
@@ -90,12 +76,9 @@ export default function Home() {
   );
   const [manualRefreshBusy, setManualRefreshBusy] = useState(false);
   const [allowedStatusIdsByIssue, setAllowedStatusIdsByIssue] = useState<Record<number, number[]>>({});
-  const [bootstrapInfo, setBootstrapInfo] = useState<BootstrapInfo>(null);
   const [bootstrapBusy, setBootstrapBusy] = useState(false);
-  const [aiStatus, setAiStatus] = useState<{ available: boolean; primaryModel: string; usingFallback: boolean } | null>(null);
   const [aiSearchOpen, setAiSearchOpen] = useState(false);
   const [ftsSearchOpen, setFtsSearchOpen] = useState(false);
-  const [aiSummaryCount, setAiSummaryCount] = useState(0);
 
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -126,13 +109,9 @@ export default function Home() {
   const [issueQueueOpen, setIssueQueueOpen] = useState(true);
   const [viewMode, setViewMode] = useState<"list" | "board" | "gantt">("list");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [favoriteIssueIds, setFavoriteIssueIds] = useState<number[]>([]);
   const [showCharts, setShowCharts] = useState(false);
   const [showAllMetrics, setShowAllMetrics] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [activityId, setActivityId] = useState(0);
-
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const prefetchedIssueIdsRef = useRef<Set<string>>(new Set());
@@ -155,6 +134,42 @@ export default function Home() {
       prefetchedIssueIdsRef.current.delete(routeId);
     });
   }, [router]);
+
+  const queryString = useMemo(() => {
+    const params = new URLSearchParams();
+    if (priorityFilter) params.set("priority", priorityFilter);
+    if (search) params.set("search", search);
+    if (advancedFilters.assignedToMe) params.set("assignedToMe", "true");
+    params.set("searchMode", searchMode);
+    params.set("scope", "issues");
+    if (sort) params.set("sort", sort);
+    params.set("page", "1");
+    return params.toString();
+  }, [priorityFilter, search, searchMode, sort, advancedFilters.assignedToMe]);
+
+  const {
+    user,
+    setUser,
+    issues,
+    setIssues,
+    total,
+    statuses,
+    priorities,
+    syncState,
+    setSyncState,
+    loading,
+    setLoading,
+    favoriteIssueIds,
+    bootstrapInfo,
+    aiStatus,
+    aiSummaryCount,
+    refreshAll,
+    loadActivities,
+    loadBootstrapInfo,
+  } = useDashboardData({
+    queryString,
+    onIssuesPageReset: () => setPage(1),
+  });
 
   const {
     computedPriorityOptions,
@@ -185,18 +200,6 @@ export default function Home() {
       onNext: () => { if (hasNext) setSelectedIssueId(allVisibleIssueIds[idx + 1]); },
     };
   }, [allVisibleIssueIds, selectedIssueId]);
-
-  const queryString = useMemo(() => {
-    const params = new URLSearchParams();
-    if (priorityFilter) params.set("priority", priorityFilter);
-    if (search) params.set("search", search);
-    if (advancedFilters.assignedToMe) params.set("assignedToMe", "true");
-    params.set("searchMode", searchMode);
-    params.set("scope", "issues");
-    if (sort) params.set("sort", sort);
-    params.set("page", "1");
-    return params.toString();
-  }, [priorityFilter, search, searchMode, sort, advancedFilters.assignedToMe]);
 
   useEffect(() => {
     if (!heroRef.current) return;
@@ -237,161 +240,9 @@ export default function Home() {
     clearActiveIfDiverged({ statusFilter, priorityFilter, search, sort });
   }, [clearActiveIfDiverged, priorityFilter, search, sort, statusFilter]);
 
-  async function loadSession() {
-    try {
-      const res = await fetch("/api/session/me", { cache: "no-store" });
-      const contentType = res.headers.get("content-type") || "";
-      if (!contentType.includes("application/json")) {
-        setUser(null);
-        return;
-      }
-      const data = await res.json();
-      setUser(data.user ?? null);
-    } catch {
-      setUser(null);
-    }
-  }
-
-  async function loadBootstrapInfo() {
-    const res = await fetch("/api/redmine/bootstrap", { cache: "no-store" });
-    if (!res.ok) {
-      return;
-    }
-    const data = await res.json();
-    setBootstrapInfo(data);
-  }
-
-  async function loadAiStatus() {
-    try {
-      const res = await fetch("/api/ai/status", { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        setAiStatus(data);
-      }
-    } catch {
-      // AI not available
-      setAiStatus(null);
-    }
-  }
-
-  async function loadAiSummaryCount() {
-    try {
-      const res = await fetch("/api/ai/summary-count", { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        setAiSummaryCount(data.count ?? 0);
-      }
-    } catch {
-      setAiSummaryCount(0);
-    }
-  }
-
-  async function loadSyncStatus() {
-    if (!user) return;
-    const res = await fetch("/api/sync/status", { cache: "no-store" });
-    if (res.ok) {
-      const data = await res.json();
-      const state = (data.state ?? null) as SyncState;
-      if (state && !state.lastError && data.latestJob?.error) {
-        state.lastError = String(data.latestJob.error);
-      }
-      setSyncState(state);
-    }
-  }
-
-  async function loadIssues() {
-    if (!user) return;
-    const res = await fetch(`/api/issues?${queryString}&pageSize=${fetchPageSize}`, { cache: "no-store" });
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error ?? "Failed to load issues");
-    }
-
-    const data = await res.json();
-    setIssues(data.items ?? []);
-    setTotal(data.total ?? 0);
-    setStatuses(data.filters?.statuses ?? []);
-    setPriorities(uniqueStrings(data.filters?.priorities ?? []));
-    setPage(1); // Reset to page 1 on fresh data
-  }
-
-  async function loadActivities() {
-    if (!user) return;
-    const res = await fetch("/api/internal/activities", { cache: "no-store" });
-    if (res.ok) {
-      const data = await res.json();
-      const fetched = data.activities ?? [];
-      if (fetched.length > 0 && activityId === 0) {
-        setActivityId(fetched[0].id);
-      }
-    }
-  }
-
   function resetPage() {
     setPage(1);
   }
-
-  async function loadFavorites() {
-    try {
-      const res = await fetch("/api/issues/favorites", { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        setFavoriteIssueIds(data.favorites ?? []);
-      }
-    } catch {
-      // Ignore errors
-    }
-  }
-
-  async function refreshAll() {
-    setLoading(true);
-    try {
-      await loadIssues();
-      await loadSyncStatus();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to refresh dashboard");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        await Promise.all([loadSession(), loadBootstrapInfo(), loadAiStatus(), loadAiSummaryCount()]);
-      } finally {
-        setLoading(false);
-      }
-    })();
-
-
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-
-    void refreshAll();
-    void loadActivities();
-    void loadFavorites();
-
-    const id = setInterval(() => {
-      void refreshAll();
-    }, POLL_INTERVAL_MS);
-
-    return () => clearInterval(id);
-    // refreshAll/loadActivities intentionally depend on current query + user snapshot.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryString, user]);
-
-  // Live updates via Server-Sent Events. The polling loop above stays
-  // as a backstop in case the stream is dropped by an intermediate proxy.
-  useEventStream({
-    enabled: Boolean(user),
-    handlers: {
-      "issue.created": () => { void refreshAll(); },
-      "issue.updated": () => { void refreshAll(); },
-    },
-  });
 
   useDashboardKeyboardShortcuts({
     showShortcutHelp,
