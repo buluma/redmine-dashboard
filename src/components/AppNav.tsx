@@ -33,6 +33,8 @@ export function AppNav() {
 
   // Load collapsed state from localStorage after mount
   useEffect(() => {
+    // SSR-hydration guard + localStorage sync — must run client-side-only.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     try {
       if (localStorage.getItem("converge.nav.collapsed") === "true") {

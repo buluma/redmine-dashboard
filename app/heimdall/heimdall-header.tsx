@@ -20,6 +20,9 @@ export function HeimdallHeader({ totalLogs, errorCount, hostCount }: HeimdallHea
   const { t } = useI18n();
 
   useEffect(() => {
+    // SSR-hydration guard: server always renders `mounted=false`, so this
+    // must run client-side-only in an effect, not derived during render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

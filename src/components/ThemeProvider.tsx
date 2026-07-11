@@ -19,8 +19,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
+    // localStorage read on mount — external-system sync, not derivable
+    // during render (unavailable during SSR).
     const saved = localStorage.getItem("theme");
     if (saved === "light" || saved === "dark" || saved === "system") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setThemeState(saved);
     }
   }, []);

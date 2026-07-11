@@ -99,9 +99,12 @@ export function SavedViewsPanel({
   const [localViews, setLocalViews] = useState<SavedViewItem[]>([]);
   const [isReorderMode, setIsReorderMode] = useState(false);
 
-  // Sync local state with props
+  // Sync local state with props. localViews is independently mutated during
+  // drag-reorder (see setLocalViews below), so it can't be pure derived
+  // state — it needs to re-sync only when the savedViews prop itself changes.
   useEffect(() => {
     const views = (savedViews as SavedViewItem[]).slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalViews(views);
   }, [savedViews]);
 

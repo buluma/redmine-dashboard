@@ -79,7 +79,7 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
     const initialLoad = window.setTimeout(() => {
       void fetchNotifications();
     }, 0);
-    let interval = window.setInterval(() => {
+    const interval = window.setInterval(() => {
       if (!document.hidden) void fetchNotifications();
     }, pollingInterval);
     const onVisibility = () => {

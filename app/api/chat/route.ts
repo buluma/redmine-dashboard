@@ -210,7 +210,7 @@ Current session context:
       // If there are pending (mutating) tool calls, return them for confirmation
       if (pending.length > 0) {
         // Also auto-execute any read-only calls in the same batch
-        let autoResults: ToolResult[] = [];
+        const autoResults: ToolResult[] = [];
         if (autoExecute.length > 0) {
           try {
             const conn = await requireRedmineClientForUser(user.id);

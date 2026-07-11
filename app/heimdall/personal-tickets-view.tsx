@@ -13,6 +13,9 @@ export function PersonalTicketsView({ issues }: PersonalTicketsViewProps) {
 
   function formatTimeAgo(dateStr: string): string {
     const date = new Date(dateStr);
+    // "Time ago" display — reading the current time at render is the whole
+    // point; worst case it's a render behind, no correctness or loop risk.
+    // eslint-disable-next-line react-hooks/purity
     const diffMs = Date.now() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     if (diffMins < 60) return t("personalTickets.timeAgo.m", { count: Math.max(diffMins, 1) });

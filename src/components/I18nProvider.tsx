@@ -53,7 +53,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // localStorage read + SSR-hydration guard — client-side-only sync.
     const stored = localStorage.getItem("converge-locale") || "en";
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocale(stored);
     document.documentElement.lang = stored;
     setMounted(true);

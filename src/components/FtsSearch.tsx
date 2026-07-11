@@ -151,7 +151,7 @@ export function FtsSearch({ onSelect }: FtsSearchProps) {
 
       {isOpen && query.length >= 2 && results.length === 0 && !loading && (
         <div className="fts-search-dropdown">
-          <div className="fts-search-empty">No results found for "{query}"</div>
+          <div className="fts-search-empty">No results found for &ldquo;{query}&rdquo;</div>
         </div>
       )}
 

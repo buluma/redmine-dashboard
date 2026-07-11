@@ -198,7 +198,7 @@ export async function POST(request: Request) {
       }
 
       if (pending.length > 0) {
-        let autoResults: ToolResult[] = [];
+        const autoResults: ToolResult[] = [];
         if (autoExecute.length > 0) {
           try {
             const conn = await requireRedmineClientForUser(user.id);

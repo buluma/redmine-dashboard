@@ -39,12 +39,14 @@ export function useSavedViews(): UseSavedViewsResult {
   const [views, setViews] = useState<SavedView[]>([]);
   const [currentViewId, setCurrentViewId] = useState<string | null>(null);
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount — external-system sync, not derivable
+  // during render.
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setViews(parsed);
       }
       

@@ -9,6 +9,9 @@ export default function OfflinePage() {
   const { t } = useI18n();
 
   useEffect(() => {
+    // Syncing with the browser's navigator.onLine external system — the
+    // canonical use case for an effect, not derivable during render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOnline(navigator.onLine);
     const on = () => setOnline(true);
     const off = () => setOnline(false);

@@ -11,6 +11,7 @@
  * - Event delivery history logging
  */
 
+import crypto from 'crypto';
 import { prisma } from './db';
 import { getAuditService } from './audit';
 import { trackInfo, trackSuccess, trackFailure } from './telemetry';
@@ -224,7 +225,6 @@ function maskUrl(url: string): string {
 }
 
 function generateSignature(payload: string, secret: string): string {
-  const crypto = require('crypto');
   return crypto.createHmac('sha256', secret).update(payload).digest('hex');
 }
 

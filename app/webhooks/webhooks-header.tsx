@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useI18n } from "@/src/components/I18nProvider";
 
 export function WebhooksHeader() {
@@ -29,7 +30,7 @@ export function WebhooksAccessDenied() {
       <section className="card">
         <h1>{t("webhooks.accessDenied")}</h1>
         <p className="muted">{t("webhooks.noPermission")}</p>
-        <a href="/" className="secondary-button">{t("webhooks.backToDashboard")}</a>
+        <Link href="/" className="secondary-button">{t("webhooks.backToDashboard")}</Link>
       </section>
     </main>
   );

@@ -24,6 +24,9 @@ export function IssueQuickPeek({ issueId, onClose, onOpenFullPage, onPrev, onNex
 
   useEffect(() => {
     if (!issueId) {
+      // Reset on close — issueId is an external prop signal, not derivable
+      // state (issue/error are independently set by the fetch below too).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIssue(null);
       setError(null);
       return;

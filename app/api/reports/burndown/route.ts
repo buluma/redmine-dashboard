@@ -62,8 +62,7 @@ export async function GET(request: Request) {
     
     // Count total issues at start (as "open")
     const totalIssues = issues.length;
-    let remaining = totalIssues;
-    
+
     // Build burndown data points
     const sortedDates = Array.from(dailyData.keys()).sort();
     let cumulativeClosed = 0;
