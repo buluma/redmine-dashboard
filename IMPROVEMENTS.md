@@ -66,11 +66,31 @@ Deferred (need approval before touching):
 
 | Item | Status | Blocker |
 |------|--------|---------|
-| 1.4 page.tsx full split | partial | core extractions shipped (1.4a–d); deeper split touches reducer migration + AI/notif/preset wiring |
 | 1.5 issue detail full split | partial | comment-post form + history/notes/properties timelines remain inline (tied to `performAction`); each is small |
 | 1.18 Saved views single source of truth | blocked | client `SavedView` shape (`statusFilter`/`priorityFilter`/`sort`) ↔ server Prisma model (`status`/`sortBy`/`sortOrder`/`priorityIds[]`) diverge; needs schema migration or wider field reshape |
 
 After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 offline conflicts, 2.19 log virtualization, etc.) untouched.
+
+---
+
+## 0b. Status (2026-07-11 working session)
+
+Completed during this session:
+
+| Item | Status | Where |
+|------|--------|-------|
+| 1.4 `app/page.tsx` full split | ✅ done | 2039 → 787 lines (61%), 10 sequential extractions into `src/hooks/` + `src/components/dashboard/` — see `docs/codebase-summary.md` for the full list. Every step: TDD, `tsc`/`eslint` clean, full suite green, individually committed/pushed, CI (`lint→typecheck→test→build→a11y→e2e`) watched to completion. |
+| CI re-enable (had been disabled since April) | ✅ done | schema-flag + job-level env-var fixes, sequential job chain via `needs:`, concurrency cancellation on new pushes |
+| Zero-warning ESLint sweep | ✅ done | 262 → 0 warnings across ~75 files; surfaced 3 real bugs along the way (wrong Prisma field name in the AI summarize-stale route, a missing `trackerId` on issue creation, dead state in `NotificationsPanel`) |
+| Repo flipped public | ✅ done | full gitleaks + manual secret audit first, confirmed clean |
+
+Verification at session end:
+- `npx tsc --noEmit` → clean.
+- `npm test --run` → 633/633 pass (up from ~403 at the last status checkpoint; +130 from the split alone).
+- `npx eslint` → 0 warnings, rule locked back to `error`.
+- CI: all 6 jobs green on every push this session, including `a11y`/`e2e` (real headless Chromium).
+
+1.4 moves from "Deferred" to fully shipped — see the updated entry under §1.4 below. 1.10 (client-only filter presets) and 1.18 (saved-view schema mismatch) remain open exactly as described; the 1.4 split relocated their code (`useFilterPresets.ts`, `DashboardFiltersPanel.tsx`) but did not change their behavior.
 
 ---
 
@@ -90,10 +110,9 @@ After-phase items (1.1 Kanban/Gantt revive, 1.6 SSE, 1.8 Postgres on Pi, 1.12 of
 - **Files (sample):** `app/api/ai/*`, `app/api/chat/*`, `app/api/external/tickets/*`, `app/api/issues/*`, `app/api/internal/notes/*`.
 - **Action:** Sweep with `grep -rEn "console\.(log|warn|error)" app/ src/`; for each, replace with `trackInfo`/`trackFailure`. Add an ESLint rule (`no-console`) once the floor is clean.
 
-### 1.4 Reduce `app/page.tsx` complexity — High ⏳ partial (1.4a–d shipped)
-- **Evidence:** 1996 lines, 55 `useState` hooks, multiple memos + effects in a single client component.
-- **Symptoms:** prop drilling avoided by stacking state; harder TDD; hard to keep effects in sync.
-- **Action:** Extract `useDashboardQueue()`, `useSavedViews()`, `useFilterPresets()`, `useIssueSelection()` hooks. Replace clusters of `useState` with `useReducer` for filter/view state. Split queue table to its own component.
+### 1.4 Reduce `app/page.tsx` complexity — High ✅ done (2026-07-11)
+- **Evidence (historical):** was 1996 lines, 55 `useState` hooks, multiple memos + effects in a single client component.
+- **Result:** 787 lines. Full split into 12 hooks/components — `useIssueHoverPreview`+`IssueHoverTooltip`, `DashboardLoginScreen`, `useDashboardKeyboardShortcuts`, `useIssueFiltering`, `InsightsGrid`, `OpsAlertsCard`+`ActivityFeedCard`, `useBulkIssueActions`, `DashboardFiltersPanel`, `useDashboardData`, `useFilterPresets`, `IssueQueueCard`. See `docs/codebase-summary.md` for what each owns. `useReducer` migration for filter/view state was not needed — the hook split already isolated each concern enough that prop drilling stopped being a problem.
 
 ### 1.5 Reduce `app/issues/[id]/page.tsx` complexity — High ⏳ partial (1.5a–c shipped)
 - **Evidence:** 2117 lines. Mix of: rendering, comment posting, GitHub link mgmt, time entries, allowed statuses, edit mode, offline queue, AI panel.
@@ -333,7 +352,7 @@ Bonus gaps not in a–h but worth tracking:
 | Phase | Items |
 |-------|-------|
 | **Now (small, high payoff)** | ✅ 1.3, ⛔ 1.18 (blocked), ✅ 2.3, ✅ 2.4, ✅ 2.6, ✅ 2.7–2.8, ✅ 2.25 |
-| **Next (med)** | ⏳ 1.4 (partial: 1.4a–d), ⏳ 1.5 (partial: 1.5a–c), ✅ 1.7, ✅ 1.9, ✅ 2.1, ✅ 2.2, ✅ 2.5, ✅ 2.12, ✅ 2.18, ✅ 2.24 |
+| **Next (med)** | ✅ 1.4, ⏳ 1.5 (partial: 1.5a–c), ✅ 1.7, ✅ 1.9, ✅ 2.1, ✅ 2.2, ✅ 2.5, ✅ 2.12, ✅ 2.18, ✅ 2.24 |
 | **After** | ✅ 1.1, ✅ 1.6, ✅ 1.8 (runbook), ⛔ 1.12 (design needed), ✅ 1.13, 1.17 (mobile strategy), ✅ 2.19 |
 | **Polish / opportunistic** | 1.11, 1.14–1.16, 1.19–1.22, 2.9–2.11, 2.13–2.17, 2.20–2.23 |
 
