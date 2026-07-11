@@ -14,11 +14,10 @@ import { ServiceWorkerRegistrar } from "@/src/components/ServiceWorkerRegistrar"
 import { AppNav } from "@/src/components/AppNav";
 import { NotificationsPanel } from "@/src/components/NotificationsPanel";
 import { ToastProvider } from "@/src/components/ToastProvider";
-import { I18nProvider, useI18n } from "@/src/components/I18nProvider";
+import { I18nProvider } from "@/src/components/I18nProvider";
 import { ThemeProvider } from "@/src/components/ThemeProvider";
 import { LocaleIndicator } from "@/src/components/LocaleIndicator";
-import React, { useContext } from 'react';
-import { LocaleSwitcherTest } from '@/src/components/LocaleSwitcherTest';
+import React from 'react';
 import { getSessionUserId } from "@/src/lib/session";
 
 const sora = Sora({

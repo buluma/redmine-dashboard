@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useI18n } from "@/src/components/I18nProvider";
+import { useI18n, type I18nContextType } from "@/src/components/I18nProvider";
 import {
   AreaChart,
   DonutChart,
@@ -59,11 +59,11 @@ function roundHours(totalSeconds: number): number {
   return Math.round((totalSeconds / 3600) * 10) / 10;
 }
 
-function hoursLabel(totalSeconds: number, t: any): string {
+function hoursLabel(totalSeconds: number, t: I18nContextType["t"]): string {
   return t("wakatime.h", { hours: roundHours(totalSeconds) });
 }
 
-function formatDay(value: string, formatDate: any): string {
+function formatDay(value: string, formatDate: I18nContextType["formatDate"]): string {
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return formatDate(new Date(`${value}T00:00:00`), { day: "numeric", month: "short" });
   }
@@ -89,7 +89,7 @@ function toFiniteNumber(value: unknown): number | null {
   return null;
 }
 
-function formatMixValue(value: number, mode: "heartbeats" | "summaries", t: any): string {
+function formatMixValue(value: number, mode: "heartbeats" | "summaries", t: I18nContextType["t"]): string {
   if (mode === "heartbeats") {
     const rounded = Math.round(value);
     return t("wakatime.events", { count: rounded });

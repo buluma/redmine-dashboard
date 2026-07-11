@@ -438,7 +438,7 @@ export function StackedBarChart({
 
   return (
     <div className="stacked-bar-chart">
-      {labels.map((label, labelIndex) => (
+      {labels.map((label) => (
         <div
           key={label}
           className="stacked-bar-row"
@@ -494,8 +494,8 @@ interface BurndownPoint {
 export function BurndownChart({
   points,
   totalPoints,
-  startDate,
-  endDate,
+  startDate: _startDate,
+  endDate: _endDate,
 }: {
   points: BurndownPoint[];
   totalPoints: number;

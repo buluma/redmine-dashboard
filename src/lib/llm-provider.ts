@@ -62,12 +62,6 @@ export interface LLMStatus {
   error?: string;
 }
 
-// OpenAI compatible response type
-interface OpenAIChatMessage {
-  role: string;
-  content: string;
-}
-
 export class LLMProviderManager {
   private provider: LLMProvider;
   private ollama = getOllamaClient();
@@ -524,7 +518,7 @@ export class LLMProviderManager {
         trackWarn("llm.openrouter.fallback", { fallbackModel: env.openrouterChatModelFallback });
         try {
           return await this.openrouterChatWithModel(messages, env.openrouterChatModelFallback, options);
-        } catch (fallbackError) {
+        } catch {
           // If fallback also fails, throw the primary error
           throw primaryError;
         }
@@ -752,7 +746,7 @@ export class LLMProviderManager {
             };
           }
         }
-      } catch (error) {
+      } catch {
         trackWarn("llm.embeddings.fallback", { provider: this.provider, fallback: "ollama" });
       }
     }

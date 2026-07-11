@@ -19,13 +19,10 @@ declare module "web-push" {
     proxy?: string;
   }
 
-  function setVapidDetails(subject: string, publicKey: string, privateKey: string): void;
-  function sendNotification(subscription: PushSubscription, payload?: string, options?: WebPushOptions): Promise<void>;
-  function generateVAPIDKeys(): { publicKey: string; privateKey: string };
-
-  export default {
-    setVapidDetails,
-    sendNotification,
-    generateVAPIDKeys,
+  const webPush: {
+    setVapidDetails(subject: string, publicKey: string, privateKey: string): void;
+    sendNotification(subscription: PushSubscription, payload?: string, options?: WebPushOptions): Promise<void>;
+    generateVAPIDKeys(): { publicKey: string; privateKey: string };
   };
+  export default webPush;
 }

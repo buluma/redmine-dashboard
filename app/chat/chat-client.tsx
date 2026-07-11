@@ -149,7 +149,7 @@ export function ChatInterface() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
+    } catch {
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -201,7 +201,7 @@ export function ChatInterface() {
       };
 
       setMessages((prev) => [...prev, resultMessage]);
-    } catch (error) {
+    } catch {
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -233,19 +233,6 @@ export function ChatInterface() {
     setMessages((prev) => [...prev, cancelMessage]);
   };
 
-  // -----------------------------------------------------------------------
-  // Clear chat
-  // -----------------------------------------------------------------------
-  const clearChat = () => {
-    setMessages([
-      {
-        id: 'welcome',
-        role: 'assistant',
-        content: welcomeContent,
-        createdAt: new Date(),
-      },
-    ]);
-  };
 
   // -----------------------------------------------------------------------
   // Render

@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "./ToastProvider";
 import { useI18n } from "./I18nProvider";
+import type { Issue } from "@/src/types/dashboard";
 
 interface Project {
   id: number;
@@ -22,7 +23,7 @@ interface Priority {
 interface IssueCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreated: (issue: any) => void;
+  onCreated: (issue: Issue) => void;
   statuses: Status[];
   priorities: Priority[];
 }
@@ -41,26 +42,7 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
   const [priorityId, setPriorityId] = useState<number>(0);
   const [dueDate, setDueDate] = useState("");
 
-  useEffect(() => {
-    if (isOpen) {
-      loadProjects();
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (statuses.length > 0 && statusId === 0) {
-      setStatusId(statuses[0].id);
-    }
-  }, [statusId, statuses]);
-
-  useEffect(() => {
-    if (priorities.length > 0 && priorityId === 0) {
-      const defaultPriority = priorities.find((p: any) => p.name.toLowerCase().includes("normal")) || priorities[0];
-      setPriorityId(defaultPriority.id);
-    }
-  }, [priorities, priorityId]);
-
-  async function loadProjects() {
+  const loadProjects = useCallback(async () => {
     setLoadingProjects(true);
     try {
       const res = await fetch("/api/projects");
@@ -77,7 +59,26 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
     } finally {
       setLoadingProjects(false);
     }
-  }
+  }, [projectId]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadProjects();
+    }
+  }, [isOpen, loadProjects]);
+
+  useEffect(() => {
+    if (statuses.length > 0 && statusId === 0) {
+      setStatusId(statuses[0].id);
+    }
+  }, [statusId, statuses]);
+
+  useEffect(() => {
+    if (priorities.length > 0 && priorityId === 0) {
+      const defaultPriority = priorities.find((p) => p.name.toLowerCase().includes("normal")) || priorities[0];
+      setPriorityId(defaultPriority.id);
+    }
+  }, [priorities, priorityId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

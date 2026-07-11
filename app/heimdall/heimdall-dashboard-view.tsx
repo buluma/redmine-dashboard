@@ -6,6 +6,38 @@ import { StatCard, StackedBarChart } from "@/src/components/reports/charts";
 import { HeimdallLogsClient } from "./heimdall-logs-client";
 import { HeimdallErrorsList, type HeimdallErrorEntry } from "./heimdall-errors-list";
 import { useI18n } from "@/src/components/I18nProvider";
+import type { MbuLog, ServerSideRulesLog, Trace } from "@prisma/client";
+
+// page.tsx serializes Prisma rows for the client boundary (bigint -> string,
+// Date -> ISO string, Decimal -> number) before passing them down.
+export type SerializedMbuLog = Omit<MbuLog, "id" | "createdAt" | "updatedAt" | "ingestedAt"> & {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  ingestedAt: string;
+};
+export type SerializedServerSideRulesLog = Omit<
+  ServerSideRulesLog,
+  "id" | "createdAt" | "updatedAt" | "ingestedAt" | "duration" | "dbRequestsTime" | "threadId"
+> & {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  ingestedAt: string;
+  duration: number;
+  dbRequestsTime: number | null;
+  threadId: string | null;
+};
+export type SerializedTrace = Omit<
+  Trace,
+  "id" | "createdAt" | "updatedAt" | "ingestedAt" | "traceId"
+> & {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  ingestedAt: string;
+  traceId: string;
+};
 
 interface HeimdallDashboardViewProps {
   totalLogs: number;
@@ -17,9 +49,9 @@ interface HeimdallDashboardViewProps {
   mbuErrorCount: number;
   ssrErrorCount: number;
   traceErrorCount: number;
-  mbuLogs: any[];
-  ssrLogs: any[];
-  traces: any[];
+  mbuLogs: SerializedMbuLog[];
+  ssrLogs: SerializedServerSideRulesLog[];
+  traces: SerializedTrace[];
   trendDates: string[];
   mbuTrend: number[];
   ssrTrend: number[];
