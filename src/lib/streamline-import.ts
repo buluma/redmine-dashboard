@@ -150,8 +150,8 @@ export async function upsertMbuLog(
       update: data,
     });
     return { created: true };
-  } catch (err: any) {
-    if (err.code === 'P2002') {
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
       return { created: false };
     }
     throw err;
@@ -179,8 +179,8 @@ export async function upsertServerSideRulesLog(
       update: data,
     });
     return { created: true };
-  } catch (err: any) {
-    if (err.code === 'P2002') {
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
       return { created: false };
     }
     throw err;
@@ -208,17 +208,28 @@ export async function upsertTrace(
       update: data,
     });
     return { created: true };
-  } catch (err: any) {
-    if (err.code === 'P2002') {
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
       return { created: false };
     }
     throw err;
   }
 }
 
+// Prisma's generated per-model upsert() signatures are structurally
+// incompatible with each other (each model's WhereUniqueInput union
+// requires a different set of alternate keys), so this can't be typed
+// against the real delegate shape without a generic per-call-site cast.
+// Record<string, unknown> args is the practical common denominator —
+// the actual where/create/update objects are still fully typed at each
+// call site below, this just describes what upsertRecords needs to call.
+interface UpsertableModel {
+  upsert(args: Record<string, unknown>): Promise<unknown>;
+}
+
 // Upsert records (skip if already exists by id + environment + host)
 async function upsertRecords(
-  model: any,
+  model: UpsertableModel,
   records: Record<string, unknown>[],
   transformFn: (r: Record<string, unknown>, env: string, host: string) => Record<string, unknown>,
   env: string,
@@ -243,8 +254,8 @@ async function upsertRecords(
         update: data,
       });
       created++;
-    } catch (err: any) {
-      if (err.code === 'P2002') {
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         skipped++;
       } else {
         throw err;
@@ -319,8 +330,8 @@ export async function fetchStreamlineLogsFromAPI(
         else if (model.key === 'serverSideRules') result.serverSideRules = parsed;
         else if (model.key === 'traces') result.traces = parsed;
       }
-    } catch (err: any) {
-      result.errors.push(`Failed to fetch ${model.alias}: ${err.message}`);
+    } catch (err) {
+      result.errors.push(`Failed to fetch ${model.alias}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -396,8 +407,8 @@ export async function importStreamlineLogs(
           // skip unknown models
           break;
       }
-    } catch (err: any) {
-      result.errors.push(`Failed to process ${path.basename(file)}: ${err.message}`);
+    } catch (err) {
+      result.errors.push(`Failed to process ${path.basename(file)}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 

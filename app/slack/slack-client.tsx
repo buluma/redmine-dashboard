@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useI18n } from "@/src/components/I18nProvider";
 import type { SlackMessage } from "@/src/lib/slack";
 
@@ -18,17 +17,6 @@ const AUTO_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 interface UserCache {
   [userId: string]: string;
-}
-
-function formatTimestamp(ts: string): string {
-  const date = new Date(parseFloat(ts) * 1000);
-  return date.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
 }
 
 function formatReactionEmoji(name: string): string {
@@ -189,7 +177,7 @@ export function SlackMessagesClient({
   refreshIntervalMs = 30000,
   channelCount
 }: SlackMessagesClientProps) {
-  const { t, formatDate } = useI18n();
+  const { t } = useI18n();
   const [messages, setMessages] = useState<SlackMessage[]>(initialMessages);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -222,7 +210,6 @@ export function SlackMessagesClient({
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
           setMutedChannels(new Set(parsed.filter((v): v is string => typeof v === "string")));
         }
       }
@@ -362,7 +349,7 @@ export function SlackMessagesClient({
       // Clear result after 5 seconds
       setTimeout(() => setTestResult(null), 5000);
     }
-  }, []);
+  }, [t]);
 
   // Auto-refresh setup. Skip entirely when the channel is muted so we
   // do not hammer Slack for a feed the user explicitly turned off.
@@ -419,21 +406,6 @@ export function SlackMessagesClient({
       setIsLoadingThread(false);
     }
   }, [currentChannelId, activeThread]);
-
-  // Group messages by date
-  const messagesByDate = messages.reduce((acc, msg) => {
-    const date = new Date(parseFloat(msg.ts) * 1000).toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(msg);
-    return acc;
-  }, {} as Record<string, SlackMessage[]>);
 
   // Separate thread parent messages from regular messages, then apply the
   // keyword filter across text + cached display name.

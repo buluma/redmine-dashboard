@@ -1,7 +1,4 @@
-import { processSyncQueue } from "@/lib/sync-queue";
-import { requireCurrentUser } from "@/src/lib/auth";
-
-export async function POST(request: Request) {
+export async function POST() {
   try {
     // Background sync might be triggered without a session in some browsers,
     // but here we expect a logged-in user context or we fallback to system-wide process.
@@ -25,7 +22,7 @@ export async function POST(request: Request) {
     // as it shares the same origin and can access the same IndexedDB.
     
     return Response.json({ message: "Endpoint for server-side sync (not client queue)" });
-  } catch (error) {
+  } catch {
     return Response.json({ error: "Failed" }, { status: 500 });
   }
 }

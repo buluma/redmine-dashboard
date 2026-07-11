@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
+import type { Journal, TimeEntry, Attachment } from "@/src/types/dashboard";
 
 export interface Issue {
   id: string;
@@ -27,9 +28,9 @@ export interface Issue {
   doneRatio: number | null;
   estimatedHours: number | null;
   createdAt: string;
-  journals?: any[];
-  timeEntries?: any[];
-  attachments?: any[];
+  journals?: Journal[];
+  timeEntries?: TimeEntry[];
+  attachments?: Attachment[];
 }
 
 export interface UseIssuesOptions {
@@ -48,8 +49,8 @@ export interface UseIssuesResult {
   error: string | null;
   refetch: () => Promise<void>;
   search: (query: string) => Promise<void>;
-  filters: Record<string, any>;
-  setFilters: (filters: Record<string, any>) => void;
+  filters: Record<string, string | number | boolean | null>;
+  setFilters: (filters: Record<string, string | number | boolean | null>) => void;
 }
 
 export function useIssues(options: UseIssuesOptions = {}): UseIssuesResult {
@@ -60,7 +61,7 @@ export function useIssues(options: UseIssuesOptions = {}): UseIssuesResult {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<Record<string, any>>({
+  const [filters, setFilters] = useState<Record<string, string | number | boolean | null>>({
     project: initialProject,
     status: initialStatus,
   });

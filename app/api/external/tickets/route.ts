@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
+import type { Prisma, Issue } from "@prisma/client";
 import {
   getExternalApiKey,
   requireExternalApiKey,
@@ -128,7 +129,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Regular list with filters
-    const where: any = {};
+    const where: Prisma.IssueWhereInput = {};
     
     if (status) {
       where.statusName = { equals: status };
@@ -216,7 +217,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function formatTicket(issue: any) {
+function formatTicket(issue: Issue) {
   return {
     id: issue.id,
     redmineIssueId: issue.redmineIssueId,

@@ -17,7 +17,10 @@ export async function GET(request: NextRequest) {
   const authError = requireExternalApiKey(request);
   if (authError) return authError;
 
-  const searchParams = (request as any).nextUrl?.searchParams ?? new URL(request.url).searchParams;
+  // request.nextUrl is always present on a real Next.js NextRequest, but
+  // tests construct a plain Request and cast it — fall back to parsing
+  // request.url directly so both real requests and test mocks work.
+  const searchParams = request.nextUrl?.searchParams ?? new URL(request.url).searchParams;
   const env = searchParams.get("env") || undefined;
   const errorLimit = Math.min(parseInt(searchParams.get("errorLimit") || "5"), 20);
 

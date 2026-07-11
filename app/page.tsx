@@ -1,14 +1,12 @@
 "use client";
 
 import { useI18n } from "@/src/components/I18nProvider";
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AiIssueActions } from "@/src/components/ai/AiIssueActions";
 import { AiSearchBar } from "@/src/components/ai/AiSearchBar";
 import { AiStatusIndicator } from "@/src/components/ai/AiStatusIndicator";
 import { DashboardWidgets, calculateStats } from "@/src/components/DashboardWidgets";
-import { AdvancedFilters, applyFilters, type FilterState } from "@/src/components/AdvancedFilters";
+import { applyFilters, type FilterState } from "@/src/components/AdvancedFilters";
 import { ProjectFilter } from "@/src/components/ProjectFilter";
 import { ExportButton } from "@/src/components/ExportButton";
 import { ShortcutHelp } from "@/src/components/ShortcutHelp";
@@ -23,12 +21,6 @@ import { IssueQuickPeek } from "@/src/components/IssueQuickPeek";
 import { SkeletonTable } from "@/src/components/SkeletonTable";
 import type {
   User,
-  Journal,
-  TimeEntry,
-  GithubLink,
-  Attachment,
-  Relation,
-  IssueChild,
   Issue,
   StatusCatalog,
   SyncState,
@@ -38,11 +30,6 @@ import type {
   ActivityEvent,
 } from "@/src/types/dashboard";
 import {
-  attachmentUrl,
-  redmineIssueUrl,
-  isImageAttachment,
-  isPdfAttachment,
-  normalizeStatus,
   uniqueStrings,
   isOpenStatus,
   isInProgressStatus,
@@ -56,8 +43,6 @@ import {
   dayDiffFromNow,
   latestIssueActivityTimestamp,
   activityTypeLabel,
-  matchesView,
-  formatDurationFromMs,
   normalizeIssueRouteId,
   issueNumericId as toIssueNumericId,
   issueRouteId,
@@ -65,7 +50,6 @@ import {
   openIssueIdInNewTab,
   openIssueInNewTab,
 } from "@/src/lib/issue-utils";
-import { MarkdownBlock } from "@/src/components/MarkdownBlock";
 import { useDashboardSavedViews } from "@/src/hooks/useDashboardSavedViews";
 import { useEventStream } from "@/src/hooks/useEventStream";
 import { PAGE_SIZE_OPTIONS, usePageSize } from "@/src/hooks/usePageSize";
@@ -94,8 +78,6 @@ export default function Home() {
   const fetchPageSize = 200;
   const [statuses, setStatuses] = useState<StatusCatalog[]>([]);
   const [priorities, setPriorities] = useState<string[]>([]);
-  const [searchSource, setSearchSource] = useState("local_cache");
-  const [activities, setActivities] = useState<Array<{ id: number; name: string }>>([]);
   const [selectedIssueId, setSelectedIssueId] = useState<number | null>(null);
   const [selectedIssueIds, setSelectedIssueIds] = useState<number[]>([]);
   const [bulkStatusId, setBulkStatusId] = useState(0);
@@ -103,7 +85,6 @@ export default function Home() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [syncState, setSyncState] = useState<SyncState>(null);
   const [loading, setLoading] = useState(true);
-  const [priorityOptions, setPriorityOptions] = useState<Array<{ id: number; name: string }>>([]);
   const toast = useToast();
   const [showIssueCreateModal, setShowIssueCreateModal] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(
@@ -145,7 +126,6 @@ export default function Home() {
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [hoveredIssue, setHoveredIssue] = useState<Issue | null>(null);
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
-  const [draggedIssueId, setDraggedIssueId] = useState<number | null>(null);
   const [opsAlertsOpen, setOpsAlertsOpen] = useState(false);
   const [activityFeedOpen, setActivityFeedOpen] = useState(false);
   const [issueQueueOpen, setIssueQueueOpen] = useState(true);
@@ -155,7 +135,6 @@ export default function Home() {
   const [showCharts, setShowCharts] = useState(false);
   const [showAllMetrics, setShowAllMetrics] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   const [activityId, setActivityId] = useState(0);
 
@@ -217,11 +196,6 @@ export default function Home() {
       prefetchedIssueIdsRef.current.delete(routeId);
     });
   }, [router]);
-
-  const selectedIssue = useMemo(
-    () => issues.find((i) => i.redmineIssueId === selectedIssueId) ?? null,
-    [issues, selectedIssueId],
-  );
 
   const computedPriorityOptions = useMemo(() => {
     const discovered = new Map<number, string>();
@@ -557,7 +531,6 @@ export default function Home() {
     setTotal(data.total ?? 0);
     setStatuses(data.filters?.statuses ?? []);
     setPriorities(uniqueStrings(data.filters?.priorities ?? []));
-    setSearchSource(data.source ?? "local_cache");
     setPage(1); // Reset to page 1 on fresh data
   }
 
@@ -567,7 +540,6 @@ export default function Home() {
     if (res.ok) {
       const data = await res.json();
       const fetched = data.activities ?? [];
-      setActivities(fetched);
       if (fetched.length > 0 && activityId === 0) {
         setActivityId(fetched[0].id);
       }
@@ -602,22 +574,10 @@ export default function Home() {
     }
   }
 
-  async function loadPriorities() {
-    try {
-      const res = await fetch("/api/internal/enumerations?kind=issue_priority");
-      if (res.ok) {
-        const data = await res.json();
-        setPriorityOptions(data.items.map((i: any) => ({ id: i.remoteId, name: i.name })));
-      }
-    } catch {
-      // Ignore
-    }
-  }
-
   useEffect(() => {
     void (async () => {
       try {
-        await Promise.all([loadSession(), loadBootstrapInfo(), loadAiStatus(), loadAiSummaryCount(), loadPriorities()]);
+        await Promise.all([loadSession(), loadBootstrapInfo(), loadAiStatus(), loadAiSummaryCount()]);
       } finally {
         setLoading(false);
       }
@@ -777,7 +737,6 @@ export default function Home() {
   async function handleManualPull() {
     setManualRefreshBusy(true);
     setError(null);
-    setInfoMessage(null);
 
     try {
       const res = await fetch("/api/sync/manual-pull", { method: "POST" });
@@ -907,7 +866,6 @@ export default function Home() {
 
     setBulkUpdating(true);
     setError(null);
-    setInfoMessage(null);
 
     try {
       const res = await fetch("/api/issues/bulk-status", {
@@ -943,7 +901,6 @@ export default function Home() {
     if (selectedIssueIds.length === 0) return;
     setBulkUpdating(true);
     setError(null);
-    setInfoMessage(null);
     try {
       const res = await fetch("/api/issues/bulk-update", {
         method: "POST",

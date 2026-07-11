@@ -1,10 +1,10 @@
 import { getLLMProviderManager } from '@/src/lib/llm-provider';
-import type { LLMChatMessage } from '@/src/lib/llm-provider';
 import { requireCurrentUser, requireRedmineClientForUser } from '@/src/lib/auth';
 import { prisma } from '@/src/lib/db';
 import { jsonError } from '@/src/lib/http';
 import { trackFailure } from '@/src/lib/telemetry';
 import { z } from 'zod';
+import type { Prisma } from '@prisma/client';
 
 const summarizeSchema = z.object({
   staleDays: z.number().min(1).max(90).default(30),
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     const cutoffDate = new Date(Date.now() - staleDays * 24 * 60 * 60 * 1000);
     
     // Build query for stale issues
-    const where: any = {
+    const where: Prisma.IssueWhereInput = {
       userId: user.id,
       updatedAt: { lt: cutoffDate },
       statusName: { notIn: ['Closed', 'Resolved'] },
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       where.projectName = projectId;
     }
     if (priority) {
-      where.priorityName = priority;
+      where.priority = priority;
     }
     
     // Get stale issues
@@ -71,11 +71,9 @@ export async function POST(request: Request) {
       });
     }
     
-    // Get Redmine client
-    let client;
+    // Gate on having a live Redmine connection before summarizing.
     try {
-      const conn = await requireRedmineClientForUser(user.id);
-      client = conn.client;
+      await requireRedmineClientForUser(user.id);
     } catch {
       return jsonError('Redmine not connected', 400);
     }

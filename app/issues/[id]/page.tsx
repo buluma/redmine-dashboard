@@ -3,7 +3,7 @@
 import { AllowedStatusView } from "@/src/lib/issue-shape";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useI18n } from "@/src/components/I18nProvider";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
@@ -225,7 +225,7 @@ function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: { c
     );
   }
 
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
 
   return (
     <div className="markdown">
@@ -257,19 +257,7 @@ function redmineIssueUrl(issue: Pick<Issue, "redmineBaseUrl" | "redmineIssueId">
   return `${baseUrl}/issues/${issue.redmineIssueId}`;
 }
 
-function isImageAttachment(attachment: Attachment): boolean {
-  const type = (attachment.contentType ?? "").toLowerCase();
-  if (type.startsWith("image/")) return true;
-  const name = attachment.filename.toLowerCase();
-  return name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".gif") || name.endsWith(".webp");
-}
-
-function isPdfAttachment(attachment: Attachment): boolean {
-  const type = (attachment.contentType ?? "").toLowerCase();
-  return type === "application/pdf" || attachment.filename.toLowerCase().endsWith(".pdf");
-}
-
-function formatAgo(dateLike: string | undefined | null, t: (key: string, data?: any) => string): string {
+function formatAgo(dateLike: string | undefined | null, t: (key: string, data?: Record<string, string | number>) => string): string {
   if (!dateLike) return "—";
   const ts = new Date(dateLike).getTime();
   if (Number.isNaN(ts)) return "—";
@@ -282,7 +270,7 @@ function formatAgo(dateLike: string | undefined | null, t: (key: string, data?: 
   return t("issues.ago.d", { count: Math.floor(hours / 24) });
 }
 
-function formatDisplayDate(dateLike: string | null, t: (key: string, data?: any) => string): string {
+function formatDisplayDate(dateLike: string | null, t: (key: string, data?: Record<string, string | number>) => string): string {
   if (!dateLike) return t("issues.notSet");
   const d = new Date(dateLike);
   if (Number.isNaN(d.getTime())) return t("issues.notSet");
@@ -380,7 +368,6 @@ function normalizeTab(raw: string | null): IssueTab {
 }
 
 function IssueLoadingShell() {
-  const { t } = useI18n();
   return (
     <main className="dashboard issue-loading-page" aria-busy="true" aria-live="polite">
       <div className="issue-loading-breadcrumb skeleton-line" />
@@ -480,7 +467,6 @@ export default function IssueDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionInfo, setActionInfo] = useState<string | null>(null);
   const [comment, setComment] = useState("");
-  const [commentBusy, setCommentBusy] = useState(false);
   const [aiStatus, setAiStatus] = useState<{ available: boolean } | null>(null);
   const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
   const [transitionStatuses, setTransitionStatuses] = useState<AllowedStatusView[]>([]);
@@ -500,7 +486,7 @@ export default function IssueDetailPage() {
   const tabsRef = useRef<HTMLDivElement | null>(null);
   const prefetchedRelatedIdsRef = useRef<Set<number>>(new Set());
   const attachmentRefreshAttemptedRef = useRef<Set<number>>(new Set());
-  const { performAction } = useOfflineAction();
+  const { performAction, isBusy: commentBusy } = useOfflineAction();
   const { t, locale } = useI18n();
 
   const {
@@ -696,7 +682,7 @@ export default function IssueDetailPage() {
     return () => {
       mounted = false;
     };
-  }, [issueId]);
+  }, [issueId, t]);
 
   useEffect(() => {
     void (async () => {
@@ -849,35 +835,6 @@ export default function IssueDetailPage() {
       }
     })();
   }, [issue]);
-
-  async function submitComment(event: React.FormEvent) {
-    event.preventDefault();
-    const trimmed = comment.trim();
-    if (!trimmed) {
-      return;
-    }
-    setCommentBusy(true);
-    setActionError(null);
-    setActionInfo(null);
-    try {
-      const res = await fetch(`/api/issues/${issueId}/comment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ comment: trimmed }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? "Unable to post comment");
-      }
-      setComment("");
-      await reloadIssue();
-      setActionInfo(t("issues.messages.redmineUpdated"));
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Unable to post comment");
-    } finally {
-      setCommentBusy(false);
-    }
-  }
 
   const totalSpent = useMemo(() => {
     if (!issue) return 0;
