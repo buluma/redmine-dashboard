@@ -32,6 +32,10 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: file:./test.db
+      APP_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      SESSION_SECRET: ci-test-secret
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -40,12 +44,15 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npx prisma generate --schema=prisma/schema.dev.sqlite.prisma
-        env:
-          DATABASE_URL: file:./test.db
       - run: npm run test
 
   build:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: file:./test.db
+      APP_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      SESSION_SECRET: ci-build-secret
+      NEXT_TELEMETRY_DISABLED: 1
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -54,11 +61,7 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npx prisma generate --schema=prisma/schema.dev.sqlite.prisma
-        env:
-          DATABASE_URL: file:./test.db
       - run: npm run build
-        env:
-          NEXT_TELEMETRY_DISABLED: 1
 
   a11y:
     runs-on: ubuntu-latest
