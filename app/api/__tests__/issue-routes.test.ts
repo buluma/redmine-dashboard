@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { NextRequest } from "next/server";
 
 const mockRequireCurrentUser = vi.fn();
 const mockRequireRedmineClient = vi.fn();
@@ -33,19 +34,19 @@ vi.mock("@/src/lib/telemetry", () => mockTelemetry);
 vi.mock("@/src/lib/http", () => ({
   jsonError: (message: string, status: number) =>
     new Response(JSON.stringify({ error: message }), { status }),
-  parseJson: async (request: Request, schema: any) => {
+  parseJson: async (request: Request, schema: { parse: (data: unknown) => unknown }) => {
     const body = await request.json();
     return schema.parse(body);
   },
 }));
 
 vi.mock("@/src/lib/redmine", () => ({
-  redmineMessageFromError: (_: any, fallback: string) => fallback,
-  redmineStatusFromError: (_: any) => 400,
+  redmineMessageFromError: (_error: unknown, fallback: string) => fallback,
+  redmineStatusFromError: () => 400,
 }));
 
 vi.mock("@/src/lib/issue-shape", () => ({
-  toIssueView: (issue: any) => issue,
+  toIssueView: (issue: unknown) => issue,
 }));
 
 describe("issue favorite route", () => {
@@ -62,7 +63,7 @@ describe("issue favorite route", () => {
         method: "POST",
       });
       const context = { params: Promise.resolve({ id: "abc" }) };
-      const response = await POST(request as any, context as any);
+      const response = await POST(request as unknown as NextRequest, context);
       expect(response.status).toBe(400);
     });
 
@@ -80,7 +81,7 @@ describe("issue favorite route", () => {
         method: "POST",
       });
       const context = { params: Promise.resolve({ id: "123" }) };
-      const response = await POST(request as any, context as any);
+      const response = await POST(request as unknown as NextRequest, context);
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.favorited).toBe(true);
@@ -99,7 +100,7 @@ describe("issue favorite route", () => {
         method: "POST",
       });
       const context = { params: Promise.resolve({ id: "123" }) };
-      const response = await POST(request as any, context as any);
+      const response = await POST(request as unknown as NextRequest, context);
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.favorited).toBe(true);
@@ -117,7 +118,7 @@ describe("issue favorite route", () => {
         method: "DELETE",
       });
       const context = { params: Promise.resolve({ id: "123" }) };
-      const response = await DELETE(request as any, context as any);
+      const response = await DELETE(request as unknown as NextRequest, context);
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.favorited).toBe(false);
@@ -131,7 +132,7 @@ describe("issue favorite route", () => {
         method: "DELETE",
       });
       const context = { params: Promise.resolve({ id: "invalid" }) };
-      const response = await DELETE(request as any, context as any);
+      const response = await DELETE(request as unknown as NextRequest, context);
       expect(response.status).toBe(400);
     });
   });
@@ -148,7 +149,7 @@ describe("issue favorite route", () => {
       const { GET } = await import("@/app/api/issues/[id]/favorite/route");
       const request = new Request("http://localhost/api/issues/123/favorite");
       const context = { params: Promise.resolve({ id: "123" }) };
-      const response = await GET(request as any, context as any);
+      const response = await GET(request as unknown as NextRequest, context);
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.favorited).toBe(true);
@@ -161,7 +162,7 @@ describe("issue favorite route", () => {
       const { GET } = await import("@/app/api/issues/[id]/favorite/route");
       const request = new Request("http://localhost/api/issues/123/favorite");
       const context = { params: Promise.resolve({ id: "123" }) };
-      const response = await GET(request as any, context as any);
+      const response = await GET(request as unknown as NextRequest, context);
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.favorited).toBe(false);
@@ -188,7 +189,7 @@ describe("issue assign route", () => {
         body: JSON.stringify({ userId: 456 }),
       });
       const context = { params: Promise.resolve({ id: "123" }) };
-      const response = await POST(request as any, context as any);
+      const response = await POST(request as unknown as NextRequest, context);
       expect(response.status).toBe(404);
     });
 
@@ -207,7 +208,7 @@ describe("issue assign route", () => {
         body: JSON.stringify({ userId: 456 }),
       });
       const context = { params: Promise.resolve({ id: "123" }) };
-      const response = await POST(request as any, context as any);
+      const response = await POST(request as unknown as NextRequest, context);
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.ok).toBe(true);
