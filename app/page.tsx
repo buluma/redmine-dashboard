@@ -36,7 +36,6 @@ import {
   normalizeIssueRouteId,
   issueNumericId as toIssueNumericId,
   issueRouteId,
-  issueDisplayId,
   openIssueIdInNewTab,
   openIssueInNewTab,
 } from "@/src/lib/issue-utils";
@@ -50,6 +49,9 @@ import { IssueHoverTooltip } from "@/src/components/dashboard/IssueHoverTooltip"
 import { useIssueHoverPreview } from "@/src/hooks/useIssueHoverPreview";
 import { useDashboardKeyboardShortcuts } from "@/src/hooks/useDashboardKeyboardShortcuts";
 import { useIssueFiltering } from "@/src/hooks/useIssueFiltering";
+import { InsightsGrid } from "@/src/components/dashboard/InsightsGrid";
+import { OpsAlertsCard } from "@/src/components/dashboard/OpsAlertsCard";
+import { ActivityFeedCard } from "@/src/components/dashboard/ActivityFeedCard";
 
 const POLL_INTERVAL_MS = 90_000;
 const SHOW_ALL_METRICS_KEY = "nrcc.showAllMetrics.v1";
@@ -911,56 +913,13 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="summary-insights" className="insights-grid">
-        <article className="card">
-          <h2>{t('insights.statusMixTitle')}</h2>
-          <p className="muted">Click a status to filter quickly.</p>
-          <div className="chip-row">
-            {summary.topStatuses.length === 0 && (
-              <div className="empty-state">
-                <span className="empty-state-icon" aria-hidden="true">📊</span>
-                <p className="muted">No status data yet.</p>
-                <p className="empty-state-hint">
-                  Connect to Redmine and run a sync to populate the status mix.
-                </p>
-              </div>
-            )}
-            {summary.topStatuses.map(([name, count]) => (
-              <button
-                key={name}
-                type="button"
-                className={`status-chip ${statusFilter === name ? "active" : ""}`}
-                onClick={() => setStatusFilter(statusFilter === name ? "" : name)}
-              >
-                {name} <span>{count}</span>
-              </button>
-            ))}
-          </div>
-        </article>
-
-        <article className="card">
-          <h2>{t('insights.priorityMixTitle')}</h2>
-          <div className="bars-list">
-            {summary.priorityMix.length === 0 && (
-              <div className="empty-state">
-                <span className="empty-state-icon" aria-hidden="true">🎯</span>
-                <p className="muted">No priority data yet.</p>
-              </div>
-            )}
-            {summary.priorityMix.map(([name, count]) => (
-              <div key={name} className="bar-row">
-                <div className="bar-label-row">
-                  <span>{name}</span>
-                  <strong>{count}</strong>
-                </div>
-                <div className="bar-track">
-                  <span className="bar-fill priority" style={{ width: `${Math.round((count / Math.max(1, summary.totalVisible)) * 100)}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </article>
-      </section>
+      <InsightsGrid
+        topStatuses={summary.topStatuses}
+        priorityMix={summary.priorityMix}
+        totalVisible={summary.totalVisible}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+      />
 
 
 
@@ -984,108 +943,23 @@ export default function Home() {
       )}
 
       <section className="collapsible-stack">
-        <article id="ops-alerts" className="card">
-          <div className="collapsible-head">
-            <div>
-              <h2>{t('opsAlerts.title')}</h2>
-              <p className="muted">{t('opsAlerts.desc')}</p>
-            </div>
-            <button 
-              type="button" 
-              className="secondary-button" 
-              onClick={() => setOpsAlertsOpen((current) => !current)}
-              aria-expanded={opsAlertsOpen}
-              aria-controls="ops-alerts-content"
-            >
-              {opsAlertsOpen ? t('collapsible.collapse') : t('collapsible.expand')}
-            </button>
-          </div>
+        <OpsAlertsCard
+          atRisk={summary.atRisk}
+          open={opsAlertsOpen}
+          onToggleOpen={() => setOpsAlertsOpen((current) => !current)}
+          onPrefetchIssue={(issue) => prefetchIssueDetail(issueRouteId(issue))}
+          onOpenIssue={openIssueInNewTab}
+          manualRefreshBusy={manualRefreshBusy}
+          onManualPull={handleManualPull}
+        />
 
-          {opsAlertsOpen ? (
-            <div id="ops-alerts-content" className="alert-list">
-              {summary.atRisk.length === 0 && (
-                <div className="empty-state">
-                  <span className="empty-state-icon" aria-hidden="true">✅</span>
-                  <p className="muted">No active risk alerts.</p>
-                  <p className="empty-state-hint">
-                    Nothing overdue, blocked, or stale right now.{" "}
-                    <button
-                      type="button"
-                      className="link-button"
-                      onClick={handleManualPull}
-                      disabled={manualRefreshBusy}
-                    >
-                      {manualRefreshBusy ? t('hero.refreshing') : t('hero.forceRefresh')}
-                    </button>{" "}
-                    to refresh from Redmine.
-                  </p>
-                </div>
-              )}
-              {summary.atRisk.map(({ issue, reason }) => (
-                <button
-                  key={issue.id}
-                  type="button"
-                  className={`alert-row ${reason.includes("overdue") ? "tone-critical" : reason.includes("blocked") ? "tone-warning" : "tone-stale"}`}
-                  onMouseEnter={() => prefetchIssueDetail(issueRouteId(issue))}
-                  onFocus={() => prefetchIssueDetail(issueRouteId(issue))}
-                  onClick={() => {
-                    openIssueInNewTab(issue);
-                  }}
-                >
-                  <span>
-                    {issueDisplayId(issue)} {issue.subject}
-                  </span>
-                  <span>{reason}</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="muted collapsible-meta">{t('opsAlerts.itemCount', { count: summary.atRisk.length })}</p>
-          )}
-        </article>
-
-        <article id="activity-feed" className="card activity-card">
-          <div className="collapsible-head">
-            <div>
-              <h2>{t('activityFeed.title')}</h2>
-              <p className="muted">{t('activityFeed.desc', { count: summary.recentActivity.length })}</p>
-            </div>
-            <button 
-              type="button" 
-              className="secondary-button" 
-              onClick={() => setActivityFeedOpen((current) => !current)}
-              aria-expanded={activityFeedOpen}
-              aria-controls="activity-feed-content"
-            >
-              {activityFeedOpen ? t('collapsible.collapse') : t('collapsible.expand')}
-            </button>
-          </div>
-
-          {activityFeedOpen ? (
-            <div id="activity-feed-content" className="activity-feed">
-              {summary.recentActivity.map((event, idx) => (
-                <button
-                  key={`${event.issueId}-${event.timestamp}-${idx}`}
-                  type="button"
-                  className={`activity-row ${event.detail.includes("logged") ? "tone-time" : event.detail.includes("commented") ? "tone-comment" : "tone-update"}`}
-                  onMouseEnter={() => prefetchIssueDetail(event.issueId)}
-                  onFocus={() => prefetchIssueDetail(event.issueId)}
-                  onClick={() => {
-                    openIssueIdInNewTab(event.issueId);
-                  }}
-                >
-                  <span>
-                    {event.issueLabel} {event.issueSubject}
-                  </span>
-                  <span>{event.detail}</span>
-                  <span>{new Date(event.timestamp).toLocaleString()}</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="muted collapsible-meta">{t('activityFeed.hiddenFeed', { count: summary.recentActivity.length })}</p>
-          )}
-        </article>
+        <ActivityFeedCard
+          recentActivity={summary.recentActivity}
+          open={activityFeedOpen}
+          onToggleOpen={() => setActivityFeedOpen((current) => !current)}
+          onPrefetchIssue={prefetchIssueDetail}
+          onOpenIssue={openIssueIdInNewTab}
+        />
 
         {/* Analytics Dashboard */}
         <article className="card charts-card">
