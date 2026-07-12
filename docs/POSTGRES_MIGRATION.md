@@ -1,6 +1,9 @@
 # SQLite → PostgreSQL migration (Pi homelab)
 
-Status: runbook. Read end-to-end before starting.
+Status: executed on Heimdal 2026-07-12 (Strategy B, full data carry-over).
+Left as a runbook for future re-runs (disaster recovery, a second instance,
+etc.) — the steps below reflect what actually worked on this arm64 host,
+not the original untested plan. Read end-to-end before starting.
 
 ## Why migrate
 
@@ -69,17 +72,34 @@ Compose forces the dashboard's `DATABASE_URL` / `DIRECT_URL` to the Postgres
 service (`postgres:5432`) inside the network, so the same `.env` works both
 inside and outside the container.
 
-5. **Run migrations against Postgres**
+5. **Create the schema on Postgres**
 
-The dashboard image starts with the Postgres-schema Prisma client baked
-in (`prisma/schema.prisma` per `Dockerfile`'s build arg). Apply pending
-migrations once the postgres health check is green:
+`prisma/migrations/` has no baseline migration — the earliest one only
+*alters* tables (`Issue`, etc.) that predate migration tracking on this
+project (which has always used `prisma db push` in practice, confirmed by
+CI and prior sqlite dev-db fixes). Running `prisma migrate deploy` against
+an empty database fails immediately with **P3018** ("relation Issue does
+not exist") on the very first migration. Use `db push` instead, then
+baseline the migration history so future `migrate deploy` calls work:
 
 ```bash
-make logs-pg                         # wait for "postgres is ready" + dashboard "listening"
-docker compose -f docker-compose.postgres.yml exec dashboard \
-  npx prisma migrate deploy
+docker compose -f docker-compose.postgres.yml run --rm dashboard \
+  npx prisma db push --accept-data-loss   # safe: db push targets an empty database
+
+# baseline: mark every existing migration as applied so future deploys
+# don't try to replay history against a schema db push already created
+for m in $(ls prisma/migrations | sort); do
+  docker compose -f docker-compose.postgres.yml exec -T dashboard \
+    npx prisma migrate resolve --applied "$m"
+done
+docker compose -f docker-compose.postgres.yml exec -T dashboard \
+  npx prisma migrate status   # should say "Database schema is up to date!"
 ```
+
+Skipping the baseline step doesn't break anything immediately, but every
+container start will log a P3005 error and silently skip the deploy step
+the entrypoint attempts — meaning any *future* migration added to the repo
+would never auto-apply.
 
 6. **Trigger first sync from Redmine**
 
@@ -89,8 +109,10 @@ Either log into `/login` and let the in-process poller pick it up, or hit
 7. **Verify**
 
 ```bash
-curl -s http://localhost:3000/api/health
-# expect { ok: true, db: "postgres", ... }
+curl -s http://localhost:${DOCKER_PORT:-3000}/api/health
+# expect "checks": { "database": { "ok": true }, ... }
+# there's no literal db:"postgres" field — connectivity + the metrics block
+# (issues/users/syncJobs counts) is the real signal
 
 docker compose -f docker-compose.postgres.yml exec postgres \
   psql -U converge -d converge -c "select count(*) from \"Issue\";"
@@ -98,6 +120,15 @@ docker compose -f docker-compose.postgres.yml exec postgres \
 
 `Issue` row count should grow as the poller backfills. Streamline logs and
 mobile tokens populate as their respective producers run.
+
+**Caddy note**: if `converge.opsio.space` (or your equivalent) proxies to
+`reverse_proxy dashboard:3000` using the Docker network alias (not a host
+port), no Caddy change is needed — both compose files default to the same
+Compose project name (the directory name), so they share one network and
+the `dashboard` alias simply resolves to whichever dashboard container is
+currently up. Confirmed live 2026-07-12: `docker exec caddy wget -qO-
+http://dashboard:3000/api/health` hit the new Postgres-backed container
+immediately after cutover, zero Caddy edits.
 
 8. **Rollback** (if needed)
 
@@ -116,7 +147,19 @@ mount wiped it.
 Use this when you want internal notes, saved views, AI summaries, webhook
 subscriptions, or audit log history to survive the cut-over.
 
-The cleanest path is **pgloader** in a one-shot Docker container.
+~~The cleanest path is **pgloader** in a one-shot Docker container.~~ **Does
+not work on this hardware** — `ghcr.io/dimitri/pgloader` only publishes an
+`amd64` image, and this Pi has no qemu/binfmt emulation registered
+(confirmed 2026-07-12: `docker run --platform linux/amd64 hello-world` →
+`exec format error`). Installing binfmt emulation was avoidable given the
+modest row counts here, so instead: **`scripts/sqlite-to-postgres-copy.py`**
+— a small arm64-native data-only copy using Python's stdlib `sqlite3` +
+`psycopg2`, run inside a throwaway `python:3.12-alpine` container on the
+Postgres network. Handles the same type gaps pgloader would (`Json`→`Int[]`
+for `SavedView`, JSON columns → `jsonb`, `0`/`1`→`boolean`) plus one this
+sqlite db needed that pgloader wouldn't know about: **`DateTime` columns
+are stored as epoch-millisecond integers, not ISO text**, in this specific
+database — the script converts them to proper timestamps automatically.
 
 **Before starting, diff `prisma/schema.prisma` against
 `prisma/schema.dev.sqlite.prisma` for drift — the two have diverged and
@@ -128,9 +171,19 @@ mismatch below will drop data or fail the copy, not silently work:**
   (`20260712000000_create_wakatime_daily_summary`).
 - `SavedView.statusIds` / `priorityIds` are `Json` in the SQLite schema but
   native `Int[]` in the Postgres schema. A JSON-encoded array string won't
-  auto-cast to a Postgres integer array — saved views will likely fail to
-  copy or need a manual conversion step (e.g. a post-load `UPDATE` casting
-  the JSON text to `int[]`) before they're usable.
+  auto-cast to a Postgres integer array — `scripts/sqlite-to-postgres-copy.py`
+  handles this conversion automatically (`json.loads` → native list, which
+  psycopg2 adapts to a Postgres array). **Checked 2026-07-12**: `SavedView`
+  had 0 rows live, so this path was never actually exercised — re-verify the
+  conversion if a future migration needs to carry real saved views over.
+- **Column-name drift**: `server_side_rules_log.dbRequestsTime` maps to
+  `db_requests_time` in the Postgres schema (`@map("db_requests_time")`) but
+  has no equivalent `@map` in `schema.dev.sqlite.prisma` — the live sqlite
+  column is literally named `dbRequestsTime`. `scripts/sqlite-to-postgres-copy.py`
+  has a hardcoded alias for this one column; the sqlite schema file itself
+  still has the drift (low priority to fix — sqlite is retired as the prod
+  path after this migration, but would bite anyone still using `db push`
+  against `schema.dev.sqlite.prisma` for local dev).
 - The Streamline log tables (`server_side_rules_log`, `traces`, `mbu_logs`)
   gained `@db.VarChar(n)` / `@db.Decimal(10,3)` constraints only on the
   Postgres side. **Audited against live Heimdal data 2026-07-12**: every
@@ -140,8 +193,9 @@ mismatch below will drop data or fail the copy, not silently work:**
   siblings in the same model (`20260712000001_widen_trace_code_column`). If
   re-auditing after this, no further conversion needed for this table.
 
-`SavedView`'s `Json`↔`Int[]` mismatch is the only item still open — resolve
-it (or accept a small manual conversion step) before running pgloader.
+`SavedView`'s `Json`↔`Int[]` mismatch is the only item that was never
+data-tested end to end (0 live rows) — worth a dry run first if a future
+migration has real saved views to carry over.
 
 ### Steps
 
@@ -153,40 +207,31 @@ it (or accept a small manual conversion step) before running pgloader.
 docker compose -f docker-compose.postgres.yml up -d postgres
 ```
 
-5. **Apply Prisma migrations against the empty database**
+5. **Create and baseline the schema** — same `db push` + `migrate resolve`
+   loop as Strategy A step 5, run against the empty database *before*
+   loading any data.
+
+6. **Run the copy script** against the snapshot SQLite file (find your
+   network name via `docker network ls` — both compose files share one
+   Compose project, so it's the same network `up -d postgres` already
+   joined):
 
 ```bash
-docker compose -f docker-compose.postgres.yml run --rm dashboard \
-  npx prisma migrate deploy
+docker run --rm \
+  -v "$PWD/scripts/sqlite-to-postgres-copy.py:/copy.py:ro" \
+  -v "$PWD/backups/<your-snapshot>.db:/dev.db:ro" \
+  --network redmine-dashboard_default \
+  python:3.12-alpine \
+  sh -c "pip install -q psycopg2-binary && python3 /copy.py /dev.db \
+    \"postgresql://converge:<change-me>@postgres:5432/converge\""
 ```
 
-6. **Run pgloader** against the snapshot SQLite file. From the Pi:
+Prints a per-table `sqlite_rows -> inserted` summary at the end — diff it
+against `sqlite3`/Python row counts on the source if anything looks off.
+No sequence reset needed; every table uses `cuid` string ids.
 
-```bash
-docker run --rm -v "$PWD/prisma:/data" \
-  --network converge_default \
-  ghcr.io/dimitri/pgloader:latest \
-  pgloader \
-    --with "data only" \
-    sqlite:///data/dev.db \
-    "postgresql://converge:<change-me>@postgres:5432/converge"
-```
-
-`--with "data only"` keeps Prisma's schema; pgloader just copies row data.
-
-7. **Reset sequences** (Prisma uses BIGSERIAL for some tables):
-
-```bash
-docker compose -f docker-compose.postgres.yml exec postgres \
-  psql -U converge -d converge -c "
-    SELECT setval(pg_get_serial_sequence(table_name, column_name),
-                  COALESCE(MAX(column_name)::bigint, 1))
-    FROM information_schema.columns
-    WHERE column_default LIKE 'nextval%';" || true
-```
-
-(If you get errors here, run the per-table form on whichever table failed.
-Most installs do not need this step because Prisma uses `cuid` strings.)
+7. **Truncate `LeaderLock`** — see Known footguns below, do this before
+   starting the dashboard so a fresh lock gets acquired cleanly.
 
 8. **Start the dashboard** and verify as in Strategy A step 7.
 
@@ -226,10 +271,17 @@ docker compose -f docker-compose.postgres.yml exec postgres \
 
 ## Verification checklist
 
-- [ ] `/api/health` returns `db: "postgres"`.
-- [ ] Issue queue loads with at least one row.
-- [ ] `/ops/audit-logs` shows entries after a manual sync action.
-- [ ] Webhook subscriptions list survives a dashboard restart.
-- [ ] Streamline log poller fills `MbuLog`, `ServerSideRulesLog`, `Trace`
-      tables (only if `ENABLE_STREAMLINE_LOG_POLLER=true`).
-- [ ] No "database is locked" errors in `make logs-pg` after 1 hour.
+Verified 2026-07-12 on Heimdal (Strategy B):
+
+- [x] `/api/health` `checks.database.ok: true` (no literal `db` field exists
+      in the response — see the note under Strategy A step 7).
+- [x] Issue queue loads: 148 rows, matched the sqlite source count exactly.
+- [x] `AuditLog`/`InternalNote`/`WebhookSubscription` rows present (1 each,
+      matching the source) and survived a dashboard container restart.
+- [x] Streamline log poller (`ENABLE_STREAMLINE_LOG_POLLER=true`) fills
+      `mbu_logs`/`server_side_rules_log`/`traces` — confirmed live inserts
+      (`streamline_log_poller.tick.completed`) and its own retention prune
+      (`streamline_log_poller.pruned`) both ran cleanly against Postgres.
+- [ ] "No errors after 1 hour" — sqlite's "database is locked" doesn't apply
+      to Postgres; re-check `docker compose logs dashboard` after an hour of
+      normal operation as the Postgres-equivalent version of this check.
