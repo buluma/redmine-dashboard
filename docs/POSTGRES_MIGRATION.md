@@ -118,6 +118,29 @@ subscriptions, or audit log history to survive the cut-over.
 
 The cleanest path is **pgloader** in a one-shot Docker container.
 
+**Before starting, diff `prisma/schema.prisma` against
+`prisma/schema.dev.sqlite.prisma` for drift — the two have diverged and
+`--with "data only"` copies against the *target* (Postgres) schema, so any
+mismatch below will drop data or fail the copy, not silently work:**
+
+- `WakaTimeDailySummary` exists only in `schema.dev.sqlite.prisma` — there is
+  no Postgres table for it yet. Wakapi daily-summary rows have nowhere to
+  land until this model is added to `prisma/schema.prisma` and migrated.
+- `SavedView.statusIds` / `priorityIds` are `Json` in the SQLite schema but
+  native `Int[]` in the Postgres schema. A JSON-encoded array string won't
+  auto-cast to a Postgres integer array — saved views will likely fail to
+  copy or need a manual conversion step (e.g. a post-load `UPDATE` casting
+  the JSON text to `int[]`) before they're usable.
+- The Streamline log tables (`ServerSideRulesLog`, `Trace`, `MbuLog`) gained
+  `@db.VarChar(n)` / `@db.Decimal(10,3)` constraints only on the Postgres
+  side (e.g. `logLevel` capped at VarChar(20), `host` at VarChar(255)). Any
+  existing SQLite value exceeding those lengths/precision will hit a
+  constraint violation during the copy, not get truncated quietly.
+
+Resolve all three (add the missing table, reconcile the array/Json types,
+confirm no oversized values) before running pgloader, or expect partial/failed
+carry-over on exactly the data this strategy exists to preserve.
+
 ### Steps
 
 1–3. Same as Strategy A (pre-flight, backup, `make down`).
