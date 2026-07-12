@@ -57,7 +57,6 @@ test.txt
 debugging/logs/*.json
 /logs
 
-/prisma/migrations
 /.openclaude
 /.gemini-tasks
 # Keep .claude private (settings may hold local paths/permissions),

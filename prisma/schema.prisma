@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "sqlite"
+  provider  = "postgresql"
   url       = env("DATABASE_URL")
 }
 
@@ -29,6 +29,7 @@ model User {
   aiChatMessages    AiChatMessage[]
   internalNotes     InternalNote[]
   pushSubscriptions PushSubscription[]
+  wakatimeSummaries WakaTimeDailySummary[]
 }
 
 enum UserRole {
@@ -628,4 +629,20 @@ model PushSubscription {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+model WakaTimeDailySummary {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           String
+  totalSeconds   Float
+  projectsJson   Json?
+  languagesJson  Json?
+  editorsJson    Json?
+  categoriesJson Json?
+  createdAt      DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([userId, date])
 }
