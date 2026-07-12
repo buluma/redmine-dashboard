@@ -123,23 +123,25 @@ The cleanest path is **pgloader** in a one-shot Docker container.
 `--with "data only"` copies against the *target* (Postgres) schema, so any
 mismatch below will drop data or fail the copy, not silently work:**
 
-- `WakaTimeDailySummary` exists only in `schema.dev.sqlite.prisma` — there is
-  no Postgres table for it yet. Wakapi daily-summary rows have nowhere to
-  land until this model is added to `prisma/schema.prisma` and migrated.
+- ~~`WakaTimeDailySummary` exists only in `schema.dev.sqlite.prisma`~~ —
+  **fixed 2026-07-12**: model + migration added to `prisma/schema.prisma`
+  (`20260712000000_create_wakatime_daily_summary`).
 - `SavedView.statusIds` / `priorityIds` are `Json` in the SQLite schema but
   native `Int[]` in the Postgres schema. A JSON-encoded array string won't
   auto-cast to a Postgres integer array — saved views will likely fail to
   copy or need a manual conversion step (e.g. a post-load `UPDATE` casting
   the JSON text to `int[]`) before they're usable.
-- The Streamline log tables (`ServerSideRulesLog`, `Trace`, `MbuLog`) gained
-  `@db.VarChar(n)` / `@db.Decimal(10,3)` constraints only on the Postgres
-  side (e.g. `logLevel` capped at VarChar(20), `host` at VarChar(255)). Any
-  existing SQLite value exceeding those lengths/precision will hit a
-  constraint violation during the copy, not get truncated quietly.
+- The Streamline log tables (`server_side_rules_log`, `traces`, `mbu_logs`)
+  gained `@db.VarChar(n)` / `@db.Decimal(10,3)` constraints only on the
+  Postgres side. **Audited against live Heimdal data 2026-07-12**: every
+  column is clean except `traces.code` (`VarChar(100)`) — one row (of 116)
+  held a 22,852-char exception-trace source snippet, real data, not garbage.
+  **Fixed**: widened `code` to `@db.Text` to match its `backtrace`/`context`
+  siblings in the same model (`20260712000001_widen_trace_code_column`). If
+  re-auditing after this, no further conversion needed for this table.
 
-Resolve all three (add the missing table, reconcile the array/Json types,
-confirm no oversized values) before running pgloader, or expect partial/failed
-carry-over on exactly the data this strategy exists to preserve.
+`SavedView`'s `Json`↔`Int[]` mismatch is the only item still open — resolve
+it (or accept a small manual conversion step) before running pgloader.
 
 ### Steps
 

@@ -514,7 +514,7 @@ model Trace {
   traceType    String   @map("trace_type") @db.VarChar(20) // "log", "exception"
   logLevel     String   @map("log_level") @db.VarChar(20) // TRACE, DEBUG, INFO, WARN, ERROR
   backtrace    String   @db.Text // Trace message
-  code         String?  @db.VarChar(100)
+  code         String?  @db.Text
   context      String?  @db.Text
   host         String   @default("streamline.staging.vodacomsa-battery.nasctech.com") @db.VarChar(255) // Source host
   resourceId   Int?     @map("resource_id")
