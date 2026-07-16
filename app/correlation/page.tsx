@@ -13,7 +13,11 @@ export default async function CorrelationPage() {
   const range = DEFAULT_WAKATIME_RANGE;
   const { start, end } = getSummaryDateWindow(range);
 
-  const data = await correlateWakaTime(userId, { start, end });
+  const data = await correlateWakaTime(userId, {
+    start,
+    end,
+    catchAllIssueId: process.env.MISC_UNLINKED_ISSUE_ID,
+  });
 
   return (
     <main className="dashboard reports-v2">
