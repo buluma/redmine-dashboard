@@ -48,8 +48,10 @@
     },
     "tooltips": {
       "expand": "Menu uitbrei",
-      "collapse": "Menu saamtrek"
-    }
+      "collapse": "Menu saamtrek",
+      "more": "More"
+    },
+    "correlation": "Time Correlation"
   },
   "theme": {
     "system": "Stelsel",
@@ -109,7 +111,10 @@
       "assigned": "Issue toegewys.",
       "timeLogged": "Tydvermelding aangeteken.",
       "assignFailed": "Kon nie toewys nie",
-      "assignedTo": "Toegewys aan {name}"
+      "assignedTo": "Toegewys aan {name}",
+      "ghLinkRemoved": "GitHub link removed.",
+      "noteUpdateFailed": "Failed to update note",
+      "noteUpdated": "Note updated."
     },
     "fields": {
       "author": "Outeur",
@@ -145,7 +150,12 @@
       "noDescription": "Geen beskrywing",
       "noCategory": "No Category",
       "noPriority": "No Priority",
-      "unset": "Unset"
+      "unset": "Unset",
+      "noProject": "No Project",
+      "unassigned": "Unassigned",
+      "history": "No history yet",
+      "notes": "No notes",
+      "properties": "No properties"
     },
     "placeholders": {
       "comment": "Add a comment...",
@@ -165,7 +175,8 @@
       "assign": "Assign",
       "assignTo": "Assign to {name}",
       "select": "Select...",
-      "postToRedmine": "Post to Redmine"
+      "postToRedmine": "Post to Redmine",
+      "confirmDeleteNote": "Are you sure you want to delete this internal note?"
     },
     "badges": {
       "local": "🟢 Local"
@@ -251,7 +262,8 @@
     "insightsCount": {
       "one": "1 KI-insig gegenereer",
       "other": "# KI-insigte gegenereer"
-    }
+    },
+    "insightsCount_zero": "No available AI insights."
   },
   "sync": {
     "syncing": "Sinkroniseer...",
@@ -325,7 +337,9 @@
     "aiInsightsLabel": "KI Insigte",
     "aiInsightsNone": "Geen beskikbare KI-insigte nie. Kyk later weer!",
     "aiInsightsOne": "1 KI-insig gegenereer",
-    "aiInsightsMany": "{count} KI-insigte gegenereer"
+    "aiInsightsMany": "{count} KI-insigte gegenereer",
+    "expandAll": "All metrics",
+    "collapseAll": "Show less"
   },
   "filters": {
     "status": "Status",
@@ -414,7 +428,11 @@
     "dragToReorder": "Sleep om te herrangskik",
     "ghLinks": "GH: {count} skakel(s)",
     "attachmentsCount": "Aanhegsels: {count}",
-    "relationsCount": "Verhoudings: {count}"
+    "relationsCount": "Verhoudings: {count}",
+    "bulkHint": "Select issues to bulk-edit.",
+    "queue.colActivity": "Activity",
+    "assignedToMeOn": "👤 Assigned to Me",
+    "assignedToMeOff": "👤 Not Assigned to Me"
   },
   "pagination": {
     "pageInfo": "Bladsy {current} van {max}",
@@ -424,7 +442,8 @@
       "=0": "Queue hidden.",
       "one": "Queue hidden. 1 issue loaded, {selectedCount} selected.",
       "other": "Queue hidden. {loadedCount} issues loaded, {selectedCount} selected."
-    }
+    },
+    "perPage": "Per page"
   },
   "preview": {
     "status": "Status: {name}",

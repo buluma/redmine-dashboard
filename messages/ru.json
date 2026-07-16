@@ -48,8 +48,10 @@
     },
     "tooltips": {
       "expand": "Expand menu",
-      "collapse": "Collapse menu"
-    }
+      "collapse": "Collapse menu",
+      "more": "More"
+    },
+    "correlation": "Time Correlation"
   },
   "theme": {
     "system": "Системная",
@@ -109,7 +111,10 @@
       "assigned": "Задача назначена.",
       "timeLogged": "Время учтено.",
       "assignFailed": "Не удалось назначить",
-      "assignedTo": "Назначено на {name}"
+      "assignedTo": "Назначено на {name}",
+      "ghLinkRemoved": "GitHub link removed.",
+      "noteUpdateFailed": "Failed to update note",
+      "noteUpdated": "Note updated."
     },
     "fields": {
       "author": "Автор",
@@ -145,7 +150,12 @@
       "noDescription": "Нет описания",
       "noCategory": "Без категории",
       "noPriority": "Без приоритета",
-      "unset": "Не задано"
+      "unset": "Не задано",
+      "noProject": "No Project",
+      "unassigned": "Unassigned",
+      "history": "No history yet",
+      "notes": "No notes",
+      "properties": "No properties"
     },
     "placeholders": {
       "comment": "Добавить комментарий...",
@@ -165,7 +175,8 @@
       "assign": "Назначить",
       "assignTo": "Назначить на {name}",
       "select": "Выбрать...",
-      "postToRedmine": "Отправить в Redmine"
+      "postToRedmine": "Отправить в Redmine",
+      "confirmDeleteNote": "Are you sure you want to delete this internal note?"
     },
     "badges": {
       "local": "🟢 Локально"
@@ -254,7 +265,8 @@
       "one": "Сгенерирован 1 ИИ-инсайт",
       "few": "Сгенерировано # ИИ-инсайта",
       "other": "Сгенерировано # ИИ-инсайтов"
-    }
+    },
+    "insightsCount_zero": "No available AI insights."
   },
   "sync": {
     "syncing": "Синхронизация...",
@@ -328,7 +340,9 @@
     "aiInsightsLabel": "ИИ-инсайты",
     "aiInsightsNone": "Нет доступной информации об искусственном интеллекте. Проверьте еще раз позже!",
     "aiInsightsOne": "Сгенерировано 1 мнение ИИ",
-    "aiInsightsMany": "{count} Информация, полученная с помощью ИИ"
+    "aiInsightsMany": "{count} Информация, полученная с помощью ИИ",
+    "expandAll": "All metrics",
+    "collapseAll": "Show less"
   },
   "filters": {
     "status": "Статус",
@@ -417,7 +431,11 @@
     "dragToReorder": "Перетащите, чтобы изменить порядок",
     "ghLinks": "GH: {count} ссылок",
     "attachmentsCount": "Вложения: {count}",
-    "relationsCount": "Отношения: {count}"
+    "relationsCount": "Отношения: {count}",
+    "bulkHint": "Select issues to bulk-edit.",
+    "queue.colActivity": "Activity",
+    "assignedToMeOn": "👤 Assigned to Me",
+    "assignedToMeOff": "👤 Not Assigned to Me"
   },
   "pagination": {
     "pageInfo": "Страница {current} из {max}",
@@ -427,7 +445,8 @@
       "=0": "Queue hidden.",
       "one": "Queue hidden. 1 issue loaded, {selectedCount} selected.",
       "other": "Queue hidden. {loadedCount} issues loaded, {selectedCount} selected."
-    }
+    },
+    "perPage": "Per page"
   },
   "preview": {
     "status": "Статус: {name}",

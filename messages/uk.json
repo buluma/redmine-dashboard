@@ -48,8 +48,10 @@
     },
     "tooltips": {
       "expand": "Розгорнути меню",
-      "collapse": "Згорнути меню"
-    }
+      "collapse": "Згорнути меню",
+      "more": "More"
+    },
+    "correlation": "Time Correlation"
   },
   "theme": {
     "system": "Системна",
@@ -109,7 +111,10 @@
       "assigned": "Завдання призначено.",
       "timeLogged": "Запис часу додано.",
       "assignFailed": "Не вдалося призначити",
-      "assignedTo": "Призначено на {name}"
+      "assignedTo": "Призначено на {name}",
+      "ghLinkRemoved": "GitHub link removed.",
+      "noteUpdateFailed": "Failed to update note",
+      "noteUpdated": "Note updated."
     },
     "fields": {
       "author": "Автор",
@@ -145,7 +150,12 @@
       "noDescription": "Немає опису",
       "noCategory": "Немає категорії",
       "noPriority": "Немає пріоритету",
-      "unset": "Не встановлено"
+      "unset": "Не встановлено",
+      "noProject": "No Project",
+      "unassigned": "Unassigned",
+      "history": "No history yet",
+      "notes": "No notes",
+      "properties": "No properties"
     },
     "placeholders": {
       "comment": "Додати коментар...",
@@ -165,7 +175,8 @@
       "assign": "Призначити",
       "assignTo": "Призначити {name}",
       "select": "Вибрати...",
-      "postToRedmine": "Надіслати до Redmine"
+      "postToRedmine": "Надіслати до Redmine",
+      "confirmDeleteNote": "Are you sure you want to delete this internal note?"
     },
     "badges": {
       "local": "🟢 Локальне"
@@ -257,7 +268,8 @@
       "few": "Згенеровано # інсайти ІІ",
       "many": "Згенеровано # інсайтів ІІ",
       "other": "Згенеровано # інсайтів ІІ"
-    }
+    },
+    "insightsCount_zero": "No available AI insights."
   },
   "sync": {
     "syncing": "Синхронізація...",
@@ -331,7 +343,9 @@
     "aiInsightsLabel": "AI Insights",
     "aiInsightsNone": "Немає доступних даних ШІ. Перевірте пізніше!",
     "aiInsightsOne": "Створено 1 інформацію ШІ",
-    "aiInsightsMany": "{count} Згенеровано AI"
+    "aiInsightsMany": "{count} Згенеровано AI",
+    "expandAll": "All metrics",
+    "collapseAll": "Show less"
   },
   "filters": {
     "status": "Статус",
@@ -420,7 +434,11 @@
     "dragToReorder": "Перетягніть, щоб змінити порядок",
     "ghLinks": "GH: {count} посилань",
     "attachmentsCount": "Додатки: {count}",
-    "relationsCount": "Відносини: {count}"
+    "relationsCount": "Відносини: {count}",
+    "bulkHint": "Select issues to bulk-edit.",
+    "queue.colActivity": "Activity",
+    "assignedToMeOn": "👤 Assigned to Me",
+    "assignedToMeOff": "👤 Not Assigned to Me"
   },
   "pagination": {
     "pageInfo": "Сторінка {current} з {max}",
@@ -430,7 +448,8 @@
       "=0": "Queue hidden.",
       "one": "Queue hidden. 1 issue loaded, {selectedCount} selected.",
       "other": "Queue hidden. {loadedCount} issues loaded, {selectedCount} selected."
-    }
+    },
+    "perPage": "Per page"
   },
   "preview": {
     "status": "Статус: {name}",
