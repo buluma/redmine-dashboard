@@ -9,7 +9,7 @@ CONVERGE="http://localhost:3001"
 KEY="X-API-Key: ${CONVERGE_API_KEY:?Set CONVERGE_API_KEY in .env.sync}"
 NTFY_URL="${NTFY_URL:-http://100.110.136.4:8091/heimdal-alerts}"
 UNMATCHED_ALERT_SECONDS="${UNMATCHED_ALERT_SECONDS:-7200}"
-START=$(date -d "3 days ago" +%Y-%m-%d)
+START=$(date -d "7 days ago" +%Y-%m-%d)
 END=$(date +%Y-%m-%d)
 curl -s -X POST "$CONVERGE/api/external/correlation" -H "$KEY" \
   -H "Content-Type: application/json" \
