@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
-import { correlateWakaTime, applyTimeEntries } from "@/src/lib/correlation";
+import { correlateWakaTime, applyTimeEntries, getAutoCreateOptionsFromEnv } from "@/src/lib/correlation";
 import { requireExternalApiKey } from "@/src/lib/external-auth";
 import { trackFailure } from "@/src/lib/telemetry";
 
@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
       end,
       dryRun,
       catchAllIssueId: process.env.MISC_UNLINKED_ISSUE_ID,
+      autoCreate: getAutoCreateOptionsFromEnv(),
     });
     return NextResponse.json(result);
   } catch (error) {

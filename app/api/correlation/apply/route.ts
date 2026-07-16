@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/src/lib/auth";
-import { applyTimeEntries } from "@/src/lib/correlation";
+import { applyTimeEntries, getAutoCreateOptionsFromEnv } from "@/src/lib/correlation";
 import { isRateLimited } from "@/src/lib/rate-limit";
 import { trackFailure } from "@/src/lib/telemetry";
 import { z } from "zod";
@@ -34,6 +34,7 @@ export async function POST(request: Request) {
     const result = await applyTimeEntries(userId, {
       ...parsed.data,
       catchAllIssueId: process.env.MISC_UNLINKED_ISSUE_ID,
+      autoCreate: getAutoCreateOptionsFromEnv(),
     });
     return NextResponse.json(result);
   } catch (error) {

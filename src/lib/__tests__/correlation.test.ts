@@ -1,27 +1,53 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 const {
   mockIssueFindMany,
   mockIssueFindFirst,
   mockIssueUpdate,
+  mockIssueAggregate,
+  mockIssueCreate,
+  mockIssueFindUnique,
   mockWakaFindMany,
   mockTimeEntryFindMany,
   mockTimeEntryCreate,
+  mockUserFindUnique,
+  mockGithubLinkFindFirst,
+  mockGithubLinkCreate,
 } = vi.hoisted(() => ({
   mockIssueFindMany: vi.fn(),
   mockIssueFindFirst: vi.fn(),
   mockIssueUpdate: vi.fn(),
+  mockIssueAggregate: vi.fn(),
+  mockIssueCreate: vi.fn(),
+  mockIssueFindUnique: vi.fn(),
   mockWakaFindMany: vi.fn(),
   mockTimeEntryFindMany: vi.fn(),
   mockTimeEntryCreate: vi.fn(),
+  mockUserFindUnique: vi.fn(),
+  mockGithubLinkFindFirst: vi.fn(),
+  mockGithubLinkCreate: vi.fn(),
 }));
 
 vi.mock("@/src/lib/db", () => ({
   prisma: {
-    issue: { findMany: mockIssueFindMany, findFirst: mockIssueFindFirst, update: mockIssueUpdate },
+    issue: {
+      findMany: mockIssueFindMany,
+      findFirst: mockIssueFindFirst,
+      update: mockIssueUpdate,
+      aggregate: mockIssueAggregate,
+      create: mockIssueCreate,
+      findUnique: mockIssueFindUnique,
+    },
     wakaTimeDailySummary: { findMany: mockWakaFindMany },
     timeEntry: { findMany: mockTimeEntryFindMany, create: mockTimeEntryCreate },
+    user: { findUnique: mockUserFindUnique },
+    issueGithubLink: { findFirst: mockGithubLinkFindFirst, create: mockGithubLinkCreate },
   },
+}));
+
+vi.mock("@/src/lib/activity-index", () => ({
+  recordIssueActivityEvent: vi.fn(),
+  recomputeIssueActivityIndex: vi.fn(),
 }));
 
 import {
@@ -29,6 +55,8 @@ import {
   buildProjectTicketIndex,
   correlateWakaTime,
   applyTimeEntries,
+  autoCreateTicketsForUnmatched,
+  getAutoCreateOptionsFromEnv,
 } from "@/src/lib/correlation";
 
 const USER_ID = "user-1";
@@ -428,5 +456,187 @@ describe("applyTimeEntries", () => {
         }),
       }),
     );
+  });
+});
+
+describe("autoCreateTicketsForUnmatched", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  function unmatchedProject(project: string, totalSeconds: number) {
+    return { project, totalSeconds, perDay: [{ date: "2026-06-20", seconds: totalSeconds }] };
+  }
+
+  it("creates a ticket + github link for a project over threshold", async () => {
+    mockUserFindUnique.mockResolvedValue({ displayName: "Michael Buluma" });
+    mockGithubLinkFindFirst.mockResolvedValue(null);
+    mockIssueAggregate.mockResolvedValue({ _max: { localIssueNumber: 4 } });
+    mockIssueCreate.mockResolvedValue({ id: "new-issue-1" });
+    mockGithubLinkCreate.mockResolvedValue({ id: "link-1", url: "https://github.com/buluma/sweeper", createdAt: new Date() });
+
+    const created = await autoCreateTicketsForUnmatched(
+      USER_ID,
+      [unmatchedProject("sweeper", 7200)],
+      { thresholdSeconds: 7200, defaultOwner: "buluma" },
+    );
+
+    expect(created).toEqual([
+      { issueId: "new-issue-1", localIssueNumber: 5, project: "sweeper", repositoryFullName: "buluma/sweeper" },
+    ]);
+    expect(mockIssueCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: USER_ID,
+          source: "local",
+          localIssueNumber: 5,
+          subject: "sweeper",
+          statusId: 1,
+          statusName: "New",
+          assignedToName: "Michael Buluma",
+        }),
+      }),
+    );
+    expect(mockGithubLinkCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          issueId: "new-issue-1",
+          repositoryFullName: "buluma/sweeper",
+          url: "https://github.com/buluma/sweeper",
+        }),
+      }),
+    );
+  });
+
+  it("skips projects below threshold", async () => {
+    const created = await autoCreateTicketsForUnmatched(
+      USER_ID,
+      [unmatchedProject("tiny-script", 60)],
+      { thresholdSeconds: 7200, defaultOwner: "buluma" },
+    );
+
+    expect(created).toEqual([]);
+    expect(mockIssueCreate).not.toHaveBeenCalled();
+  });
+
+  it("skips a project that already has a matching link (idempotent)", async () => {
+    mockGithubLinkFindFirst.mockResolvedValue({ id: "existing-link" });
+
+    const created = await autoCreateTicketsForUnmatched(
+      USER_ID,
+      [unmatchedProject("sweeper", 7200)],
+      { thresholdSeconds: 7200, defaultOwner: "buluma" },
+    );
+
+    expect(created).toEqual([]);
+    expect(mockIssueCreate).not.toHaveBeenCalled();
+  });
+
+  it("preserves an explicit owner/repo project name instead of prefixing defaultOwner", async () => {
+    mockUserFindUnique.mockResolvedValue({ displayName: "Michael Buluma" });
+    mockGithubLinkFindFirst.mockResolvedValue(null);
+    mockIssueAggregate.mockResolvedValue({ _max: { localIssueNumber: null } });
+    mockIssueCreate.mockResolvedValue({ id: "new-issue-2" });
+    mockGithubLinkCreate.mockResolvedValue({ id: "link-2", url: "https://github.com/other-owner/tool", createdAt: new Date() });
+
+    const created = await autoCreateTicketsForUnmatched(
+      USER_ID,
+      [unmatchedProject("other-owner/tool", 7200)],
+      { thresholdSeconds: 7200, defaultOwner: "buluma" },
+    );
+
+    expect(created[0].repositoryFullName).toBe("other-owner/tool");
+  });
+});
+
+describe("applyTimeEntries with autoCreate", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("auto-creates a ticket for unmatched activity, then logs it as matched in the same call", async () => {
+    // First correlateWakaTime pass (no catchAll) sees "sweeper" as unmatched.
+    // After auto-create inserts its github link, the index rebuild for the
+    // second pass must reflect the new ticket — simulate that by having
+    // issue.findMany return it only once a link has been "created".
+    let linkCreated = false;
+    mockIssueFindMany.mockImplementation(async () => {
+      if (!linkCreated) return [];
+      return [localIssue("new-issue-1", 5, "sweeper", ["buluma/sweeper"])];
+    });
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-20", [{ name: "sweeper", total_seconds: 7200 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([]);
+    mockUserFindUnique.mockResolvedValue({ displayName: "Michael Buluma" });
+    mockGithubLinkFindFirst.mockResolvedValue(null);
+    mockIssueAggregate.mockResolvedValue({ _max: { localIssueNumber: 4 } });
+    mockIssueCreate.mockResolvedValue({ id: "new-issue-1" });
+    mockGithubLinkCreate.mockImplementation(async () => {
+      linkCreated = true;
+      return { id: "link-1", url: "https://github.com/buluma/sweeper", createdAt: new Date() };
+    });
+    mockTimeEntryCreate.mockResolvedValue({ id: "te-1" });
+    mockIssueUpdate.mockResolvedValue({});
+
+    const result = await applyTimeEntries(USER_ID, {
+      start: "2026-06-20",
+      end: "2026-06-20",
+      autoCreate: { thresholdSeconds: 7200, defaultOwner: "buluma" },
+    });
+
+    expect(mockIssueCreate).toHaveBeenCalledTimes(1);
+    expect(result.autoCreatedTickets).toEqual([
+      { issueId: "new-issue-1", localIssueNumber: 5, project: "sweeper", repositoryFullName: "buluma/sweeper" },
+    ]);
+    expect(result.created).toBe(1);
+    expect(mockTimeEntryCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ issueId: "new-issue-1" }) }),
+    );
+  });
+
+  it("does not auto-create anything on dryRun", async () => {
+    mockIssueFindMany.mockResolvedValue([]);
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-20", [{ name: "sweeper", total_seconds: 7200 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([]);
+
+    const result = await applyTimeEntries(USER_ID, {
+      start: "2026-06-20",
+      end: "2026-06-20",
+      dryRun: true,
+      autoCreate: { thresholdSeconds: 7200, defaultOwner: "buluma" },
+    });
+
+    expect(mockIssueCreate).not.toHaveBeenCalled();
+    expect(result.autoCreatedTickets).toBeUndefined();
+  });
+});
+
+describe("getAutoCreateOptionsFromEnv", () => {
+  const originalEnv = { ...process.env };
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it("returns undefined when GITHUB_DEFAULT_OWNER is not set", () => {
+    delete process.env.GITHUB_DEFAULT_OWNER;
+    expect(getAutoCreateOptionsFromEnv()).toBeUndefined();
+  });
+
+  it("returns undefined when explicitly disabled", () => {
+    process.env.GITHUB_DEFAULT_OWNER = "buluma";
+    process.env.AUTO_CREATE_UNMATCHED_TICKETS = "false";
+    expect(getAutoCreateOptionsFromEnv()).toBeUndefined();
+  });
+
+  it("returns options with defaults when owner is set and not disabled", () => {
+    process.env.GITHUB_DEFAULT_OWNER = "buluma";
+    delete process.env.AUTO_CREATE_UNMATCHED_TICKETS;
+    delete process.env.AUTO_CREATE_TICKET_THRESHOLD_SECONDS;
+    expect(getAutoCreateOptionsFromEnv()).toEqual({ thresholdSeconds: 7200, defaultOwner: "buluma" });
+  });
+
+  it("respects a custom threshold", () => {
+    process.env.GITHUB_DEFAULT_OWNER = "buluma";
+    process.env.AUTO_CREATE_TICKET_THRESHOLD_SECONDS = "3600";
+    expect(getAutoCreateOptionsFromEnv()).toEqual({ thresholdSeconds: 3600, defaultOwner: "buluma" });
   });
 });

@@ -1,4 +1,5 @@
 import { prisma } from "@/src/lib/db";
+import { recordIssueActivityEvent, recomputeIssueActivityIndex } from "@/src/lib/activity-index";
 
 type WakaBreakdown = { name: string; total_seconds: number; percent: number; text: string };
 
@@ -44,6 +45,23 @@ export type ApplyResult = {
   totalHours: number;
   entries: Array<{ ticketId: string; date: string; hours: number }>;
 };
+
+/**
+ * Reads AUTO_CREATE_UNMATCHED_TICKETS / AUTO_CREATE_TICKET_THRESHOLD_SECONDS /
+ * GITHUB_DEFAULT_OWNER from the environment. Returns undefined when the
+ * feature is disabled, so callers can pass the result straight through as
+ * applyTimeEntries's `autoCreate` option.
+ */
+export function getAutoCreateOptionsFromEnv(): { thresholdSeconds: number; defaultOwner: string } | undefined {
+  const enabled = (process.env.AUTO_CREATE_UNMATCHED_TICKETS ?? "true").trim().toLowerCase();
+  if (["0", "false", "no", "off"].includes(enabled)) return undefined;
+
+  const thresholdSeconds = Number(process.env.AUTO_CREATE_TICKET_THRESHOLD_SECONDS ?? 7200);
+  const defaultOwner = process.env.GITHUB_DEFAULT_OWNER;
+  if (!Number.isFinite(thresholdSeconds) || thresholdSeconds <= 0 || !defaultOwner) return undefined;
+
+  return { thresholdSeconds, defaultOwner };
+}
 
 /**
  * Normalize a project or repo name for matching.
@@ -271,15 +289,127 @@ export async function correlateWakaTime(
   return { matched, unmatched };
 }
 
+export type AutoCreatedTicket = {
+  issueId: string;
+  localIssueNumber: number;
+  project: string;
+  repositoryFullName: string;
+};
+
+/**
+ * Auto-create a personal ticket + GitHub link for any unmatched WakaTime
+ * project whose tracked time in this window crosses `thresholdSeconds`.
+ * Keeps one-off/trivial projects from being permanently linked while
+ * giving anything real its own ticket instead of piling up in the
+ * Misc/Unlinked catch-all forever. Idempotent: skips a project that
+ * already has a matching link (from a prior run, or a manually-added
+ * one) rather than creating a duplicate ticket for it.
+ */
+export async function autoCreateTicketsForUnmatched(
+  userId: string,
+  unmatched: UnmatchedProject[],
+  options: { thresholdSeconds: number; defaultOwner: string }
+): Promise<AutoCreatedTicket[]> {
+  const eligible = unmatched.filter((u) => u.totalSeconds >= options.thresholdSeconds);
+  const created: AutoCreatedTicket[] = [];
+  if (eligible.length === 0) return created;
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { displayName: true } });
+
+  for (const project of eligible) {
+    const repositoryFullName = project.project.includes("/")
+      ? project.project
+      : `${options.defaultOwner}/${project.project}`;
+
+    const existingLink = await prisma.issueGithubLink.findFirst({
+      where: { userId, repositoryFullName },
+      select: { id: true },
+    });
+    if (existingLink) continue;
+
+    const maxNumber = await prisma.issue.aggregate({
+      where: { userId, source: "local" },
+      _max: { localIssueNumber: true },
+    });
+    const localIssueNumber = (maxNumber._max.localIssueNumber ?? 0) + 1;
+
+    const issue = await prisma.issue.create({
+      data: {
+        userId,
+        source: "local",
+        localIssueNumber,
+        subject: project.project,
+        tracker: "Task",
+        priority: "Normal",
+        statusId: 1,
+        statusName: "New",
+        authorName: user?.displayName,
+        assignedToName: user?.displayName,
+        updatedOnRemote: new Date(),
+        lastActivityAt: new Date(),
+        lastActivityType: "auto_created_from_wakatime",
+      },
+    });
+
+    const url = `https://github.com/${repositoryFullName}`;
+    const link = await prisma.issueGithubLink.create({
+      data: {
+        issueId: issue.id,
+        userId,
+        repositoryFullName,
+        url,
+        title: `Auto-linked from WakaTime (${(project.totalSeconds / 3600).toFixed(1)}h)`,
+      },
+    });
+
+    await recordIssueActivityEvent({
+      issueId: issue.id,
+      eventType: "github_link",
+      source: "local",
+      sourceRemoteId: link.id,
+      eventAt: link.createdAt,
+      summary: link.url,
+    });
+    await recomputeIssueActivityIndex(issue.id);
+
+    created.push({
+      issueId: issue.id,
+      localIssueNumber,
+      project: project.project,
+      repositoryFullName,
+    });
+  }
+
+  return created;
+}
+
 /**
  * Apply WakaTime hours as TimeEntry rows on matched tickets.
  * Idempotent: skips dates already logged (unique on issueId + wakaTimeDate).
  * dryRun: returns summary without writing.
+ *
+ * When `autoCreate` is given (and dryRun isn't set), unmatched projects
+ * crossing its threshold get a real ticket created first — computed
+ * against a catch-all-free pass so the catch-all bucket doesn't swallow
+ * them before auto-create ever sees them — then the actual correlation
+ * pass picks up the new ticket like any other matched one.
  */
 export async function applyTimeEntries(
   userId: string,
-  options: { start: string; end: string; dryRun?: boolean; catchAllIssueId?: string }
-): Promise<ApplyResult> {
+  options: {
+    start: string;
+    end: string;
+    dryRun?: boolean;
+    catchAllIssueId?: string;
+    autoCreate?: { thresholdSeconds: number; defaultOwner: string };
+  }
+): Promise<ApplyResult & { autoCreatedTickets?: AutoCreatedTicket[] }> {
+  let autoCreatedTickets: AutoCreatedTicket[] | undefined;
+  if (options.autoCreate && !options.dryRun) {
+    const rawPass = await correlateWakaTime(userId, { start: options.start, end: options.end });
+    autoCreatedTickets = await autoCreateTicketsForUnmatched(userId, rawPass.unmatched, options.autoCreate);
+  }
+
   const correlation = await correlateWakaTime(userId, options);
 
   let created = 0;
@@ -329,5 +459,5 @@ export async function applyTimeEntries(
     }
   }
 
-  return { created, skipped, totalHours, entries };
+  return { created, skipped, totalHours, entries, autoCreatedTickets };
 }
