@@ -16,7 +16,6 @@ import { NotificationsPanel } from "@/src/components/NotificationsPanel";
 import { ToastProvider } from "@/src/components/ToastProvider";
 import { I18nProvider } from "@/src/components/I18nProvider";
 import { ThemeProvider } from "@/src/components/ThemeProvider";
-import { LocaleIndicator } from "@/src/components/LocaleIndicator";
 import React from 'react';
 import { getSessionUserId } from "@/src/lib/session";
 
@@ -76,7 +75,6 @@ export default async function RootLayout({
           <ThemeProvider>
           <ToastProvider>
             <I18nProvider>
-              <LocaleIndicator />
               <OfflineBanner />
               <SyncQueueInitializer />
               <ServiceWorkerRegistrar />

@@ -599,6 +599,13 @@
   border-bottom: 1px solid var(--line);
 }
 
+.data-table th,
+.data-table td {
+  padding: 0.4rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
 .tt-hours {
   font-weight: 600;
 }

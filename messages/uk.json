@@ -142,6 +142,7 @@
       "relations": "Немає зв’язків",
       "subtickets": "Немає підзадач",
       "github": "Немає пов’язаних GitHub посилань",
+      "noDescription": "Немає опису",
       "noCategory": "Немає категорії",
       "noPriority": "Немає пріоритету",
       "unset": "Не встановлено"
