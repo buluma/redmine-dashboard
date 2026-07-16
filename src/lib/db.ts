@@ -68,8 +68,12 @@ function isSqliteMode(): boolean {
  */
 async function configureSqlitePragmas(): Promise<void> {
   if (!isSqliteMode()) return;
-  await prisma.$executeRawUnsafe(`PRAGMA journal_mode=WAL;`);
-  await prisma.$executeRawUnsafe(`PRAGMA busy_timeout=5000;`);
+  // PRAGMA journal_mode and busy_timeout both return the value they set,
+  // and Prisma's SQLite driver rejects $executeRawUnsafe for statements
+  // that return rows ("Execute returned results, which is not allowed in
+  // SQLite") — must go through $queryRawUnsafe instead.
+  await prisma.$queryRawUnsafe(`PRAGMA journal_mode=WAL;`);
+  await prisma.$queryRawUnsafe(`PRAGMA busy_timeout=5000;`);
 }
 
 async function ensureRuntimeTables(): Promise<void> {

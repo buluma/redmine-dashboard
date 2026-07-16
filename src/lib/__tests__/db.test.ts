@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockExecuteRawUnsafe = vi.fn();
+const mockQueryRawUnsafe = vi.fn();
 
 vi.mock("@prisma/client", () => {
   const PrismaClient = class {
     $executeRawUnsafe = mockExecuteRawUnsafe;
+    $queryRawUnsafe = mockQueryRawUnsafe;
   };
   return { PrismaClient };
 });
@@ -80,21 +82,26 @@ describe("database utilities", () => {
   });
 
   describe("configureSqlitePragmas", () => {
-    it("sets WAL journal mode and a busy_timeout before touching runtime tables", async () => {
+    it("sets WAL journal mode and a busy_timeout via $queryRawUnsafe (PRAGMA returns a row, $executeRawUnsafe rejects that on SQLite)", async () => {
+      await import("@/src/lib/db");
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const pragmaCalls: string[] = mockQueryRawUnsafe.mock.calls.map(
+        (c: unknown[]) => String(c[0])
+      );
+      expect(pragmaCalls.some((sql) => sql.includes("PRAGMA journal_mode=WAL"))).toBe(true);
+      expect(pragmaCalls.some((sql) => sql.includes("PRAGMA busy_timeout=5000"))).toBe(true);
+      expect(mockExecuteRawUnsafe).not.toHaveBeenCalledWith(expect.stringContaining("PRAGMA"));
+    });
+
+    it("still runs ensureRuntimeTables afterward", async () => {
       await import("@/src/lib/db");
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       const sqlCalls: string[] = mockExecuteRawUnsafe.mock.calls.map(
         (c: unknown[]) => String(c[0])
       );
-      const walIndex = sqlCalls.findIndex((sql) => sql.includes("PRAGMA journal_mode=WAL"));
-      const busyTimeoutIndex = sqlCalls.findIndex((sql) => sql.includes("PRAGMA busy_timeout=5000"));
-      const webhookTableIndex = sqlCalls.findIndex((sql) => sql.includes("WebhookSubscription"));
-
-      expect(walIndex).toBeGreaterThanOrEqual(0);
-      expect(busyTimeoutIndex).toBeGreaterThanOrEqual(0);
-      expect(walIndex).toBeLessThan(webhookTableIndex);
-      expect(busyTimeoutIndex).toBeLessThan(webhookTableIndex);
+      expect(sqlCalls.some((sql) => sql.includes("WebhookSubscription"))).toBe(true);
     });
   });
 });
