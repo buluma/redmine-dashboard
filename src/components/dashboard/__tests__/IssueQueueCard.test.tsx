@@ -125,9 +125,6 @@ function renderCard(overrides: Partial<Parameters<typeof IssueQueueCard>[0]> = {
     onVisibleColumnsChange: vi.fn(),
     selectedProject: null,
     onSelectedProjectChange: vi.fn(),
-    viewMode: "list" as const,
-    onViewModeChange: vi.fn(),
-    onBoardDrop: vi.fn(),
     onSelectIssueId: vi.fn(),
     selectedAllVisible: false,
     onToggleSelectAllVisible: vi.fn(),
@@ -205,23 +202,6 @@ describe("IssueQueueCard", () => {
     renderCard({ loading: true });
     expect(screen.getByTestId("skeleton-table")).toBeInTheDocument();
     expect(screen.queryByTestId("row-1")).toBeNull();
-  });
-
-  it("renders the kanban board when viewMode is board", () => {
-    renderCard({ viewMode: "board" });
-    expect(screen.getByTestId("kanban-board")).toBeInTheDocument();
-    expect(screen.queryByRole("table")).toBeNull();
-  });
-
-  it("renders the gantt chart when viewMode is gantt", () => {
-    renderCard({ viewMode: "gantt" });
-    expect(screen.getByTestId("gantt-chart")).toBeInTheDocument();
-  });
-
-  it("switches view mode via the tab buttons", () => {
-    const props = renderCard();
-    fireEvent.click(screen.getByRole("tab", { name: "queue.viewBoard" }));
-    expect(props.onViewModeChange).toHaveBeenCalledWith("board");
   });
 
   it("wires the select-all checkbox", () => {

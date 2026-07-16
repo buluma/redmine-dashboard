@@ -3,16 +3,12 @@
 import { useI18n } from "@/src/components/I18nProvider";
 import { ColumnPicker, type ColumnKey } from "@/src/components/ColumnPicker";
 import { ExportButton } from "@/src/components/ExportButton";
-import { GanttChart } from "@/src/components/GanttChart";
-import { KanbanBoard } from "@/src/components/KanbanBoard";
 import { ProjectFilter } from "@/src/components/ProjectFilter";
 import { SkeletonTable } from "@/src/components/SkeletonTable";
 import { PAGE_SIZE_OPTIONS } from "@/src/hooks/usePageSize";
 import { issueNumericId as toIssueNumericId } from "@/src/lib/issue-utils";
 import type { FilterPreset, Issue, StatusCatalog } from "@/src/types/dashboard";
 import { IssueQueueRow } from "@/src/components/dashboard/IssueQueueRow";
-
-export type IssueQueueViewMode = "list" | "board" | "gantt";
 
 export interface IssueQueueSummary {
   open: number;
@@ -76,10 +72,6 @@ interface IssueQueueCardProps {
   onVisibleColumnsChange: (columns: Set<ColumnKey>) => void;
   selectedProject: string | null;
   onSelectedProjectChange: (project: string | null) => void;
-
-  viewMode: IssueQueueViewMode;
-  onViewModeChange: (mode: IssueQueueViewMode) => void;
-  onBoardDrop: (issueId: number, targetStatusId: number) => void;
 
   onSelectIssueId: (id: number | null) => void;
   selectedAllVisible: boolean;
@@ -145,9 +137,6 @@ export function IssueQueueCard({
   onVisibleColumnsChange,
   selectedProject,
   onSelectedProjectChange,
-  viewMode,
-  onViewModeChange,
-  onBoardDrop,
   onSelectIssueId,
   selectedAllVisible,
   onToggleSelectAllVisible,
@@ -433,78 +422,7 @@ export function IssueQueueCard({
             </div>
           </div>
 
-          <div className="view-mode-tabs" role="tablist" aria-label="Issue view mode">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={viewMode === "list"}
-              className={`secondary-button ${viewMode === "list" ? "active" : ""}`}
-              onClick={() => onViewModeChange("list")}
-            >
-              {t('queue.viewList')}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={viewMode === "board"}
-              className={`secondary-button ${viewMode === "board" ? "active" : ""}`}
-              onClick={() => onViewModeChange("board")}
-            >
-              {t('queue.viewBoard')}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={viewMode === "gantt"}
-              className={`secondary-button ${viewMode === "gantt" ? "active" : ""}`}
-              onClick={() => onViewModeChange("gantt")}
-            >
-              {t('queue.viewGantt')}
-            </button>
-          </div>
-
-          {viewMode === "board" ? (
-            <KanbanBoard
-              issues={visibleIssues
-                .filter((i): i is typeof i & { redmineIssueId: number } =>
-                  Number.isInteger(i.redmineIssueId) && (i.redmineIssueId ?? 0) > 0,
-                )
-                .map((i) => ({
-                  id: i.id,
-                  redmineIssueId: i.redmineIssueId as number,
-                  subject: i.subject,
-                  projectName: i.projectName,
-                  priority: i.priority,
-                  statusId: i.statusId,
-                  statusName: i.statusName,
-                  doneRatio: i.doneRatio ?? null,
-                }))}
-              statuses={statuses}
-              onDrop={onBoardDrop}
-              onClick={(boardIssue) => onSelectIssueId(boardIssue.redmineIssueId)}
-            />
-          ) : viewMode === "gantt" ? (
-            <GanttChart
-              issues={visibleIssues
-                .filter((i): i is typeof i & { redmineIssueId: number } =>
-                  Number.isInteger(i.redmineIssueId) && (i.redmineIssueId ?? 0) > 0,
-                )
-                .map((i) => ({
-                  id: i.id,
-                  redmineIssueId: i.redmineIssueId as number,
-                  subject: i.subject,
-                  projectName: i.projectName,
-                  priority: i.priority,
-                  statusName: i.statusName,
-                  startDate: i.startDate ?? null,
-                  dueDate: i.dueDate ?? null,
-                  createdAt: i.createdAt,
-                  updatedAt: i.updatedAt,
-                  doneRatio: i.doneRatio ?? null,
-                }))}
-              onClick={(g) => onSelectIssueId(g.redmineIssueId)}
-            />
-          ) : (
+          {(
             <>
             <table className="issues-table">
               <thead>

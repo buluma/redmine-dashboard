@@ -112,31 +112,6 @@ describe("useBulkIssueActions", () => {
     });
   });
 
-  describe("handleBoardDrop", () => {
-    it("posts a single-issue status change and refreshes on success", async () => {
-      vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ updatedCount: 1, failedCount: 0 }));
-      const { params, result } = renderActions();
-
-      await act(async () => { await result.current.handleBoardDrop(99, 4); });
-
-      expect(fetch).toHaveBeenCalledWith("/api/issues/bulk-status", expect.objectContaining({
-        body: JSON.stringify({ issueIds: [99], statusId: 4 }),
-      }));
-      expect(toastInfo).toHaveBeenCalled();
-      expect(params.refreshAll).toHaveBeenCalledTimes(1);
-    });
-
-    it("reverts via refreshAll when the drop is rejected", async () => {
-      vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ failures: [{ error: "not allowed" }] }));
-      const { params, result } = renderActions();
-
-      await act(async () => { await result.current.handleBoardDrop(99, 4); });
-
-      expect(toastError).toHaveBeenCalledWith("not allowed");
-      expect(params.refreshAll).toHaveBeenCalledTimes(1);
-    });
-  });
-
   it("sets bulkUpdating true while a bulk request is in flight", async () => {
     let resolveFetch: (v: Response) => void;
     vi.mocked(fetch).mockReturnValueOnce(new Promise((resolve) => { resolveFetch = resolve; }));

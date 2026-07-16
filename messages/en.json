@@ -415,9 +415,6 @@
     "saveFilters": "💾",
     "favoritesOn": "★ Favorites",
     "favoritesOff": "☆ Favorites",
-    "viewList": "📑 List",
-    "viewBoard": "🗂 Board",
-    "viewGantt": "📈 Gantt",
     "colId": "ID",
     "colSubject": "Subject",
     "colStatus": "Status",
@@ -431,7 +428,7 @@
     "relationsCount": "Relations: {count}",
     "assignedToMeOn": "👤 Assigned to Me",
     "assignedToMeOff": "👤 Not Assigned to Me"
-    },
+  },
   "pagination": {
     "pageInfo": "Page {current} of {max}",
     "perPage": "Per page",

@@ -201,7 +201,6 @@
 
 [data-theme="dark"] .toolbar,
 [data-theme="dark"] .toolbar-actions,
-[data-theme="dark"] .view-mode-tabs,
 [data-theme="dark"] .qa-tabs,
 [data-theme="dark"] .status-chip,
 [data-theme="dark"] .saved-view-pill,
@@ -750,12 +749,6 @@
 
 [data-theme="dark"] .ai-link {
   color: var(--accent-strong) !important;
-}
-
-[data-theme="dark"] .view-mode-tabs .secondary-button.active {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent-strong);
 }
 
 [data-theme="dark"] .preset-name-input {

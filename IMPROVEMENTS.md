@@ -96,10 +96,8 @@ Verification at session end:
 
 ## 1. Functional Improvements
 
-### 1.1 Re-enable Kanban Board and Gantt views — High ✅ done
-- **Evidence:** `app/page.tsx:1656-1687` — Kanban + Gantt view-mode buttons and renderers are commented out (`temporarily disabled`). Only the `list` tab actually renders, so `view-mode-tabs` shows a single button with no purpose.
-- **Impact:** Two TODO items in `TODO.md` ("Jira-Style Kanban Board", "Interactive Gantt Chart View") already have component scaffolding (`src/components/KanbanBoard.tsx`, `src/components/GanttChart.tsx`).
-- **Action:** Either restore both with working drag-and-drop status updates, or remove `KanbanBoard`/`GanttChart` imports and the `viewMode` state entirely. Half-wired UI is worse than no UI.
+### 1.1 Re-enable Kanban Board and Gantt views — High ✅ removed (2026-07-16)
+- **Resolution:** Kanban and Gantt were fully wired and live (not commented out, contrary to the stale note this entry previously carried), but unwanted. Removed both entirely: `src/components/KanbanBoard.tsx`, `src/components/GanttChart.tsx` deleted; `viewMode`/`onBoardDrop` plumbing stripped from `app/page.tsx`, `IssueQueueCard.tsx`, `useBulkIssueActions.ts`; dead `queue.viewList/viewBoard/viewGantt` i18n keys and `.view-mode-tabs` CSS removed.
 
 ### 1.2 Finish drag-to-reorder in issues table — Medium
 - **Evidence:** `app/page.tsx:1781-1786` — `onDrop` handler is `// Reorder logic would go here`. Drag handle visually exists; nothing happens on drop.
@@ -254,9 +252,8 @@ Bonus gaps not in a–h but worth tracking:
 - **Evidence:** `AppNav.tsx:277-325` collapses to a bottom bar on `≤768px`. With 11 nav items + 0.65 rem labels, items overlap on small phones.
 - **Action:** Switch to a "more" overflow menu after 5 items. Or a slide-up sheet triggered by a single hamburger button on mobile.
 
-### 2.3 View-mode tabs render a single tab — High ✅ done
-- **Evidence:** `app/page.tsx:1652-1664` — only `list` button is active; Kanban and Gantt are commented out. Tabs container is empty visual noise.
-- **Action:** Hide the `.view-mode-tabs` wrapper while only one view exists. Bring back once 1.1 is resolved.
+### 2.3 View-mode tabs render a single tab — High ✅ resolved via 1.1 (2026-07-16)
+- **Resolution:** Superseded by 1.1 — the tab bar itself was removed along with Kanban/Gantt, so there's no single-tab wrapper left to hide.
 
 ### 2.4 Mouse-following hover tooltip blocks the row — Medium ✅ done
 - **Evidence:** `app/page.tsx:1937-1969` — preview tooltip anchors to `clientX/clientY + 15px`, follows the cursor and overlays whatever is beneath. Hard to read while moving cursor.

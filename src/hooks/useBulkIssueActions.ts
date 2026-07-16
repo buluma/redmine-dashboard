@@ -19,7 +19,6 @@ export interface UseBulkIssueActionsResult {
   updateBulkStatus: () => Promise<void>;
   updateBulkPriority: () => Promise<void>;
   updateBulkMarkDone: () => Promise<void>;
-  handleBoardDrop: (issueId: number, targetStatusId: number) => Promise<void>;
 }
 
 export function useBulkIssueActions({
@@ -106,32 +105,9 @@ export function useBulkIssueActions({
     onBulkPriorityApplied();
   }
 
-  async function handleBoardDrop(issueId: number, targetStatusId: number) {
-    try {
-      const res = await fetch("/api/issues/bulk-status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ issueIds: [issueId], statusId: targetStatusId }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? "Status update failed");
-      }
-      if (data.failures?.length > 0) {
-        throw new Error(data.failures[0].error || t('toasts.actionNotPermitted'));
-      }
-      toast.info(t('toasts.statusUpdated'));
-      await refreshAll();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('toasts.dropFailed'));
-      // Refetch to revert KanbanBoard's optimistic state.
-      await refreshAll();
-    }
-  }
-
   async function updateBulkMarkDone() {
     await runBulkUpdate({ doneRatio: 100 }, 'toasts.bulkSuccess');
   }
 
-  return { bulkUpdating, updateBulkStatus, updateBulkPriority, updateBulkMarkDone, handleBoardDrop };
+  return { bulkUpdating, updateBulkStatus, updateBulkPriority, updateBulkMarkDone };
 }

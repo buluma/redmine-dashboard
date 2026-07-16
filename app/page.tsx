@@ -107,7 +107,6 @@ export default function Home() {
   const [opsAlertsOpen, setOpsAlertsOpen] = useState(false);
   const [activityFeedOpen, setActivityFeedOpen] = useState(false);
   const [issueQueueOpen, setIssueQueueOpen] = useState(true);
-  const [viewMode, setViewMode] = useState<"list" | "board" | "gantt">("list");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [showCharts, setShowCharts] = useState(false);
   const [showAllMetrics, setShowAllMetrics] = useState(false);
@@ -419,7 +418,6 @@ export default function Home() {
     updateBulkStatus,
     updateBulkPriority,
     updateBulkMarkDone,
-    handleBoardDrop,
   } = useBulkIssueActions({
     selectedIssueIds,
     bulkStatusId,
@@ -728,9 +726,6 @@ export default function Home() {
           onVisibleColumnsChange={setVisibleColumns}
           selectedProject={selectedProject}
           onSelectedProjectChange={setSelectedProject}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          onBoardDrop={handleBoardDrop}
           onSelectIssueId={setSelectedIssueId}
           selectedAllVisible={selectedAllVisible}
           onToggleSelectAllVisible={toggleSelectAllVisible}
