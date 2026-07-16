@@ -102,9 +102,8 @@ make help
 ## Environment Notes
 
 - Compose loads `.env` via `env_file`.
-- Docker Compose forces `DATABASE_URL=file:./prisma/dev.db` for the container, so it uses local `./prisma` data and not remote Supabase/Postgres values from `.env`.
-- Docker build generates Prisma client from `prisma/schema.dev.sqlite.prisma` for SQLite compatibility.
-- Postgres mode uses `docker-compose.postgres.yml` and `DATABASE_URL=${DOCKER_POSTGRES_DATABASE_URL}`.
+- `docker-compose.yml` is Postgres-based: it runs a `postgres` service alongside `dashboard`, and forces `DATABASE_URL=${DOCKER_POSTGRES_DATABASE_URL}` for the container regardless of what `.env` sets. Docker build generates the Prisma client from `prisma/schema.prisma`.
+- There used to be a separate `docker-compose.postgres.yml` for this; it was folded into `docker-compose.yml` on 2026-07-16 after the two files' shared `container_name: redmine-dashboard` let a plain `docker compose up -d --build` (no `-f`) silently replace the Postgres-backed container with a SQLite-backed one from the (then still SQLite-only) default file. One canonical file now — there's no `-f` flag to get wrong.
 - Plain HTTP deployments, including Pi/homelab access by IP and port, need `SECURE_COOKIES=false`. If this is missing while `NODE_ENV=production`, login succeeds on the server but the browser discards the `rd_session` cookie and redirects back to `/login`.
 - HTTPS-only deployments can set `SECURE_COOKIES=true`.
 - For first-run Redmine bootstrap, set:

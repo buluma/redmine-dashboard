@@ -124,9 +124,10 @@ Verification at session end:
 - **Evidence:** `TODO.md` notes unbounded growth, Pi disk at 73%.
 - **Action:** Add Prisma deleteMany cron in `src/lib/streamline-log-poller.ts` keyed on `createdAt < now() - 30d` (configurable env). Wire metric `streamline_log_pruned`.
 
-### 1.8 Migrate Pi from SQLite to PostgreSQL — High (TODO carry-over) ✅ runbook done
-- **Evidence:** SQLite locks under concurrent writes. `docker-compose.postgres.yml` already prepared.
-- **Action:** Document migration runbook (pg_dumpall import? prisma migrate deploy with new DATABASE_URL?). Test on staging Pi first.
+### 1.8 Migrate Pi from SQLite to PostgreSQL — High ✅ actually cut over (2026-07-16)
+- **History:** A runbook + `docker-compose.postgres.yml` were prepared and "fully verified" back on 2026-07-12, but the standard deploy path (plain `docker compose up -d --build`, no `-f`) was never switched to it — production kept running SQLite the whole time, invisibly, because both compose files shared `container_name: redmine-dashboard`. Whichever file someone last ran with that plain command silently became "the" container; the discarded stack's Postgres sidecar just sat there orphaned and healthy, looking fine on `docker ps` while receiving zero traffic.
+- **What actually happened this time:** `docker-compose.postgres.yml` deleted; its Postgres service and Postgres-pointed `dashboard` config folded directly into `docker-compose.yml`, which is now the one and only compose file — no `-f` flag exists to get wrong. Data that had diverged during the SQLite window (new local tickets, TimeEntry rows, journals) was delta-copied into Postgres by primary key (rows already shared identical cuids from the original migration, so only genuinely new rows needed copying); `UserRedmineCredential` was updated by hand since it doesn't have an `id` PK the delta script could diff on.
+- **Verified:** local tickets 1-19 present with correct GitHub links, credential fresh, full Redmine re-sync + WakaTime correlation both ran clean against the real Postgres container.
 
 ### 1.9 Bulk actions beyond status — Medium ✅ done
 - **Evidence:** `app/page.tsx:1456-1483` — bulk toolbar only exposes `bulkStatusId`.

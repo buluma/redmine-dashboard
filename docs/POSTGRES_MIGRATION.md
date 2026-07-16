@@ -5,6 +5,15 @@ Left as a runbook for future re-runs (disaster recovery, a second instance,
 etc.) — the steps below reflect what actually worked on this arm64 host,
 not the original untested plan. Read end-to-end before starting.
 
+> **2026-07-16 update:** the commands below reference `docker-compose.postgres.yml`,
+> which existed at the time this was written but has since been folded into
+> `docker-compose.yml` (it's the only compose file now — drop every `-f
+> docker-compose.postgres.yml` below). That split file is *why* production
+> silently ran on SQLite for days after this migration was "verified": both
+> files shared `container_name: redmine-dashboard`, and a plain `docker
+> compose up -d --build` (no `-f`) on the default file replaced the
+> Postgres-backed container without anyone noticing. See IMPROVEMENTS.md §1.8.
+
 ## Why migrate
 
 - SQLite locks under concurrent writes from the in-process poller, mobile

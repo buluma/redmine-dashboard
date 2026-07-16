@@ -109,9 +109,10 @@ A Docker setup is provided for a containerized development environment. For more
     ```bash
     make down
     ```
-5.  **Reset Database:** To reset the Docker SQLite database cache:
+5.  **Reset Database:** To wipe the Docker Postgres volume and start fresh (destructive — this deletes all data in the `postgres-data` volume):
     ```bash
-    make reset-db
+    docker compose down -v
+    make up
     ```
 
 ### Supabase -> Local Docker Postgres Import
@@ -142,11 +143,11 @@ A full list of helper targets is available in the [Makefile](/Users/shadowwalker
 
 - `DATABASE_URL`: SQLite file path for local development (default: `file:./dev.db`).
 - `DOCKER_DATABASE_URL`: Optional Docker-only SQLite path override. Recommended to use `file:./prisma/dev.db` for Docker Compose setups.
-- `DOCKER_POSTGRES_DB`: Local Docker Postgres DB name for Postgres-mode stack.
+- `DOCKER_POSTGRES_DB`: Local Docker Postgres DB name.
 - `DOCKER_POSTGRES_USER`: Local Docker Postgres username.
 - `DOCKER_POSTGRES_PASSWORD`: Local Docker Postgres password.
 - `DOCKER_POSTGRES_PORT`: Host port mapping for local Docker Postgres (default: `5433`).
-- `DOCKER_POSTGRES_DATABASE_URL`: Dashboard connection string used by `docker-compose.postgres.yml`.
+- `DOCKER_POSTGRES_DATABASE_URL`: Dashboard connection string used by `docker-compose.yml`'s `dashboard` service.
 - `SUPABASE_DATABASE_URL`: Optional convenience variable used by `make import-supabase`.
 - `APP_ENCRYPTION_KEY`: Secret key for encrypting Redmine API keys at rest.
 - `SESSION_SECRET`: HMAC secret for signing session cookies.
