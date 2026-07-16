@@ -121,8 +121,8 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
     const term = searchTerm.toLowerCase();
     return messages.filter(
       (msg) =>
-        msg.issue!.subject.toLowerCase().includes(term) ||
-        (msg.issue!.redmineIssueId?.toString() ?? "").includes(term) ||
+        (msg.issue?.subject.toLowerCase().includes(term) ?? false) ||
+        (msg.issue?.redmineIssueId?.toString() ?? "").includes(term) ||
         msg.content.toLowerCase().includes(term)
     );
   }, [messages, searchTerm]);
@@ -355,19 +355,23 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
                 <article key={msg.id} className={`summary-card chat-card chat-${msg.role}`}>
                   <div className="summary-header">
                     <div className="summary-issue-info">
-                      <Link
-                        href={`/issues/${issueRouteId(msg.issue!)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="summary-issue-link"
-                      >
-                        {issueDisplayId(msg.issue!)} - {msg.issue!.subject}
-                      </Link>
+                      {msg.issue ? (
+                        <Link
+                          href={`/issues/${issueRouteId(msg.issue)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="summary-issue-link"
+                        >
+                          {issueDisplayId(msg.issue)} - {msg.issue.subject}
+                        </Link>
+                      ) : (
+                        <span className="summary-issue-link muted">No linked issue</span>
+                      )}
                       <div className="summary-meta">
                         <span className={`chat-role-badge chat-role-${msg.role}`}>
                           {msg.role === "user" ? "👤 You" : "🤖 AI"}
                         </span>
-                        <span className="chat-status-badge">{msg.issue!.statusName}</span>
+                        {msg.issue && <span className="chat-status-badge">{msg.issue.statusName}</span>}
                       </div>
                     </div>
                     <div className="summary-side">
@@ -511,13 +515,13 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
           padding: 0.5rem 0.75rem;
           border: 1px solid var(--border, #e5e7eb);
           border-radius: 6px;
-          background: white;
+          background: var(--surface-1, white);
           flex: 1;
           max-width: 320px;
         }
 
         .chat-search svg {
-          color: #9ca3af;
+          color: var(--text-soft, #9ca3af);
           flex-shrink: 0;
         }
 
@@ -527,20 +531,21 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
           outline: none;
           font-size: 0.875rem;
           background: transparent;
+          color: var(--text, inherit);
         }
 
         .chat-search-clear {
           background: none;
           border: none;
           cursor: pointer;
-          color: #9ca3af;
+          color: var(--text-soft, #9ca3af);
           font-size: 1.2rem;
           padding: 0;
           line-height: 1;
         }
 
         .chat-search-clear:hover {
-          color: #6b7280;
+          color: var(--text, #6b7280);
         }
 
         .chat-view-toggle {
@@ -552,14 +557,15 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
           padding: 0.4rem 0.75rem;
           border: 1px solid var(--border, #e5e7eb);
           border-radius: 6px;
-          background: white;
+          background: var(--surface-1, white);
+          color: var(--text);
           font-size: 0.8rem;
           cursor: pointer;
           transition: all 0.15s;
         }
 
         .view-toggle-btn:hover {
-          background: #f3f4f6;
+          background: var(--bg-soft, #f3f4f6);
         }
 
         .view-toggle-btn.active {
@@ -586,20 +592,21 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
           gap: 0.75rem;
           width: 100%;
           padding: 0.75rem 1rem;
-          background: #f9fafb;
+          background: var(--bg-soft, #f9fafb);
           border: none;
           cursor: pointer;
           text-align: left;
           font-size: 0.875rem;
+          color: var(--text);
         }
 
         .chat-issue-header:hover {
-          background: #f3f4f6;
+          background: var(--surface-1, #f3f4f6);
         }
 
         .chat-issue-toggle {
           font-size: 0.7rem;
-          color: #6b7280;
+          color: var(--text-soft, #6b7280);
           width: 16px;
         }
 
@@ -627,12 +634,13 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
           align-items: center;
           gap: 0.75rem;
           font-size: 0.75rem;
-          color: #6b7280;
+          color: var(--text-soft, #6b7280);
         }
 
         .chat-status-badge {
           padding: 0.15rem 0.4rem;
-          background: #e5e7eb;
+          background: var(--bg-soft, #e5e7eb);
+          color: var(--text);
           border-radius: 4px;
           font-size: 0.7rem;
         }
@@ -646,7 +654,7 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
           display: flex;
           flex-direction: column;
           gap: 0.75rem;
-          background: white;
+          background: var(--surface-1, white);
           max-height: 600px;
           overflow-y: auto;
         }
@@ -678,7 +686,7 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
 
         .pagination-info {
           font-size: 0.8rem;
-          color: #6b7280;
+          color: var(--text-soft, #6b7280);
         }
 
         .pagination-controls {
@@ -691,14 +699,15 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
           padding: 0.35rem 0.6rem;
           border: 1px solid var(--border, #e5e7eb);
           border-radius: 4px;
-          background: white;
+          background: var(--surface-1, white);
+          color: var(--text);
           cursor: pointer;
           font-size: 0.8rem;
           transition: all 0.15s;
         }
 
         .pagination-btn:hover:not(:disabled) {
-          background: #f3f4f6;
+          background: var(--bg-soft, #f3f4f6);
         }
 
         .pagination-btn:disabled {
@@ -718,7 +727,7 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
           gap: 0.75rem;
           padding-top: 0.75rem;
           margin-top: 0.75rem;
-          border-top: 1px solid #f3f4f6;
+          border-top: 1px solid var(--border, #f3f4f6);
         }
 
         .ai-result-header {
@@ -735,9 +744,9 @@ export function AiChatHistoryClient({ messages }: { messages: AiChatMessageData[
         .ai-perf-badge {
           font-size: 0.7rem;
           padding: 0.2rem 0.5rem;
-          background: #f3f4f6;
+          background: var(--bg-soft, #f3f4f6);
           border-radius: 4px;
-          color: #6b7280;
+          color: var(--text-soft, #6b7280);
           font-family: monospace;
         }
       `}</style>
