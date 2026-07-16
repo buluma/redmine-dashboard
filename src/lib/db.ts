@@ -52,10 +52,28 @@ async function executeRawIgnoreDuplicate(sql: string): Promise<void> {
   }
 }
 
-async function ensureRuntimeTables(): Promise<void> {
+function isSqliteMode(): boolean {
   const databaseUrl = env.databaseUrl.toLowerCase();
-  const sqliteMode = databaseUrl.startsWith("file:") || databaseUrl.startsWith("sqlite:");
-  if (!sqliteMode) {
+  return databaseUrl.startsWith("file:") || databaseUrl.startsWith("sqlite:");
+}
+
+/**
+ * Default SQLite settings are journal_mode=DELETE and busy_timeout=0 — the
+ * poller, cron scripts, and concurrent API requests all hit the same file,
+ * so any overlap fails instantly instead of waiting a moment for the lock.
+ * That surfaced as recurring "Socket timeout" Prisma errors on ordinary
+ * upserts (issueAttachment, issueActivityEvent, etc.) with no real load.
+ * WAL lets readers proceed during a writer; busy_timeout gives a writer
+ * a few seconds to retry before giving up.
+ */
+async function configureSqlitePragmas(): Promise<void> {
+  if (!isSqliteMode()) return;
+  await prisma.$executeRawUnsafe(`PRAGMA journal_mode=WAL;`);
+  await prisma.$executeRawUnsafe(`PRAGMA busy_timeout=5000;`);
+}
+
+async function ensureRuntimeTables(): Promise<void> {
+  if (!isSqliteMode()) {
     return;
   }
 
@@ -211,9 +229,11 @@ async function ensureRuntimeTables(): Promise<void> {
   `);
 }
 
-void ensureRuntimeTables().catch((error) => {
-  trackFailure({ event: "db.runtime_tables.failed", error, metricName: "db_runtime_tables_failed" });
-});
+void configureSqlitePragmas()
+  .then(() => ensureRuntimeTables())
+  .catch((error) => {
+    trackFailure({ event: "db.runtime_tables.failed", error, metricName: "db_runtime_tables_failed" });
+  });
 
 if (process.env.NODE_ENV !== "production") {
   global.prisma = prisma;
