@@ -404,6 +404,8 @@ export class RedmineClient {
     trackerId?: number;
     assignedToId?: number;
     dueDate?: string;
+    categoryId?: number;
+    customFields?: Array<{ id: number; value: string }>;
   }): Promise<{ id: number; url: string }> {
     const response = await this.request<{ issue: { id: number } }>("/issues.json", {
       method: "POST",
@@ -416,6 +418,8 @@ export class RedmineClient {
           tracker_id: input.trackerId,
           assigned_to_id: input.assignedToId,
           due_date: input.dueDate,
+          ...(input.categoryId !== undefined ? { category_id: input.categoryId } : {}),
+          ...(input.customFields !== undefined ? { custom_fields: input.customFields } : {}),
         },
       }),
     });

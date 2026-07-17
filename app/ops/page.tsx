@@ -443,6 +443,9 @@ export default function OpsPage() {
                 <Link href="/ops/users" className="secondary-button" style={{ marginLeft: '0.5rem' }}>
                   {t("ops.userManagement")}
                 </Link>
+                <Link href="/ops/recurring-tickets" className="secondary-button" style={{ marginLeft: '0.5rem' }}>
+                  {t("recurringTickets.title")}
+                </Link>
               </div>
             </article>
 

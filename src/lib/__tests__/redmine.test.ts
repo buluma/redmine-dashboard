@@ -126,4 +126,48 @@ describe("RedmineClient", () => {
     expect(redmineStatusFromError(error)).toBe(422);
     expect(redmineMessageFromError(error, "Unable to save time entry")).toBe("Hours is invalid");
   });
+
+  it("includes category_id and custom_fields in createIssue payload when provided", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ issue: { id: 555 } }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new RedmineClient("https://redmine.example.com", "apikey");
+    const result = await client.createIssue({
+      subject: "Week 29 DRC Support",
+      projectId: 42,
+      trackerId: 3,
+      priorityId: 2,
+      categoryId: 7,
+      customFields: [{ id: 20, value: "Major" }],
+    });
+
+    expect(result).toEqual({ id: 555, url: "https://redmine.example.com/issues/555" });
+    const [, requestInit] = fetchMock.mock.calls[0];
+    const body = JSON.parse(requestInit.body as string);
+    expect(body.issue.category_id).toBe(7);
+    expect(body.issue.custom_fields).toEqual([{ id: 20, value: "Major" }]);
+  });
+
+  it("omits category_id and custom_fields from createIssue payload when not provided", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ issue: { id: 556 } }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new RedmineClient("https://redmine.example.com", "apikey");
+    await client.createIssue({ subject: "Plain ticket" });
+
+    const [, requestInit] = fetchMock.mock.calls[0];
+    const body = JSON.parse(requestInit.body as string);
+    expect(body.issue).not.toHaveProperty("category_id");
+    expect(body.issue).not.toHaveProperty("custom_fields");
+  });
 });

@@ -8,157 +8,159 @@ datasource db {
 }
 
 model User {
-  id                String                  @id @default(cuid())
-  emailOrUsername   String                  @unique
-  displayName       String
-  role              UserRole               @default(USER)
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
-  credential        UserRedmineCredential?
-  issues            Issue[]
-  githubLinks       IssueGithubLink[]
-  mobileApiTokens   MobileApiToken[]
-  mobilePushTokens  MobilePushToken[]
-  timeEntries       TimeEntry[]
-  syncState         SyncState?
-  syncJobs          SyncJob[]
-  favorites         Favorite[]
-  savedViews        SavedView[]
-  customReports     CustomReport[]
-  aiSummaries       AiSummary[]
-  aiChatMessages    AiChatMessage[]
-  internalNotes     InternalNote[]
-  pushSubscriptions PushSubscription[]
-  wakatimeSummaries WakaTimeDailySummary[]
+  id                    String                  @id @default(cuid())
+  emailOrUsername       String                  @unique
+  displayName           String
+  role                  UserRole                @default(USER)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  credential            UserRedmineCredential?
+  issues                Issue[]
+  githubLinks           IssueGithubLink[]
+  mobileApiTokens       MobileApiToken[]
+  mobilePushTokens      MobilePushToken[]
+  timeEntries           TimeEntry[]
+  syncState             SyncState?
+  syncJobs              SyncJob[]
+  favorites             Favorite[]
+  savedViews            SavedView[]
+  customReports         CustomReport[]
+  aiSummaries           AiSummary[]
+  aiChatMessages        AiChatMessage[]
+  internalNotes         InternalNote[]
+  pushSubscriptions     PushSubscription[]
+  wakatimeSummaries     WakaTimeDailySummary[]
+  recurringTicketSeries RecurringTicketSeries[]
 }
 
 enum UserRole {
-  ADMIN    // Full access, can manage users, view all data
-  EDITOR  // Can create/edit issues, view all data
-  USER    // Default, limited to own data
-  VIEWER  // Read-only access
+  ADMIN // Full access, can manage users, view all data
+  EDITOR // Can create/edit issues, view all data
+  USER // Default, limited to own data
+  VIEWER // Read-only access
 }
 
 model Favorite {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  issueId      Int      // Redmine issue ID
-  createdAt    DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  issueId   Int // Redmine issue ID
+  createdAt DateTime @default(now())
 
   @@unique([userId, issueId])
 }
 
 model SavedView {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name          String
-  project       String?
-  status        String?  @default("open")
-  search        String?
-  sortBy        String?  @default("updated")
-  sortOrder     String   @default("desc")
-  statusIds     Json
-  priorityIds   Json
-  assignedToMe  Boolean  @default(false)
-  dueInDays     Int?
-  position      Int      @default(0)
-  isDefault     Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  project      String?
+  status       String?  @default("open")
+  search       String?
+  sortBy       String?  @default("updated")
+  sortOrder    String   @default("desc")
+  statusIds    Json
+  priorityIds  Json
+  assignedToMe Boolean  @default(false)
+  dueInDays    Int?
+  position     Int      @default(0)
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([userId])
   @@index([userId, position])
 }
 
 model RedmineUser {
-  id           Int      @id
-  name         String
-  login        String?
-  email        String?
-  isActive     Boolean  @default(true)
-  lastSeenAt   DateTime @default(now())
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id         Int      @id
+  name       String
+  login      String?
+  email      String?
+  isActive   Boolean  @default(true)
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([name])
   @@index([isActive])
 }
 
 model RedmineEnumeration {
-  id           Int      @id
-  kind         String   // "issue_priority", "time_entry_activity", "document_category", "issue_category"
-  name         String
-  isDefault    Boolean  @default(false)
-  isActive     Boolean  @default(true)
-  position     Int?
-  lastSeenAt   DateTime @default(now())
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id         Int      @id
+  kind       String // "issue_priority", "time_entry_activity", "document_category", "issue_category"
+  name       String
+  isDefault  Boolean  @default(false)
+  isActive   Boolean  @default(true)
+  position   Int?
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([kind, isActive])
   @@index([kind, position])
 }
 
 model UserRedmineCredential {
-  userId           String   @id
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  baseUrl          String
-  apiKeyEncrypted  String
-  apiKeyIv         String
-  isActive         Boolean  @default(true)
-  lastValidatedAt  DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  userId          String    @id
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  baseUrl         String
+  apiKeyEncrypted String
+  apiKeyIv        String
+  isActive        Boolean   @default(true)
+  lastValidatedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Issue {
-  id               String         @id @default(cuid())
-  redmineIssueId   Int?
-  redmineBaseUrl   String?
-  userId           String
-  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  source           String         @default("redmine") // "redmine" | "local"
-  localIssueNumber Int?           // auto-increment per user for local issues
-  subject          String
-  description      String?
-  projectName      String?
-  tracker          String?
-  priority         String?
-  priorityId       Int?
-  statusId         Int
-  statusName       String
-  parentIssueId    Int?
-  parentIssueLabel String?
-  assignedToId     Int?
-  assignedToName   String?
-  authorId         Int?
-  authorName       String?
-  categoryId       Int?
-  categoryName     String?
-  startDate        DateTime?
-  estimatedHours   Float?
-  spentHours       Float?  @default(0)
-  customFieldsJson  Json?
-  updatedOnRemote  DateTime
-  dueDate          DateTime?
-  doneRatio        Int?
+  id                  String                   @id @default(cuid())
+  redmineIssueId      Int?
+  redmineBaseUrl      String?
+  userId              String
+  user                User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source              String                   @default("redmine") // "redmine" | "local"
+  localIssueNumber    Int? // auto-increment per user for local issues
+  subject             String
+  description         String?
+  projectName         String?
+  tracker             String?
+  priority            String?
+  priorityId          Int?
+  statusId            Int
+  statusName          String
+  parentIssueId       Int?
+  parentIssueLabel    String?
+  assignedToId        Int?
+  assignedToName      String?
+  authorId            Int?
+  authorName          String?
+  categoryId          Int?
+  categoryName        String?
+  startDate           DateTime?
+  estimatedHours      Float?
+  spentHours          Float?                   @default(0)
+  customFieldsJson    Json?
+  updatedOnRemote     DateTime
+  dueDate             DateTime?
+  doneRatio           Int?
   allowedStatusesJson Json?
-  childrenJson     Json?
-  journals         IssueJournal[]
-  timeEntries      TimeEntry[]
-  githubLinks      IssueGithubLink[]
-  attachments      IssueAttachment[]
-  relations        IssueRelation[]
-  activityEvents   IssueActivityEvent[]
-  aiSummaries      AiSummary[]
-  chatMessages     AiChatMessage[]
-  internalNotes    InternalNote[]
-  lastActivityAt   DateTime?
-  lastActivityType String?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  childrenJson        Json?
+  journals            IssueJournal[]
+  timeEntries         TimeEntry[]
+  githubLinks         IssueGithubLink[]
+  attachments         IssueAttachment[]
+  relations           IssueRelation[]
+  activityEvents      IssueActivityEvent[]
+  aiSummaries         AiSummary[]
+  chatMessages        AiChatMessage[]
+  internalNotes       InternalNote[]
+  recurringInstance   RecurringTicketInstance?
+  lastActivityAt      DateTime?
+  lastActivityType    String?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
 
   @@unique([userId, redmineBaseUrl, redmineIssueId])
   @@unique([userId, source, localIssueNumber])
@@ -170,33 +172,33 @@ model Issue {
 }
 
 model IssueAttachment {
-  id                 String   @id @default(cuid())
+  id                  String    @id @default(cuid())
   redmineAttachmentId Int
-  issueId            String
-  issue              Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  filename           String
-  filesize           Int
-  contentType        String?
-  author             String?
-  createdOnRemote    DateTime?
-  downloadUrl        String
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  issueId             String
+  issue               Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  filename            String
+  filesize            Int
+  contentType         String?
+  author              String?
+  createdOnRemote     DateTime?
+  downloadUrl         String
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@unique([issueId, redmineAttachmentId])
   @@index([issueId, createdOnRemote])
 }
 
 model IssueRelation {
-  id               String   @id @default(cuid())
+  id                String   @id @default(cuid())
   redmineRelationId Int
-  issueId          String
-  issue            Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  targetIssueId    Int
-  relationType     String
-  delay            Int?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  issueId           String
+  issue             Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  targetIssueId     Int
+  relationType      String
+  delay             Int?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@unique([issueId, redmineRelationId])
   @@index([issueId, relationType])
@@ -204,58 +206,58 @@ model IssueRelation {
 
 model IssueActivityEvent {
   id             String   @id @default(cuid())
-  issueId         String
-  issue           Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  eventType       String
-  source          String
-  sourceRemoteId  String?
-  eventAt         DateTime
-  summary         String?
-  dedupeKey       String   @unique
-  createdAt       DateTime @default(now())
+  issueId        String
+  issue          Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  eventType      String
+  source         String
+  sourceRemoteId String?
+  eventAt        DateTime
+  summary        String?
+  dedupeKey      String   @unique
+  createdAt      DateTime @default(now())
 
   @@index([issueId, eventAt])
   @@index([issueId, eventType])
 }
 
 model AiSummary {
-  id                String   @id @default(cuid())
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  issueId           String
-  issue             Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  summary           String
-  model             String
-  confidence        Float?
-  totalDuration     BigInt?
-  loadDuration      BigInt?
-  promptEvalCount   Int?
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  issueId            String
+  issue              Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  summary            String
+  model              String
+  confidence         Float?
+  totalDuration      BigInt?
+  loadDuration       BigInt?
+  promptEvalCount    Int?
   promptEvalDuration BigInt?
-  evalCount         Int?
-  evalDuration      BigInt?
-  generatedAt       DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  evalCount          Int?
+  evalDuration       BigInt?
+  generatedAt        DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([userId])
   @@index([issueId])
 }
 
 model AiChatMessage {
-  id                String   @id @default(cuid())
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  issueId           String?
-  issue             Issue?   @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  role              String   // "user" or "assistant"
-  content           String
-  model             String?
-  totalDuration     BigInt?
-  loadDuration      BigInt?
-  promptEvalCount   Int?
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  issueId            String?
+  issue              Issue?   @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  role               String // "user" or "assistant"
+  content            String
+  model              String?
+  totalDuration      BigInt?
+  loadDuration       BigInt?
+  promptEvalCount    Int?
   promptEvalDuration BigInt?
-  evalCount         Int?
-  evalDuration      BigInt?
-  createdAt         DateTime @default(now())
+  evalCount          Int?
+  evalDuration       BigInt?
+  createdAt          DateTime @default(now())
 
   @@index([userId, issueId])
   @@index([issueId, createdAt])
@@ -277,22 +279,22 @@ model InternalNote {
 }
 
 model IssueGithubLink {
-  id                String   @id @default(cuid())
-  issueId           String
-  issue             Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String   @id @default(cuid())
+  issueId            String
+  issue              Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   repositoryFullName String
-  githubIssueNumber Int?
-  githubPrNumber    Int?
-  url               String
-  title             String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  githubIssueNumber  Int?
+  githubPrNumber     Int?
+  url                String
+  title              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
+  @@unique([issueId, url])
   @@index([issueId, createdAt])
   @@index([userId, createdAt])
-  @@unique([issueId, url])
 }
 
 model IssueJournal {
@@ -311,12 +313,12 @@ model IssueJournal {
 }
 
 model TimeEntry {
-  id                 String    @id @default(cuid())
+  id                 String   @id @default(cuid())
   redmineTimeEntryId Int?
   issueId            String
-  issue              Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  issue              Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
   userId             String
-  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   hours              Float
   activityId         Int
   activityName       String?
@@ -325,7 +327,7 @@ model TimeEntry {
   spentOn            DateTime
   source             String?
   wakaTimeDate       String?
-  createdAt          DateTime  @default(now())
+  createdAt          DateTime @default(now())
 
   @@unique([issueId, redmineTimeEntryId])
   @@unique([issueId, wakaTimeDate])
@@ -334,26 +336,26 @@ model TimeEntry {
 }
 
 model SyncState {
-  userId                String          @id
-  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                String    @id
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   lastIncrementalSyncAt DateTime?
   lastFullSyncAt        DateTime?
-  lastSyncStatus        String          @default("idle")
+  lastSyncStatus        String    @default("idle")
   lastError             String?
   runningJobId          String?
-  updatedAt             DateTime        @updatedAt
+  updatedAt             DateTime  @updatedAt
 }
 
 model SyncJob {
-  id         String       @id @default(cuid())
-  userId     String
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobType    String
-  status     String        @default("pending")
-  startedAt  DateTime?
-  endedAt    DateTime?
-  error      String?
-  createdAt  DateTime      @default(now())
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobType   String
+  status    String    @default("pending")
+  startedAt DateTime?
+  endedAt   DateTime?
+  error     String?
+  createdAt DateTime  @default(now())
 
   @@index([userId, createdAt])
 }
@@ -366,24 +368,24 @@ model StatusCatalog {
 }
 
 model EnumerationCatalog {
-  key        String   @id
-  remoteId   Int
-  kind       String
-  name       String
-  isDefault  Boolean  @default(false)
-  isActive   Boolean  @default(true)
-  position   Int?
-  updatedAt  DateTime @updatedAt
+  key       String   @id
+  remoteId  Int
+  kind      String
+  name      String
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  position  Int?
+  updatedAt DateTime @updatedAt
 
   @@index([kind, remoteId])
   @@index([kind, isActive])
 }
 
 model LeaderLock {
-  name       String   @id
-  ownerId    String
+  name        String   @id
+  ownerId     String
   heartbeatAt DateTime
-  expiresAt  DateTime
+  expiresAt   DateTime
 }
 
 model MobileApiToken {
@@ -415,12 +417,12 @@ model MobilePushToken {
 }
 
 model IssueEmbedding {
-  id         String   @id @default(cuid())
-  issueId    String   @unique
-  embedding  String   // Stored as JSON string for SQLite compatibility
-  model      String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(cuid())
+  issueId   String   @unique
+  embedding String // Stored as JSON string for SQLite compatibility
+  model     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([issueId])
 }
@@ -429,8 +431,8 @@ model WebLog {
   id        String   @id @default(cuid())
   userId    String?
   message   String
-  level     String   // "error", "warn", "info"
-  source    String?  // "client", "server", "api"
+  level     String // "error", "warn", "info"
+  source    String? // "client", "server", "api"
   url       String?
   stack     String?
   userAgent String?
@@ -448,11 +450,11 @@ model MbuLog {
   id          BigInt   @id // Remote log ID from Streamline
   createdAt   DateTime
   updatedAt   DateTime
-  backtrace   String   // Log message/content
+  backtrace   String // Log message/content
   logLevel    String   @map("log_level") // TRACE, DEBUG, INFO, WARN, ERROR
   traceType   String   @map("trace_type") // "log", "exception"
   traceId     String   @map("trace_id")
-  code        String   // Error code if any
+  code        String // Error code if any
   host        String   @default("streamline.staging.vodacomsa-battery.nasctech.com") // Source host
   createdBy   Int?
   updatedBy   Int?
@@ -470,27 +472,27 @@ model MbuLog {
 
 // Streamline Server-Side Rules Logs - Scheduled job execution logs
 model ServerSideRulesLog {
-  id              BigInt   @id // Remote log ID from Streamline
-  createdAt       DateTime
-  updatedAt       DateTime
-  actionName      String   @map("action_name") // "Scheduled job"
-  status          String   // "completed", "failed", "error"
-  scriptName      String   @map("script_name") // e.g. "205. Vandalism 48hr Calculate SLA v2"
-  duration        Decimal // Duration in seconds
-  ramUsage        Int      @map("ram_usage") // Memory usage in bytes
-  cpuUsage        Int      @map("cpu_usage") // CPU percentage
-  host              String   @default("streamline.staging.vodacomsa-battery.nasctech.com")
-  isError         Boolean  @map("is_error") @default(false)
-  errorDescr      String?  @map("error_descr") // Error description if failed
-  processId       Int?     @map("process_id")
-  requestId       String?  @map("request_id")
-  threadId        BigInt?  @map("thread_id")
-  dbRequestsTime  Decimal? // Time spent on DB requests
-  coModel         String?  @map("co_model")
-  coRecordId      Int?     @map("co_record_id")
-  resType         String?  @map("res_type")
-  ingestedAt      DateTime @default(now())
-  environment     String   @default("staging")
+  id             BigInt   @id // Remote log ID from Streamline
+  createdAt      DateTime
+  updatedAt      DateTime
+  actionName     String   @map("action_name") // "Scheduled job"
+  status         String // "completed", "failed", "error"
+  scriptName     String   @map("script_name") // e.g. "205. Vandalism 48hr Calculate SLA v2"
+  duration       Decimal // Duration in seconds
+  ramUsage       Int      @map("ram_usage") // Memory usage in bytes
+  cpuUsage       Int      @map("cpu_usage") // CPU percentage
+  host           String   @default("streamline.staging.vodacomsa-battery.nasctech.com")
+  isError        Boolean  @default(false) @map("is_error")
+  errorDescr     String?  @map("error_descr") // Error description if failed
+  processId      Int?     @map("process_id")
+  requestId      String?  @map("request_id")
+  threadId       BigInt?  @map("thread_id")
+  dbRequestsTime Decimal? // Time spent on DB requests
+  coModel        String?  @map("co_model")
+  coRecordId     Int?     @map("co_record_id")
+  resType        String?  @map("res_type")
+  ingestedAt     DateTime @default(now())
+  environment    String   @default("staging")
 
   @@unique([id, environment, host])
   @@index([host])
@@ -510,9 +512,9 @@ model Trace {
   traceId      BigInt   @map("trace_id")
   traceType    String   @map("trace_type") // "log", "exception"
   logLevel     String   @map("log_level") // TRACE, DEBUG, INFO, WARN, ERROR
-  backtrace    String   // Trace message
-  code         String? 
-  context      String? 
+  backtrace    String // Trace message
+  code         String?
+  context      String?
   host         String   @default("streamline.staging.vodacomsa-battery.nasctech.com") // Source host
   resourceId   Int?     @map("resource_id")
   resourceType String?  @map("resource_type")
@@ -534,17 +536,17 @@ model Trace {
 
 // Audit Log - Tracks all mutations for compliance
 model AuditLog {
-  id          String   @id @default(cuid())
-  userId      String?  // null for system actions
-  userEmail   String?  // cached for display
-  action      String   // CREATE, READ, UPDATE, DELETE
-  entityType  String   // e.g., "Issue", "InternalNote", "TimeEntry"
-  entityId    String?  // ID of affected entity
-  changes     Json?   // { field: { old: x, new: y } }
-  ipAddress   String?  // Client IP
-  userAgent   String?  // Client user agent
-  metadata    Json?    // Additional context (e.g., redmineIssueId)
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  userId     String? // null for system actions
+  userEmail  String? // cached for display
+  action     String // CREATE, READ, UPDATE, DELETE
+  entityType String // e.g., "Issue", "InternalNote", "TimeEntry"
+  entityId   String? // ID of affected entity
+  changes    Json? // { field: { old: x, new: y } }
+  ipAddress  String? // Client IP
+  userAgent  String? // Client user agent
+  metadata   Json? // Additional context (e.g., redmineIssueId)
+  createdAt  DateTime @default(now())
 
   @@index([userId])
   @@index([entityType, entityId])
@@ -555,14 +557,14 @@ model AuditLog {
 
 // API Rate Limit - Track requests per user/IP for rate limiting
 model ApiRateLimit {
-  id        String   @id @default(cuid())
-  key       String   // userId or IP address
-  keyType   String   // "user" or "ip"
-  endpoint  String   // API endpoint pattern
-  count     Int      @default(1)
+  id          String   @id @default(cuid())
+  key         String // userId or IP address
+  keyType     String // "user" or "ip"
+  endpoint    String // API endpoint pattern
+  count       Int      @default(1)
   windowStart DateTime @default(now())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@unique([key, keyType, endpoint])
   @@index([key, windowStart])
@@ -570,48 +572,48 @@ model ApiRateLimit {
 
 // Webhook Subscription - External systems subscribe to ticket events
 model WebhookSubscription {
-  id              String    @id @default(cuid())
+  id              String            @id @default(cuid())
   name            String
   url             String
-  secret          String    @default("")
-  events          String    @default("[]") // JSON array of event types
-  active          Boolean   @default(true)
-  createdAt       DateTime  @default(now())
+  secret          String            @default("")
+  events          String            @default("[]") // JSON array of event types
+  active          Boolean           @default(true)
+  createdAt       DateTime          @default(now())
   createdBy       String
   lastTriggeredAt DateTime?
   lastStatus      Int?
-  failureCount    Int       @default(0)
+  failureCount    Int               @default(0)
   deliveries      WebhookDelivery[]
 
   @@index([active])
 }
 
 model WebhookDelivery {
-  id              String    @id @default(cuid())
-  subscriptionId  String
-  subscription    WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  event           String
-  payload         Json
-  responseStatus  Int?
-  responseBody    String?
-  error           String?
-  durationMs      Int?
-  attempt         Int       @default(1)
-  deliveredAt     DateTime  @default(now())
+  id             String              @id @default(cuid())
+  subscriptionId String
+  subscription   WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  event          String
+  payload        Json
+  responseStatus Int?
+  responseBody   String?
+  error          String?
+  durationMs     Int?
+  attempt        Int                 @default(1)
+  deliveredAt    DateTime            @default(now())
 
   @@index([subscriptionId])
   @@index([deliveredAt])
 }
 
 model CustomReport {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
-  type        String   // "time-summary", "burndown", "velocity"
-  config      Json
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  type      String // "time-summary", "burndown", "velocity"
+  config    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
@@ -643,4 +645,72 @@ model WakaTimeDailySummary {
 
   @@unique([userId, date])
   @@index([userId, date])
+}
+
+model RecurringTicketSeries {
+  id       String  @id @default(cuid())
+  userId   String
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key      String // "drc-support", "vodacom-sl-support"
+  name     String
+  isActive Boolean @default(true)
+
+  redmineProjectId Int
+  parentIssueId    Int // informational (113554 / 97459)
+  trackerId        Int
+  priorityId       Int
+  categoryId       Int?
+  assignedToId     Int?
+
+  subjectTemplate     String // "Week {{week}} DRC Support" / "Week {{week}}: Support for Vodacom SL Users (MBU)"
+  descriptionTemplate String? // null for DRC series
+  estimatedHours      Float?
+  customFieldsJson    Json? // [{id:20,value:"Major"},{id:4,value:"GUI/Server (new client)"}]
+
+  cadence          String @default("weekly") // "weekly" | "monthly"
+  createWeekday    Int    @default(1) // ISO 1=Mon..7=Sun
+  closeWeekday     Int    @default(7)
+  createDayOfMonth Int    @default(1)
+  closeDayOfMonth  Int?
+
+  wakatimeProjectName String // fixed key matched against WakaTime "project" tag
+  defaultActivityId   Int     @default(9) // Development
+  defaultActivityName String  @default("Development")
+  expectsTime         Boolean @default(false)
+
+  instances RecurringTicketInstance[]
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+
+  @@unique([userId, key])
+  @@index([userId, isActive])
+}
+
+model RecurringTicketInstance {
+  id       String                @id @default(cuid())
+  seriesId String
+  series   RecurringTicketSeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  userId   String
+
+  periodKey      String // "2026-W29" (weekly, ISO) or "2026-07" (monthly) — idempotency key
+  redmineIssueId Int
+  issueId        String? @unique
+  issue          Issue?  @relation(fields: [issueId], references: [id])
+  githubLinkId   String? // currently-active IssueGithubLink.id for this instance
+
+  subject             String
+  scheduledCreateDate DateTime
+  scheduledCloseDate  DateTime
+
+  status            String  @default("open") // open | closing | closed | resolved_not_closed | create_failed | close_failed
+  closeAttempts     Int     @default(0)
+  lastError         String?
+  finalHoursApplied Float?
+
+  createdAt DateTime  @default(now())
+  closedAt  DateTime?
+
+  @@unique([seriesId, periodKey])
+  @@index([seriesId, status])
+  @@index([userId, status])
 }

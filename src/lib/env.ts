@@ -69,6 +69,10 @@ export const env = {
   enableStreamlineLogPoller: boolFromEnv("ENABLE_STREAMLINE_LOG_POLLER", false),
   streamlineLogPollIntervalMs: numberFromEnv("STREAMLINE_LOG_POLL_INTERVAL_MS", 5 * 60 * 1000), // 5 min default
   streamlineLogLockTtlMs: numberFromEnv("STREAMLINE_LOG_LOCK_TTL_MS", 90000), // 90 sec default
+  // Recurring ticket ticks make several sequential Redmine HTTP calls
+  // (create/close/time-entry pushes) per due series/instance, so this gets a
+  // longer TTL than the 90s poller lock.
+  recurringTicketsLockTtlMs: numberFromEnv("RECURRING_TICKETS_LOCK_TTL_MS", 10 * 60 * 1000), // 10 min default
   streamlineEnvironment: process.env.STREAMLINE_ENV || "staging",
   streamlineLogFetchLimit: numberFromEnv("STREAMLINE_LOG_FETCH_LIMIT", 100),
   streamlineLogRetentionMs: numberFromEnv("STREAMLINE_LOG_RETENTION_DAYS", 7) * 24 * 60 * 60 * 1000,
