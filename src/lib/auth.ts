@@ -3,7 +3,7 @@ import { prisma } from "@/src/lib/db";
 import { logEvent } from "@/src/lib/log";
 import { verifyMobileToken } from "@/src/lib/mobile-auth";
 import { RedmineClient } from "@/src/lib/redmine";
-import { getSessionUserId, requireCsrf } from "@/src/lib/session";
+import { getSessionUserId } from "@/src/lib/session";
 import { headers } from "next/headers";
 
 /**
@@ -30,13 +30,10 @@ export async function getAuthenticatedUserId(): Promise<string | null> {
   return verified?.userId ?? null;
 }
 
-export async function requireCurrentUser(validateCsrf = false) {
+export async function requireCurrentUser() {
   const sessionUserId = await getSessionUserId();
 
   if (sessionUserId) {
-    if (validateCsrf) {
-      await requireCsrf();
-    }
     const user = await prisma.user.findUnique({ where: { id: sessionUserId } });
     if (!user) {
       throw new Error("Unauthorized");

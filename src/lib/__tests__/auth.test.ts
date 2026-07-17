@@ -5,7 +5,6 @@ const mockDecryptText = vi.fn();
 const mockVerifyMobileToken = vi.fn();
 const mockGetSessionUserId = vi.fn();
 const mockHeadersGet = vi.fn();
-const mockRequireCsrf = vi.fn();
 
 vi.mock("@/src/lib/db", () => ({
   prisma: {
@@ -28,7 +27,6 @@ vi.mock("@/src/lib/mobile-auth", () => ({
 
 vi.mock("@/src/lib/session", () => ({
   getSessionUserId: mockGetSessionUserId,
-  requireCsrf: mockRequireCsrf,
 }));
 
 vi.mock("next/headers", () => ({
@@ -199,40 +197,6 @@ describe("requireCurrentUser Bearer token fallback", () => {
 
     expect(result.id).toBe("user_123");
     expect(mockVerifyMobileToken).not.toHaveBeenCalled();
-  });
-
-  it("skips CSRF validation on Bearer-authenticated requests", async () => {
-    mockGetSessionUserId.mockResolvedValue(null);
-    mockHeadersGet.mockReturnValue("Bearer mrt_testtoken123");
-    mockVerifyMobileToken.mockResolvedValue({
-      userId: "user_456",
-      tokenRecordId: "tok_rec_1",
-    });
-    mockFindUnique.mockResolvedValue({
-      id: "user_456",
-      emailOrUsername: "cli_user",
-      displayName: "CLI User",
-    });
-
-    const { requireCurrentUser } = await import("@/src/lib/auth");
-    await requireCurrentUser(true);
-
-    expect(mockRequireCsrf).not.toHaveBeenCalled();
-  });
-
-  it("enforces CSRF validation on cookie-authenticated requests when requested", async () => {
-    mockGetSessionUserId.mockResolvedValue("user_123");
-    mockRequireCsrf.mockResolvedValue(undefined);
-    mockFindUnique.mockResolvedValue({
-      id: "user_123",
-      emailOrUsername: "web_user",
-      displayName: "Web User",
-    });
-
-    const { requireCurrentUser } = await import("@/src/lib/auth");
-    await requireCurrentUser(true);
-
-    expect(mockRequireCsrf).toHaveBeenCalled();
   });
 
   it("throws Unauthorized when Bearer user not found in database", async () => {

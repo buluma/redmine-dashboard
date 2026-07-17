@@ -517,9 +517,9 @@ export function SlackMessagesClient({
         }
 
         .auto-refresh-toggle.active {
-          background: #f0f9ff;
-          border-color: #0d6efd;
-          color: #0d6efd;
+          background: var(--accent-soft);
+          border-color: var(--accent);
+          color: var(--accent);
         }
 
         .toggle-indicator {
@@ -530,8 +530,8 @@ export function SlackMessagesClient({
         }
 
         .auto-refresh-toggle.active .toggle-indicator {
-          background: #0d6efd;
-          box-shadow: 0 0 6px #0d6efd;
+          background: var(--accent);
+          box-shadow: 0 0 6px var(--accent);
         }
 
         .refresh-timer {
@@ -553,7 +553,7 @@ export function SlackMessagesClient({
         }
 
         .secondary-button:hover:not(:disabled) {
-          background: #f5f5f5;
+          background: var(--surface-2);
         }
 
         .secondary-button:disabled {
@@ -921,7 +921,7 @@ export function SlackMessagesClient({
         }
 
         .auto-refresh-toggle.active .toggle-indicator {
-          background: #4ade80;
+          background: var(--ok);
           animation: pulse 2s infinite;
         }
 
@@ -999,7 +999,7 @@ export function SlackMessagesClient({
           padding: 0.375rem 2rem 0.375rem 0.75rem;
           border: 1px solid var(--border-color, #e5e7eb);
           border-radius: 0.375rem;
-          background: white;
+          background: var(--card);
           font-size: 0.875rem;
           font-weight: 500;
           color: var(--text-primary, #111827);
