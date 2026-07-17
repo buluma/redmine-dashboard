@@ -403,9 +403,11 @@ export class RedmineClient {
     priorityId?: number;
     trackerId?: number;
     assignedToId?: number;
+    startDate?: string;
     dueDate?: string;
     categoryId?: number;
     customFields?: Array<{ id: number; value: string }>;
+    parentIssueId?: number;
   }): Promise<{ id: number; url: string }> {
     const response = await this.request<{ issue: { id: number } }>("/issues.json", {
       method: "POST",
@@ -417,9 +419,11 @@ export class RedmineClient {
           priority_id: input.priorityId,
           tracker_id: input.trackerId,
           assigned_to_id: input.assignedToId,
+          start_date: input.startDate,
           due_date: input.dueDate,
           ...(input.categoryId !== undefined ? { category_id: input.categoryId } : {}),
           ...(input.customFields !== undefined ? { custom_fields: input.customFields } : {}),
+          ...(input.parentIssueId !== undefined ? { parent_issue_id: input.parentIssueId } : {}),
         },
       }),
     });

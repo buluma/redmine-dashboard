@@ -176,6 +176,9 @@ export async function createInstance(
     assignedToId: series.assignedToId ?? undefined,
     categoryId: series.categoryId ?? undefined,
     customFields,
+    parentIssueId: series.parentIssueId,
+    startDate: window.createDate.toISOString().slice(0, 10),
+    dueDate: window.closeDate.toISOString().slice(0, 10),
   });
 
   // localIssueNumber is derived from max()+1, which races another writer onto

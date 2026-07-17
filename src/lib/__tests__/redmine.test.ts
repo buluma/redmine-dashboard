@@ -144,6 +144,9 @@ describe("RedmineClient", () => {
       priorityId: 2,
       categoryId: 7,
       customFields: [{ id: 20, value: "Major" }],
+      parentIssueId: 113554,
+      startDate: "2026-07-13",
+      dueDate: "2026-07-19",
     });
 
     expect(result).toEqual({ id: 555, url: "https://redmine.example.com/issues/555" });
@@ -151,6 +154,9 @@ describe("RedmineClient", () => {
     const body = JSON.parse(requestInit.body as string);
     expect(body.issue.category_id).toBe(7);
     expect(body.issue.custom_fields).toEqual([{ id: 20, value: "Major" }]);
+    expect(body.issue.parent_issue_id).toBe(113554);
+    expect(body.issue.start_date).toBe("2026-07-13");
+    expect(body.issue.due_date).toBe("2026-07-19");
   });
 
   it("omits category_id and custom_fields from createIssue payload when not provided", async () => {
@@ -169,5 +175,6 @@ describe("RedmineClient", () => {
     const body = JSON.parse(requestInit.body as string);
     expect(body.issue).not.toHaveProperty("category_id");
     expect(body.issue).not.toHaveProperty("custom_fields");
+    expect(body.issue).not.toHaveProperty("parent_issue_id");
   });
 });

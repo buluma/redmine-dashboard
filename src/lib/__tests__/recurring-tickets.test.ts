@@ -284,6 +284,9 @@ describe("createInstance", () => {
         priorityId: 2,
         trackerId: 3,
         customFields: [{ id: 20, value: "Major" }],
+        parentIssueId: 113554,
+        startDate: "2026-07-13",
+        dueDate: "2026-07-19",
       }),
     );
     expect(mockIssueCreate).toHaveBeenCalledWith({
