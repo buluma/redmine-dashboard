@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "@/src/components/I18nProvider";
+import { renderSlackMarkdown } from "@/src/lib/slack-format";
 import type { SlackMessage } from "@/src/lib/slack";
 
 interface SlackMessagesClientProps {
@@ -46,16 +47,20 @@ function MessageItem({
   onThreadClick: (threadTs: string) => void;
   showAvatar?: boolean;
 }) {
-  const { t, formatDate } = useI18n();
+  const { t } = useI18n();
   const isThreadReply = !!message.threadTs && message.ts !== message.threadTs;
   const userId = message.user || "unknown";
   const userName = userNames[userId] || (userId === "unknown" ? t("slack.unknown") : userId);
   const isBot = !!message.botId;
   const initial = userName.charAt(0).toUpperCase();
 
-  // Format time like Slack: "11:51 AM"
+  // Time-of-day only ("12:17 PM") — messages are already grouped under a date
+  // separator, so repeating the full date on every row is noise.
   const formatTime = (ts: string) => {
-    return formatDate(new Date(parseFloat(ts) * 1000));
+    return new Date(parseFloat(ts) * 1000).toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+    });
   };
 
   // Check if this is a system message subtype
@@ -109,7 +114,7 @@ function MessageItem({
               <span className="message-time">{formatTime(message.ts)}</span>
             </div>
             <div className="message-body">
-              <span className="message-text">{message.text}</span>
+              <span className="message-text">{renderSlackMarkdown(message.text || "", userNames)}</span>
             </div>
             {message.attachments && message.attachments.length > 0 && (
               <div className="message-attachments">
@@ -120,7 +125,7 @@ function MessageItem({
                         📎 {att.title}
                       </a>
                     )}
-                    {att.text && <p className="attachment-text">{att.text}</p>}
+                    {att.text && <p className="attachment-text">{renderSlackMarkdown(att.text, userNames)}</p>}
                   </div>
                 ))}
               </div>
@@ -155,7 +160,7 @@ function MessageItem({
         // Compact view for thread replies
         <div className="compact-message">
           <span className="compact-time">{formatTime(message.ts)}</span>
-          <div className="message-body"><span className="message-text">{message.text}</span></div>
+          <div className="message-body"><span className="message-text">{renderSlackMarkdown(message.text || "", userNames)}</span></div>
           {message.reactions && message.reactions.length > 0 && (
             <div className="message-reactions compact-reactions">
               {message.reactions.map((reaction, idx) => (
@@ -738,6 +743,31 @@ export function SlackMessagesClient({
           color: var(--text-primary, #111827);
           white-space: pre-wrap;
           word-break: break-word;
+        }
+
+        .message-text a.slack-link {
+          color: var(--accent);
+          text-decoration: none;
+        }
+
+        .message-text a.slack-link:hover {
+          text-decoration: underline;
+        }
+
+        .message-text .slack-mention {
+          color: var(--accent);
+          background: var(--accent-soft);
+          padding: 0 0.2rem;
+          border-radius: 0.2rem;
+          font-weight: 500;
+        }
+
+        .message-text code {
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+          font-size: 0.85em;
+          background: var(--surface-2);
+          padding: 0.05rem 0.3rem;
+          border-radius: 0.25rem;
         }
 
         .system-message-row {
