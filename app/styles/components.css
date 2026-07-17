@@ -1979,12 +1979,14 @@
   text-decoration: none;
 }
 
-/* Shared form layout — used by webhooks, issue create, and any other
-   className="webhook-form" / "form-row" / "form-group" / "form-actions"
-   form. These class names were referenced by several forms with no
-   backing CSS, so every one of them silently fell back to unstyled,
-   full-width, stacked inputs. */
-.webhook-form {
+/* Form layout for the recurring-tickets admin page (app/ops/recurring-tickets).
+   Deliberately namespaced with an rt- prefix rather than reusing the
+   generic webhook-form/form-row/form-group/form-actions names: those are
+   already defined by webhooks-client.tsx's own inline <style> block, and a
+   global rule of the same name at equal specificity would silently race
+   that inline block for which one wins (DOM source order), and break the
+   moment someone removes the "duplicate-looking" inline block. */
+.rt-form {
   background: var(--surface-2);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -1992,56 +1994,56 @@
   margin: 0.85rem 0;
 }
 
-.webhook-form h3 {
+.rt-form h3 {
   margin: 0 0 0.9rem;
 }
 
-.form-row {
+.rt-form-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0.85rem;
   margin-bottom: 0.85rem;
 }
 
-.form-row .form-group {
+.rt-form-row .rt-form-group {
   flex: 1 1 200px;
   margin-bottom: 0;
 }
 
-.form-group {
+.rt-form-group {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
   margin-bottom: 0.85rem;
 }
 
-.form-group label {
+.rt-form-group label {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--ink-soft);
 }
 
-.form-group > p.muted {
+.rt-form-group > p.muted {
   margin: 0.2rem 0 0;
   font-size: 0.8rem;
 }
 
-.form-actions {
+.rt-form-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.6rem;
   margin-top: 1rem;
 }
 
-.event-checkbox {
-  display: flex !important;
-  flex-direction: row !important;
+.rt-checkbox {
+  display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 0.5rem;
   font-size: 0.92rem;
   color: var(--ink);
 }
 
-.event-checkbox input[type="checkbox"] {
+.rt-checkbox input[type="checkbox"] {
   width: auto;
 }

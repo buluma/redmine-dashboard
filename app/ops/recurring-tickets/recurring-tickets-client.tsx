@@ -306,12 +306,12 @@ export function RecurringTicketsClient({
       </header>
 
       {showForm && (
-        <section className="webhook-form">
+        <section className="rt-form">
           <h3>{editingId ? t("recurringTickets.editSeries") : t("recurringTickets.newSeries")}</h3>
           {formError && <p className="error-banner">{formError}</p>}
           <form onSubmit={handleSubmit}>
-            <div className="form-row">
-              <div className="form-group">
+            <div className="rt-form-row">
+              <div className="rt-form-group">
                 <label htmlFor="key">{t("recurringTickets.keyLabel")}</label>
                 <input
                   id="key"
@@ -323,7 +323,7 @@ export function RecurringTicketsClient({
                   required
                 />
               </div>
-              <div className="form-group">
+              <div className="rt-form-group">
                 <label htmlFor="name">{t("recurringTickets.nameLabel")}</label>
                 <input
                   id="name"
@@ -336,8 +336,8 @@ export function RecurringTicketsClient({
               </div>
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
+            <div className="rt-form-row">
+              <div className="rt-form-group">
                 <label htmlFor="redmineProjectId">{t("recurringTickets.projectIdLabel")}</label>
                 <input
                   id="redmineProjectId"
@@ -348,7 +348,7 @@ export function RecurringTicketsClient({
                 />
                 <p className="muted">{t("recurringTickets.projectIdHint")}</p>
               </div>
-              <div className="form-group">
+              <div className="rt-form-group">
                 <label htmlFor="parentIssueId">{t("recurringTickets.parentIssueIdLabel")}</label>
                 <input
                   id="parentIssueId"
@@ -358,7 +358,7 @@ export function RecurringTicketsClient({
                   required
                 />
               </div>
-              <div className="form-group">
+              <div className="rt-form-group">
                 <label htmlFor="trackerId">{t("recurringTickets.trackerIdLabel")}</label>
                 <input
                   id="trackerId"
@@ -368,7 +368,7 @@ export function RecurringTicketsClient({
                   required
                 />
               </div>
-              <div className="form-group">
+              <div className="rt-form-group">
                 <label htmlFor="priorityId">{t("recurringTickets.priorityIdLabel")}</label>
                 <input
                   id="priorityId"
@@ -380,8 +380,8 @@ export function RecurringTicketsClient({
               </div>
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
+            <div className="rt-form-row">
+              <div className="rt-form-group">
                 <label htmlFor="categoryId">{t("recurringTickets.categoryIdLabel")}</label>
                 <input
                   id="categoryId"
@@ -390,7 +390,7 @@ export function RecurringTicketsClient({
                   onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
                 />
               </div>
-              <div className="form-group">
+              <div className="rt-form-group">
                 <label htmlFor="assignedToId">{t("recurringTickets.assignedToIdLabel")}</label>
                 <input
                   id="assignedToId"
@@ -399,7 +399,7 @@ export function RecurringTicketsClient({
                   onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
                 />
               </div>
-              <div className="form-group">
+              <div className="rt-form-group">
                 <label htmlFor="estimatedHours">{t("recurringTickets.estimatedHoursLabel")}</label>
                 <input
                   id="estimatedHours"
@@ -411,7 +411,7 @@ export function RecurringTicketsClient({
               </div>
             </div>
 
-            <div className="form-group">
+            <div className="rt-form-group">
               <label htmlFor="subjectTemplate">{t("recurringTickets.subjectTemplateLabel")}</label>
               <input
                 id="subjectTemplate"
@@ -424,7 +424,7 @@ export function RecurringTicketsClient({
               <p className="muted">{t("recurringTickets.subjectTemplateHint")}</p>
             </div>
 
-            <div className="form-group">
+            <div className="rt-form-group">
               <label htmlFor="descriptionTemplate">{t("recurringTickets.descriptionTemplateLabel")}</label>
               <textarea
                 id="descriptionTemplate"
@@ -434,7 +434,7 @@ export function RecurringTicketsClient({
               />
             </div>
 
-            <div className="form-group">
+            <div className="rt-form-group">
               <label htmlFor="customFieldsJson">{t("recurringTickets.customFieldsLabel")}</label>
               <textarea
                 id="customFieldsJson"
@@ -446,8 +446,8 @@ export function RecurringTicketsClient({
               <p className="muted">{t("recurringTickets.customFieldsHint")}</p>
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
+            <div className="rt-form-row">
+              <div className="rt-form-group">
                 <label htmlFor="cadence">{t("recurringTickets.cadenceLabel")}</label>
                 <select
                   id="cadence"
@@ -458,7 +458,7 @@ export function RecurringTicketsClient({
                   <option value="monthly">{t("recurringTickets.cadenceMonthly")}</option>
                 </select>
               </div>
-              <div className="form-group">
+              <div className="rt-form-group">
                 <label htmlFor="wakatimeProjectName">{t("recurringTickets.wakatimeProjectLabel")}</label>
                 <input
                   id="wakatimeProjectName"
@@ -471,8 +471,8 @@ export function RecurringTicketsClient({
             </div>
 
             {formData.cadence === "weekly" ? (
-              <div className="form-row">
-                <div className="form-group">
+              <div className="rt-form-row">
+                <div className="rt-form-group">
                   <label htmlFor="createWeekday">{t("recurringTickets.createWeekdayLabel")}</label>
                   <select
                     id="createWeekday"
@@ -486,7 +486,7 @@ export function RecurringTicketsClient({
                     ))}
                   </select>
                 </div>
-                <div className="form-group">
+                <div className="rt-form-group">
                   <label htmlFor="closeWeekday">{t("recurringTickets.closeWeekdayLabel")}</label>
                   <select
                     id="closeWeekday"
@@ -502,8 +502,8 @@ export function RecurringTicketsClient({
                 </div>
               </div>
             ) : (
-              <div className="form-row">
-                <div className="form-group">
+              <div className="rt-form-row">
+                <div className="rt-form-group">
                   <label htmlFor="createDayOfMonth">{t("recurringTickets.createDayOfMonthLabel")}</label>
                   <input
                     id="createDayOfMonth"
@@ -514,7 +514,7 @@ export function RecurringTicketsClient({
                     onChange={(e) => setFormData({ ...formData, createDayOfMonth: e.target.value })}
                   />
                 </div>
-                <div className="form-group">
+                <div className="rt-form-group">
                   <label htmlFor="closeDayOfMonth">{t("recurringTickets.closeDayOfMonthLabel")}</label>
                   <input
                     id="closeDayOfMonth"
@@ -529,8 +529,8 @@ export function RecurringTicketsClient({
               </div>
             )}
 
-            <div className="form-row">
-              <div className="form-group">
+            <div className="rt-form-row">
+              <div className="rt-form-group">
                 <label htmlFor="defaultActivityId">{t("recurringTickets.activityIdLabel")}</label>
                 <input
                   id="defaultActivityId"
@@ -540,7 +540,7 @@ export function RecurringTicketsClient({
                   required
                 />
               </div>
-              <div className="form-group">
+              <div className="rt-form-group">
                 <label htmlFor="defaultActivityName">{t("recurringTickets.activityNameLabel")}</label>
                 <input
                   id="defaultActivityName"
@@ -550,8 +550,8 @@ export function RecurringTicketsClient({
                   required
                 />
               </div>
-              <div className="form-group">
-                <label className="event-checkbox">
+              <div className="rt-form-group">
+                <label className="rt-checkbox">
                   <input
                     type="checkbox"
                     checked={formData.expectsTime}
@@ -562,7 +562,7 @@ export function RecurringTicketsClient({
               </div>
             </div>
 
-            <div className="form-actions">
+            <div className="rt-form-actions">
               <button type="button" onClick={cancelForm} className="secondary-button">
                 {t("recurringTickets.cancel")}
               </button>
