@@ -1213,6 +1213,8 @@
     "colHours": "Hours Applied",
     "colCloseAttempts": "Close Attempts",
     "colScheduledClose": "Scheduled Close",
-    "colError": "Last Error"
+    "colError": "Last Error",
+    "projectIdPlaceholder": "Leave blank to derive from Parent Issue ID",
+    "projectIdHint": "Optional — if left blank, looked up from the Parent Issue's own Redmine project on save."
   }
 }

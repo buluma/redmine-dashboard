@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 
 const mockRequireRole = vi.fn();
 const mockGetAuthenticatedUserId = vi.fn();
+const mockRequireRedmineClientForUser = vi.fn();
 const mockListSeries = vi.fn();
 const mockCreateSeries = vi.fn();
 const mockGetSeries = vi.fn();
@@ -11,7 +12,10 @@ const mockToggleSeries = vi.fn();
 const mockListRecentInstances = vi.fn();
 
 vi.mock("@/src/lib/rbac", () => ({ requireRole: mockRequireRole }));
-vi.mock("@/src/lib/auth", () => ({ getAuthenticatedUserId: mockGetAuthenticatedUserId }));
+vi.mock("@/src/lib/auth", () => ({
+  getAuthenticatedUserId: mockGetAuthenticatedUserId,
+  requireRedmineClientForUser: mockRequireRedmineClientForUser,
+}));
 vi.mock("@/src/lib/recurring-ticket-series", () => ({
   listSeries: mockListSeries,
   createSeries: mockCreateSeries,
@@ -96,6 +100,44 @@ describe("GET/POST /api/recurring-tickets", () => {
     const { POST } = await import("@/app/api/recurring-tickets/route");
     const res = await POST(req("POST", validSeriesInput()));
     expect(res.status).toBe(409);
+  });
+
+  it("POST derives redmineProjectId from the parent issue's project when omitted", async () => {
+    const { redmineProjectId: _omit, ...withoutProjectId } = validSeriesInput();
+    mockRequireRedmineClientForUser.mockResolvedValue({
+      client: { getIssue: vi.fn().mockResolvedValue({ issue: { project: { id: 7, name: "Streamline" } } }) },
+    });
+    mockCreateSeries.mockResolvedValue({ id: "s1", ...validSeriesInput() });
+
+    const { POST } = await import("@/app/api/recurring-tickets/route");
+    const res = await POST(req("POST", withoutProjectId));
+    const body = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(body.series.id).toBe("s1");
+    expect(mockCreateSeries).toHaveBeenCalledWith("user-1", expect.objectContaining({ redmineProjectId: 7 }));
+  });
+
+  it("POST returns 400 when the parent issue has no resolvable project", async () => {
+    const { redmineProjectId: _omit, ...withoutProjectId } = validSeriesInput();
+    mockRequireRedmineClientForUser.mockResolvedValue({
+      client: { getIssue: vi.fn().mockResolvedValue({ issue: {} }) },
+    });
+
+    const { POST } = await import("@/app/api/recurring-tickets/route");
+    const res = await POST(req("POST", withoutProjectId));
+    expect(res.status).toBe(400);
+    expect(mockCreateSeries).not.toHaveBeenCalled();
+  });
+
+  it("POST returns 400 when the parent issue lookup itself fails", async () => {
+    const { redmineProjectId: _omit, ...withoutProjectId } = validSeriesInput();
+    mockRequireRedmineClientForUser.mockRejectedValue(new Error("Redmine account not connected"));
+
+    const { POST } = await import("@/app/api/recurring-tickets/route");
+    const res = await POST(req("POST", withoutProjectId));
+    expect(res.status).toBe(400);
+    expect(mockCreateSeries).not.toHaveBeenCalled();
   });
 });
 

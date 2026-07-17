@@ -239,7 +239,7 @@ export function RecurringTicketsClient({
     const payload = {
       key: formData.key.trim(),
       name: formData.name.trim(),
-      redmineProjectId: requiredInt(formData.redmineProjectId),
+      redmineProjectId: optionalInt(formData.redmineProjectId) ?? undefined,
       parentIssueId: requiredInt(formData.parentIssueId),
       trackerId: requiredInt(formData.trackerId),
       priorityId: requiredInt(formData.priorityId),
@@ -344,8 +344,9 @@ export function RecurringTicketsClient({
                   type="number"
                   value={formData.redmineProjectId}
                   onChange={(e) => setFormData({ ...formData, redmineProjectId: e.target.value })}
-                  required
+                  placeholder={t("recurringTickets.projectIdPlaceholder")}
                 />
+                <p className="muted">{t("recurringTickets.projectIdHint")}</p>
               </div>
               <div className="form-group">
                 <label htmlFor="parentIssueId">{t("recurringTickets.parentIssueIdLabel")}</label>

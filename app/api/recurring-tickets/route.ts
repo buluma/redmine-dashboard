@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/src/lib/rbac";
-import { getAuthenticatedUserId } from "@/src/lib/auth";
+import { getAuthenticatedUserId, requireRedmineClientForUser } from "@/src/lib/auth";
 import { listSeries, createSeries } from "@/src/lib/recurring-ticket-series";
 import { trackFailure } from "@/src/lib/telemetry";
 
@@ -15,7 +15,10 @@ const seriesInputSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "key must be lowercase letters, numbers, and hyphens only"),
   name: z.string().min(1).max(200),
   isActive: z.boolean().optional(),
-  redmineProjectId: z.number().int().positive(),
+  // Optional: derived from parentIssueId's own project via a Redmine lookup
+  // when omitted (see POST below) — Redmine's create-issue API still needs
+  // a concrete project_id, it just doesn't have to come from the form.
+  redmineProjectId: z.number().int().positive().optional(),
   parentIssueId: z.number().int().positive(),
   trackerId: z.number().int().positive(),
   priorityId: z.number().int().positive(),
@@ -74,7 +77,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
     }
 
-    const series = await createSeries(userId, parsed.data);
+    let redmineProjectId = parsed.data.redmineProjectId;
+    if (redmineProjectId === undefined) {
+      try {
+        const { client } = await requireRedmineClientForUser(userId);
+        const detail = await client.getIssue(parsed.data.parentIssueId);
+        const project = detail.issue.project as { id?: number } | undefined;
+        if (!project?.id) {
+          return NextResponse.json(
+            { error: "Could not determine project from Parent Issue ID — provide Redmine Project ID directly" },
+            { status: 400 },
+          );
+        }
+        redmineProjectId = project.id;
+      } catch {
+        return NextResponse.json(
+          { error: "Failed to look up Parent Issue ID on Redmine — provide Redmine Project ID directly" },
+          { status: 400 },
+        );
+      }
+    }
+
+    const series = await createSeries(userId, { ...parsed.data, redmineProjectId });
     return NextResponse.json({ series }, { status: 201 });
   } catch (error) {
     if ((error as { code?: string }).code === "P2002") {
