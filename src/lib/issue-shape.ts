@@ -100,3 +100,15 @@ export function toIssueView<T extends { allowedStatusesJson: JsonValue | null; c
     children: parseChildren(childrenJson),
   };
 }
+
+/**
+ * True only for genuinely local-only issues — no real Redmine ticket exists
+ * to push edits to. source === "local" alone isn't enough: recurring-tickets'
+ * auto-created tickets are source:"local" (required for WakaTime correlation
+ * in src/lib/correlation.ts) but DO carry a real redmineIssueId, and edits to
+ * those must go through the Redmine-push path or they get silently
+ * overwritten by the next sync pulling Redmine's copy back over them.
+ */
+export function isLocalOnlyIssue(issue: { source: string; redmineIssueId: number | null }): boolean {
+  return issue.source === "local" && !issue.redmineIssueId;
+}

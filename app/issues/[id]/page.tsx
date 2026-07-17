@@ -1,6 +1,6 @@
 "use client";
 
-import { AllowedStatusView } from "@/src/lib/issue-shape";
+import { AllowedStatusView, isLocalOnlyIssue } from "@/src/lib/issue-shape";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -576,7 +576,7 @@ export default function IssueDetailPage() {
     try {
       let res: Response;
 
-      if (issue.source === "local" && !issue.redmineIssueId) {
+      if (isLocalOnlyIssue(issue)) {
         // True local-only issue (no real Redmine ticket to push to) → PATCH to local API
         res = await fetch(`/api/issues/local/${issue.id}`, {
           method: "PATCH",
@@ -632,7 +632,7 @@ export default function IssueDetailPage() {
       setEditMode(false);
       setEditDraft(null);
       setActionInfo(
-        issue.source === "local" && !issue.redmineIssueId
+        isLocalOnlyIssue(issue)
           ? t("issues.messages.personalUpdated")
           : t("issues.messages.redmineUpdated"),
       );
@@ -1175,7 +1175,7 @@ export default function IssueDetailPage() {
             currentStatus={translateStatusLabel(issue.statusName, t)}
           currentAssignee={issue.assignedToName ?? undefined}
           onStatusChange={async (statusId) => {
-            if (issue.source === "local" && !issue.redmineIssueId) {
+            if (isLocalOnlyIssue(issue)) {
               const statusEntry = transitionStatuses.find((s) => s.id === statusId);
               const res = await fetch(`/api/issues/local/${issue.id}`, {
                 method: "PATCH",
@@ -1196,7 +1196,7 @@ export default function IssueDetailPage() {
             }
           }}
           onAssign={async (userId) => {
-            if (issue.source === "local" && !issue.redmineIssueId) {
+            if (isLocalOnlyIssue(issue)) {
               const user = users.find((u) => u.id === userId);
               const res = await fetch(`/api/issues/local/${issue.id}`, {
                 method: "PATCH",
@@ -1217,7 +1217,7 @@ export default function IssueDetailPage() {
             }
           }}
           onAddTime={async (hours, comment) => {
-            if (issue.source === "local" && !issue.redmineIssueId) {
+            if (isLocalOnlyIssue(issue)) {
               const res = await fetch(`/api/issues/local/${issue.id}/time`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
