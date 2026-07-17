@@ -937,6 +937,7 @@
     "noHeartbeatsScope": "Heartbeats недоступні. Додайте доступ read_heartbeats для отримання детальної активності.",
     "noGoalsAvailable": "Цілі недоступні. Підтвердіть доступ read_goals та наявність плану WakaTime premium.",
     "noCodingDays": "Немає даних",
+    "noLanguage": "Немає мови",
     "tryLast30Days": "Останні 30 днів",
     "vsEarlierPeriod": "{prefix}{percent}% порівняно",
     "h": "{hours}г",

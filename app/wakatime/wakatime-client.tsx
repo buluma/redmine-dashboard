@@ -195,6 +195,19 @@ export function WakatimeChartsClient({
     [summaryDays],
   );
 
+  // Wakapi labels heartbeats it can't classify as the "Unknown" language, which
+  // for these projects is usually the biggest bucket — so the raw top language
+  // is a useless "Unknown". Prefer the largest *real* language, then fall back
+  // to the top editor (which we do have: Helium/Sonnet/Ghostty/…), then nothing.
+  const topRealTech = (
+    languages: { name: string; total_seconds: number }[] | undefined,
+    editors: { name: string; total_seconds: number }[] | undefined,
+  ): string => {
+    const firstReal = (arr?: { name: string; total_seconds: number }[]) =>
+      (arr ?? []).find((x) => x.total_seconds > 0 && x.name && x.name !== "Unknown");
+    return firstReal(languages)?.name ?? firstReal(editors)?.name ?? t("wakatime.noLanguage", "No language");
+  };
+
   const toSegments = (items: { name: string; total_seconds: number }[] | undefined) =>
     (items ?? [])
       .filter((x) => x.total_seconds > 0)
@@ -727,7 +740,7 @@ export function WakatimeChartsClient({
                     <span className="wakatime-top-day-total">{day.grand_total.text}</span>
                   </div>
                   <div className="wakatime-top-day-sub muted">
-                    {day.languages[0]?.name ?? "No language"}
+                    {topRealTech(day.languages, day.editors)}
                     {day.projects[0]?.name ? ` • ${day.projects[0].name}` : ""}
                   </div>
                 </div>

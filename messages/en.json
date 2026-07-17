@@ -927,6 +927,7 @@
     "noHeartbeatsScope": "Heartbeats unavailable. Add read_heartbeats scope effectively power this with raw activity.",
     "noGoalsAvailable": "Goals unavailable. Confirm your key has read_goals access and a WakaTime premium plan.",
     "noCodingDays": "No coding days found for this range.",
+    "noLanguage": "No language",
     "tryLast30Days": "Try Last 30 Days",
     "vsEarlierPeriod": "{prefix}{percent}% vs earlier period",
     "h": "{hours}h",

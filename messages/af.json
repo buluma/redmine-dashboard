@@ -929,6 +929,7 @@
     "noHeartbeatsScope": "Geen heartbeats beskikbaar nie. Voeg read_heartbeats-toegang by.",
     "noGoalsAvailable": "Geen doelwitte beskikbaar nie. Bevestig read_goals-toegang.",
     "noCodingDays": "Geen koderingsdae gevind nie.",
+    "noLanguage": "Geen taal",
     "tryLast30Days": "Probeer laaste 30 dae",
     "vsEarlierPeriod": "{prefix}{percent}% teenoor vroeër periode",
     "h": "{hours}h",
