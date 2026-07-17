@@ -148,6 +148,7 @@ export default function ReportsPage() {
   const [appliedFilters, setAppliedFilters] = useState<ReportsFilters>(DEFAULT_FILTERS);
   const [drilldown, setDrilldown] = useState<Drilldown>(null);
   const [data, setData] = useState<ReportData | null>(null);
+  const [activityExpanded, setActivityExpanded] = useState(false);
   const prefetchedIssueIdsRef = useRef<Set<number>>(new Set());
 
   const prefetchIssueDetail = useCallback((targetIssueId: number) => {
@@ -561,12 +562,21 @@ export default function ReportsPage() {
 
       {/* Activity Feed */}
       <section className="card report-panel activity-panel">
-        <div className="report-panel-head">
+        <button
+          type="button"
+          className="report-panel-head activity-toggle"
+          onClick={() => setActivityExpanded((v) => !v)}
+          aria-expanded={activityExpanded}
+        >
           <div>
             <h3>Recent Activity</h3>
             <p className="muted">Latest comments and time entries</p>
           </div>
-        </div>
+          <span className="activity-toggle-chevron" aria-hidden="true">
+            {activityExpanded ? "▾" : "▸"} {recentActivity.length}
+          </span>
+        </button>
+        {activityExpanded && (
         <div className="activity-timeline">
           {recentActivity.map((event, idx) => (
             <Link
@@ -594,6 +604,7 @@ export default function ReportsPage() {
             </Link>
           ))}
         </div>
+        )}
       </section>
     </main>
   );

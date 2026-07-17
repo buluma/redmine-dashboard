@@ -36,6 +36,245 @@ function formatReactionEmoji(name: string): string {
   return emojiMap[name] || `:${name}:`;
 }
 
+// Message styles live here (not in the parent SlackMessagesClient) because
+// styled-jsx scopes a <style jsx> block to the component that renders it —
+// with the CSS in the parent, none of it reached MessageItem's own elements,
+// so the whole message layout rendered unstyled.
+const MESSAGE_CSS = `
+        .slack-message {
+          padding: 0.125rem 0;
+          border-radius: 0.375rem;
+          transition: background 0.1s;
+        }
+
+        .slack-message:hover {
+          background: var(--bg-hover, rgba(0,0,0,0.02));
+        }
+
+        .slack-message.thread-reply {
+          margin-left: 3.5rem;
+        }
+
+        .message-layout {
+          display: flex;
+          gap: 1rem;
+          padding: 0.25rem 0;
+        }
+
+        .avatar {
+          width: 2.5rem;
+          min-width: 2.5rem;
+          height: 2.25rem;
+          border-radius: 0.375rem;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+          font-size: 0.875rem;
+        }
+
+        .avatar .bot-badge {
+          font-size: 1rem;
+        }
+
+        .message-content {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .message-header {
+          display: flex;
+          align-items: baseline;
+          gap: 0.5rem;
+          margin-bottom: 0.125rem;
+        }
+
+        .message-header > * {
+          flex-shrink: 0;
+        }
+
+        .message-header .message-content-text {
+          flex-shrink: 0;
+        }
+
+        .message-author {
+          font-weight: 700;
+          font-size: 0.9375rem;
+          color: var(--text-primary, #111827);
+          margin-right: 0.25rem;
+        }
+
+        .bot-label {
+          font-size: 0.6875rem;
+          font-weight: 500;
+          background: var(--bg-secondary, #e5e7eb);
+          color: var(--text-muted, #6b7280);
+          padding: 0.0625rem 0.375rem;
+          border-radius: 0.25rem;
+          margin-left: 0.25rem;
+        }
+
+        .message-time {
+          font-size: 0.75rem;
+          color: var(--text-muted, #6b7280);
+          margin-left: 0.5rem;
+        }
+
+        .message-body {
+          margin: 0;
+        }
+
+        .message-text {
+          font-size: 0.9375rem;
+          line-height: 1.5;
+          color: var(--text-primary, #111827);
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+
+        .message-text a.slack-link {
+          color: var(--accent);
+          text-decoration: none;
+        }
+
+        .message-text a.slack-link:hover {
+          text-decoration: underline;
+        }
+
+        .message-text .slack-mention {
+          color: var(--accent);
+          background: var(--accent-soft);
+          padding: 0 0.2rem;
+          border-radius: 0.2rem;
+          font-weight: 500;
+        }
+
+        .message-text code {
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+          font-size: 0.85em;
+          background: var(--surface-2);
+          padding: 0.05rem 0.3rem;
+          border-radius: 0.25rem;
+        }
+
+        .system-message-row {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.75rem;
+          padding: 0.5rem 0;
+          color: var(--text-muted, #6b7280);
+        }
+
+        .system-text {
+          font-size: 0.8125rem;
+          font-style: italic;
+        }
+
+        .system-time {
+          font-size: 0.6875rem;
+          color: var(--text-muted, #9ca3af);
+        }
+
+        .compact-message {
+          display: flex;
+          align-items: baseline;
+          gap: 0.75rem;
+          padding: 0.125rem 0;
+          margin-left: 3.5rem;
+        }
+
+        .compact-time {
+          font-size: 0.6875rem;
+          color: var(--text-muted, #9ca3af);
+          min-width: 3rem;
+        }
+
+        .compact-reactions {
+          margin-left: 0;
+        }
+
+        .compact-message .message-body {
+          flex: 1;
+        }
+
+        .message-attachments {
+          margin-top: 0.5rem;
+        }
+
+        .attachment-card {
+          background: var(--bg-secondary, #f3f4f6);
+          border-radius: 0.5rem;
+          padding: 0.5rem 0.75rem;
+          margin-top: 0.25rem;
+        }
+
+        .attachment-title {
+          font-weight: 500;
+          font-size: 0.875rem;
+          color: var(--color-primary, #2563eb);
+          text-decoration: none;
+          display: block;
+        }
+
+        .attachment-title:hover {
+          text-decoration: underline;
+        }
+
+        .attachment-text {
+          margin: 0.25rem 0 0;
+          font-size: 0.8125rem;
+          color: var(--text-secondary, #4b5563);
+        }
+
+        .message-reactions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.375rem;
+          margin-top: 0.375rem;
+        }
+
+        .reaction {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.25rem;
+          padding: 0.125rem 0.5rem;
+          background: var(--bg-secondary, #f3f4f6);
+          border: 1px solid var(--border-color, #e5e7eb);
+          border-radius: 1rem;
+          font-size: 0.75rem;
+          font-weight: 500;
+          cursor: default;
+          transition: background 0.1s;
+        }
+
+        .reaction:hover {
+          background: var(--bg-hover, #e5e7eb);
+        }
+
+        .thread-info {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.25rem;
+          margin-top: 0.375rem;
+          padding: 0.125rem 0.5rem;
+          background: transparent;
+          border: none;
+          border-radius: 0.25rem;
+          font-size: 0.75rem;
+          font-weight: 500;
+          color: var(--color-primary, #2563eb);
+          cursor: pointer;
+          transition: background 0.1s;
+        }
+
+        .thread-info:hover {
+          background: var(--bg-secondary, #f3f4f6);
+        }
+`;
+
 function MessageItem({
   message,
   userNames,
@@ -91,14 +330,18 @@ function MessageItem({
   // Show system messages in centered format
   if (isSystemMessage && text) {
     return (
-      <div className="system-message-row">
-        <span className="system-text">{getSystemMessageText()}</span>
-        <span className="system-time">{formatTime(message.ts)}</span>
-      </div>
+      <>
+        <div className="system-message-row">
+          <span className="system-text">{getSystemMessageText()}</span>
+          <span className="system-time">{formatTime(message.ts)}</span>
+        </div>
+        <style jsx>{MESSAGE_CSS}</style>
+      </>
     );
   }
 
   return (
+    <>
     <article className={`slack-message ${isThreadReply ? "thread-reply" : ""}`}>
       {showAvatar ? (
         <div className="message-layout">
@@ -171,6 +414,8 @@ function MessageItem({
         </div>
       )}
     </article>
+    <style jsx>{MESSAGE_CSS}</style>
+    </>
   );
 }
 
@@ -650,239 +895,6 @@ export function SlackMessagesClient({
           background: var(--bg-secondary, #f3f4f6);
           padding: 0.25rem 0.75rem;
           border-radius: 1rem;
-        }
-
-        .slack-message {
-          padding: 0.125rem 0;
-          border-radius: 0.375rem;
-          transition: background 0.1s;
-        }
-
-        .slack-message:hover {
-          background: var(--bg-hover, rgba(0,0,0,0.02));
-        }
-
-        .slack-message.thread-reply {
-          margin-left: 3.5rem;
-        }
-
-        .message-layout {
-          display: flex;
-          gap: 1rem;
-          padding: 0.25rem 0;
-        }
-
-        .avatar {
-          width: 2.5rem;
-          min-width: 2.5rem;
-          height: 2.25rem;
-          border-radius: 0.375rem;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 600;
-          font-size: 0.875rem;
-        }
-
-        .avatar .bot-badge {
-          font-size: 1rem;
-        }
-
-        .message-content {
-          flex: 1;
-          min-width: 0;
-        }
-
-        .message-header {
-          display: flex;
-          align-items: baseline;
-          gap: 0.5rem;
-          margin-bottom: 0.125rem;
-        }
-
-        .message-header > * {
-          flex-shrink: 0;
-        }
-
-        .message-header .message-content-text {
-          flex-shrink: 0;
-        }
-
-        .message-author {
-          font-weight: 700;
-          font-size: 0.9375rem;
-          color: var(--text-primary, #111827);
-          margin-right: 0.25rem;
-        }
-
-        .bot-label {
-          font-size: 0.6875rem;
-          font-weight: 500;
-          background: var(--bg-secondary, #e5e7eb);
-          color: var(--text-muted, #6b7280);
-          padding: 0.0625rem 0.375rem;
-          border-radius: 0.25rem;
-          margin-left: 0.25rem;
-        }
-
-        .message-time {
-          font-size: 0.75rem;
-          color: var(--text-muted, #6b7280);
-          margin-left: 0.5rem;
-        }
-
-        .message-body {
-          margin: 0;
-        }
-
-        .message-text {
-          font-size: 0.9375rem;
-          line-height: 1.5;
-          color: var(--text-primary, #111827);
-          white-space: pre-wrap;
-          word-break: break-word;
-        }
-
-        .message-text a.slack-link {
-          color: var(--accent);
-          text-decoration: none;
-        }
-
-        .message-text a.slack-link:hover {
-          text-decoration: underline;
-        }
-
-        .message-text .slack-mention {
-          color: var(--accent);
-          background: var(--accent-soft);
-          padding: 0 0.2rem;
-          border-radius: 0.2rem;
-          font-weight: 500;
-        }
-
-        .message-text code {
-          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-          font-size: 0.85em;
-          background: var(--surface-2);
-          padding: 0.05rem 0.3rem;
-          border-radius: 0.25rem;
-        }
-
-        .system-message-row {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.75rem;
-          padding: 0.5rem 0;
-          color: var(--text-muted, #6b7280);
-        }
-
-        .system-text {
-          font-size: 0.8125rem;
-          font-style: italic;
-        }
-
-        .system-time {
-          font-size: 0.6875rem;
-          color: var(--text-muted, #9ca3af);
-        }
-
-        .compact-message {
-          display: flex;
-          align-items: baseline;
-          gap: 0.75rem;
-          padding: 0.125rem 0;
-          margin-left: 3.5rem;
-        }
-
-        .compact-time {
-          font-size: 0.6875rem;
-          color: var(--text-muted, #9ca3af);
-          min-width: 3rem;
-        }
-
-        .compact-reactions {
-          margin-left: 0;
-        }
-
-        .compact-message .message-body {
-          flex: 1;
-        }
-
-        .message-attachments {
-          margin-top: 0.5rem;
-        }
-
-        .attachment-card {
-          background: var(--bg-secondary, #f3f4f6);
-          border-radius: 0.5rem;
-          padding: 0.5rem 0.75rem;
-          margin-top: 0.25rem;
-        }
-
-        .attachment-title {
-          font-weight: 500;
-          font-size: 0.875rem;
-          color: var(--color-primary, #2563eb);
-          text-decoration: none;
-          display: block;
-        }
-
-        .attachment-title:hover {
-          text-decoration: underline;
-        }
-
-        .attachment-text {
-          margin: 0.25rem 0 0;
-          font-size: 0.8125rem;
-          color: var(--text-secondary, #4b5563);
-        }
-
-        .message-reactions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.375rem;
-          margin-top: 0.375rem;
-        }
-
-        .reaction {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.25rem;
-          padding: 0.125rem 0.5rem;
-          background: var(--bg-secondary, #f3f4f6);
-          border: 1px solid var(--border-color, #e5e7eb);
-          border-radius: 1rem;
-          font-size: 0.75rem;
-          font-weight: 500;
-          cursor: default;
-          transition: background 0.1s;
-        }
-
-        .reaction:hover {
-          background: var(--bg-hover, #e5e7eb);
-        }
-
-        .thread-info {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.25rem;
-          margin-top: 0.375rem;
-          padding: 0.125rem 0.5rem;
-          background: transparent;
-          border: none;
-          border-radius: 0.25rem;
-          font-size: 0.75rem;
-          font-weight: 500;
-          color: var(--color-primary, #2563eb);
-          cursor: pointer;
-          transition: background 0.1s;
-        }
-
-        .thread-info:hover {
-          background: var(--bg-secondary, #f3f4f6);
         }
 
         .thread-messages {

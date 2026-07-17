@@ -281,6 +281,25 @@
   margin-bottom: 0.62rem;
 }
 
+/* Recent Activity is collapsible; the head doubles as the toggle button. */
+.reports-v2 .activity-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.reports-v2 .activity-toggle-chevron {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-soft, #5b6a7b);
+  white-space: nowrap;
+}
+
 .reports-v2 .report-panel-head h3 {
   margin: 0;
   font-size: 0.88rem;
