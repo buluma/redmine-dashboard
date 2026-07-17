@@ -128,7 +128,7 @@ export function AiSummariesHeader({
 
         .auto-refresh-toggle.active .toggle-indicator {
           background: var(--accent);
-          box-shadow: 0 0 6px #0d6efd;
+          box-shadow: 0 0 6px var(--accent);
         }
 
         .refresh-timer {

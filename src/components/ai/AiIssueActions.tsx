@@ -526,15 +526,17 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
           border-radius: 4px;
           font-size: 0.75rem;
           cursor: pointer;
-          transition: background-color 0.2s ease;
+          transition: filter 0.2s ease;
         }
 
+        /* Brightness deltas give real hover/press feedback in both themes,
+           where a fixed darker/lighter hex would invert in one of them. */
         .ai-copy-button:hover {
-          background: var(--ok);
+          filter: brightness(1.08);
         }
 
         .ai-copy-button:active {
-          background: #047857;
+          filter: brightness(0.9);
         }
       `}</style>
     </div>
