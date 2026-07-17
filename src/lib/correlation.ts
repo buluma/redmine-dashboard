@@ -327,29 +327,43 @@ export async function autoCreateTicketsForUnmatched(
     });
     if (existingLink) continue;
 
-    const maxNumber = await prisma.issue.aggregate({
-      where: { userId, source: "local" },
-      _max: { localIssueNumber: true },
-    });
-    const localIssueNumber = (maxNumber._max.localIssueNumber ?? 0) + 1;
+    // localIssueNumber is derived from max()+1, which races another writer
+    // (a concurrent apply, or manual ticket creation) onto the same number and
+    // trips the (userId, source, localIssueNumber) unique constraint. Retry a
+    // few times, recomputing the max each pass, before giving up on this one.
+    let issue: Awaited<ReturnType<typeof prisma.issue.create>> | null = null;
+    let localIssueNumber = 0;
+    for (let attempt = 0; attempt < 5 && !issue; attempt++) {
+      const maxNumber = await prisma.issue.aggregate({
+        where: { userId, source: "local" },
+        _max: { localIssueNumber: true },
+      });
+      localIssueNumber = (maxNumber._max.localIssueNumber ?? 0) + 1;
 
-    const issue = await prisma.issue.create({
-      data: {
-        userId,
-        source: "local",
-        localIssueNumber,
-        subject: project.project,
-        tracker: "Task",
-        priority: "Normal",
-        statusId: 1,
-        statusName: "New",
-        authorName: user?.displayName,
-        assignedToName: user?.displayName,
-        updatedOnRemote: new Date(),
-        lastActivityAt: new Date(),
-        lastActivityType: "auto_created_from_wakatime",
-      },
-    });
+      try {
+        issue = await prisma.issue.create({
+          data: {
+            userId,
+            source: "local",
+            localIssueNumber,
+            subject: project.project,
+            tracker: "Task",
+            priority: "Normal",
+            statusId: 1,
+            statusName: "New",
+            authorName: user?.displayName,
+            assignedToName: user?.displayName,
+            updatedOnRemote: new Date(),
+            lastActivityAt: new Date(),
+            lastActivityType: "auto_created_from_wakatime",
+          },
+        });
+      } catch (error) {
+        if ((error as { code?: string }).code === "P2002") continue;
+        throw error;
+      }
+    }
+    if (!issue) continue;
 
     const url = `https://github.com/${repositoryFullName}`;
     const link = await prisma.issueGithubLink.create({
@@ -428,34 +442,54 @@ export async function applyTimeEntries(
         continue;
       }
 
+      if (options.dryRun) {
+        created++;
+        totalHours += hours;
+        entries.push({ ticketId: row.ticketId, date: day.date, hours });
+        continue;
+      }
+
+      // The TimeEntry write and the spentHours increment must be atomic — a
+      // partial failure would otherwise double-count or lose hours. And a
+      // concurrent run (the 6h cron overlapping a manual apply) can beat us to
+      // the same issueId+wakaTimeDate: that surfaces as a P2002 unique
+      // violation, which means "already logged", not an error — skip it
+      // instead of aborting the whole batch.
+      try {
+        await prisma.$transaction([
+          prisma.timeEntry.create({
+            data: {
+              issueId: row.ticketId,
+              userId,
+              hours,
+              spentOn: new Date(day.date),
+              activityId: 9,
+              activityName: "Development",
+              comments: `WakaTime: ${row.repo.split("/").pop() ?? row.repo} ${day.date}`,
+              source: "wakatime",
+              wakaTimeDate: day.date,
+            },
+          }),
+          prisma.issue.update({
+            where: { id: row.ticketId },
+            data: {
+              lastActivityAt: new Date(),
+              lastActivityType: "wakatime_time_logged",
+              spentHours: { increment: hours },
+            },
+          }),
+        ]);
+      } catch (error) {
+        if ((error as { code?: string }).code === "P2002") {
+          skipped++;
+          continue;
+        }
+        throw error;
+      }
+
       created++;
       totalHours += hours;
       entries.push({ ticketId: row.ticketId, date: day.date, hours });
-
-      if (!options.dryRun) {
-        await prisma.timeEntry.create({
-          data: {
-            issueId: row.ticketId,
-            userId,
-            hours,
-            spentOn: new Date(day.date),
-            activityId: 9,
-            activityName: "Development",
-            comments: `WakaTime: ${row.repo.split("/").pop() ?? row.repo} ${day.date}`,
-            source: "wakatime",
-            wakaTimeDate: day.date,
-          },
-        });
-
-        await prisma.issue.update({
-          where: { id: row.ticketId },
-          data: {
-            lastActivityAt: new Date(),
-            lastActivityType: "wakatime_time_logged",
-            spentHours: { increment: hours },
-          },
-        });
-      }
     }
   }
 

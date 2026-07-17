@@ -197,7 +197,20 @@ export async function checkRateLimit(
     };
   } catch (error) {
     trackFailure({ event: "rate_limit.check.failed", error, metricName: "rate_limit_check_failed" });
-    return { allowed: true, remaining: 999, resetAt: new Date(), limit: 999 };
+    // DB-backed limiter is unavailable. Rather than fail fully open (no limiting
+    // at all), degrade to the per-process in-memory limiter so requests are still
+    // bounded on each instance. Less precise across instances, but not wide open.
+    const mem = isRateLimited({
+      key: `${endpoint}:${key}`,
+      max: config.maxRequests,
+      windowMs: config.windowMs,
+    });
+    return {
+      allowed: !mem.limited,
+      remaining: mem.remaining,
+      resetAt: new Date(Date.now() + mem.resetInMs),
+      limit: config.maxRequests,
+    };
   }
 }
 

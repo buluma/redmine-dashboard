@@ -13,6 +13,7 @@ const {
   mockUserFindUnique,
   mockGithubLinkFindFirst,
   mockGithubLinkCreate,
+  mockTransaction,
 } = vi.hoisted(() => ({
   mockIssueFindMany: vi.fn(),
   mockIssueFindFirst: vi.fn(),
@@ -26,6 +27,7 @@ const {
   mockUserFindUnique: vi.fn(),
   mockGithubLinkFindFirst: vi.fn(),
   mockGithubLinkCreate: vi.fn(),
+  mockTransaction: vi.fn(),
 }));
 
 vi.mock("@/src/lib/db", () => ({
@@ -42,6 +44,10 @@ vi.mock("@/src/lib/db", () => ({
     timeEntry: { findMany: mockTimeEntryFindMany, create: mockTimeEntryCreate },
     user: { findUnique: mockUserFindUnique },
     issueGithubLink: { findFirst: mockGithubLinkFindFirst, create: mockGithubLinkCreate },
+    // applyTimeEntries batches the TimeEntry insert + spentHours increment in a
+    // $transaction([...]); default behaviour just resolves the built ops so the
+    // underlying create/update mocks still record their calls.
+    $transaction: mockTransaction,
   },
 }));
 
@@ -358,7 +364,10 @@ describe("correlateWakaTime", () => {
 });
 
 describe("applyTimeEntries", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockTransaction.mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops));
+  });
 
   function setupCorrelation() {
     mockIssueFindMany.mockResolvedValue([
@@ -457,6 +466,28 @@ describe("applyTimeEntries", () => {
       }),
     );
   });
+
+  it("treats a P2002 unique-violation (concurrent run logged the same date) as skipped, not an error", async () => {
+    setupCorrelation();
+    // A parallel apply/cron already wrote this issueId+wakaTimeDate between our
+    // correlate read and our write — the transaction rejects with P2002.
+    mockTransaction.mockRejectedValueOnce(Object.assign(new Error("Unique constraint failed"), { code: "P2002" }));
+
+    const result = await applyTimeEntries(USER_ID, { start: "2026-06-20", end: "2026-06-20" });
+
+    expect(result.created).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(result.entries).toHaveLength(0);
+  });
+
+  it("still throws on a non-P2002 write failure", async () => {
+    setupCorrelation();
+    mockTransaction.mockRejectedValueOnce(Object.assign(new Error("connection reset"), { code: "P1001" }));
+
+    await expect(
+      applyTimeEntries(USER_ID, { start: "2026-06-20", end: "2026-06-20" }),
+    ).rejects.toThrow("connection reset");
+  });
 });
 
 describe("autoCreateTicketsForUnmatched", () => {
@@ -548,7 +579,10 @@ describe("autoCreateTicketsForUnmatched", () => {
 });
 
 describe("applyTimeEntries with autoCreate", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockTransaction.mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops));
+  });
 
   it("auto-creates a ticket for unmatched activity, then logs it as matched in the same call", async () => {
     // First correlateWakaTime pass (no catchAll) sees "sweeper" as unmatched.

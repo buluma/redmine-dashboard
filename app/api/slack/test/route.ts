@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
+import { getAuthenticatedUserId } from "@/src/lib/auth";
 import { env } from "@/src/lib/env";
 import { SlackNotifier } from "@/src/lib/slack-notifier";
 import { trackFailure } from "@/src/lib/telemetry";
 
 export async function POST() {
+  if (!(await getAuthenticatedUserId())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   if (!env.slackBotToken) {
     return NextResponse.json(
       { error: "Slack bot token not configured" },

@@ -2,6 +2,7 @@ import { getOllamaClient } from "@/src/lib/ollama";
 import { createSearchMessages, parseJsonResponse, type SearchResponse } from "@/src/lib/ai-prompt";
 import { env } from "@/src/lib/env";
 import { prisma } from "@/src/lib/db";
+import { getAuthenticatedUserId } from "@/src/lib/auth";
 import { jsonError } from "@/src/lib/http";
 import { trackFailure } from "@/src/lib/telemetry";
 
@@ -12,18 +13,25 @@ export async function POST(request: Request) {
     return jsonError("AI search is disabled", 403);
   }
 
+  // Always scope to the authenticated user. The issue set is fed verbatim to
+  // the LLM and returned, so an unauthenticated or cross-user query would leak
+  // every ticket's subject/description — the userId must come from the session,
+  // never from the request body.
+  const userId = await getAuthenticatedUserId();
+  if (!userId) {
+    return jsonError("Unauthorized", 401);
+  }
+
   try {
     const body = await request.json();
-    const { query, limit = 10, userId } = body;
+    const { query, limit = 10 } = body;
 
     if (!query) {
       return jsonError("query is required", 400);
     }
 
-    // Fetch issues for the user
-    const where = userId ? { userId } : {};
     const issues = await prisma.issue.findMany({
-      where,
+      where: { userId },
       take: 50, // Limit for AI processing
       orderBy: { updatedOnRemote: "desc" },
     });

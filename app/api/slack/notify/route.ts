@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { requireExternalApiKey } from "@/src/lib/external-auth";
 import { logEvent } from "@/src/lib/log";
 import { getSlackNotificationService } from "@/src/lib/slack-notification-service";
 
@@ -27,6 +28,12 @@ const notifyPayloadSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  // Externally-facing webhook receiver: gate on the external API key so it
+  // can't be used to inject arbitrary Slack notifications. Fail-closed —
+  // with no EXTERNAL_API_KEYS configured, no key is valid.
+  const unauthorized = requireExternalApiKey(request);
+  if (unauthorized) return unauthorized;
+
   try {
     const body = await request.json();
     
@@ -115,7 +122,10 @@ export async function POST(request: NextRequest) {
 }
 
 // GET endpoint to check webhook status
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const unauthorized = requireExternalApiKey(request);
+  if (unauthorized) return unauthorized;
+
   const service = getSlackNotificationService();
   const testResult = await service.testNotification();
 

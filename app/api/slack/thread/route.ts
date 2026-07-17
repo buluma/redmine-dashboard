@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAuthenticatedUserId } from "@/src/lib/auth";
 import { env } from "@/src/lib/env";
 import { SlackClient } from "@/src/lib/slack";
 import { trackFailure } from "@/src/lib/telemetry";
 
 export async function GET(request: NextRequest) {
+  if (!(await getAuthenticatedUserId())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const channelId = searchParams.get("channelId");
   const threadTs = searchParams.get("threadTs");

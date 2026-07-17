@@ -8,6 +8,7 @@ const {
   mockWakaFindMany,
   mockTimeEntryFindMany,
   mockTimeEntryCreate,
+  mockTransaction,
 } = vi.hoisted(() => ({
   mockGetAuthenticatedUserId: vi.fn(),
   mockIssueFindMany: vi.fn(),
@@ -15,6 +16,7 @@ const {
   mockWakaFindMany: vi.fn(),
   mockTimeEntryFindMany: vi.fn(),
   mockTimeEntryCreate: vi.fn(),
+  mockTransaction: vi.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
 }));
 
 vi.mock("@/src/lib/auth", () => ({
@@ -26,6 +28,7 @@ vi.mock("@/src/lib/db", () => ({
     issue: { findMany: mockIssueFindMany, update: mockIssueUpdate },
     wakaTimeDailySummary: { findMany: mockWakaFindMany },
     timeEntry: { findMany: mockTimeEntryFindMany, create: mockTimeEntryCreate },
+    $transaction: mockTransaction,
   },
 }));
 
@@ -62,6 +65,7 @@ describe("Correlation API routes", () => {
     vi.clearAllMocks();
     clearRateLimitState();
     mockGetAuthenticatedUserId.mockResolvedValue("u1");
+    mockTransaction.mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops));
   });
 
   describe("GET /api/correlation", () => {

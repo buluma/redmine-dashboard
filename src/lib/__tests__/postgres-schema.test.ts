@@ -21,5 +21,8 @@ describe("prisma/schema.prisma (postgres)", () => {
         stdio: "pipe",
       }),
     ).not.toThrow();
-  });
+    // `npx prisma validate` spawns a cold Prisma CLI; on a loaded machine it can
+    // exceed vitest's default 5s timeout and flake. Give it generous headroom so
+    // a failure here means a real schema problem, not a slow spawn.
+  }, 60_000);
 });

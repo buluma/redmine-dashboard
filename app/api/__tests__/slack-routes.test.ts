@@ -48,6 +48,17 @@ class MockSlackClient {
   );
 }
 
+const mockGetAuthenticatedUserId = vi.fn();
+const mockRequireExternalApiKey = vi.fn();
+
+vi.mock("@/src/lib/auth", () => ({
+  getAuthenticatedUserId: mockGetAuthenticatedUserId,
+}));
+
+vi.mock("@/src/lib/external-auth", () => ({
+  requireExternalApiKey: mockRequireExternalApiKey,
+}));
+
 vi.mock("@/src/lib/env", () => ({
   env: mockEnv,
 }));
@@ -71,9 +82,18 @@ vi.mock("@/src/lib/log", () => ({
 describe("Slack test route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetAuthenticatedUserId.mockResolvedValue("user_1");
+    mockRequireExternalApiKey.mockReturnValue(null);
   });
 
   describe("POST /api/slack/test", () => {
+    it("returns 401 when unauthenticated", async () => {
+      mockGetAuthenticatedUserId.mockResolvedValue(null);
+      const { POST } = await import("@/app/api/slack/test/route");
+      const response = await POST();
+      expect(response.status).toBe(401);
+    });
+
     it("returns 500 when slack bot token not configured", async () => {
       mockEnv.slackBotToken = undefined;
 
@@ -113,6 +133,8 @@ describe("Slack test route", () => {
 describe("Slack thread route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetAuthenticatedUserId.mockResolvedValue("user_1");
+    mockRequireExternalApiKey.mockReturnValue(null);
   });
 
   describe("GET /api/slack/thread", () => {
@@ -121,6 +143,14 @@ describe("Slack thread route", () => {
       req.nextUrl = new URL(url);
       return req as unknown as NextRequest;
     };
+
+    it("returns 401 when unauthenticated", async () => {
+      mockGetAuthenticatedUserId.mockResolvedValue(null);
+      const { GET } = await import("@/app/api/slack/thread/route");
+      const request = createNextRequest("http://localhost/api/slack/thread?channelId=C123&threadTs=1");
+      const response = await GET(request);
+      expect(response.status).toBe(401);
+    });
 
     it("returns 500 when slack bot token not configured", async () => {
       mockEnv.slackBotToken = undefined;
@@ -169,10 +199,25 @@ describe("Slack thread route", () => {
 describe("Slack notify route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetAuthenticatedUserId.mockResolvedValue("user_1");
+    mockRequireExternalApiKey.mockReturnValue(null);
     mockSlackNotificationService.notifyIssueChanges = vi.fn().mockResolvedValue({ success: true });
   });
 
   describe("POST /api/slack/notify", () => {
+    it("returns 401 when the external API key is missing/invalid", async () => {
+      mockRequireExternalApiKey.mockReturnValue(
+        new Response(JSON.stringify({ error: "Valid API key required" }), { status: 401 }),
+      );
+      const { POST } = await import("@/app/api/slack/notify/route");
+      const request = new Request("http://localhost/api/slack/notify", {
+        method: "POST",
+        body: JSON.stringify({ action: "test", issue: {} }),
+      });
+      const response = await POST(request as unknown as NextRequest);
+      expect(response.status).toBe(401);
+    });
+
     it("returns 400 when payload is invalid", async () => {
       const { POST } = await import("@/app/api/slack/notify/route");
       const request = new Request("http://localhost/api/slack/notify", {
