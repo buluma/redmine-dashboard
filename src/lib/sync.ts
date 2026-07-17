@@ -569,7 +569,16 @@ export async function syncSingleIssue(
     sendNotifications?: boolean;
   },
 ) {
-  // Guard: check if issue is local-only — skip sync entirely
+  // Hybrid mirror check: source:"local" rows that DO carry a real redmineIssueId
+  // (recurring-tickets' auto-created tickets — see src/lib/recurring-tickets.ts)
+  // are real Redmine tickets Converge also needs read-only visibility into, not
+  // fully local-only ones. Sync everything from Redmine normally EXCEPT the
+  // time-entry pull: upsertTimeEntriesForIssue's prune step (manual full-sync
+  // only, not this 5-min poller) deletes any local TimeEntry with
+  // redmineTimeEntryId: null that isn't in Redmine's list yet — which would
+  // wipe WakaTime hours logged mid-week but not yet pushed by the Sunday
+  // close. `source` itself is never part of upsertIssueFromRemote's update
+  // payload, so it stays "local" regardless of what runs below.
   const existingLocalCheck = await prisma.issue.findFirst({
     where: {
       userId,
@@ -578,13 +587,7 @@ export async function syncSingleIssue(
     },
     select: { id: true, source: true },
   });
-  if (existingLocalCheck?.source === "local") {
-    logEvent("sync.local_issue_skipped", {
-      redmineIssueId: remoteIssueId,
-      reason: "Issue marked as local-only, skipping sync to prevent Redmine overwrite",
-    }, "warn");
-    return null;
-  }
+  const isHybridLocalMirror = existingLocalCheck?.source === "local";
 
   const detail = await client.getIssue(remoteIssueId, [
     "journals",
@@ -634,13 +637,20 @@ export async function syncSingleIssue(
   await upsertJournals(issue.id, detail.issue);
   await upsertAttachmentsForIssue(issue.id, detail.issue, options?.pruneAttachments ?? true);
   await upsertRelationsForIssue(issue.id, detail.issue, options?.pruneRelations ?? true);
-  await upsertTimeEntriesForIssue(
-    userId,
-    issue.id,
-    remoteIssueId,
-    client,
-    Boolean(options?.pruneTimeEntries),
-  );
+  if (isHybridLocalMirror) {
+    logEvent("sync.hybrid_local_mirror_time_entries_skipped", {
+      redmineIssueId: remoteIssueId,
+      reason: "Issue is a recurring-tickets hybrid mirror — skipping time-entry pull to avoid pruning unpushed WakaTime hours",
+    }, "info");
+  } else {
+    await upsertTimeEntriesForIssue(
+      userId,
+      issue.id,
+      remoteIssueId,
+      client,
+      Boolean(options?.pruneTimeEntries),
+    );
+  }
   await recomputeIssueActivityIndex(issue.id);
 
   // Build breadcrumbs by fetching parent chain
