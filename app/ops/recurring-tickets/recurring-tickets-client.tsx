@@ -306,7 +306,7 @@ export function RecurringTicketsClient({
       </header>
 
       {showForm && (
-        <section className="card webhook-form">
+        <section className="webhook-form">
           <h3>{editingId ? t("recurringTickets.editSeries") : t("recurringTickets.newSeries")}</h3>
           {formError && <p className="error-banner">{formError}</p>}
           <form onSubmit={handleSubmit}>

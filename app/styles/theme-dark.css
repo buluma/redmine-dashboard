@@ -141,6 +141,18 @@
   color: var(--ink);
 }
 
+/* .webhook-form itself sits on --surface-2 (== --bg-soft), and the base
+   dark-mode rule above puts every input's background on --card — those two
+   are close enough in value that field borders disappear into the form
+   background. Push form inputs a step darker than their container so they
+   read as distinct fields again. */
+[data-theme="dark"] .webhook-form select,
+[data-theme="dark"] .webhook-form input,
+[data-theme="dark"] .webhook-form textarea {
+  background: var(--bg) !important;
+  border-color: var(--ink-soft);
+}
+
 [data-theme="dark"] .filters-bar,
 [data-theme="dark"] .filters-bar-compact {
   background: linear-gradient(180deg, var(--bg-soft) 0%, var(--card) 100%);
