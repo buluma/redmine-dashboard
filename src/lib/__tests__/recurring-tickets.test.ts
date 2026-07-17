@@ -427,12 +427,36 @@ describe("closeInstance", () => {
     expect(client.updateIssueStatus).toHaveBeenNthCalledWith(2, 9001, 3, expect.stringContaining("only the author can close"));
     expect(mockInstanceUpdate).toHaveBeenCalledWith({
       where: { id: "instance-1" },
-      data: expect.objectContaining({ status: "resolved_not_closed", lastError: "only the author can close" }),
+      data: expect.objectContaining({ status: "resolved_not_closed", lastError: "only the author can close", finalHoursApplied: 0 }),
     });
     expect(mockIssueUpdate).toHaveBeenCalledWith({
       where: { id: "issue-1" },
       data: expect.objectContaining({ statusId: 3, statusName: "Resolved" }),
     });
+  });
+
+  it("marks the instance close_failed (not resolved_not_closed) when the Resolve fallback also fails, and rethrows", async () => {
+    const client = fakeClient({
+      updateIssueStatus: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("only the author can close"))
+        .mockRejectedValueOnce(new Error("redmine unreachable")),
+    });
+
+    await expect(closeInstance(fakeInstance(), client)).rejects.toThrow("redmine unreachable");
+
+    expect(mockInstanceUpdate).toHaveBeenCalledWith({
+      where: { id: "instance-1" },
+      data: expect.objectContaining({
+        status: "close_failed",
+        lastError: expect.stringContaining("only the author can close"),
+        finalHoursApplied: 0,
+      }),
+    });
+    // Never claims Resolved succeeded when it didn't.
+    expect(mockIssueUpdate).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ statusName: "Resolved" }) }),
+    );
   });
 
   it("throws when the instance has no linked local issue", async () => {

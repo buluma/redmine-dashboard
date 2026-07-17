@@ -361,31 +361,52 @@ export async function closeInstance(instance: RecurringTicketInstance, client: R
       },
     });
     return;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    await prisma.recurringTicketInstance.update({
-      where: { id: instance.id },
-      data: { status: "resolved_not_closed", lastError: message, closeAttempts: { increment: 1 } },
-    });
+  } catch (closeError) {
+    const closeMessage = closeError instanceof Error ? closeError.message : String(closeError);
 
     // Only the ticket's Redmine author can Close it — fall back to Resolved
-    // so the ticket doesn't sit open forever. This must never fail silently:
-    // status + lastError stay recorded above even if this fallback call
-    // itself throws (propagates to runRecurringTicketsTick's closeFailures).
-    await client.updateIssueStatus(
-      instance.redmineIssueId,
-      REDMINE_STATUS_RESOLVED,
-      `Auto-close failed (${message}); resolved instead.`,
-    );
-    await prisma.issue.update({
-      where: { id: instance.issueId },
-      data: {
-        statusId: REDMINE_STATUS_RESOLVED,
-        statusName: "Resolved",
-        lastActivityAt: new Date(),
-        lastActivityType: "recurring_ticket_resolve_fallback",
-      },
-    });
+    // so the ticket doesn't sit open forever. The DB write happens AFTER this
+    // call settles (not before) so that if the fallback itself fails too, the
+    // instance is left in "close_failed" — still inside getInstancesDueForClose's
+    // retry filter — instead of prematurely marked "resolved_not_closed" with
+    // no real Resolve having happened and no future retry ever picking it up.
+    try {
+      await client.updateIssueStatus(
+        instance.redmineIssueId,
+        REDMINE_STATUS_RESOLVED,
+        `Auto-close failed (${closeMessage}); resolved instead.`,
+      );
+      await prisma.recurringTicketInstance.update({
+        where: { id: instance.id },
+        data: {
+          status: "resolved_not_closed",
+          lastError: closeMessage,
+          finalHoursApplied: hours,
+          closeAttempts: { increment: 1 },
+        },
+      });
+      await prisma.issue.update({
+        where: { id: instance.issueId },
+        data: {
+          statusId: REDMINE_STATUS_RESOLVED,
+          statusName: "Resolved",
+          lastActivityAt: new Date(),
+          lastActivityType: "recurring_ticket_resolve_fallback",
+        },
+      });
+    } catch (resolveError) {
+      const resolveMessage = resolveError instanceof Error ? resolveError.message : String(resolveError);
+      await prisma.recurringTicketInstance.update({
+        where: { id: instance.id },
+        data: {
+          status: "close_failed",
+          lastError: `Close failed (${closeMessage}); Resolve fallback also failed (${resolveMessage}).`,
+          finalHoursApplied: hours,
+          closeAttempts: { increment: 1 },
+        },
+      });
+      throw resolveError;
+    }
   }
 }
 
