@@ -576,8 +576,8 @@ export default function IssueDetailPage() {
     try {
       let res: Response;
 
-      if (issue.source === "local") {
-        // Local issue → PATCH to local API
+      if (issue.source === "local" && !issue.redmineIssueId) {
+        // True local-only issue (no real Redmine ticket to push to) → PATCH to local API
         res = await fetch(`/api/issues/local/${issue.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -602,7 +602,10 @@ export default function IssueDetailPage() {
           }),
         });
       } else {
-        // Redmine issue → PUT via Redmine API then re-sync
+        // Real Redmine ticket (including source:"local" hybrid mirrors that
+        // carry a redmineIssueId, e.g. recurring-tickets' auto-created
+        // tickets) → PUT via Redmine API then re-sync, so the edit actually
+        // lands before the next sync cycle pulls Redmine's copy back over it.
         res = await fetch(`/api/issues/${issueId}/edit`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -628,7 +631,11 @@ export default function IssueDetailPage() {
       await reloadIssue();
       setEditMode(false);
       setEditDraft(null);
-      setActionInfo(issue.source === "local" ? t("issues.messages.personalUpdated") : t("issues.messages.redmineUpdated"));
+      setActionInfo(
+        issue.source === "local" && !issue.redmineIssueId
+          ? t("issues.messages.personalUpdated")
+          : t("issues.messages.redmineUpdated"),
+      );
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to update issue");
     } finally {
@@ -1168,7 +1175,7 @@ export default function IssueDetailPage() {
             currentStatus={translateStatusLabel(issue.statusName, t)}
           currentAssignee={issue.assignedToName ?? undefined}
           onStatusChange={async (statusId) => {
-            if (issue.source === "local") {
+            if (issue.source === "local" && !issue.redmineIssueId) {
               const statusEntry = transitionStatuses.find((s) => s.id === statusId);
               const res = await fetch(`/api/issues/local/${issue.id}`, {
                 method: "PATCH",
@@ -1189,7 +1196,7 @@ export default function IssueDetailPage() {
             }
           }}
           onAssign={async (userId) => {
-            if (issue.source === "local") {
+            if (issue.source === "local" && !issue.redmineIssueId) {
               const user = users.find((u) => u.id === userId);
               const res = await fetch(`/api/issues/local/${issue.id}`, {
                 method: "PATCH",
@@ -1210,7 +1217,7 @@ export default function IssueDetailPage() {
             }
           }}
           onAddTime={async (hours, comment) => {
-            if (issue.source === "local") {
+            if (issue.source === "local" && !issue.redmineIssueId) {
               const res = await fetch(`/api/issues/local/${issue.id}/time`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
