@@ -122,7 +122,7 @@ export function AiSearchBar({ onResults, onInsights }: AiSearchBarProps) {
         .ai-search-input {
           flex: 1;
           padding: 0.5rem 0.75rem;
-          border: 1px solid #d1d5db;
+          border: 1px solid var(--border);
           border-radius: 6px;
           font-size: 0.9rem;
         }
@@ -149,7 +149,7 @@ export function AiSearchBar({ onResults, onInsights }: AiSearchBarProps) {
         }
         
         .ai-search-error {
-          color: #dc2626;
+          color: var(--danger);
           font-size: 0.85rem;
           margin: 0.5rem 0;
         }
@@ -184,8 +184,8 @@ export function AiSearchBar({ onResults, onInsights }: AiSearchBarProps) {
         
         .ai-result-item {
           padding: 0.75rem;
-          background: white;
-          border: 1px solid #e5e7eb;
+          background: var(--card);
+          border: 1px solid var(--border);
           border-radius: 6px;
           margin-bottom: 0.5rem;
         }
@@ -198,7 +198,7 @@ export function AiSearchBar({ onResults, onInsights }: AiSearchBarProps) {
         
         .ai-result-id {
           font-weight: 600;
-          color: #374151;
+          color: var(--text);
         }
         
         .ai-relevance {
@@ -215,7 +215,7 @@ export function AiSearchBar({ onResults, onInsights }: AiSearchBarProps) {
         .ai-result-explanation {
           margin: 0;
           font-size: 0.85rem;
-          color: #6b7280;
+          color: var(--text-soft);
         }
       `}</style>
     </div>

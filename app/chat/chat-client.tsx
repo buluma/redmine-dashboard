@@ -526,13 +526,13 @@ export function ChatInterface() {
 
         .tool-badge.success {
           background: rgba(34, 197, 94, 0.15);
-          color: #16a34a;
+          color: var(--ok);
           border: 1px solid rgba(34, 197, 94, 0.3);
         }
 
         .tool-badge.error {
           background: rgba(239, 68, 68, 0.15);
-          color: #dc2626;
+          color: var(--danger);
           border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
@@ -622,7 +622,7 @@ export function ChatInterface() {
 
         .tool-btn.confirm {
           background: rgba(34, 197, 94, 0.15);
-          color: #16a34a;
+          color: var(--ok);
           border: 1px solid rgba(34, 197, 94, 0.35);
         }
 
@@ -632,7 +632,7 @@ export function ChatInterface() {
 
         .tool-btn.reject {
           background: rgba(239, 68, 68, 0.1);
-          color: #dc2626;
+          color: var(--danger);
           border: 1px solid rgba(239, 68, 68, 0.25);
         }
 

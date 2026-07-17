@@ -32,6 +32,21 @@
   --border-color: var(--line);
   --accent-light: var(--accent-soft);
   --error: var(--danger);
+  /* Aliases referenced by component styled-jsx that were never defined, so they
+     resolved to invalid (transparent/ignored) values — worst in dark mode. Each
+     maps to a base token above, so it inherits the active theme automatically. */
+  --bg-hover: var(--surface-2);
+  --bg-secondary: var(--surface-2);
+  --bg-muted: var(--surface-2);
+  --bg-subtle: var(--bg-soft);
+  --bg-input: var(--card);
+  --bg-success: var(--ok-soft);
+  --color-primary: var(--accent);
+  --error-bg: var(--danger-soft);
+  --error-border: var(--danger);
+  --error-text: var(--danger);
+  --sync-success: var(--ok);
+  --sync-failed: var(--danger);
 }
 
 [data-theme="light"],

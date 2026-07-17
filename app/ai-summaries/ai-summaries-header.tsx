@@ -114,9 +114,9 @@ export function AiSummariesHeader({
         }
 
         .auto-refresh-toggle.active {
-          background: #f0f9ff;
-          border-color: #0d6efd;
-          color: #0d6efd;
+          background: var(--accent-soft);
+          border-color: var(--accent);
+          color: var(--accent);
         }
 
         .toggle-indicator {
@@ -127,7 +127,7 @@ export function AiSummariesHeader({
         }
 
         .auto-refresh-toggle.active .toggle-indicator {
-          background: #0d6efd;
+          background: var(--accent);
           box-shadow: 0 0 6px #0d6efd;
         }
 

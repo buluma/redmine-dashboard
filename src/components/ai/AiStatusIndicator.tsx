@@ -194,15 +194,15 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
         }
 
         .ai-status-healthy {
-          color: #10b981;
+          color: var(--ok);
         }
 
         .ai-status-unhealthy {
-          color: #ef4444;
+          color: var(--danger);
         }
 
         .ai-status-loading {
-          color: #6b7280;
+          color: var(--text-soft);
         }
 
         .ai-status-dot {
@@ -212,16 +212,16 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
         }
 
         .ai-status-dot-healthy {
-          background: #10b981;
+          background: var(--ok);
           box-shadow: 0 0 6px #10b981;
         }
 
         .ai-status-dot-unhealthy {
-          background: #ef4444;
+          background: var(--danger);
         }
 
         .ai-status-dot-loading {
-          background: #6b7280;
+          background: var(--muted);
           animation: pulse 1.5s infinite;
         }
 
@@ -254,8 +254,8 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
           max-width: min(360px, calc(100vw - 1rem));
           max-height: 400px;
           overflow-y: auto;
-          background: white;
-          border: 1px solid #e5e7eb;
+          background: var(--card);
+          border: 1px solid var(--border);
           border-radius: 8px;
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
           z-index: 4202 !important;
@@ -287,7 +287,7 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
           align-items: center;
           margin-bottom: 0.75rem;
           padding-bottom: 0.75rem;
-          border-bottom: 1px solid #e5e7eb;
+          border-bottom: 1px solid var(--border);
         }
 
         .ai-status-header h4 {
@@ -324,7 +324,7 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
 
         .ai-status-label {
           font-size: 0.75rem;
-          color: #6b7280;
+          color: var(--text-soft);
         }
 
         .ai-status-value {
@@ -334,19 +334,19 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
         }
 
         .ai-status-warning {
-          color: #d97706;
+          color: var(--warn);
         }
 
         .ai-status-section {
           margin-top: 0.75rem;
           padding-top: 0.75rem;
-          border-top: 1px solid #f3f4f6;
+          border-top: 1px solid var(--border);
         }
 
         .ai-status-section h5 {
           margin: 0 0 0.5rem 0;
           font-size: 0.75rem;
-          color: #6b7280;
+          color: var(--text-soft);
           text-transform: uppercase;
         }
 
@@ -359,7 +359,7 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
         .ai-feature-badge {
           font-size: 0.7rem;
           padding: 0.2rem 0.4rem;
-          background: #f3f4f6;
+          background: var(--surface-2);
           border-radius: 4px;
         }
 
@@ -400,19 +400,19 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
 
         .ai-model-desc {
           font-size: 0.7rem;
-          color: #6b7280;
+          color: var(--text-soft);
         }
 
         .ai-status-actions {
           margin-top: 0.75rem;
           padding-top: 0.75rem;
-          border-top: 1px solid #f3f4f6;
+          border-top: 1px solid var(--border);
         }
 
         .ai-status-refresh {
           width: 100%;
           padding: 0.4rem;
-          background: #f3f4f6;
+          background: var(--surface-2);
           border: none;
           border-radius: 4px;
           font-size: 0.75rem;
@@ -421,7 +421,7 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
         }
 
         .ai-status-refresh:hover {
-          background: #e5e7eb;
+          background: var(--surface-2);
         }
 
         .ai-status-error {

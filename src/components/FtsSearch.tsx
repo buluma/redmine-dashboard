@@ -168,12 +168,12 @@ export function FtsSearch({ onSelect }: FtsSearchProps) {
           border: 1px solid var(--border-color);
           border-radius: 4px;
           font-size: 14px;
-          background: var(--card-bg);
+          background: var(--card);
           color: var(--text-primary);
         }
         .fts-search-input:focus {
           outline: none;
-          border-color: var(--accent-color);
+          border-color: var(--accent);
         }
         .fts-search-spinner {
           position: absolute;
@@ -191,7 +191,7 @@ export function FtsSearch({ onSelect }: FtsSearchProps) {
           top: 100%;
           left: 0;
           right: 0;
-          background: var(--card-bg);
+          background: var(--card);
           border: 1px solid var(--border-color);
           border-radius: 4px;
           margin-top: 4px;
@@ -210,7 +210,7 @@ export function FtsSearch({ onSelect }: FtsSearchProps) {
           color: var(--text-muted);
         }
         .fts-search-badge {
-          background: var(--accent-color);
+          background: var(--accent);
           color: white;
           padding: 2px 8px;
           border-radius: 10px;
@@ -230,7 +230,7 @@ export function FtsSearch({ onSelect }: FtsSearchProps) {
           border-bottom: none;
         }
         .fts-search-result:hover {
-          background: var(--bg-hover);
+          background: var(--surface-2);
         }
         .fts-result-main {
           display: flex;
@@ -241,7 +241,7 @@ export function FtsSearch({ onSelect }: FtsSearchProps) {
         .fts-result-id {
           font-size: 11px;
           color: var(--text-muted);
-          background: var(--bg-secondary);
+          background: var(--surface-2);
           padding: 2px 6px;
           border-radius: 3px;
         }

@@ -597,13 +597,13 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
           padding: 0.5rem 0.75rem;
           border: 1px solid var(--border, #e5e7eb);
           border-radius: 6px;
-          background: white;
+          background: var(--card);
           flex: 1;
           max-width: 320px;
         }
 
         .summaries-search svg {
-          color: #9ca3af;
+          color: var(--text-soft);
           flex-shrink: 0;
         }
 
@@ -619,14 +619,14 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
           background: none;
           border: none;
           cursor: pointer;
-          color: #9ca3af;
+          color: var(--text-soft);
           font-size: 1.2rem;
           padding: 0;
           line-height: 1;
         }
 
         .summaries-search-clear:hover {
-          color: #6b7280;
+          color: var(--text-soft);
         }
 
         .summaries-actions {
@@ -639,14 +639,14 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
           padding: 0.4rem 0.75rem;
           border: 1px solid var(--border, #e5e7eb);
           border-radius: 6px;
-          background: white;
+          background: var(--card);
           font-size: 0.8rem;
           cursor: pointer;
           transition: all 0.15s;
         }
 
         .filter-toggle:hover {
-          background: #f3f4f6;
+          background: var(--surface-2);
         }
 
         .filter-toggle.active {
@@ -659,14 +659,14 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
           padding: 0.4rem 0.75rem;
           border: 1px solid var(--border, #e5e7eb);
           border-radius: 6px;
-          background: white;
+          background: var(--card);
           font-size: 0.8rem;
           cursor: pointer;
           transition: all 0.15s;
         }
 
         .export-btn:hover:not(:disabled) {
-          background: #f3f4f6;
+          background: var(--surface-2);
         }
 
         .export-btn:disabled {
@@ -694,7 +694,7 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
           gap: 1rem;
           padding: 1rem;
           margin-bottom: 1rem;
-          background: #f9fafb;
+          background: var(--surface-2);
           border: 1px solid var(--border, #e5e7eb);
           border-radius: 8px;
         }
@@ -707,7 +707,7 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
 
         .filter-group label {
           font-size: 0.75rem;
-          color: #6b7280;
+          color: var(--text-soft);
           font-weight: 500;
         }
 
@@ -716,7 +716,7 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
           border: 1px solid var(--border, #e5e7eb);
           border-radius: 4px;
           font-size: 0.8rem;
-          background: white;
+          background: var(--card);
         }
 
         .summaries-list {
@@ -734,7 +734,7 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
         .confidence-bar-bg {
           width: 60px;
           height: 6px;
-          background: #e5e7eb;
+          background: var(--surface-2);
           border-radius: 3px;
           overflow: hidden;
         }
@@ -748,7 +748,7 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
         .confidence-label {
           font-size: 0.7rem;
           font-family: monospace;
-          color: #6b7280;
+          color: var(--text-soft);
           min-width: 30px;
         }
 
@@ -763,7 +763,7 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
 
         .pagination-info {
           font-size: 0.8rem;
-          color: #6b7280;
+          color: var(--text-soft);
         }
 
         .pagination-controls {
@@ -776,14 +776,14 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
           padding: 0.35rem 0.6rem;
           border: 1px solid var(--border, #e5e7eb);
           border-radius: 4px;
-          background: white;
+          background: var(--card);
           cursor: pointer;
           font-size: 0.8rem;
           transition: all 0.15s;
         }
 
         .pagination-btn:hover:not(:disabled) {
-          background: #f3f4f6;
+          background: var(--surface-2);
         }
 
         .pagination-btn:disabled {

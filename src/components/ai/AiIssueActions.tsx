@@ -407,7 +407,7 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
 
         .ai-powered-by {
           font-size: 0.75rem;
-          color: #666;
+          color: var(--text-soft);
         }
 
         .ai-buttons-row {
@@ -417,7 +417,7 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
         }
 
         .ai-error {
-          color: #dc2626;
+          color: var(--danger);
           font-size: 0.85rem;
           margin: 0.5rem 0 0 0;
         }
@@ -425,9 +425,9 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
         .ai-result {
           margin-top: 0.75rem;
           padding: 0.75rem;
-          background: white;
+          background: var(--card);
           border-radius: 6px;
-          border: 1px solid #e5e7eb;
+          border: 1px solid var(--border);
         }
 
         .ai-result-header {
@@ -440,13 +440,13 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
         .ai-result-header h5 {
           margin: 0;
           font-size: 0.85rem;
-          color: #374151;
+          color: var(--text);
         }
 
         .ai-confidence {
           font-size: 0.7rem;
-          color: #6b7280;
-          background: #f3f4f6;
+          color: var(--text-soft);
+          background: var(--surface-2);
           padding: 0.15rem 0.4rem;
           border-radius: 4px;
         }
@@ -458,7 +458,7 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
         .ai-section h6 {
           margin: 0 0 0.4rem 0;
           font-size: 0.8rem;
-          color: #4b5563;
+          color: var(--text-soft);
           font-weight: 600;
         }
 
@@ -466,7 +466,7 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
           margin: 0;
           font-size: 0.9rem;
           line-height: 1.5;
-          color: #1f2937;
+          color: var(--text);
         }
 
         .ai-section ul {
@@ -474,7 +474,7 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
           padding-left: 1.2rem;
           font-size: 0.85rem;
           line-height: 1.6;
-          color: #374151;
+          color: var(--text);
         }
 
         .ai-section ul li {
@@ -486,18 +486,18 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
         }
 
         .ai-link {
-          color: #2563eb;
+          color: var(--accent);
           text-decoration: underline;
         }
 
         .ai-link:hover {
-          color: #1d4ed8;
+          color: var(--accent-strong);
         }
 
         .ai-perf-metrics {
           margin-top: 1rem;
           padding-top: 0.75rem;
-          border-top: 1px dashed #e5e7eb;
+          border-top: 1px dashed var(--border);
         }
 
         .ai-perf-grid {
@@ -509,18 +509,18 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
         .ai-perf-badge {
           display: inline-block;
           padding: 0.2rem 0.5rem;
-          background: #f3f4f6;
+          background: var(--surface-2);
           border-radius: 4px;
           font-size: 0.72rem;
           font-weight: 500;
-          color: #6b7280;
+          color: var(--text-soft);
           font-family: monospace;
         }
 
         .ai-copy-button {
           margin-left: 0.5rem;
           padding: 0.25rem 0.5rem;
-          background: #10b981;
+          background: var(--ok);
           color: white;
           border: none;
           border-radius: 4px;
@@ -530,7 +530,7 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
         }
 
         .ai-copy-button:hover {
-          background: #059669;
+          background: var(--ok);
         }
 
         .ai-copy-button:active {
