@@ -8,6 +8,11 @@ import { recordIssueActivityEvent, recomputeIssueActivityIndex } from "@/src/lib
 const NAIROBI_TZ = "Africa/Nairobi";
 const REDMINE_STATUS_CLOSED = 5;
 const REDMINE_STATUS_RESOLVED = 3;
+// After this many failed close ticks, stop retrying: getInstancesDueForClose
+// excludes instances at/above this count so a permanently-unclosable ticket
+// (deleted in Redmine, permission change) settles into a terminal close_failed
+// state a human can see, instead of re-working and re-alerting every day forever.
+const MAX_CLOSE_ATTEMPTS = 5;
 // API key owner (MBU) — the implicit author on ticket creation and the only
 // user Redmine allows to Close a ticket it authored. A future credential
 // rotation onto a different account would silently break the close step.
@@ -276,10 +281,28 @@ export async function getInstancesDueForClose(userId: string, today: Date): Prom
     where: {
       userId,
       status: { in: ["open", "close_failed"] },
+      closeAttempts: { lt: MAX_CLOSE_ATTEMPTS },
       scheduledCloseDate: { lte: todayMarker },
     },
     include: { series: true },
   }) as Promise<InstanceDueForClose[]>;
+}
+
+/**
+ * Total hours actually pushed to Redmine for this issue — the sum of its
+ * WakaTime TimeEntry rows that carry a real redmineTimeEntryId. Used for
+ * finalHoursApplied instead of a single push call's delta: a close that
+ * completes across more than one tick (e.g. entries pushed on a tick that
+ * then failed to close) would otherwise record only the last call's hours
+ * (often 0, since already-stamped entries are skipped), corrupting the figure
+ * and firing a false "closed with zero hours" alert.
+ */
+async function sumPushedHours(issueId: string): Promise<number> {
+  const agg = await prisma.timeEntry.aggregate({
+    where: { issueId, source: "wakatime", redmineTimeEntryId: { not: null } },
+    _sum: { hours: true },
+  });
+  return agg._sum.hours ?? 0;
 }
 
 /**
@@ -342,14 +365,17 @@ export async function closeInstance(instance: RecurringTicketInstance, client: R
   const endDate = instance.scheduledCloseDate.toISOString().slice(0, 10);
   await applyTimeEntries(instance.userId, { start: startDate, end: endDate });
 
-  const { pushed, hours } = await pushPendingWakaTimeEntriesToRedmine(instance.issueId, client);
-  const closeNote = `Auto-closed by recurring ticket automation. ${pushed} time entr${pushed === 1 ? "y" : "ies"} pushed (${hours.toFixed(2)}h).`;
+  const { pushed } = await pushPendingWakaTimeEntriesToRedmine(instance.issueId, client);
+  // Cumulative total actually in Redmine for this issue, not just this call's
+  // push — so a close spread across retries still records the real figure.
+  const appliedHours = await sumPushedHours(instance.issueId);
+  const closeNote = `Auto-closed by recurring ticket automation. ${pushed} time entr${pushed === 1 ? "y" : "ies"} pushed this run (${appliedHours.toFixed(2)}h total).`;
 
   try {
     await client.updateIssueStatus(instance.redmineIssueId, REDMINE_STATUS_CLOSED, closeNote);
     await prisma.recurringTicketInstance.update({
       where: { id: instance.id },
-      data: { status: "closed", closedAt: new Date(), finalHoursApplied: hours, closeAttempts: { increment: 1 } },
+      data: { status: "closed", closedAt: new Date(), finalHoursApplied: appliedHours, closeAttempts: { increment: 1 } },
     });
     await prisma.issue.update({
       where: { id: instance.issueId },
@@ -381,7 +407,7 @@ export async function closeInstance(instance: RecurringTicketInstance, client: R
         data: {
           status: "resolved_not_closed",
           lastError: closeMessage,
-          finalHoursApplied: hours,
+          finalHoursApplied: appliedHours,
           closeAttempts: { increment: 1 },
         },
       });
@@ -401,7 +427,7 @@ export async function closeInstance(instance: RecurringTicketInstance, client: R
         data: {
           status: "close_failed",
           lastError: `Close failed (${closeMessage}); Resolve fallback also failed (${resolveMessage}).`,
-          finalHoursApplied: hours,
+          finalHoursApplied: appliedHours,
           closeAttempts: { increment: 1 },
         },
       });

@@ -16,6 +16,7 @@ const {
   mockGithubLinkCreate,
   mockTimeEntryFindMany,
   mockTimeEntryUpdate,
+  mockTimeEntryAggregate,
   mockApplyTimeEntries,
 } = vi.hoisted(() => ({
   mockSeriesFindMany: vi.fn(),
@@ -31,6 +32,7 @@ const {
   mockGithubLinkCreate: vi.fn(),
   mockTimeEntryFindMany: vi.fn(),
   mockTimeEntryUpdate: vi.fn(),
+  mockTimeEntryAggregate: vi.fn(),
   mockApplyTimeEntries: vi.fn(),
 }));
 
@@ -50,7 +52,7 @@ vi.mock("@/src/lib/db", () => ({
       update: mockIssueUpdate,
     },
     issueGithubLink: { deleteMany: mockGithubLinkDeleteMany, create: mockGithubLinkCreate },
-    timeEntry: { findMany: mockTimeEntryFindMany, update: mockTimeEntryUpdate },
+    timeEntry: { findMany: mockTimeEntryFindMany, update: mockTimeEntryUpdate, aggregate: mockTimeEntryAggregate },
   },
 }));
 
@@ -345,6 +347,7 @@ describe("getInstancesDueForClose", () => {
       where: {
         userId: USER_ID,
         status: { in: ["open", "close_failed"] },
+        closeAttempts: { lt: 5 },
         scheduledCloseDate: { lte: new Date(Date.UTC(2026, 6, 19)) },
       },
       include: { series: true },
@@ -395,6 +398,8 @@ describe("closeInstance", () => {
     mockApplyTimeEntries.mockResolvedValue({ created: 0, skipped: 0, totalHours: 0, entries: [] });
     mockIssueFindUnique.mockResolvedValue({ redmineIssueId: 9001 });
     mockTimeEntryFindMany.mockResolvedValue([]);
+    // sumPushedHours: total pushed WakaTime hours for the issue.
+    mockTimeEntryAggregate.mockResolvedValue({ _sum: { hours: 0 } });
   });
 
   it("closes the Redmine ticket and marks the instance closed on success", async () => {
@@ -410,6 +415,22 @@ describe("closeInstance", () => {
     expect(mockIssueUpdate).toHaveBeenCalledWith({
       where: { id: "issue-1" },
       data: expect.objectContaining({ statusId: 5, statusName: "Closed" }),
+    });
+  });
+
+  it("records finalHoursApplied as the cumulative pushed total, not just this run's push", async () => {
+    // Entries were pushed on a prior tick (already stamped, so this run's push
+    // finds nothing) but the issue's total pushed hours is 3.5 — the close
+    // must record 3.5, not 0.
+    mockTimeEntryFindMany.mockResolvedValue([]); // nothing left to push this run
+    mockTimeEntryAggregate.mockResolvedValue({ _sum: { hours: 3.5 } });
+    const client = fakeClient();
+
+    await closeInstance(fakeInstance(), client);
+
+    expect(mockInstanceUpdate).toHaveBeenCalledWith({
+      where: { id: "instance-1" },
+      data: expect.objectContaining({ status: "closed", finalHoursApplied: 3.5 }),
     });
   });
 
@@ -468,6 +489,7 @@ describe("runRecurringTicketsTick", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockApplyTimeEntries.mockResolvedValue({ created: 0, skipped: 0, totalHours: 0, entries: [] });
+    mockTimeEntryAggregate.mockResolvedValue({ _sum: { hours: 0 } });
   });
 
   it("aggregates a create and a close in one tick", async () => {

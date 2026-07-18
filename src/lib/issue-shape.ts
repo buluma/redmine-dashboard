@@ -112,3 +112,17 @@ export function toIssueView<T extends { allowedStatusesJson: JsonValue | null; c
 export function isLocalOnlyIssue(issue: { source: string; redmineIssueId: number | null }): boolean {
   return issue.source === "local" && !issue.redmineIssueId;
 }
+
+/**
+ * True for recurring-tickets' hybrid mirrors: source:"local" (so
+ * correlation.ts's WakaTime matching indexes them) but with a real
+ * redmineIssueId (so they're genuine Redmine tickets Converge mirrors
+ * read-only). The complement of isLocalOnlyIssue among source:"local" rows.
+ * Synced from Redmine normally, but with local-only quirks (see sync.ts):
+ * their WakaTime hours live in local TimeEntry rows until the Sunday close
+ * pushes them, so a Redmine pull must not clobber those or the spentHours
+ * derived from them.
+ */
+export function isHybridLocalMirror(issue: { source: string; redmineIssueId: number | null }): boolean {
+  return issue.source === "local" && issue.redmineIssueId != null;
+}

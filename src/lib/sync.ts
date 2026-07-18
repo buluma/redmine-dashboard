@@ -6,6 +6,7 @@ import { logEvent } from "@/src/lib/log";
 import { trackFailure } from "@/src/lib/telemetry";
 import { RedmineClient } from "@/src/lib/redmine";
 import { recordIssueActivityEvent, recomputeIssueActivityIndex } from "@/src/lib/activity-index";
+import { isHybridLocalMirror } from "@/src/lib/issue-shape";
 
 function asObject(value: unknown): Record<string, unknown> {
   return (value ?? {}) as Record<string, unknown>;
@@ -587,7 +588,12 @@ export async function syncSingleIssue(
     },
     select: { id: true, source: true },
   });
-  const isHybridLocalMirror = existingLocalCheck?.source === "local";
+  // Matched by redmineIssueId: remoteIssueId, so any row found has a real
+  // redmineIssueId — a match therefore means a hybrid mirror, not a
+  // fully-local ticket (those have redmineIssueId: null and never match here).
+  const hybridMirror = existingLocalCheck
+    ? isHybridLocalMirror({ source: existingLocalCheck.source, redmineIssueId: remoteIssueId })
+    : false;
 
   const detail = await client.getIssue(remoteIssueId, [
     "journals",
@@ -637,11 +643,25 @@ export async function syncSingleIssue(
   await upsertJournals(issue.id, detail.issue);
   await upsertAttachmentsForIssue(issue.id, detail.issue, options?.pruneAttachments ?? true);
   await upsertRelationsForIssue(issue.id, detail.issue, options?.pruneRelations ?? true);
-  if (isHybridLocalMirror) {
+  if (hybridMirror) {
     logEvent("sync.hybrid_local_mirror_time_entries_skipped", {
       redmineIssueId: remoteIssueId,
       reason: "Issue is a recurring-tickets hybrid mirror — skipping time-entry pull to avoid pruning unpushed WakaTime hours",
     }, "info");
+    // upsertIssueFromRemote just overwrote spentHours with Redmine's value,
+    // which excludes WakaTime hours logged locally but not yet pushed to
+    // Redmine (that happens at the Sunday close). Recompute it from the local
+    // TimeEntry rows — the source of truth we're preserving above — so the
+    // displayed total reflects all logged hours, not just what's reached
+    // Redmine so far.
+    const localSpent = await prisma.timeEntry.aggregate({
+      where: { issueId: issue.id },
+      _sum: { hours: true },
+    });
+    await prisma.issue.update({
+      where: { id: issue.id },
+      data: { spentHours: localSpent._sum.hours ?? 0 },
+    });
   } else {
     await upsertTimeEntriesForIssue(
       userId,
@@ -653,8 +673,11 @@ export async function syncSingleIssue(
   }
   await recomputeIssueActivityIndex(issue.id);
 
-  // Build breadcrumbs by fetching parent chain
-  const breadcrumbs = await buildBreadcrumbChain(client, remoteIssueId);
+  // Build breadcrumbs by fetching parent chain. Skipped for hybrid mirrors:
+  // it walks the parent chain with one Redmine getIssue per ancestor, no
+  // caller reads breadcrumbs off this function's return (the issue detail
+  // route recomputes them), and a mirror's parent chain is stable.
+  const breadcrumbs = hybridMirror ? [] : await buildBreadcrumbChain(client, remoteIssueId);
 
   // Send PWA Push notifications
   let notificationResult = null;

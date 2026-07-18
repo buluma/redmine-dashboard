@@ -9,6 +9,7 @@ const {
   mockIssueRelationDeleteMany,
   mockTimeEntryUpsert,
   mockTimeEntryDeleteMany,
+  mockTimeEntryAggregate,
   mockIssueActivityEventUpsert,
   mockIssueActivityEventFindFirst,
   mockIssueUpdate,
@@ -21,6 +22,7 @@ const {
   mockIssueRelationDeleteMany: vi.fn(),
   mockTimeEntryUpsert: vi.fn(),
   mockTimeEntryDeleteMany: vi.fn(),
+  mockTimeEntryAggregate: vi.fn(),
   mockIssueActivityEventUpsert: vi.fn(),
   mockIssueActivityEventFindFirst: vi.fn(),
   mockIssueUpdate: vi.fn(),
@@ -37,7 +39,7 @@ vi.mock("@/src/lib/db", () => ({
     issueJournal: { upsert: mockIssueJournalUpsert },
     issueAttachment: { deleteMany: mockIssueAttachmentDeleteMany },
     issueRelation: { deleteMany: mockIssueRelationDeleteMany },
-    timeEntry: { upsert: mockTimeEntryUpsert, deleteMany: mockTimeEntryDeleteMany },
+    timeEntry: { upsert: mockTimeEntryUpsert, deleteMany: mockTimeEntryDeleteMany, aggregate: mockTimeEntryAggregate },
     issueActivityEvent: { upsert: mockIssueActivityEventUpsert, findFirst: mockIssueActivityEventFindFirst },
   },
 }));
@@ -89,6 +91,7 @@ describe("syncSingleIssue — hybrid local mirror (recurring tickets)", () => {
       createdAt: new Date(),
     });
     mockIssueActivityEventFindFirst.mockResolvedValue(null);
+    mockTimeEntryAggregate.mockResolvedValue({ _sum: { hours: 0 } });
   });
 
   it("skips the time-entry pull for a source:local row with a real redmineIssueId, but still syncs issue fields", async () => {
@@ -103,6 +106,34 @@ describe("syncSingleIssue — hybrid local mirror (recurring tickets)", () => {
     expect(client.listIssueTimeEntries).not.toHaveBeenCalled();
     expect(mockTimeEntryUpsert).not.toHaveBeenCalled();
     expect(mockTimeEntryDeleteMany).not.toHaveBeenCalled();
+  });
+
+  it("recomputes spentHours from local TimeEntry rows instead of leaving Redmine's (possibly lower) value", async () => {
+    mockIssueFindFirst.mockResolvedValue({ id: "local-issue-1", source: "local" });
+    // Local TimeEntry rows sum to 4.25h, but Redmine only knows about what's
+    // been pushed so far — the mirror's spentHours must reflect the local total.
+    mockTimeEntryAggregate.mockResolvedValue({ _sum: { hours: 4.25 } });
+    const client = fakeClient();
+
+    await syncSingleIssue(USER_ID, client, REMOTE_ISSUE_ID);
+
+    expect(mockTimeEntryAggregate).toHaveBeenCalledWith({
+      where: { issueId: "local-issue-1" },
+      _sum: { hours: true },
+    });
+    expect(mockIssueUpdate).toHaveBeenCalledWith({
+      where: { id: "local-issue-1" },
+      data: { spentHours: 4.25 },
+    });
+  });
+
+  it("does NOT recompute spentHours for an ordinary source:redmine issue", async () => {
+    mockIssueFindFirst.mockResolvedValue(null);
+    const client = fakeClient();
+
+    await syncSingleIssue(USER_ID, client, REMOTE_ISSUE_ID);
+
+    expect(mockTimeEntryAggregate).not.toHaveBeenCalled();
   });
 
   it("still never sends source in the upsert payload, so the row stays source:local", async () => {
