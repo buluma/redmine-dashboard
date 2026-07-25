@@ -50,7 +50,7 @@
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-react": "^5.32.2",
+    "swagger-ui-react": "^5.32.11",
     "web-push": "^3.6.7",
     "zod": "^4.3.6",
     "zustand": "^5.0.12"
