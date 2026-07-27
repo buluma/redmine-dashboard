@@ -41,7 +41,7 @@
     "@upstash/redis": "^1.37.0",
     "chart.js": "^4.5.1",
     "idb": "^8.0.3",
-    "next": "16.2.6",
+    "next": "16.2.12",
     "prisma": "^6.19.3",
     "react": "19.2.3",
     "react-chartjs-2": "^5.3.1",
