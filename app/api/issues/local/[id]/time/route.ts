@@ -41,7 +41,7 @@ export async function POST(
         userId: user.id,
         hours: parsed.data.hours,
         spentOn: new Date(),
-        activityId: 9,
+        activityId: 31,
         activityName: "Development",
         comments: parsed.data.comments ?? null,
       },

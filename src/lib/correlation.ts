@@ -463,7 +463,7 @@ export async function applyTimeEntries(
               userId,
               hours,
               spentOn: new Date(day.date),
-              activityId: 9,
+              activityId: 31,
               activityName: "Development",
               comments: `WakaTime: ${row.repo.split("/").pop() ?? row.repo} ${day.date}`,
               source: "wakatime",

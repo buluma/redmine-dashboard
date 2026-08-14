@@ -394,7 +394,7 @@ describe("applyTimeEntries", () => {
         issueId: "t1",
         userId: USER_ID,
         hours: 2,
-        activityId: 9,
+        activityId: 31,
         activityName: "Development",
         source: "wakatime",
         wakaTimeDate: "2026-06-20",
