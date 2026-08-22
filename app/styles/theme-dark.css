@@ -36,7 +36,12 @@
   /* Liquid-glass tokens for the card family below: translucent + blurred
      rather than fully transparent, so the constellation shows through while
      text stays readable without a hard-edged card. */
-  --glass-bg: color-mix(in srgb, var(--card) 55%, transparent);
+  /* --card and --bg are both near-black, so even at 55% mix the pixel
+     barely shifts — the glass effect read as invisible in practice.
+     Dropped further so the card reads as translucent by contrast with its
+     neighbors, not dependent on something detailed (like the constellation)
+     happening to sit behind it. */
+  --glass-bg: color-mix(in srgb, var(--card) 32%, transparent);
   --glass-blur: 16px;
 }
 
