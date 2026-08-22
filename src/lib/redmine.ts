@@ -396,6 +396,29 @@ export class RedmineClient {
     return this.request<RedmineIssueDetail>(`/issues/${issueId}.json${query}`);
   }
 
+  // The nested `children` array on an issue's own payload (include=children) only
+  // carries id/tracker/subject — Redmine's issue show API doesn't nest status or
+  // assigned_to there. To show those columns for subtickets, fetch the children
+  // as full issue records via parent_id instead.
+  async listChildIssues(parentId: number): Promise<Array<Record<string, unknown>>> {
+    const limit = 100;
+    const out: Array<Record<string, unknown>> = [];
+    let offset = 0;
+
+    while (true) {
+      const path = `/issues.json?parent_id=${parentId}&status_id=*&sort=id&limit=${limit}&offset=${offset}`;
+      const data = await this.request<RedmineIssueListResponse>(path);
+      out.push(...data.issues);
+      offset += data.issues.length;
+
+      if (offset >= data.total_count || data.issues.length === 0) {
+        break;
+      }
+    }
+
+    return out;
+  }
+
   async createIssue(input: {
     subject: string;
     description?: string;

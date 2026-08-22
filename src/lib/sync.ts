@@ -81,6 +81,8 @@ type IssueChild = {
   id: number;
   subject: string;
   tracker?: string;
+  statusName?: string;
+  assignedToName?: string;
 };
 
 function parseChildren(issueRaw: Record<string, unknown>): IssueChild[] {
@@ -97,10 +99,11 @@ function parseChildren(issueRaw: Record<string, unknown>): IssueChild[] {
     if (!id || !subject) continue;
 
     const trackerObj = item.tracker as Record<string, unknown> | undefined;
-    const trackerName = trackerObj ? asString(trackerObj.name) : null;
-    const tracker = trackerName ?? undefined;
+    const tracker = (trackerObj ? asString(trackerObj.name) : null) ?? undefined;
+    const statusName = nestedName(item.status) ?? undefined;
+    const assignedToName = nestedName(item.assigned_to) ?? undefined;
 
-    result.push({ id, subject, tracker });
+    result.push({ id, subject, tracker, statusName, assignedToName });
   }
   return result;
 }
@@ -602,7 +605,15 @@ export async function syncSingleIssue(
     "allowed_statuses",
     "children",
   ]);
-  
+
+  // Redmine's nested `children` (above) only carries id/tracker/subject per
+  // child — no status or assignee. Re-fetch children as full issue records
+  // so the subtickets table can show who each one is assigned to.
+  const detailRecord = detail as unknown as Record<string, unknown>;
+  if (Array.isArray(detailRecord.children) && detailRecord.children.length > 0) {
+    detailRecord.children = await client.listChildIssues(remoteIssueId);
+  }
+
   // Track changes if notifications are enabled
   const trackChanges = options?.sendNotifications ?? false;
   const upsertResult = await upsertIssueFromRemote(

@@ -7,6 +7,8 @@ export type IssueChildView = {
   id: number;
   subject: string;
   tracker?: string | null;
+  statusName?: string | null;
+  assignedToName?: string | null;
 };
 
 export type IssueViewBase = {
@@ -79,7 +81,12 @@ function parseChildren(value: JsonValue | null): IssueChildView[] {
     const tracker = item.tracker as Record<string, unknown> | undefined;
     const trackerName = typeof tracker?.name === "string" ? tracker.name : null;
 
-    result.push({ id, subject, tracker: trackerName });
+    const status = item.statusName;
+    const statusName = typeof status === "string" ? status : null;
+    const assignedTo = item.assignedToName;
+    const assignedToName = typeof assignedTo === "string" ? assignedTo : null;
+
+    result.push({ id, subject, tracker: trackerName, statusName, assignedToName });
   }
   return result;
 }
