@@ -12,14 +12,15 @@ import { useTheme } from "@/src/components/ThemeProvider";
 // without a reload, only runs in dark mode (the dots wouldn't read
 // against the light theme's cream background), and freezes to a single
 // static frame under prefers-reduced-motion.
-// First pass (50 stars, low opacity) was invisible against the real
-// dashboard's dense card grid. Bumping intensity to compensate overcorrected:
-// with this many cards, "visible" reads as clutter poking into card
-// whitespace rather than an ambient touch. Settled on a middle ground — a
-// faint wallpaper texture (think a terminal's barely-there background
-// image), not a foreground animation competing with content.
-const STAR_COUNT = 60;
-const CONNECT_DIST = 130;
+// Went through three rounds chasing this on a single page at a time: the
+// original (moderate) values read fine on the mostly-empty dashboard but
+// were invisible on dense pages (/ops); boosting fixed that but made dense
+// pages (issue detail) look cluttered; fading below that made it invisible
+// EVERYWHERE, confirmed by decompiling the actual deployed prod bundle, not
+// a caching mystery. Landed back near the original, verified across
+// dashboard, /ops, issue detail, and /webhooks together this time.
+const STAR_COUNT = 55;
+const CONNECT_DIST = 120;
 
 type Star = { x: number; y: number; vx: number; vy: number; r: number; phase: number };
 
@@ -47,7 +48,7 @@ export function ConstellationBackground() {
         y: Math.random() * height,
         vx: (Math.random() - 0.5) * 0.15,
         vy: (Math.random() - 0.5) * 0.15,
-        r: 0.7 + Math.random() * 0.7,
+        r: 0.9 + Math.random() * 0.9,
         phase: Math.random() * Math.PI * 2,
       }));
     };
@@ -90,7 +91,7 @@ export function ConstellationBackground() {
           const dy = stars[i].y - stars[j].y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < CONNECT_DIST) {
-            ctx.globalAlpha = (1 - dist / CONNECT_DIST) * 0.08;
+            ctx.globalAlpha = (1 - dist / CONNECT_DIST) * 0.14;
             ctx.beginPath();
             ctx.moveTo(stars[i].x, stars[i].y);
             ctx.lineTo(stars[j].x, stars[j].y);
@@ -102,7 +103,7 @@ export function ConstellationBackground() {
       ctx.fillStyle = color;
       for (const s of stars) {
         const twinkle = reduceMotion ? 0.75 : 0.5 + 0.5 * Math.sin(t * 2 + s.phase);
-        ctx.globalAlpha = 0.06 + twinkle * 0.1;
+        ctx.globalAlpha = 0.14 + twinkle * 0.22;
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
         ctx.fill();
