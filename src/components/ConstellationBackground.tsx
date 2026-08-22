@@ -12,12 +12,14 @@ import { useTheme } from "@/src/components/ThemeProvider";
 // without a reload, only runs in dark mode (the dots wouldn't read
 // against the light theme's cream background), and freezes to a single
 // static frame under prefers-reduced-motion.
-// Converge's dashboard is dense with cards — much less open gap than the
-// chat UI Odysseus's version shows this off in — so the effect needs more
-// visual weight to actually read at all: more stars, brighter dots, more
-// visible lines. Tuned against the real dashboard, not just eyeballed.
-const STAR_COUNT = 90;
-const CONNECT_DIST = 140;
+// First pass (50 stars, low opacity) was invisible against the real
+// dashboard's dense card grid. Bumping intensity to compensate overcorrected:
+// with this many cards, "visible" reads as clutter poking into card
+// whitespace rather than an ambient touch. Settled on a middle ground — a
+// faint wallpaper texture (think a terminal's barely-there background
+// image), not a foreground animation competing with content.
+const STAR_COUNT = 60;
+const CONNECT_DIST = 130;
 
 type Star = { x: number; y: number; vx: number; vy: number; r: number; phase: number };
 
@@ -45,7 +47,7 @@ export function ConstellationBackground() {
         y: Math.random() * height,
         vx: (Math.random() - 0.5) * 0.15,
         vy: (Math.random() - 0.5) * 0.15,
-        r: 1.1 + Math.random() * 1.2,
+        r: 0.7 + Math.random() * 0.7,
         phase: Math.random() * Math.PI * 2,
       }));
     };
@@ -88,7 +90,7 @@ export function ConstellationBackground() {
           const dy = stars[i].y - stars[j].y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < CONNECT_DIST) {
-            ctx.globalAlpha = (1 - dist / CONNECT_DIST) * 0.35;
+            ctx.globalAlpha = (1 - dist / CONNECT_DIST) * 0.08;
             ctx.beginPath();
             ctx.moveTo(stars[i].x, stars[i].y);
             ctx.lineTo(stars[j].x, stars[j].y);
@@ -100,7 +102,7 @@ export function ConstellationBackground() {
       ctx.fillStyle = color;
       for (const s of stars) {
         const twinkle = reduceMotion ? 0.75 : 0.5 + 0.5 * Math.sin(t * 2 + s.phase);
-        ctx.globalAlpha = 0.3 + twinkle * 0.45;
+        ctx.globalAlpha = 0.06 + twinkle * 0.1;
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
         ctx.fill();
