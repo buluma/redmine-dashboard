@@ -78,6 +78,8 @@ type IssueChild = {
   id: number;
   subject: string;
   tracker?: string | null;
+  statusName?: string | null;
+  assignedToName?: string | null;
 };
 
 type Issue = {
@@ -1599,8 +1601,9 @@ export default function IssueDetailPage() {
                   <thead>
                     <tr>
                       <th>{t("issues.colNumber")}</th>
-                      <th>{t("issues.tracker")}</th>
                       <th>{t("issues.subject")}</th>
+                      <th>{t("issues.status")}</th>
+                      <th>{t("issues.assignee")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1611,15 +1614,20 @@ export default function IssueDetailPage() {
                             #{child.id}
                           </Link>
                         </td>
-                        <td className="child-tracker">
-                          <span className={`tracker-chip ${(child.tracker ?? "").toLowerCase().replace(" ", "-")}`}>
-                            {translateTrackerLabel(child.tracker ?? null, t)}
-                          </span>
-                        </td>
                         <td className="child-subject">
                           <Link href={`/issues/${child.id}`} target="_blank" rel="noopener noreferrer">
                             {child.subject}
                           </Link>
+                        </td>
+                        <td className="child-status">
+                          {child.statusName ? (
+                            <span className="status-chip">{translateStatusLabel(child.statusName, t)}</span>
+                          ) : (
+                            <span className="muted">—</span>
+                          )}
+                        </td>
+                        <td className="child-assignee">
+                          {child.assignedToName ?? t("issues.empty.unassigned")}
                         </td>
                       </tr>
                     ))}
