@@ -227,4 +227,17 @@ describe("IssueQueueCard", () => {
     renderCard({ visibleIssues: [] });
     expect(screen.queryByText(/pagination.showing/)).toBeNull();
   });
+
+  it("highlights the In Progress quick filter as active when selected", () => {
+    renderCard({ statusFilter: "In Progress" });
+    expect(screen.getByRole("button", { name: /In Progress/ })).toHaveClass("active");
+  });
+
+  it("highlights the Overdue quick filter as active when selected", () => {
+    renderCard({
+      statusFilter: "Overdue",
+      summary: { open: 0, inProgress: 0, blocked: 0, overdue: 3, stale: 0, dueToday: 0, totalVisible: 3 },
+    });
+    expect(screen.getByRole("button", { name: /Overdue/ })).toHaveClass("active");
+  });
 });
