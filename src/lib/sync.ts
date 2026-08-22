@@ -609,9 +609,8 @@ export async function syncSingleIssue(
   // Redmine's nested `children` (above) only carries id/tracker/subject per
   // child — no status or assignee. Re-fetch children as full issue records
   // so the subtickets table can show who each one is assigned to.
-  const detailRecord = detail as unknown as Record<string, unknown>;
-  if (Array.isArray(detailRecord.children) && detailRecord.children.length > 0) {
-    detailRecord.children = await client.listChildIssues(remoteIssueId);
+  if (Array.isArray(detail.issue.children) && (detail.issue.children as unknown[]).length > 0) {
+    detail.issue.children = await client.listChildIssues(remoteIssueId);
   }
 
   // Track changes if notifications are enabled
