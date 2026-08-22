@@ -97,6 +97,13 @@ describe("POST /api/external/tickets", () => {
     expect(mockIssueCreate).not.toHaveBeenCalled();
   });
 
+  it("rejects a subject that's an unresolved email-parse placeholder", async () => {
+    const { POST } = await import("@/app/api/external/tickets/route");
+    const res = await POST(withKey({ subject: "[Email] (no subject)" }));
+    expect(res.status).toBe(422);
+    expect(mockIssueCreate).not.toHaveBeenCalled();
+  });
+
   it("returns 503 when there's no user to attach the ticket to", async () => {
     mockUserFindFirst.mockResolvedValue(null);
     const { POST } = await import("@/app/api/external/tickets/route");

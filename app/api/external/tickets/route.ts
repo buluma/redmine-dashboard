@@ -17,12 +17,23 @@ export const runtime = "nodejs";
 // a small subset of app/api/issues/local/route.ts's schema — that route's
 // full field set is for the UI form; this one is for scripts that just
 // need "create me a ticket to point other things at."
-const createExternalTicketSchema = z.object({
-  subject: z.string().min(1).max(500),
-  description: z.string().optional(),
-  tracker: z.string().optional(),
-  priority: z.string().optional(),
-});
+// Callers that submit a parsed email as a ticket (e.g. the Odysseus/OpenClaw
+// bridge) sometimes hit an upstream extraction failure and still POST —
+// subject/body/sender all placeholders. Reject those instead of letting a
+// broken parser flood Converge with unusable "(no subject)" tickets.
+const EMAIL_PLACEHOLDER_SUBJECT = /\(no subject\)/i;
+
+const createExternalTicketSchema = z
+  .object({
+    subject: z.string().min(1).max(500),
+    description: z.string().optional(),
+    tracker: z.string().optional(),
+    priority: z.string().optional(),
+  })
+  .refine((data) => !EMAIL_PLACEHOLDER_SUBJECT.test(data.subject), {
+    message: "Subject is an unresolved email-parse placeholder — fix extraction upstream instead of submitting it",
+    path: ["subject"],
+  });
 
 // GET /api/external/tickets - List or search tickets
 // Query params:
@@ -171,6 +182,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const parsed = createExternalTicketSchema.safeParse(body);
     if (!parsed.success) {
+      const isPlaceholder = parsed.error.issues.some((issue) => issue.path.join(".") === "subject" && issue.message.includes("email-parse placeholder"));
+      if (isPlaceholder) {
+        trackFailure({
+          event: "external.tickets.create.rejected_placeholder",
+          error: new Error("Rejected email-parse placeholder subject"),
+          metricName: "external_tickets_create_rejected_placeholder",
+        });
+        return NextResponse.json(
+          { error: "Invalid request", details: parsed.error.flatten() },
+          { status: 422 }
+        );
+      }
       return NextResponse.json(
         { error: "Invalid request", details: parsed.error.flatten() },
         { status: 400 }
