@@ -2393,14 +2393,12 @@ kbd {
     var(--bg);
 }
 
-[data-theme="dark"] .card {
-  background: linear-gradient(180deg, var(--bg-soft) 0%, var(--card) 100%);
-}
-
-[data-theme="dark"] .metric-card,
-[data-theme="dark"] .report-card {
-  background: linear-gradient(180deg, var(--bg-soft) 0%, var(--card) 100%);
-}
+/* .card, .metric-card, .report-card background: intentionally not set here —
+   theme-dark.css's "final pass" rule is the authoritative one for these
+   (imported last, same selectors) and leaves them transparent on purpose so
+   the constellation background shows through. This file's copy used to
+   duplicate that background and silently win by being the only declarer
+   left once theme-dark.css's was removed — don't re-add it here. */
 
 [data-theme="dark"] .report-list-row,
 [data-theme="dark"] .report-btn {
@@ -2480,9 +2478,8 @@ kbd {
   color: var(--warn);
 }
 
-[data-theme="dark"] .activity-row {
-  background: var(--card);
-}
+/* .activity-row background: intentionally not set — theme-dark.css's rule
+   handles this class and leaves it transparent on purpose, see its comment. */
 
 [data-theme="dark"] .window-btn {
   background: var(--card);
