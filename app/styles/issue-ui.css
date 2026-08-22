@@ -955,7 +955,8 @@
 /* ══ Dark mode overrides ══ */
 
 [data-theme="dark"] .chat-log-entry {
-  background: var(--card);
+  /* Background intentionally not set — theme-dark.css's rule handles this
+     class and leaves it transparent on purpose. See its comment. */
   border-color: var(--line);
 }
 
