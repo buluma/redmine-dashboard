@@ -164,6 +164,20 @@ export function activityTypeLabel(type: string | null | undefined): string {
   return normalized.replace(/_/g, " ");
 }
 
+// activityTypeLabel alone renders "relation" for every relation event, which
+// tells you nothing about what changed. Issue.relations is already loaded
+// with the feed data, so use it to name the actual relationship (e.g.
+// "blocks #109108") instead. No per-relation timestamp exists yet, so this
+// picks the most recently synced relation as a best-effort match for
+// "the one that set lastActivityType" — not a guaranteed exact pairing.
+export function activityDetailLabel(issue: Pick<Issue, "lastActivityType" | "relations">): string {
+  if ((issue.lastActivityType ?? "").trim().toLowerCase() === "relation" && issue.relations.length > 0) {
+    const latest = issue.relations[issue.relations.length - 1];
+    return `${latest.relationType.replace(/_/g, " ")} #${latest.targetIssueId}`;
+  }
+  return activityTypeLabel(issue.lastActivityType);
+}
+
 export function matchesView(view: SavedView, state: {
   statusFilter: string;
   priorityFilter: string;

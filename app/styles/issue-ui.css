@@ -662,6 +662,12 @@
   color: #92400e;
 }
 
+.quick-filter-btn.quick-overdue.active {
+  background: #f59e0b;
+  border-color: #b45309;
+  color: white;
+}
+
 /* Status Dot */
 .status-dot {
   display: inline-block;
@@ -1143,6 +1149,12 @@
   background: var(--warn-soft);
   border-color: var(--warn);
   color: var(--warn-strong);
+}
+
+[data-theme="dark"] .quick-filter-btn.quick-overdue.active {
+  background: var(--warn);
+  border-color: var(--warn-strong);
+  color: var(--bg);
 }
 
 [data-theme="dark"] .priority-badge {

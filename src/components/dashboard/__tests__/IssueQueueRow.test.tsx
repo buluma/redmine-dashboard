@@ -133,4 +133,14 @@ describe("IssueQueueRow", () => {
     const options = Array.from(select.querySelectorAll("option")).map((o) => o.textContent);
     expect(options).toEqual(["Done"]);
   });
+
+  it("shows a blocked pill when the status counts as blocked even if it doesn't say 'blocked'", () => {
+    renderRow({ issue: makeIssue({ statusName: "On hold testing" }) });
+    expect(screen.getByText("blocked")).toBeInTheDocument();
+  });
+
+  it("does not show a blocked pill for a plain in-progress status", () => {
+    renderRow({ issue: makeIssue({ statusName: "In Progress" }) });
+    expect(screen.queryByText("blocked")).toBeNull();
+  });
 });

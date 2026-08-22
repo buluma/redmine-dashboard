@@ -289,7 +289,7 @@ export function IssueQueueCard({
               </button>
               <button
                 type="button"
-                className={`quick-filter-btn quick-progress ${statusFilter.includes("progress") || statusFilter.includes("dev") ? "active" : ""}`}
+                className={`quick-filter-btn quick-progress ${statusFilter.toLowerCase().includes("progress") || statusFilter.toLowerCase().includes("dev") ? "active" : ""}`}
                 onClick={() => { onStatusFilterChange("In Progress"); onResetPage(); }}
               >
                 <span aria-hidden="true">🔵</span> In Progress ({summary.inProgress})
@@ -304,7 +304,7 @@ export function IssueQueueCard({
               {summary.overdue > 0 && (
                 <button
                   type="button"
-                  className="quick-filter-btn quick-overdue"
+                  className={`quick-filter-btn quick-overdue ${statusFilter === "Overdue" ? "active" : ""}`}
                   onClick={() => { onStatusFilterChange("Overdue"); onResetPage(); }}
                 >
                   <span aria-hidden="true">⚠️</span> Overdue ({summary.overdue})

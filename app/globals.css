@@ -1531,6 +1531,19 @@ label {
   color: #2f7e48;
 }
 
+.blocked-pill {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.13rem 0.48rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-left: 0.5rem;
+  background: #ffdede;
+  color: #9d2626;
+}
+
 .status-select {
   min-width: 136px;
 }
@@ -2540,6 +2553,11 @@ kbd {
 [data-theme="dark"] .urgency-pill.done {
   background: var(--ok-soft);
   color: var(--ok);
+}
+
+[data-theme="dark"] .blocked-pill {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 [data-theme="dark"] .timer-pill {
