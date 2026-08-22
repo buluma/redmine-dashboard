@@ -180,6 +180,14 @@ export function IssueQueueRow({
             role="img"
             aria-label={`Status: ${issue.statusName ?? "unknown"}`}
           />
+          {isBlockedStatus(issue.statusName) && (
+            // The Blocked quick-filter bucket also catches "on hold"/"waiting"
+            // statuses (see isBlockedStatus), which don't say "blocked"
+            // anywhere on the status pill itself — this makes that visible.
+            <span className="blocked-pill" title={`Counted as blocked: status is "${issue.statusName}"`}>
+              blocked
+            </span>
+          )}
         </div>
       </td>
       {visibleColumns.has("priority") && (
