@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { issueDisplayId, issueNumericId, issueRouteId } from "@/src/lib/issue-utils";
+import { activityDetailLabel, issueDisplayId, issueNumericId, issueRouteId } from "@/src/lib/issue-utils";
 
 describe("issueNumericId", () => {
   it("returns a positive integer Redmine id unchanged", () => {
@@ -50,5 +50,36 @@ describe("issueDisplayId", () => {
 
   it("falls back to # when neither id exists", () => {
     expect(issueDisplayId({ redmineIssueId: null, localIssueNumber: null })).toBe("#");
+  });
+});
+
+describe("activityDetailLabel", () => {
+  it("names the actual relationship instead of the bare 'relation' type", () => {
+    expect(
+      activityDetailLabel({
+        lastActivityType: "relation",
+        relations: [{ id: "r1", redmineRelationId: 1, targetIssueId: 109108, relationType: "blocks", delay: null }],
+      }),
+    ).toBe("blocks #109108");
+  });
+
+  it("uses the most recently synced relation when there are several", () => {
+    expect(
+      activityDetailLabel({
+        lastActivityType: "relation",
+        relations: [
+          { id: "r1", redmineRelationId: 1, targetIssueId: 100, relationType: "relates", delay: null },
+          { id: "r2", redmineRelationId: 2, targetIssueId: 200, relationType: "duplicates", delay: null },
+        ],
+      }),
+    ).toBe("duplicates #200");
+  });
+
+  it("falls back to the generic type label when there are no relations loaded", () => {
+    expect(activityDetailLabel({ lastActivityType: "relation", relations: [] })).toBe("relation");
+  });
+
+  it("falls back to the generic type label for non-relation activity", () => {
+    expect(activityDetailLabel({ lastActivityType: "time_entry", relations: [] })).toBe("time entry");
   });
 });

@@ -4,7 +4,7 @@ import { useMemo } from "react";
 
 import { applyFilters, type FilterState } from "@/src/components/AdvancedFilters";
 import {
-  activityTypeLabel,
+  activityDetailLabel,
   dayDiffFromNow,
   dueInDays,
   isBlockedStatus,
@@ -203,7 +203,7 @@ export function useIssueFiltering({
         issueLabel: issueDisplayId(issue),
         issueSubject: issue.subject,
         timestamp: latestIssueActivityTimestamp(issue),
-        detail: `Latest activity: ${activityTypeLabel(issue.lastActivityType)}`,
+        detail: `Latest activity: ${activityDetailLabel(issue)}`,
       });
 
       for (const journal of issue.journals.slice(0, 3)) {
