@@ -49,6 +49,7 @@ export async function PersonalTicketsDashboard() {
         where: { userId, source: "local" },
         orderBy: [{ createdAt: "desc" }],
         select: selectWithLocal,
+        take: 100,
       });
     } catch (error) {
       if (isDbStatementTimeout(error)) {
@@ -75,6 +76,7 @@ export async function PersonalTicketsDashboard() {
           createdAt: true,
           updatedAt: true,
         },
+        take: 100,
       });
 
       return legacyIssues.map((issue) => ({
