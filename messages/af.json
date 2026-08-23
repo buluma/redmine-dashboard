@@ -724,6 +724,7 @@
     "environment": "Omgewing",
     "uptime": "Uptyd",
     "stackTrace": "Stapelspoor",
+    "repeatedSince": "Herhaal sedert {date}",
     "activeCount": "{count} aktief",
     "noActiveMobileTokens": "Geen aktiewe mobiele tokens nie.",
     "tokenRevoked": "Mobiele token herroep.",

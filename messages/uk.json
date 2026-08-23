@@ -730,6 +730,7 @@
     "environment": "Середовище",
     "uptime": "Час роботи",
     "stackTrace": "Stack trace",
+    "repeatedSince": "Повторюється з {date}",
     "activeCount": "Активних: {count}",
     "noActiveMobileTokens": "Немає активних токенів.",
     "tokenRevoked": "Токен відкликано.",

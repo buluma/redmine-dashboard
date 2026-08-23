@@ -1625,6 +1625,15 @@
   font-family: monospace;
 }
 
+.log-count-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #6b7280;
+  background: #e5e7eb;
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+}
+
 .log-time {
   font-size: 0.7rem;
   color: #9ca3af;

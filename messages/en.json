@@ -722,6 +722,7 @@
     "environment": "Environment",
     "uptime": "Uptime",
     "stackTrace": "Stack trace",
+    "repeatedSince": "Repeated since {date}",
     "activeCount": "{count} active",
     "noActiveMobileTokens": "No active mobile tokens.",
     "tokenRevoked": "Mobile token revoked.",

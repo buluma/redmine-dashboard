@@ -50,6 +50,8 @@ type WebLog = {
   createdAt: string;
 };
 
+type DedupedWebLog = WebLog & { count: number; firstSeenAt: string };
+
 type Metrics = {
   issues: number;
   users: number;
@@ -299,17 +301,42 @@ export default function OpsPage() {
     () => logs.filter((l) => l.level === "error").length,
     [logs],
   );
+  // Repeated client errors (e.g. a retry loop hitting the same failing
+  // request) otherwise bury the log with dozens of identical rows. Collapse
+  // entries sharing level+source+message+url into one row with a count,
+  // keeping the most recent occurrence's timestamp for sorting/display.
+  const dedupedLogs = useMemo<DedupedWebLog[]>(() => {
+    const groups = new Map<string, DedupedWebLog>();
+    for (const log of logs) {
+      const key = `${log.level}|${log.source ?? ""}|${log.message}|${log.url ?? ""}`;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.count += 1;
+        if (new Date(log.createdAt) > new Date(existing.createdAt)) {
+          existing.createdAt = log.createdAt;
+        }
+        if (new Date(log.createdAt) < new Date(existing.firstSeenAt)) {
+          existing.firstSeenAt = log.createdAt;
+        }
+      } else {
+        groups.set(key, { ...log, count: 1, firstSeenAt: log.createdAt });
+      }
+    }
+    return Array.from(groups.values()).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }, [logs]);
   const filteredLogs = useMemo(
     () =>
       logFilter
-        ? logs.filter(
+        ? dedupedLogs.filter(
             (l) =>
               l.message.toLowerCase().includes(logFilter.toLowerCase()) ||
               (l.url ?? "").toLowerCase().includes(logFilter.toLowerCase()) ||
               (l.stack ?? "").toLowerCase().includes(logFilter.toLowerCase()),
           )
-        : logs,
-    [logs, logFilter],
+        : dedupedLogs,
+    [dedupedLogs, logFilter],
   );
 
   return (
@@ -554,6 +581,11 @@ export default function OpsPage() {
                   <div className="log-head">
                     <span className={`log-level-badge log-${log.level}`}>{log.level}</span>
                     <span className="log-source">{log.source ?? t("ops.unknown")}</span>
+                    {log.count > 1 && (
+                      <span className="log-count-badge" title={t("ops.repeatedSince", { date: new Date(log.firstSeenAt).toLocaleString(locale) })}>
+                        ×{log.count}
+                      </span>
+                    )}
                     <span className="log-time">{new Date(log.createdAt).toLocaleString(locale)}</span>
                   </div>
                   <div className="log-message">{log.message}</div>

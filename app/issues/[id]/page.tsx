@@ -934,7 +934,17 @@ export default function IssueDetailPage() {
 
   const historyJournals = useMemo(() => {
     if (!issue) return [];
-    return issue.journals.filter((journal) => Boolean(journal.notes?.trim()) || (Array.isArray(journal.details) && journal.details.length > 0));
+    return issue.journals.filter((journal) => {
+      const hasNotes = Boolean(journal.notes?.trim());
+      const details = journal.details ?? [];
+      // Redmine auto-logs a journal entry every time a sub-issue is linked
+      // (child_id changed from (none) to N). On tickets with many children
+      // — recurring/hybrid mirrors especially — these entries have no notes
+      // and drown out real history, so hide journals that are child_id-only.
+      const isChildLinkNoise = details.length > 0 && details.every((d) => d.name === "child_id");
+      if (!hasNotes && isChildLinkNoise) return false;
+      return hasNotes || details.length > 0;
+    });
   }, [issue]);
 
   const noteJournals = historyJournals;

@@ -727,6 +727,7 @@
     "environment": "Окружение",
     "uptime": "Аптайм",
     "stackTrace": "Стек вызовов",
+    "repeatedSince": "Повторяется с {date}",
     "activeCount": "Активных: {count}",
     "noActiveMobileTokens": "Нет активных токенов.",
     "tokenRevoked": "Токен отозван.",

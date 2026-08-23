@@ -426,6 +426,7 @@
 [data-theme="dark"] .log-entry.log-warn,
 [data-theme="dark"] .log-entry.log-error {
   border-color: var(--line);
+  background: var(--card);
   color: var(--ink);
 }
 
@@ -448,6 +449,11 @@
 [data-theme="dark"] .log-source,
 [data-theme="dark"] .log-time,
 [data-theme="dark"] .log-stack summary {
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .log-count-badge {
+  background: var(--surface-3);
   color: var(--ink-soft);
 }
 
@@ -520,6 +526,7 @@
 }
 
 [data-theme="dark"] .swagger-ui .scheme-container {
+  background: var(--bg-soft) !important;
   box-shadow: none !important;
 }
 
