@@ -511,7 +511,6 @@ textarea {
 
 .quick-actions-panel {
   border: 1px solid #c7d5e2;
-  background: linear-gradient(180deg, #ffffff 0%, #f6fafd 100%);
   box-shadow: 0 6px 14px rgba(20, 41, 59, 0.08);
 }
 
@@ -561,7 +560,6 @@ textarea {
 .qa-select,
 .qa-input {
   border-color: #c6d5e2;
-  background: #fbfdff;
 }
 
 .qa-button.primary {
@@ -718,18 +716,15 @@ textarea {
 }
 
 .internal-notes-section .form {
-  background: linear-gradient(180deg, #ffffff 0%, #f4f9fc 100%);
   border-color: #ccd8e2;
 }
 
 .internal-note-item {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
   border-color: #cad7e2;
 }
 
 .time-tracking-panel {
   border-color: #c7d5e2;
-  background: linear-gradient(180deg, #ffffff 0%, #f6fafd 100%);
 }
 
 .tt-form {

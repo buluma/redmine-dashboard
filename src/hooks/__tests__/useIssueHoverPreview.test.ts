@@ -38,9 +38,11 @@ describe("useIssueHoverPreview", () => {
     expect(result.current.previewPosition).toEqual({ x: 0, y: 0 });
   });
 
-  it("shows the issue after the 300ms delay, anchored right of the row", () => {
+  it("shows the issue after the 300ms delay, anchored below the row", () => {
     const { result } = renderHook(() => useIssueHoverPreview());
-    const anchor = makeAnchor({ top: 100, left: 50, right: 200 });
+    // right of the row would sit on top of that same row's other cells
+    // (status/priority/due) — anchor below instead.
+    const anchor = makeAnchor({ top: 100, left: 50, right: 200, bottom: 120 });
 
     act(() => {
       result.current.scheduleHoverPreview(issue, anchor);
@@ -51,7 +53,8 @@ describe("useIssueHoverPreview", () => {
       vi.advanceTimersByTime(300);
     });
     expect(result.current.hoveredIssue).toBe(issue);
-    expect(result.current.previewPosition.x).toBe(208); // right + 8
+    expect(result.current.previewPosition.x).toBe(50); // left
+    expect(result.current.previewPosition.y).toBe(128); // bottom + 8
   });
 
   it("cancelling before the delay elapses never shows the issue", () => {
@@ -82,19 +85,34 @@ describe("useIssueHoverPreview", () => {
     expect(result.current.hoveredIssue).toBeNull();
   });
 
-  it("flips to the left of the anchor when the tooltip would overflow the viewport", () => {
+  it("clamps x so the tooltip stays within the viewport", () => {
     const { result } = renderHook(() => useIssueHoverPreview());
     const originalWidth = window.innerWidth;
     Object.defineProperty(window, "innerWidth", { value: 500, configurable: true });
-    const anchor = makeAnchor({ top: 100, left: 400, right: 480 });
+    const anchor = makeAnchor({ top: 100, left: 400, right: 480, bottom: 120 });
 
     act(() => {
       result.current.scheduleHoverPreview(issue, anchor);
       vi.advanceTimersByTime(300);
     });
-    expect(result.current.previewPosition.x).toBe(400 - 360 - 8); // left - TOOLTIP_WIDTH - 8
+    expect(result.current.previewPosition.x).toBe(500 - 360 - 12); // innerWidth - TOOLTIP_WIDTH - MARGIN
 
     Object.defineProperty(window, "innerWidth", { value: originalWidth, configurable: true });
+  });
+
+  it("flips above the anchor when there isn't room below it", () => {
+    const { result } = renderHook(() => useIssueHoverPreview());
+    const originalHeight = window.innerHeight;
+    Object.defineProperty(window, "innerHeight", { value: 300, configurable: true });
+    const anchor = makeAnchor({ top: 250, left: 50, right: 200, bottom: 270 });
+
+    act(() => {
+      result.current.scheduleHoverPreview(issue, anchor);
+      vi.advanceTimersByTime(300);
+    });
+    expect(result.current.previewPosition.y).toBe(250 - 200 - 8); // top - TOOLTIP_EST_HEIGHT - 8
+
+    Object.defineProperty(window, "innerHeight", { value: originalHeight, configurable: true });
   });
 
   it("rescheduling cancels the previous pending timer", () => {

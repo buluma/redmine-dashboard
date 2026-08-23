@@ -1203,7 +1203,6 @@
   right: 70px;
   bottom: 50%;
   transform: translateY(50%);
-  background: var(--ink, #1d2a3a);
   color: #fff;
   font-size: 0.78rem;
   padding: 0.35rem 0.6rem;
