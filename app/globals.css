@@ -1092,7 +1092,6 @@ label {
 .window-btn {
   padding: 0.4rem 0.7rem;
   border-radius: 999px;
-  background: #ebe5d8;
   color: var(--ink);
   border: 1px solid var(--line);
   min-width: 56px;
@@ -1114,7 +1113,6 @@ label {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 0.75rem;
-  background: linear-gradient(180deg, #fffdf8, #f9f4ea);
   display: grid;
   gap: 0.45rem;
 }
@@ -1620,7 +1618,6 @@ label {
 .timeline-item {
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #fffdf8;
   padding: 0.55rem;
   display: grid;
   gap: 0.35rem;

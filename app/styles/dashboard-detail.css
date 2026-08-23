@@ -437,9 +437,6 @@ textarea {
 /* Second pass: issue detail + issue queue polish */
 .issue-detail-shell {
   gap: 0.95rem;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 251, 254, 0.98) 100%),
-    linear-gradient(125deg, rgba(214, 234, 242, 0.18) 0%, rgba(248, 226, 213, 0.12) 100%);
 }
 
 .issue-hero {
@@ -493,7 +490,6 @@ textarea {
 
 .issue-snapshot {
   border: 1px solid #cad8e5;
-  background: linear-gradient(180deg, #ffffff 0%, #f3f8fc 100%);
   border-radius: 8px;
   padding: 0.4rem 0.56rem;
   display: grid;
@@ -546,8 +542,8 @@ textarea {
 
 .qa-meta-pill {
   border: 1px solid #c9d8e4;
-  background: #edf5fb;
-  color: #355872;
+  background: #5aada9;
+  color: #fff !important;
   border-radius: 999px;
   padding: 0.12rem 0.48rem;
   font-size: 0.74rem;
@@ -594,16 +590,15 @@ textarea {
 .issue-metadata-card,
 .comment-card {
   border-color: #c9d7e3;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbfe 100%);
 }
 
-.issue-metadata-card .metadata-item {
+/* .issue-metadata-card .metadata-item {
   background: linear-gradient(180deg, #ffffff 0%, #f4f8fc 100%);
 }
 
 .issue-metadata-card .metadata-item-editable {
   background: linear-gradient(180deg, #f1f8fb 0%, #e8f3f8 100%);
-}
+} */
 
 .issue-collapsible > summary {
   align-items: center;
@@ -649,7 +644,6 @@ textarea {
   gap: 0.4rem;
   border: 1px solid #c8d6e2;
   border-radius: 8px;
-  background: #eef4f9;
   color: #35556f;
   padding: 0.36rem 0.62rem;
   font-size: 0.84rem;
@@ -686,7 +680,6 @@ textarea {
 .timeline-item {
   position: relative;
   border: 1px solid #c9d7e3;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
   border-radius: 8px;
   padding: 0.62rem 0.66rem 0.62rem 0.78rem;
 }
