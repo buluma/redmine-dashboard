@@ -156,7 +156,6 @@
   flex-direction: column;
   gap: 1rem;
   padding: 1.1rem;
-  background: linear-gradient(180deg, #f8fbfd 0%, #f3f7fb 100%);
   border: 1px solid #cfdeea;
   border-radius: 12px;
 }
@@ -308,7 +307,6 @@
 
 .ai-overview-card {
   padding: 0.78rem 0.92rem;
-  background: white;
   border: 1px solid #d5e1eb;
   border-radius: 9px;
 }
@@ -996,7 +994,6 @@
 }
 
 [data-theme="dark"] .ai-overview {
-  background: var(--card);
   border-color: var(--line);
 }
 
@@ -1036,7 +1033,6 @@
 }
 
 [data-theme="dark"] .ai-overview-card {
-  background: var(--card);
   border-color: var(--line);
 }
 

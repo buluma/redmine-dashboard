@@ -181,7 +181,6 @@ export function AppNav() {
           top: 0;
           bottom: 0;
           width: 200px;
-          background: var(--surface-2);
           border-right: 1px solid var(--border);
           display: flex;
           flex-direction: column;
@@ -190,7 +189,7 @@ export function AppNav() {
           z-index: 100;
           transition: width 0.2s;
         }
-        
+
         .app-nav.collapsed {
           width: 60px;
         }
@@ -228,17 +227,17 @@ export function AppNav() {
           width: 1.5rem;
           height: 1.5rem;
         }
-        
+
         .nav-links {
           display: flex;
           flex-direction: column;
           gap: 0.25rem;
         }
-        
+
         .nav-group {
           margin-bottom: 0.5rem;
         }
-        
+
         .nav-group-label {
           font-size: 0.65rem;
           font-weight: 600;
@@ -248,25 +247,25 @@ export function AppNav() {
           padding: 0.75rem 1rem 0.375rem;
           margin-top: 0.5rem;
         }
-        
+
         .nav-group:first-child .nav-group-label {
           margin-top: 0;
         }
-        
+
         .nav-footer {
           margin-top: auto;
           padding-top: 0.5rem;
           border-top: 1px solid var(--border);
         }
-        
+
         .app-nav.collapsed .nav-footer {
           display: none;
         }
-        
+
         .app-nav.collapsed .nav-group-label {
           display: none;
         }
-        
+
         .nav-link {
           display: flex;
           align-items: center;
@@ -278,46 +277,46 @@ export function AppNav() {
           transition: background 0.15s, color 0.15s;
           border-left: 3px solid transparent;
         }
-        
+
         .app-nav.collapsed .nav-link {
           justify-content: center;
           padding: 0.625rem 0.5rem;
           min-height: 2.35rem;
           line-height: 1.2;
         }
-        
+
         .nav-link:hover {
           background: var(--surface-3);
         }
-        
+
         .nav-link.active {
           background: var(--accent-light);
           color: var(--accent);
           border-left-color: var(--accent);
         }
-        
+
         .app-nav.collapsed .nav-link.active {
           border-left-color: transparent;
           border-bottom: 2px solid var(--accent);
         }
-        
+
         .nav-icon {
           font-size: 1rem;
           width: 1.5rem;
           text-align: center;
           flex-shrink: 0;
         }
-        
+
         .nav-label {
           font-weight: 500;
           white-space: nowrap;
           overflow: hidden;
         }
-        
+
         .app-nav.collapsed .nav-label {
           display: none;
         }
-        
+
         /* Mobile responsive */
         @media (max-width: 768px) {
           .app-nav {
