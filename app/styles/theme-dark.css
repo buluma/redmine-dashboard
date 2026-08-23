@@ -536,6 +536,28 @@
   color: var(--accent-strong) !important;
 }
 
+/* Issue quick-peek side panel: liquid glass. First real use of the
+   --glass-bg/--glass-blur tokens above — a translucent, blurred panel
+   over the page rather than a flat card, so the dashboard shows through. */
+[data-theme="dark"] .peek-backdrop {
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+[data-theme="dark"] .peek-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  border-left-color: var(--line);
+  box-shadow: -6px 0 32px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .peek-header {
+  background: color-mix(in srgb, var(--bg-soft) 55%, transparent);
+  border-color: var(--line);
+}
+
 /* Issue detail page */
 [data-theme="dark"] .breadcrumb-nav,
 [data-theme="dark"] .breadcrumb-item,
