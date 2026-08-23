@@ -425,7 +425,6 @@ export function AiIssueActions({ issueId, existingSummaries = [], onSummary, onC
         .ai-result {
           margin-top: 0.75rem;
           padding: 0.75rem;
-          background: var(--card);
           border-radius: 6px;
           border: 1px solid var(--border);
         }

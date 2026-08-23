@@ -113,7 +113,7 @@ function buildExportText(summaries: AiSummaryData[]): string {
     lines.push(`Status: ${summary.issue.statusName} | Project: ${summary.issue.projectName || "N/A"}`);
     lines.push(`Model: ${summary.model} | Date: ${formatDate(new Date(summary.updatedAt))}`);
     lines.push("");
-    
+
     if (parsed) {
       if (parsed.summary) {
         lines.push("Summary:");
@@ -597,7 +597,6 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
           padding: 0.5rem 0.75rem;
           border: 1px solid var(--border, #e5e7eb);
           border-radius: 6px;
-          background: var(--card);
           flex: 1;
           max-width: 320px;
         }
@@ -639,7 +638,6 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
           padding: 0.4rem 0.75rem;
           border: 1px solid var(--border, #e5e7eb);
           border-radius: 6px;
-          background: var(--card);
           font-size: 0.8rem;
           cursor: pointer;
           transition: all 0.15s;
@@ -659,7 +657,6 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
           padding: 0.4rem 0.75rem;
           border: 1px solid var(--border, #e5e7eb);
           border-radius: 6px;
-          background: var(--card);
           font-size: 0.8rem;
           cursor: pointer;
           transition: all 0.15s;
@@ -716,7 +713,6 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
           border: 1px solid var(--border, #e5e7eb);
           border-radius: 4px;
           font-size: 0.8rem;
-          background: var(--card);
         }
 
         .summaries-list {
@@ -776,7 +772,6 @@ export function AiSummariesClient({ summaries }: { summaries: AiSummaryData[] })
           padding: 0.35rem 0.6rem;
           border: 1px solid var(--border, #e5e7eb);
           border-radius: 4px;
-          background: var(--card);
           cursor: pointer;
           font-size: 0.8rem;
           transition: all 0.15s;

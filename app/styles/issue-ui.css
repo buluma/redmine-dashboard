@@ -998,7 +998,6 @@
 }
 
 [data-theme="dark"] .ai-stat-card {
-  background: var(--card);
   border-color: var(--line);
 }
 
@@ -1069,7 +1068,6 @@
 
 [data-theme="dark"] .ai-overview + .stat-card,
 [data-theme="dark"] .ai-overview ~ .stat-card {
-  background: var(--card);
   border-color: var(--line);
 }
 
@@ -1089,7 +1087,6 @@
 }
 
 [data-theme="dark"] .queue-stat {
-  background: var(--card);
   color: var(--ink);
 }
 
@@ -1108,7 +1105,6 @@
 }
 
 [data-theme="dark"] .quick-filter-btn {
-  background: var(--card);
   border-color: var(--line);
   color: var(--ink);
 }
@@ -1155,7 +1151,6 @@
 }
 
 [data-theme="dark"] .priority-badge {
-  background: var(--card);
   color: var(--ink);
 }
 
@@ -1187,7 +1182,6 @@
 
 [data-theme="dark"] .preset-select,
 [data-theme="dark"] .preset-save-btn {
-  background: var(--card);
   border-color: var(--line);
   color: var(--ink);
 }
@@ -1197,7 +1191,6 @@
 }
 
 [data-theme="dark"] .issue-preview-tooltip {
-  background: var(--card);
   border-color: var(--line);
 }
 

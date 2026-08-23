@@ -162,7 +162,6 @@
 .stat-card {
   flex: 1;
   padding: 1rem;
-  background: var(--card);
   border: 1px solid var(--line);
   border-radius: 8px;
   text-align: center;
@@ -195,7 +194,6 @@
   flex: 1;
   min-width: 250px;
   padding: 1rem;
-  background: var(--card);
   border: 1px solid var(--line);
   border-radius: 8px;
 }
@@ -225,7 +223,6 @@
 
 /* Quick Actions Panel */
 .quick-actions-panel {
-  background: var(--card);
   border: 1px solid var(--line);
   border-radius: 8px;
   margin-bottom: 1rem;
@@ -350,7 +347,6 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.75rem;
-  background: var(--card);
   border: 1px solid var(--line);
   border-radius: 4px;
   cursor: pointer;
@@ -370,7 +366,6 @@
   top: 100%;
   left: 0;
   z-index: 100;
-  background: var(--card);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 1rem;
@@ -470,7 +465,6 @@
 
 /* Time Tracking Panel */
 .time-tracking-panel {
-  background: var(--card);
   border: 1px solid var(--line);
   border-radius: 8px;
   margin-bottom: 1rem;
@@ -619,7 +613,6 @@
 
 /* Custom Reports */
 .custom-reports {
-  background: var(--card);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 1.5rem;
@@ -644,7 +637,6 @@
 
 .export-btn {
   padding: 0.5rem 1rem;
-  background: var(--card);
   color: var(--ink);
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -744,7 +736,6 @@
   top: 100%;
   right: 0;
   z-index: 100;
-  background: var(--card);
   border: 1px solid var(--line);
   border-radius: 8px;
   width: clamp(320px, 36vw, 560px);
@@ -872,7 +863,6 @@
   border: 1px solid var(--line);
   border-radius: 4px;
   font-size: 0.875rem;
-  background: var(--card);
 }
 
 /* Shortcut Help */
@@ -887,7 +877,6 @@
 }
 
 .shortcut-modal {
-  background: var(--card);
   border-radius: 12px;
   width: 90%;
   max-width: 600px;
@@ -993,7 +982,6 @@
   position: fixed;
   bottom: 1rem;
   right: 1rem;
-  background: var(--card);
   border: 1px solid var(--line);
   border-radius: 4px;
   padding: 0.5rem 1rem;
@@ -1016,7 +1004,6 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem;
-  background: var(--card);
   border: 1px solid var(--line);
   border-radius: 8px;
   margin-bottom: 1rem;
@@ -1127,7 +1114,6 @@
 
 .not-found-help {
   text-align: left;
-  background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 1.25rem 1.5rem;
@@ -1192,7 +1178,6 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 0.85rem 1rem;
-  background: var(--card);
   transition: box-shadow 0.15s ease;
 }
 
@@ -1326,7 +1311,6 @@
 .pagination-btn {
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--card);
   color: var(--ink);
   padding: 0.35rem 0.65rem;
   font-weight: 700;
@@ -1365,7 +1349,6 @@
   padding: 0.25rem 0.4rem;
   border-radius: 6px;
   border: 1px solid var(--line);
-  background: var(--card);
   color: var(--ink);
   font-size: 0.85rem;
 }
@@ -1505,7 +1488,6 @@
   width: 1.85rem;
   height: 1.85rem;
   border: 0;
-  background: var(--card);
   color: var(--ink);
   cursor: pointer;
   font-size: 0.85rem;
@@ -1874,7 +1856,6 @@
 /* ══ Dark mode overrides ══ */
 
 [data-theme="dark"] .ai-toggle {
-  background: var(--card);
   border-color: var(--line);
   color: var(--ink);
 }
@@ -1883,9 +1864,9 @@
   color: var(--ink);
 }
 
-[data-theme="dark"] .lightbox-close:hover {
+/* [data-theme="dark"] .lightbox-close:hover {
   background: var(--card);
-}
+} */
 
 /* ── Issue relations ──────────────────────────────── */
 

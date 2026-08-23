@@ -168,7 +168,6 @@ export function FtsSearch({ onSelect }: FtsSearchProps) {
           border: 1px solid var(--border-color);
           border-radius: 4px;
           font-size: 14px;
-          background: var(--card);
           color: var(--text-primary);
         }
         .fts-search-input:focus {
@@ -191,7 +190,6 @@ export function FtsSearch({ onSelect }: FtsSearchProps) {
           top: 100%;
           left: 0;
           right: 0;
-          background: var(--card);
           border: 1px solid var(--border-color);
           border-radius: 4px;
           margin-top: 4px;

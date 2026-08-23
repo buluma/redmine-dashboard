@@ -30,7 +30,7 @@ export function AiSearchBar({ onResults, onInsights }: AiSearchBarProps) {
 
   const handleSearch = async () => {
     if (!query.trim()) return;
-    
+
     setLoading(true);
     setError(null);
     try {
@@ -108,17 +108,17 @@ export function AiSearchBar({ onResults, onInsights }: AiSearchBarProps) {
         .ai-search {
           margin: 1rem 0;
         }
-        
+
         .ai-search-header {
           display: flex;
           gap: 0.5rem;
           align-items: center;
         }
-        
+
         .ai-search-icon {
           font-size: 1.2rem;
         }
-        
+
         .ai-search-input {
           flex: 1;
           padding: 0.5rem 0.75rem;
@@ -126,13 +126,13 @@ export function AiSearchBar({ onResults, onInsights }: AiSearchBarProps) {
           border-radius: 6px;
           font-size: 0.9rem;
         }
-        
+
         .ai-search-input:focus {
           outline: none;
           border-color: #667eea;
           box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
         }
-        
+
         .ai-search-btn {
           padding: 0.5rem 1rem;
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -142,18 +142,18 @@ export function AiSearchBar({ onResults, onInsights }: AiSearchBarProps) {
           font-weight: 500;
           cursor: pointer;
         }
-        
+
         .ai-search-btn:disabled {
           opacity: 0.5;
           cursor: not-allowed;
         }
-        
+
         .ai-search-error {
           color: var(--danger);
           font-size: 0.85rem;
           margin: 0.5rem 0;
         }
-        
+
         .ai-insights {
           margin-top: 1rem;
           padding: 0.75rem;
@@ -161,57 +161,56 @@ export function AiSearchBar({ onResults, onInsights }: AiSearchBarProps) {
           border-radius: 6px;
           border-left: 3px solid #667eea;
         }
-        
+
         .ai-insights h5 {
           margin: 0 0 0.5rem 0;
           font-size: 0.85rem;
         }
-        
+
         .ai-insights p {
           margin: 0;
           font-size: 0.9rem;
           line-height: 1.5;
         }
-        
+
         .ai-results {
           margin-top: 1rem;
         }
-        
+
         .ai-results h5 {
           margin: 0 0 0.75rem 0;
           font-size: 0.9rem;
         }
-        
+
         .ai-result-item {
           padding: 0.75rem;
-          background: var(--card);
           border: 1px solid var(--border);
           border-radius: 6px;
           margin-bottom: 0.5rem;
         }
-        
+
         .ai-result-header {
           display: flex;
           justify-content: space-between;
           margin-bottom: 0.25rem;
         }
-        
+
         .ai-result-id {
           font-weight: 600;
           color: var(--text);
         }
-        
+
         .ai-relevance {
           font-size: 0.8rem;
           color: #667eea;
           font-weight: 500;
         }
-        
+
         .ai-result-subject {
           margin: 0.25rem 0;
           font-size: 0.9rem;
         }
-        
+
         .ai-result-explanation {
           margin: 0;
           font-size: 0.85rem;

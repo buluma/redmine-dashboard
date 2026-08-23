@@ -419,8 +419,8 @@ function MessageItem({
   );
 }
 
-export function SlackMessagesClient({ 
-  initialMessages, 
+export function SlackMessagesClient({
+  initialMessages,
   initialUserNames = {},
   channelId: initialChannelId,
   channels,
@@ -548,26 +548,26 @@ export function SlackMessagesClient({
 
   const handleChannelChange = useCallback(async (newChannelId: string) => {
     if (newChannelId === currentChannelId) return;
-    
+
     setIsLoadingChannel(true);
     setError(null);
     setCurrentChannelId(newChannelId);
-    
+
     try {
       const response = await fetch(`/api/slack/messages?channelId=${encodeURIComponent(newChannelId)}`);
-      
+
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error || `Failed to fetch messages (${response.status})`);
       }
-      
+
       const data = await response.json();
       setMessages(data.messages || []);
       setLastUpdated(new Date());
       setNextRefreshIn(refreshIntervalMs / 1000);
       setActiveThread(null);
       setThreadMessages([]);
-      
+
       // Update user names if provided
       if (data.users) {
         setUserNames(prev => ({ ...prev, ...data.users }));
@@ -690,8 +690,8 @@ export function SlackMessagesClient({
             <p className="kicker">Slack</p>
             <h1>Slack Messages</h1>
             <p className="muted">
-              {channelCount > 0 
-                ? `${channelCount} channel${channelCount !== 1 ? "s" : ""} monitored` 
+              {channelCount > 0
+                ? `${channelCount} channel${channelCount !== 1 ? "s" : ""} monitored`
                 : "Configuration Required"}
             </p>
           </div>
@@ -703,7 +703,7 @@ export function SlackMessagesClient({
             >
               {isRefreshing ? t("slack.refreshing") : t("slack.refresh")}
             </button>
-            
+
             <button
               type="button"
               className={`auto-refresh-toggle ${isAutoRefreshEnabled ? "active" : ""}`}
@@ -1041,7 +1041,6 @@ export function SlackMessagesClient({
           padding: 0.375rem 2rem 0.375rem 0.75rem;
           border: 1px solid var(--border-color, #e5e7eb);
           border-radius: 0.375rem;
-          background: var(--card);
           font-size: 0.875rem;
           font-weight: 500;
           color: var(--text-primary, #111827);

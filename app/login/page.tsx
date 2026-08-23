@@ -141,7 +141,6 @@ export default function LoginPage() {
         .login-card {
           width: 100%;
           max-width: 420px;
-          background: var(--card);
           border: 1px solid var(--line);
           border-radius: 20px;
           padding: 2.5rem 2rem;

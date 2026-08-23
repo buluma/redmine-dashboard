@@ -254,7 +254,6 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
           max-width: min(360px, calc(100vw - 1rem));
           max-height: 400px;
           overflow-y: auto;
-          background: var(--card);
           border: 1px solid var(--border);
           border-radius: 8px;
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);

@@ -208,7 +208,6 @@ body {
   gap: 0.35rem;
   flex-wrap: wrap;
   padding: 0.5rem 0.75rem;
-  background: var(--card);
   border: 1px solid var(--line);
   border-radius: 10px;
   font-size: 0.82rem;
@@ -372,7 +371,6 @@ body {
 }
 
 .card {
-  background: linear-gradient(180deg, #fffefb 0%, var(--card) 100%);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 1rem;
@@ -1069,7 +1067,6 @@ label {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 0.45rem 0.55rem;
-  background: var(--card);
   color: var(--ink);
 }
 
@@ -2400,10 +2397,10 @@ kbd {
    duplicate that background and silently win by being the only declarer
    left once theme-dark.css's was removed — don't re-add it here. */
 
-[data-theme="dark"] .report-list-row,
+/* [data-theme="dark"] .report-list-row,
 [data-theme="dark"] .report-btn {
   background: var(--card);
-}
+} */
 
 [data-theme="dark"] .metadata-item {
   background: linear-gradient(180deg, var(--bg-soft) 0%, var(--card) 100%);
@@ -2418,17 +2415,17 @@ kbd {
   opacity: 0.6;
 }
 
-[data-theme="dark"] .tracker-chip {
+/* [data-theme="dark"] .tracker-chip {
   background: var(--card);
-}
+} */
 
-[data-theme="dark"] .secondary-button,
+/* [data-theme="dark"] .secondary-button,
 [data-theme="dark"] .not-found-btn-secondary,
 [data-theme="dark"] .favorite-btn,
 [data-theme="dark"] .favorite-filter,
 [data-theme="dark"] .edit-cancel-btn {
   background: var(--card);
-}
+} */
 
 [data-theme="dark"] .secondary-button:hover,
 [data-theme="dark"] .not-found-btn-secondary:hover,
@@ -2442,7 +2439,6 @@ kbd {
 [data-theme="dark"] .edit-title-input,
 [data-theme="dark"] .edit-description-textarea,
 [data-theme="dark"] .edit-metadata-input {
-  background: var(--card);
   color: var(--ink);
 }
 
@@ -2451,9 +2447,9 @@ kbd {
   background: var(--line);
 }
 
-[data-theme="dark"] .sync-idle {
+/* [data-theme="dark"] .sync-idle {
   background: var(--card);
-}
+} */
 
 [data-theme="dark"] .sync-error-inline {
   background: var(--danger-soft);
@@ -2461,9 +2457,9 @@ kbd {
   border-color: var(--danger);
 }
 
-[data-theme="dark"] .saved-view-pill {
+/* [data-theme="dark"] .saved-view-pill {
   background: var(--card);
-}
+} */
 
 [data-theme="dark"] .saved-view-pill.active {
   background: var(--accent-soft);
@@ -2481,9 +2477,9 @@ kbd {
 /* .activity-row background: intentionally not set — theme-dark.css's rule
    handles this class and leaves it transparent on purpose, see its comment. */
 
-[data-theme="dark"] .window-btn {
+/* [data-theme="dark"] .window-btn {
   background: var(--card);
-}
+} */
 
 [data-theme="dark"] .window-btn.active {
   background: var(--accent-soft);
@@ -2503,9 +2499,9 @@ kbd {
   border-color: var(--ink);
 }
 
-[data-theme="dark"] .status-chip {
+/* [data-theme="dark"] .status-chip {
   background: var(--card);
-}
+} */
 
 [data-theme="dark"] .status-chip.active {
   background: var(--accent-soft);
@@ -2516,9 +2512,9 @@ kbd {
   background: var(--bg-soft);
 }
 
-[data-theme="dark"] .issues-table th.sortable-header:hover {
+/* [data-theme="dark"] .issues-table th.sortable-header:hover {
   background: var(--card);
-}
+} */
 
 [data-theme="dark"] .issues-table th.sortable-header:active {
   background: var(--line);
@@ -2563,25 +2559,25 @@ kbd {
   border-color: var(--accent);
 }
 
-[data-theme="dark"] .timeline-item {
+/* [data-theme="dark"] .timeline-item {
   background: var(--card);
-}
+} */
 
 [data-theme="dark"] .children-table tr:hover {
   background: var(--bg-soft);
 }
 
-[data-theme="dark"] .qa-tabs {
+/* [data-theme="dark"] .qa-tabs {
   background: var(--card);
-}
+} */
 
 [data-theme="dark"] .qa-tabs button:hover {
   background: var(--bg-soft);
 }
 
-[data-theme="dark"] .internal-notes-section .form {
+/* [data-theme="dark"] .internal-notes-section .form {
   background: var(--card);
-}
+} */
 
 [data-theme="dark"] .favorite-btn:hover,
 [data-theme="dark"] .favorite-filter:hover {

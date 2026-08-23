@@ -150,26 +150,22 @@ textarea {
 
 .metric-card {
   border: 1px solid #cfdae4;
-  background: linear-gradient(180deg, #ffffff 0%, #f5f9fc 100%);
   box-shadow: 0 4px 14px rgba(17, 36, 54, 0.06);
 }
 
 .metric-primary {
   grid-column: span 2;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(226, 241, 248, 0.94) 100%),
-    linear-gradient(140deg, rgba(20, 108, 131, 0.08) 0%, rgba(189, 90, 38, 0.05) 100%);
 }
 
-.metric-open {
+/* .metric-open {
   background: linear-gradient(180deg, #ffffff 0%, #ebf7f0 100%);
-}
+} */
 
-.metric-risk,
+/* .metric-risk,
 .metric-blocked,
 .metric-stale {
   background: linear-gradient(180deg, #ffffff 0%, #fcf3eb 100%);
-}
+} */
 
 .metric-ai-insights {
   background: linear-gradient(135deg, #ffffff 0%, #f3f0ff 50%, #ede9fe 100%);
@@ -226,10 +222,10 @@ textarea {
     color: var(--ink-soft);
     font-size: smaller;
 }
-
+/*
 .filters-panel {
   background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
-}
+} */
 
 .saved-view-pill {
   background: #f2f6fa;
@@ -396,7 +392,6 @@ textarea {
 }
 
 .filters-bar {
-  background: linear-gradient(180deg, #fbfdff 0%, #f3f8fb 100%);
   border-color: #cfdae4;
 }
 
@@ -1168,7 +1163,6 @@ textarea {
   min-width: 220px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--card);
   color: var(--ink);
   padding: 0.62rem 0.75rem;
 }
@@ -1182,7 +1176,6 @@ textarea {
 .heimdall-error-source-tabs button {
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: var(--card);
   color: var(--ink);
   font-weight: 700;
   padding: 0.46rem 0.72rem;
