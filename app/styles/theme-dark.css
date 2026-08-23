@@ -196,14 +196,13 @@
   border-color: var(--line);
 }
 
-/* [data-theme="dark"] .issue-row,
+/* No zebra striping in dark mode: the light-mode base rules alternate
+   #ffffff/#f7fafd, and were never overridden here, so odd rows rendered
+   white-on-dark. Flatten every row to no background instead of picking a
+   dark pair of stripe colors. */
+[data-theme="dark"] .issue-row,
 [data-theme="dark"] .issue-row td {
-  background: var(--card);
-} */
-
-[data-theme="dark"] .issue-row:nth-child(even),
-[data-theme="dark"] .issue-row:nth-child(even) td {
-  background: #1e1b18;
+  background: transparent;
 }
 
 [data-theme="dark"] .issue-row:hover,
