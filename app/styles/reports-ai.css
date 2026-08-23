@@ -34,7 +34,6 @@
 .reports-v2 .filter-field select,
 .reports-v2 .filter-field input {
   border-color: var(--line);
-  background: #fff;
 }
 
 .reports-v2 .filter-field select:focus,
@@ -195,7 +194,6 @@
   border-radius: 8px;
   padding: 0.82rem 0.86rem;
   position: relative;
-  background: linear-gradient(180deg, #ffffff 0%, #f5f9fc 100%);
   box-shadow: 0 4px 12px rgba(17, 36, 54, 0.06);
 }
 
@@ -579,7 +577,6 @@
   border: 1px solid #d7e4ef;
   border-radius: 8px;
   padding: 0.5rem 0.62rem;
-  background: #f8fbfd;
 }
 
 .reports-v2 .wakatime-goal-top {
@@ -1330,7 +1327,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  background: #fff;
 }
 
 .chat-empty {
@@ -1445,9 +1441,9 @@
   margin: 0.25rem 0;
 }
 
-.chat-input {
+/* .chat-input {
   background: #fff !important;
-}
+} */
 
 .chat-input-bar {
   display: flex;

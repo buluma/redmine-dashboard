@@ -347,7 +347,6 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  background: #f0ece2;
   color: var(--ink-soft);
   border: 1px solid var(--line);
 }
@@ -728,7 +727,6 @@ button:disabled {
 
 .secondary-button {
   color: var(--ink);
-  background: #f0ece2;
   border: 1px solid var(--line);
   text-decoration: none;
   display: inline-flex;
@@ -748,7 +746,6 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 11px;
   padding: 0.54rem 0.62rem;
-  background: #fff;
   color: var(--ink);
 }
 
@@ -781,7 +778,6 @@ label {
 
 .metric-card {
   padding: 0.75rem;
-  background: linear-gradient(180deg, #fffefb 0%, #fdf8ef 100%);
 }
 
 .metric-label {
@@ -867,7 +863,6 @@ label {
   align-items: center;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: #f2eee5;
   overflow: hidden;
 }
 
@@ -1280,7 +1275,6 @@ label {
 
 .status-chip {
   color: var(--ink);
-  background: #f2eee5;
   border: 1px solid var(--line);
   border-radius: 999px;
   font-weight: 700;
@@ -1462,7 +1456,6 @@ label {
 }
 
 .issues-table th.sortable-header:hover {
-  background: #f0ece2;
   color: var(--ink);
 }
 
@@ -1817,7 +1810,6 @@ label {
   font-size: clamp(1.15rem, 0.9vw + 0.78rem, 1.6rem);
   font-weight: 700;
   color: var(--ink);
-  background: #fff;
   font-family: inherit;
 }
 
@@ -1834,7 +1826,6 @@ label {
   padding: 0.6rem 0.75rem;
   font-size: 0.95rem;
   color: var(--ink);
-  background: #fff;
   font-family: inherit;
   line-height: 1.6;
   resize: vertical;
@@ -1853,7 +1844,6 @@ label {
   padding: 0.3rem 0.5rem;
   font-size: 0.9rem;
   color: var(--ink);
-  background: #fff;
   font-family: inherit;
 }
 
@@ -1895,7 +1885,6 @@ label {
   padding: 0.3rem 0.5rem;
   font-size: 0.9rem;
   color: var(--ink);
-  background: #fff;
   cursor: pointer;
 }
 
@@ -1971,7 +1960,6 @@ label {
 }
 
 .issue-tabs a.active {
-  background: #fff;
   border-bottom-color: #fff;
   font-weight: 700;
 }
