@@ -83,19 +83,6 @@
 [data-theme="dark"] .internal-notes-section .form,
 [data-theme="dark"] .activity-item,
 [data-theme="dark"] .activity-row {
-  /* Liquid glass, not fully transparent — a translucent, blurred card so
-     the constellation background shows through while text stays readable
-     (ShadowWalker's call, validated by hand in devtools first, then
-     upgraded from flat transparent to blur). --glass-bg/--glass-blur are
-     explicit values, not just an absent background property — several of
-     these classes also have a base (non-dark) rule with a hardcoded light
-     background, so merely omitting this declaration lets that light rule
-     win by cascade fallback instead of actually going translucent. Every
-     other rule in this file that mentions "the .card rule near the top"
-     hit the same trap. */
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));
   border-color: var(--line);
   color: var(--ink);
 }
@@ -104,9 +91,6 @@
 [data-theme="dark"] .dashboard-widgets .stat-card.open,
 [data-theme="dark"] .dashboard-widgets .stat-card.closed,
 [data-theme="dark"] .dashboard-widgets .widget-card {
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));
   border-color: var(--line);
   color: var(--ink);
 }
@@ -119,9 +103,6 @@
 [data-theme="dark"] .metric-stale,
 [data-theme="dark"] .metric-ai-insights,
 [data-theme="dark"] .metric-health {
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));
   border-color: var(--line);
   color: var(--ink);
 }
@@ -137,11 +118,11 @@
   border-color: var(--line);
 }
 
-[data-theme="dark"] .hero {
+/* [data-theme="dark"] .hero {
   background:
     linear-gradient(90deg, rgba(90, 173, 169, 0.2) 0%, rgba(217, 125, 69, 0.18) 100%) top / 100% 4px no-repeat,
     linear-gradient(180deg, rgba(34, 31, 27, 0.96) 0%, rgba(28, 26, 23, 0.96) 100%);
-}
+} */
 
 [data-theme="dark"] .reports-v2 .filter-field select,
 [data-theme="dark"] .reports-v2 .filter-field input,
@@ -181,9 +162,6 @@
 
 [data-theme="dark"] .filters-bar,
 [data-theme="dark"] .filters-bar-compact {
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));
   border-color: var(--line);
   color: var(--ink);
 }
@@ -295,7 +273,6 @@
 }
 
 [data-theme="dark"] .message-content {
-  background: var(--card);
   border-color: var(--line);
   color: var(--ink);
 }
@@ -452,9 +429,6 @@
 [data-theme="dark"] .log-entry.log-info,
 [data-theme="dark"] .log-entry.log-warn,
 [data-theme="dark"] .log-entry.log-error {
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));
   border-color: var(--line);
   color: var(--ink);
 }
@@ -509,7 +483,6 @@
 [data-theme="dark"] .swagger-ui .opblock-description-wrapper,
 [data-theme="dark"] .swagger-ui .opblock-external-docs-wrapper,
 [data-theme="dark"] .swagger-ui .opblock-title_normal {
-  background: var(--card) !important;
   border-color: var(--line) !important;
   color: var(--ink) !important;
 }
@@ -602,9 +575,6 @@
 [data-theme="dark"] .comment-card,
 [data-theme="dark"] .time-tracking-panel,
 [data-theme="dark"] .internal-note-item {
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));
   border-color: var(--line);
   color: var(--ink);
 }
@@ -657,9 +627,6 @@
 
 [data-theme="dark"] .metadata-item,
 [data-theme="dark"] .issue-metadata-card .metadata-item {
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));
   border-color: var(--line);
 }
 
@@ -695,9 +662,6 @@
 
 [data-theme="dark"] .timeline-item,
 [data-theme="dark"] .internal-note-item {
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));
   border-color: var(--line);
 }
 
@@ -747,9 +711,6 @@
 }
 
 [data-theme="dark"] .ai-issue-actions {
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--line);
   color: var(--ink);
 }
@@ -763,7 +724,6 @@
 }
 
 [data-theme="dark"] .ai-result {
-  background: var(--card) !important;
   border-color: var(--line) !important;
   color: var(--ink) !important;
 }

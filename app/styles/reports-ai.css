@@ -93,7 +93,6 @@
 .reports-v2 .stat-card {
   border: 1px solid #cfdbe5;
   border-radius: 8px;
-  background: linear-gradient(180deg, #ffffff 0%, #f6fafd 100%);
   padding: 0.86rem;
   position: relative;
   overflow: hidden;
@@ -270,7 +269,6 @@
   padding: 0.82rem;
   border: 1px solid #cfdbe5;
   border-radius: 8px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
 }
 
 .reports-v2 .report-panel-head {
@@ -1669,7 +1667,7 @@
 .log-stack pre {
   margin-top: 0.35rem;
   padding: 0.5rem;
-  background: #1f2937;
+  background: #1F2931;
   color: #e5e7eb;
   border-radius: 6px;
   font-size: 0.72rem;
