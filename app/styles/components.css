@@ -59,7 +59,6 @@
   position: absolute;
   top: -40px;
   right: 0;
-  background: white;
   border: none;
   border-radius: 50%;
   width: 36px;
@@ -111,7 +110,6 @@
   padding: 0.4rem 0.6rem;
   border: 1px solid var(--line);
   border-radius: 4px;
-  background: white;
   font-size: 0.875rem;
 }
 

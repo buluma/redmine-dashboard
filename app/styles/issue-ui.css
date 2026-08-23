@@ -12,7 +12,6 @@
   padding: 0.75rem;
   border-radius: 10px;
   border: 1px solid #e5e7eb;
-  background: white;
   transition: box-shadow 0.15s ease;
 }
 
@@ -171,7 +170,6 @@
   align-items: center;
   gap: 0.75rem;
   padding: 1rem;
-  background: white;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   transition: all 0.2s;
@@ -621,7 +619,6 @@
   padding: 0.35rem 0.75rem;
   border: 1px solid #e5e7eb;
   border-radius: 20px;
-  background: white;
   font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.15s;
@@ -834,7 +831,6 @@
   padding: 0.25rem 0.5rem;
   border: 1px solid #e5e7eb;
   border-radius: 4px;
-  background: white;
   font-size: 0.75rem;
   cursor: pointer;
 }
@@ -843,7 +839,6 @@
   padding: 0.25rem 0.4rem;
   border: 1px solid #e5e7eb;
   border-radius: 4px;
-  background: white;
   font-size: 0.75rem;
   cursor: pointer;
 }
@@ -856,7 +851,6 @@
 .issue-preview-tooltip {
   position: fixed;
   z-index: 1000;
-  background: white;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);

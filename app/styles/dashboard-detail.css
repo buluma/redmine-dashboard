@@ -231,9 +231,9 @@ textarea {
   background: #f2f6fa;
 }
 
-.status-chip {
+/* .status-chip {
   background: #eef3f8;
-}
+} */
 
 .status-chip.active {
   background: #daeaf5;
@@ -397,7 +397,6 @@ textarea {
 
 .notif-trigger {
   border-radius: 8px;
-  background: #eff5fa;
   border: 1px solid #c8d7e4;
 }
 
