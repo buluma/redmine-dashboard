@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 
 import { useToast } from "@/src/components/ToastProvider";
 import { useEventStream } from "@/src/hooks/useEventStream";
@@ -15,6 +15,11 @@ import type {
 
 const POLL_INTERVAL_MS = 90_000;
 const FETCH_PAGE_SIZE = 200;
+// A sync run emits one issue.created/issue.updated SSE event per issue
+// touched, so a batch of 200 issues would otherwise fire 200 back-to-back
+// refreshes. Coalesce bursts into a single refreshAll() after the stream
+// goes quiet for this long.
+const SSE_REFRESH_DEBOUNCE_MS = 1_000;
 
 interface AiStatusInfo {
   available: boolean;
@@ -211,11 +216,24 @@ export function useDashboardData({
 
   // Live updates via Server-Sent Events. The polling loop above stays
   // as a backstop in case the stream is dropped by an intermediate proxy.
+  const sseRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (sseRefreshTimerRef.current) clearTimeout(sseRefreshTimerRef.current);
+    };
+  }, []);
+  const scheduleSseRefresh = () => {
+    if (sseRefreshTimerRef.current) clearTimeout(sseRefreshTimerRef.current);
+    sseRefreshTimerRef.current = setTimeout(() => {
+      sseRefreshTimerRef.current = null;
+      void refreshAll();
+    }, SSE_REFRESH_DEBOUNCE_MS);
+  };
   useEventStream({
     enabled: Boolean(user),
     handlers: {
-      "issue.created": () => { void refreshAll(); },
-      "issue.updated": () => { void refreshAll(); },
+      "issue.created": scheduleSseRefresh,
+      "issue.updated": scheduleSseRefresh,
     },
   });
 

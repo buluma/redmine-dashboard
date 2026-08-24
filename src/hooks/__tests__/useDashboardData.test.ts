@@ -154,6 +154,40 @@ describe("useDashboardData", () => {
       expect(last.enabled).toBe(true);
       expect(Object.keys(last.handlers)).toEqual(expect.arrayContaining(["issue.created", "issue.updated"]));
     });
+
+    it("coalesces a burst of SSE issue events into a single refreshAll call", async () => {
+      let issuesCalls = 0;
+      vi.mocked(fetch).mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.includes("/api/session/me")) return jsonResponse({ user: { id: "u1", username: "a", displayName: "A" } });
+        if (url.includes("/api/issues?")) { issuesCalls += 1; return jsonResponse({ items: [], total: 0, filters: {} }); }
+        return jsonResponse({ state: null, activities: [], favorites: [] });
+      });
+      const { result } = renderData();
+      await waitFor(() => expect(result.current.user).not.toBeNull());
+      await waitFor(() => expect(issuesCalls).toBeGreaterThanOrEqual(1));
+      const callsBeforeBurst = issuesCalls;
+
+      const last = eventStreamCalls[eventStreamCalls.length - 1] as { handlers: Record<string, (data: unknown) => void> };
+      // Sync upserts many issues in a row — each one fires its own SSE event.
+      act(() => {
+        for (let i = 0; i < 200; i += 1) {
+          last.handlers["issue.updated"]?.({ redmineIssueId: i });
+        }
+      });
+
+      // Still within the debounce window: no refresh yet.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500);
+      });
+      expect(issuesCalls).toBe(callsBeforeBurst);
+
+      // Debounce window elapses after the burst goes quiet: exactly one refresh.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(600);
+      });
+      expect(issuesCalls).toBe(callsBeforeBurst + 1);
+    });
   });
 
   it("refreshAll toasts an error and clears loading when a loader throws", async () => {
