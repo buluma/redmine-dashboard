@@ -50,6 +50,18 @@ function asDate(value: unknown): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+// See the cachedUpdatedOnByRemoteId comment in executeSyncJob for why this
+// exists: redmineDate()'s day-granularity `updated_on` filter re-lists every
+// issue touched today on every incremental tick, not just ones that changed
+// since the last poll. This lets the sync loop skip an issue whose
+// updated_on genuinely hasn't moved since it was last cached.
+export function isUnchangedSinceLastSync(remoteUpdatedOn: Date | null, cachedUpdatedOn: Date | null | undefined): boolean {
+  if (!remoteUpdatedOn || !cachedUpdatedOn) {
+    return false;
+  }
+  return remoteUpdatedOn.getTime() === cachedUpdatedOn.getTime();
+}
+
 function asBoolean(value: unknown): boolean | null {
   return typeof value === "boolean" ? value : null;
 }
@@ -1141,12 +1153,47 @@ export async function executeSyncJob(jobId: string): Promise<void> {
     const issueList = await client.listIssues(env.redmineSyncIssueScope, incrementalSince);
     const seenRemoteIssueIds = new Set<number>();
 
+    // redmineDate() (redmine.ts) filters `updated_on` at day granularity, not
+    // timestamp granularity — every incremental tick re-lists every issue
+    // touched *today*, not just since the last poll. syncSingleIssue does a
+    // full detail GET plus several upserts per issue, so on a busy project
+    // that's real amplification, worse as the day goes on. Compare each
+    // listed issue's updated_on against what's already cached and skip the
+    // ones that plainly haven't changed since we last synced them. Only for
+    // incremental — full_manual intentionally re-walks everything to also
+    // prune stale time entries/attachments/relations (pruneTimeEntries etc.
+    // below), which this shortcut would defeat.
+    let cachedUpdatedOnByRemoteId: Map<number, Date> | null = null;
+    if (job.jobType === "incremental") {
+      const remoteIds = issueList
+        .map((raw) => asNumber(asObject(raw).id))
+        .filter((id): id is number => id != null);
+      const cached = remoteIds.length > 0
+        ? await prisma.issue.findMany({
+            where: { userId: job.userId, redmineBaseUrl: client.normalizedBaseUrl, redmineIssueId: { in: remoteIds } },
+            select: { redmineIssueId: true, updatedOnRemote: true },
+          })
+        : [];
+      cachedUpdatedOnByRemoteId = new Map(
+        cached
+          .filter((c): c is typeof c & { redmineIssueId: number } => c.redmineIssueId != null)
+          .map((c) => [c.redmineIssueId, c.updatedOnRemote])
+      );
+    }
+
     for (const issueRaw of issueList) {
       const remoteId = asNumber(asObject(issueRaw).id);
       if (!remoteId) {
         continue;
       }
       seenRemoteIssueIds.add(remoteId);
+
+      if (
+        cachedUpdatedOnByRemoteId &&
+        isUnchangedSinceLastSync(asDate(asObject(issueRaw).updated_on), cachedUpdatedOnByRemoteId.get(remoteId))
+      ) {
+        continue;
+      }
 
       await syncSingleIssue(job.userId, client, remoteId, {
         pruneTimeEntries: job.jobType === "full_manual",
