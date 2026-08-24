@@ -234,4 +234,109 @@ describe("RedmineClient", () => {
       expect(result).toEqual([{ id: 1 }, { id: 101 }]);
     });
   });
+
+  describe("request retry/backoff", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("retries a 429 with backoff and succeeds on the next attempt", async () => {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(new Response("rate limited", { status: 429 }))
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ user: { id: 1, login: "me" } }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      vi.stubGlobal("fetch", fetchMock);
+      vi.useFakeTimers();
+
+      const client = new RedmineClient("https://redmine.example.com", "apikey");
+      const resultPromise = client.getCurrentUser();
+      await vi.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(result).toEqual({ id: 1, login: "me" });
+    });
+
+    it("retries a 500 with backoff and succeeds on the next attempt", async () => {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(new Response("server error", { status: 500 }))
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ user: { id: 1, login: "me" } }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      vi.stubGlobal("fetch", fetchMock);
+      vi.useFakeTimers();
+
+      const client = new RedmineClient("https://redmine.example.com", "apikey");
+      const resultPromise = client.getCurrentUser();
+      await vi.runAllTimersAsync();
+      await resultPromise;
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("throws RedmineError with no retry on a non-retryable 4xx", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(new Response("not found", { status: 404 }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const client = new RedmineClient("https://redmine.example.com", "apikey");
+      await expect(client.getCurrentUser()).rejects.toThrow(RedmineError);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("gives up after exhausting all retries on a persistent 429", async () => {
+      const fetchMock = vi.fn().mockImplementation(() => new Response("rate limited", { status: 429 }));
+      vi.stubGlobal("fetch", fetchMock);
+      vi.useFakeTimers();
+
+      const client = new RedmineClient("https://redmine.example.com", "apikey");
+      const resultPromise = client.getCurrentUser();
+      const assertion = expect(resultPromise).rejects.toThrow(RedmineError);
+      await vi.runAllTimersAsync();
+      await assertion;
+
+      // maxAttempts is 3 in RedmineClient.request — three tries, no more.
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+
+    it("retries on an aborted (timed-out) request and succeeds on the next attempt", async () => {
+      let call = 0;
+      const fetchMock = vi.fn().mockImplementation((_url: string, init: RequestInit) => {
+        call += 1;
+        if (call === 1) {
+          return new Promise((_resolve, reject) => {
+            init.signal?.addEventListener("abort", () => {
+              const err = new Error("This operation was aborted");
+              err.name = "AbortError";
+              reject(err);
+            });
+          });
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ user: { id: 1, login: "me" } }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      vi.useFakeTimers();
+
+      const client = new RedmineClient("https://redmine.example.com", "apikey");
+      const resultPromise = client.getCurrentUser();
+      await vi.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(result).toEqual({ id: 1, login: "me" });
+    });
+  });
 });

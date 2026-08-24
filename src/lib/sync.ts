@@ -50,6 +50,18 @@ function asDate(value: unknown): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+// See the cachedUpdatedOnByRemoteId comment in executeSyncJob for why this
+// exists: redmineDate()'s day-granularity `updated_on` filter re-lists every
+// issue touched today on every incremental tick, not just ones that changed
+// since the last poll. This lets the sync loop skip an issue whose
+// updated_on genuinely hasn't moved since it was last cached.
+export function isUnchangedSinceLastSync(remoteUpdatedOn: Date | null, cachedUpdatedOn: Date | null | undefined): boolean {
+  if (!remoteUpdatedOn || !cachedUpdatedOn) {
+    return false;
+  }
+  return remoteUpdatedOn.getTime() === cachedUpdatedOn.getTime();
+}
+
 function asBoolean(value: unknown): boolean | null {
   return typeof value === "boolean" ? value : null;
 }
@@ -893,9 +905,16 @@ async function markSyncState(
     error?: string | null;
     full?: boolean;
     incremental?: boolean;
+    // Watermark to stamp for a successful incremental/full run. Must be the
+    // time the fetch *started*, not "now" at completion — see syncStartedAt
+    // at the executeSyncJob call site. Stamping completion time would let
+    // any Redmine update that lands between fetch-start and job-completion
+    // fall before the next run's `since` filter and get silently skipped
+    // forever (its updated_on is now older than the new watermark).
+    syncStartedAt?: Date;
   },
 ) {
-  const now = new Date();
+  const now = input.syncStartedAt ?? new Date();
   await prisma.syncState.upsert({
     where: { userId },
     update: {
@@ -916,10 +935,15 @@ async function markSyncState(
   });
 }
 
-export async function runSyncJob(
+/**
+ * Finds a reusable pending/running SyncJob for the user, or creates a new
+ * pending one. Does not execute it — callers decide whether to fire the
+ * execution in the background (runSyncJob) or await it (runSyncJobAndWait).
+ */
+async function getOrCreateSyncJob(
   userId: string,
   jobType: "incremental" | "full_manual",
-): Promise<{ jobId: string }> {
+): Promise<{ jobId: string; isNew: boolean }> {
   const now = new Date();
   const existing = await prisma.syncJob.findFirst({
     where: {
@@ -941,7 +965,7 @@ export async function runSyncJob(
           existingJobId: existing.id,
           existingStatus: existing.status,
         });
-        return { jobId: existing.id };
+        return { jobId: existing.id, isNew: false };
       }
 
       const staleMessage = `Sync job was pending for ${Math.round(ageMs / 1000)}s and was reset automatically`;
@@ -980,7 +1004,7 @@ export async function runSyncJob(
           existingJobId: existing.id,
           existingStatus: existing.status,
         });
-        return { jobId: existing.id };
+        return { jobId: existing.id, isNew: false };
       }
 
       const orphanMessage = `Sync job was running for ${Math.round(runningAgeMs / 1000)}s without finishing and was reset as orphaned`;
@@ -1009,6 +1033,53 @@ export async function runSyncJob(
     }
   }
 
+  // The findFirst above and the create below are two separate round-trips —
+  // two near-simultaneous callers for the same user (a double-clicked manual
+  // pull, or a manual pull racing a poller tick) can both pass findFirst
+  // with no existing job, then both create one, doubling Redmine API load
+  // and DB writes concurrently. SyncState.userId is a real unique key (@id),
+  // so use a conditional update on it as an atomic claim: only the caller
+  // whose update actually matches a row (or wins the create race on a
+  // brand-new user) proceeds to create the SyncJob; everyone else falls back
+  // to whatever job the winner is about to create.
+  const claimed = await prisma.syncState.updateMany({
+    where: { userId, lastSyncStatus: { notIn: ["pending", "running"] } },
+    data: { lastSyncStatus: "pending" },
+  });
+
+  if (claimed.count === 0) {
+    const state = await prisma.syncState.findUnique({ where: { userId } });
+    if (!state) {
+      try {
+        await prisma.syncState.create({ data: { userId, lastSyncStatus: "pending" } });
+      } catch (error) {
+        if ((error as { code?: string }).code !== "P2002") {
+          throw error;
+        }
+        // Lost the create race too — fall through to the "lost the claim" lookup below.
+      }
+    }
+
+    // Re-check: either we lost the claim outright, or the create-race branch
+    // above also lost. Either way another caller now owns this — find the
+    // job it's creating/created instead of inserting a duplicate.
+    const stillClaimed = await prisma.syncState.findUnique({ where: { userId } });
+    if (stillClaimed && stillClaimed.lastSyncStatus === "pending") {
+      const winner = await prisma.syncJob.findFirst({
+        where: { userId, status: { in: ["pending", "running"] } },
+        orderBy: { createdAt: "desc" },
+      });
+      if (winner) {
+        logEvent("sync.job.claim_lost", { userId, jobType, winnerJobId: winner.id }, "warn");
+        return { jobId: winner.id, isNew: false };
+      }
+      // Extremely narrow window: the winner claimed SyncState but hasn't
+      // inserted its SyncJob row yet. Rather than block or loop, fall
+      // through and create anyway — worse-case a rare duplicate, which is
+      // exactly today's behavior, not a regression.
+    }
+  }
+
   const job = await prisma.syncJob.create({
     data: {
       userId,
@@ -1017,9 +1088,63 @@ export async function runSyncJob(
     },
   });
 
-  void executeSyncJob(job.id);
   logEvent("sync.job.created", { userId, jobType, jobId: job.id });
-  return { jobId: job.id };
+  return { jobId: job.id, isNew: true };
+}
+
+/**
+ * Enqueues a sync job and returns immediately — the actual sync runs in the
+ * background. Used by callers (manual pull, bootstrap, connect) that just
+ * need a jobId to poll status on, and shouldn't block on the sync itself.
+ */
+export async function runSyncJob(
+  userId: string,
+  jobType: "incremental" | "full_manual",
+): Promise<{ jobId: string }> {
+  const { jobId, isNew } = await getOrCreateSyncJob(userId, jobType);
+  if (isNew) {
+    void executeSyncJob(jobId);
+  }
+  return { jobId };
+}
+
+/**
+ * Like runSyncJob, but awaits the actual sync execution before returning.
+ * The poller needs this: it counts issue.created/issue.updated events across
+ * the run to size sync.tick.completed (see poller.ts), which requires the
+ * sync to have actually finished — not merely been enqueued — before the
+ * counter unsubscribes. Using fire-and-forget runSyncJob here previously
+ * caused sync.tick.completed to fire almost immediately with near-zero
+ * counts while the real sync was still running in the background.
+ */
+export async function runSyncJobAndWait(
+  userId: string,
+  jobType: "incremental" | "full_manual",
+): Promise<{ jobId: string }> {
+  const { jobId, isNew } = await getOrCreateSyncJob(userId, jobType);
+  if (isNew) {
+    await executeSyncJob(jobId);
+  } else {
+    // Reused an existing pending/running job (e.g. a manual pull already in
+    // flight for this user) — wait for it to leave pending/running instead
+    // of assuming it's done, so the caller still gets a real completion.
+    await waitForSyncJobToSettle(jobId);
+  }
+  return { jobId };
+}
+
+async function waitForSyncJobToSettle(jobId: string): Promise<void> {
+  const pollMs = 500;
+  const maxWaitMs = env.syncJobRunningStaleMs;
+  const deadline = Date.now() + maxWaitMs;
+  while (Date.now() < deadline) {
+    const job = await prisma.syncJob.findUnique({ where: { id: jobId }, select: { status: true } });
+    if (!job || job.status === "success" || job.status === "failed") {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+  logEvent("sync.job.wait_timeout", { jobId }, "warn");
 }
 
 export async function executeSyncJob(jobId: string): Promise<void> {
@@ -1069,8 +1194,48 @@ export async function executeSyncJob(jobId: string): Promise<void> {
           ? twentyFourHoursAgo
           : undefined;
 
+    // Captured before the fetch, not after — see markSyncState's
+    // syncStartedAt doc comment.
+    const syncStartedAt = new Date();
     const issueList = await client.listIssues(env.redmineSyncIssueScope, incrementalSince);
     const seenRemoteIssueIds = new Set<number>();
+
+    // redmineDate() (redmine.ts) filters `updated_on` at day granularity, not
+    // timestamp granularity — every incremental tick re-lists every issue
+    // touched *today*, not just since the last poll. syncSingleIssue does a
+    // full detail GET plus several upserts per issue, so on a busy project
+    // that's real amplification, worse as the day goes on. Compare each
+    // listed issue's updated_on against what's already cached and skip the
+    // ones that plainly haven't changed since we last synced them. Only for
+    // incremental — full_manual intentionally re-walks everything to also
+    // prune stale time entries/attachments/relations (pruneTimeEntries etc.
+    // below), which this shortcut would defeat.
+    let cachedUpdatedOnByRemoteId: Map<number, Date> | null = null;
+    if (job.jobType === "incremental") {
+      const remoteIds = issueList
+        .map((raw) => asNumber(asObject(raw).id))
+        .filter((id): id is number => id != null);
+      const cached = remoteIds.length > 0
+        ? await prisma.issue.findMany({
+            where: { userId: job.userId, redmineBaseUrl: client.normalizedBaseUrl, redmineIssueId: { in: remoteIds } },
+            select: { redmineIssueId: true, updatedOnRemote: true },
+          })
+        : [];
+      cachedUpdatedOnByRemoteId = new Map(
+        cached
+          .filter((c): c is typeof c & { redmineIssueId: number } => c.redmineIssueId != null)
+          .map((c) => [c.redmineIssueId, c.updatedOnRemote])
+      );
+    }
+
+    // One issue's failure (a persistent 429/timeout after RedmineClient's own
+    // retries, a malformed payload) used to propagate straight out of this
+    // loop and abort the whole job — every issue after the failing one in
+    // this page simply never synced that run, with seenRemoteIssueIds so far
+    // discarded. Isolate each issue instead: log it, keep going, and let the
+    // job still complete for everything that did sync — a single bad issue
+    // will just retry on the next tick along with everything else.
+    const failedRemoteIssueIds: number[] = [];
 
     for (const issueRaw of issueList) {
       const remoteId = asNumber(asObject(issueRaw).id);
@@ -1079,12 +1244,24 @@ export async function executeSyncJob(jobId: string): Promise<void> {
       }
       seenRemoteIssueIds.add(remoteId);
 
-      await syncSingleIssue(job.userId, client, remoteId, {
-        pruneTimeEntries: job.jobType === "full_manual",
-        pruneAttachments: true,
-        pruneRelations: true,
-        sendNotifications: env.slackNotifyEnabled,
-      });
+      if (
+        cachedUpdatedOnByRemoteId &&
+        isUnchangedSinceLastSync(asDate(asObject(issueRaw).updated_on), cachedUpdatedOnByRemoteId.get(remoteId))
+      ) {
+        continue;
+      }
+
+      try {
+        await syncSingleIssue(job.userId, client, remoteId, {
+          pruneTimeEntries: job.jobType === "full_manual",
+          pruneAttachments: true,
+          pruneRelations: true,
+          sendNotifications: env.slackNotifyEnabled,
+        });
+      } catch (error) {
+        failedRemoteIssueIds.push(remoteId);
+        logEvent("sync.job.issue_failed", { userId: job.userId, jobId, remoteIssueId: remoteId, error }, "warn");
+      }
     }
 
     // The "assigned" scope's Redmine query is assigned_to_id=me, so an issue
@@ -1120,12 +1297,17 @@ export async function executeSyncJob(jobId: string): Promise<void> {
               continue;
             }
             seenRemoteIssueIds.add(remoteId);
-            await syncSingleIssue(job.userId, client, remoteId, {
-              pruneTimeEntries: job.jobType === "full_manual",
-              pruneAttachments: true,
-              pruneRelations: true,
-              sendNotifications: env.slackNotifyEnabled,
-            });
+            try {
+              await syncSingleIssue(job.userId, client, remoteId, {
+                pruneTimeEntries: job.jobType === "full_manual",
+                pruneAttachments: true,
+                pruneRelations: true,
+                sendNotifications: env.slackNotifyEnabled,
+              });
+            } catch (error) {
+              failedRemoteIssueIds.push(remoteId);
+              logEvent("sync.job.issue_failed", { userId: job.userId, jobId, remoteIssueId: remoteId, error }, "warn");
+            }
           }
           logEvent("sync.job.recheck_reassigned", {
             userId: job.userId,
@@ -1156,26 +1338,37 @@ export async function executeSyncJob(jobId: string): Promise<void> {
     //   });
     // }
 
+    // A per-issue failure above doesn't fail the whole job — everything that
+    // did sync is real and shouldn't be thrown away — but it also shouldn't
+    // be invisible. Surface it as a non-fatal note on the otherwise-"success"
+    // job/state rows instead of silently discarding it.
+    const partialFailureNote = failedRemoteIssueIds.length > 0
+      ? `${failedRemoteIssueIds.length} issue(s) failed to sync this run: ${failedRemoteIssueIds.join(", ")}`
+      : null;
+
     await prisma.syncJob.update({
       where: { id: jobId },
       data: {
         status: "success",
         endedAt: new Date(),
+        error: partialFailureNote,
       },
     });
 
     await markSyncState(job.userId, {
       status: "success",
       runningJobId: null,
-      error: null,
+      error: partialFailureNote,
       full: job.jobType === "full_manual",
       incremental: job.jobType === "incremental",
+      syncStartedAt,
     });
     logEvent("sync.job.succeeded", {
       jobId,
       userId: job.userId,
       jobType: job.jobType,
       syncedIssueCount: seenRemoteIssueIds.size,
+      failedIssueCount: failedRemoteIssueIds.length,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown sync error";

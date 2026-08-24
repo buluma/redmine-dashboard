@@ -35,7 +35,7 @@ export function isWakaTimeRange(value: string | null | undefined): value is Waka
   return Object.prototype.hasOwnProperty.call(WAKATIME_RANGE_DAYS, value);
 }
 
-function asDateOnlyLocal(date: Date): string {
+export function asDateOnlyLocal(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");

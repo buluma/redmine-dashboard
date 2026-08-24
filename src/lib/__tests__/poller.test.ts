@@ -4,7 +4,7 @@ import { emitEvent, subscribe, type ConvergeEvent } from "@/src/lib/event-bus";
 
 const findManyMock = vi.fn();
 const acquireLeaderLockMock = vi.fn();
-const runSyncJobMock = vi.fn();
+const runSyncJobAndWaitMock = vi.fn();
 const syncWakaTimeSummariesMock = vi.fn();
 
 vi.mock("@/src/lib/db", () => ({
@@ -21,7 +21,7 @@ vi.mock("@/src/lib/wakatime-sync", () => ({
   syncWakaTimeSummaries: (...args: unknown[]) => syncWakaTimeSummariesMock(...args),
 }));
 vi.mock("@/src/lib/sync", () => ({
-  runSyncJob: (...args: unknown[]) => runSyncJobMock(...args),
+  runSyncJobAndWait: (...args: unknown[]) => runSyncJobAndWaitMock(...args),
 }));
 
 // Real event-bus — pollTick's issue-count tracking subscribes to it directly,
@@ -39,7 +39,7 @@ describe("pollTick", () => {
     findManyMock.mockResolvedValue([{ userId: "u1" }, { userId: "u2" }]);
     // Simulate what sync.ts really does: emit one issue.* event per issue
     // upserted while a sync job runs.
-    runSyncJobMock.mockImplementation(async (userId: string) => {
+    runSyncJobAndWaitMock.mockImplementation(async (userId: string) => {
       emitEvent({ type: "issue.updated", userId, redmineIssueId: 1, issueId: "i1" });
       emitEvent({ type: "issue.created", userId, redmineIssueId: 2, issueId: "i2" });
       return { jobId: `job-${userId}` };
@@ -54,7 +54,7 @@ describe("pollTick", () => {
     await pollTick();
     unsubscribe();
 
-    expect(runSyncJobMock).toHaveBeenCalledTimes(2);
+    expect(runSyncJobAndWaitMock).toHaveBeenCalledTimes(2);
     expect(received).toHaveLength(1);
     // 2 users × 2 events each = 4 issue.* events counted into the one tick.
     expect(received[0]).toMatchObject({ type: "sync.tick.completed", issueCount: 4 });
@@ -74,13 +74,13 @@ describe("pollTick", () => {
     await pollTick();
     unsubscribe();
 
-    expect(runSyncJobMock).not.toHaveBeenCalled();
+    expect(runSyncJobAndWaitMock).not.toHaveBeenCalled();
     expect(received).toHaveLength(0);
   });
 
   it("unsubscribes its issue-event counter after the tick so later syncs aren't double-counted", async () => {
     findManyMock.mockResolvedValue([{ userId: "u1" }]);
-    runSyncJobMock.mockImplementation(async (userId: string) => {
+    runSyncJobAndWaitMock.mockImplementation(async (userId: string) => {
       emitEvent({ type: "issue.updated", userId, redmineIssueId: 1, issueId: "i1" });
       return { jobId: "job-1" };
     });
@@ -102,5 +102,23 @@ describe("pollTick", () => {
 
     expect(received).toHaveLength(1);
     expect(received[0]).toMatchObject({ issueCount: 0 });
+  });
+
+  it("renews the leader lock periodically while a long sync is running", async () => {
+    findManyMock.mockResolvedValue([{ userId: "u1" }]);
+    vi.useFakeTimers();
+    // leaderLockTtlMs is 30_000 in the mocked env → renewal interval is 10_000ms.
+    // A sync that takes 25s should renew at least once before it's done.
+    runSyncJobAndWaitMock.mockImplementation(async () => {
+      await vi.advanceTimersByTimeAsync(25_000);
+      return { jobId: "job-1" };
+    });
+
+    const { pollTick } = await import("@/src/lib/poller");
+    await pollTick();
+    vi.useRealTimers();
+
+    // Once for the initial acquire, at least once more for renewal.
+    expect(acquireLeaderLockMock.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 });

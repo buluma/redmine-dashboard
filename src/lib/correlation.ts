@@ -85,6 +85,9 @@ export async function buildProjectTicketIndex(
 ): Promise<Map<string, TicketMatch>> {
   const issues = await prisma.issue.findMany({
     where: { userId, source: "local" },
+    // Deterministic order so an ambiguous substring match (see findMatch)
+    // resolves the same way on every run instead of depending on DB order.
+    orderBy: { id: "asc" },
     select: {
       id: true,
       localIssueNumber: true,
@@ -124,9 +127,18 @@ export async function buildProjectTicketIndex(
   return index;
 }
 
+// Below this length, a bidirectional substring match is too likely to be a
+// coincidence ("api" inside "rapidapi", "sl2" inside "sl2platformx") rather
+// than a real relationship — those short names must match exactly instead.
+const MIN_SUBSTRING_MATCH_LENGTH = 4;
+
 /**
  * Find a ticket match for a WakaTime project name.
- * Strategy: exact normalized match first, then bidirectional substring.
+ * Strategy: exact normalized match first, then bidirectional substring —
+ * restricted to names long enough (see MIN_SUBSTRING_MATCH_LENGTH) that a
+ * false-positive collision is unlikely, and picking the most specific
+ * (longest) shared substring when more than one repo could match, so the
+ * result is deterministic regardless of index iteration order.
  */
 function findMatch(
   wakaProjectName: string,
@@ -139,14 +151,24 @@ function findMatch(
   const exact = index.get(normalizedWaka);
   if (exact) return exact;
 
-  // Bidirectional substring match
+  // Bidirectional substring match, most-specific (longest) match wins
+  let best: { match: TicketMatch; repoNorm: string; specificity: number } | null = null;
   for (const [repoNorm, match] of index.entries()) {
-    if (normalizedWaka.includes(repoNorm) || repoNorm.includes(normalizedWaka)) {
-      return match;
+    const shorter = normalizedWaka.length <= repoNorm.length ? normalizedWaka : repoNorm;
+    const longer = normalizedWaka.length <= repoNorm.length ? repoNorm : normalizedWaka;
+    if (shorter.length < MIN_SUBSTRING_MATCH_LENGTH) continue;
+    if (!longer.includes(shorter)) continue;
+
+    if (
+      !best ||
+      shorter.length > best.specificity ||
+      (shorter.length === best.specificity && repoNorm < best.repoNorm)
+    ) {
+      best = { match, repoNorm, specificity: shorter.length };
     }
   }
 
-  return null;
+  return best?.match ?? null;
 }
 
 /**
@@ -220,6 +242,11 @@ export async function correlateWakaTime(
     perDayMap: Map<string, number>;
     totalSeconds: number;
     alreadyLoggedDates: Set<string>;
+    // Every distinct WakaTime project name that rolled into this ticket —
+    // usually just one, but the catch-all bucket in particular can merge
+    // several unrelated projects onto the same ticket+day. Kept so `repo`
+    // stays traceable to all of them instead of only whichever hit first.
+    sourceProjects: Set<string>;
   }>();
 
   const unmatchedMap = new Map<string, {
@@ -248,9 +275,11 @@ export async function correlateWakaTime(
           perDayMap: new Map<string, number>(),
           totalSeconds: 0,
           alreadyLoggedDates: new Set<string>(),
+          sourceProjects: new Set<string>(),
         };
         entry.perDayMap.set(row.date, (entry.perDayMap.get(row.date) ?? 0) + proj.total_seconds);
         entry.totalSeconds += proj.total_seconds;
+        entry.sourceProjects.add(proj.name);
         if (loggedSet.has(loggedKey)) {
           entry.alreadyLoggedDates.add(row.date);
         }
@@ -276,7 +305,14 @@ export async function correlateWakaTime(
     ticketId: m.match.ticket.id,
     localIssueNumber: m.match.ticket.localIssueNumber,
     subject: m.match.ticket.subject,
-    repo: m.match.link.repositoryFullName,
+    // The linked repo's full name in the normal single-source case. When
+    // distinct WakaTime project names merged into this ticket (the
+    // catch-all bucket in particular can do this — see matchedMap's
+    // sourceProjects), list all of them instead so every original source
+    // stays traceable rather than showing only whichever hit first.
+    repo: m.sourceProjects.size > 1
+      ? Array.from(m.sourceProjects).sort().join(", ")
+      : m.match.link.repositoryFullName,
     totalSeconds: m.totalSeconds,
     perDay: Array.from(m.perDayMap.entries())
       .map(([date, seconds]) => ({ date, seconds }))

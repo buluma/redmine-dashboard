@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
 import { syncWakaTimeSummaries, queryWakaTimeHistory } from "@/src/lib/wakatime-sync";
 import { requireExternalApiKey } from "@/src/lib/external-auth";
+import { isRateLimited } from "@/src/lib/rate-limit";
 import { trackFailure } from "@/src/lib/telemetry";
 
 export const runtime = "nodejs";
@@ -36,12 +37,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "WakaTime not configured" }, { status: 503 });
   }
 
+  // Same cap as the internal route (app/api/wakatime/history/route.ts) — at
+  // BATCH_DAYS=28 (wakatime-sync.ts), a range much larger than this means
+  // dozens of sequential WakaTime API calls in one synchronous request,
+  // risking a proxy/hosting timeout with no partial-progress feedback.
+  const rl = isRateLimited({ key: "external-wakatime-sync", max: 5, windowMs: 60_000 });
+  if (rl.limited) {
+    return NextResponse.json({ error: "Rate limited" }, { status: 429 });
+  }
+
   try {
     const user = await prisma.user.findFirst({ orderBy: { createdAt: "asc" } });
     if (!user) return NextResponse.json({ error: "No users" }, { status: 503 });
 
     const body = await request.json().catch(() => ({}));
-    const days = typeof body.days === "number" ? Math.min(body.days, 3650) : 14;
+    const days = typeof body.days === "number" ? Math.min(body.days, 365) : 14;
     const result = await syncWakaTimeSummaries(user.id, apiKey, { days });
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
