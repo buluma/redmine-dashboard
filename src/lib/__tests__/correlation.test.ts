@@ -179,6 +179,42 @@ describe("correlateWakaTime", () => {
     expect(result.matched[0].ticketId).toBe("t2");
   });
 
+  it("does not false-positive match a short substring collision", async () => {
+    // repo = "buluma/sl2platformx", waka project = "sl2" — "sl2" is too short
+    // (< MIN_SUBSTRING_MATCH_LENGTH) to trust as a real substring match, so
+    // it must NOT get swept into t1's hours.
+    mockIssueFindMany.mockResolvedValue([
+      localIssue("t1", 1, "SL2PlatformX", ["buluma/sl2platformx"]),
+    ]);
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-20", [{ name: "sl2", total_seconds: 3600 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([]);
+
+    const result = await correlateWakaTime(USER_ID, { start: "2026-06-20", end: "2026-06-20" });
+
+    expect(result.matched).toHaveLength(0);
+    expect(result.unmatched).toHaveLength(1);
+    expect(result.unmatched[0].project).toBe("sl2");
+  });
+
+  it("picks the most specific (longest) match deterministically when two repos could both substring-match", async () => {
+    mockIssueFindMany.mockResolvedValue([
+      localIssue("t1", 1, "Vodacom", ["buluma/vodacom"]),
+      localIssue("t2", 2, "Vodacom SA Prod", ["buluma/vodacom-sa-prod"]),
+    ]);
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-20", [{ name: "vodacom-sa-prod-optimization", total_seconds: 3600 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([]);
+
+    const result = await correlateWakaTime(USER_ID, { start: "2026-06-20", end: "2026-06-20" });
+
+    // "vodacomsaprod" is a longer, more specific match than "vodacom" alone.
+    expect(result.matched).toHaveLength(1);
+    expect(result.matched[0].ticketId).toBe("t2");
+  });
+
   it("puts unmatched projects in unmatched bucket", async () => {
     mockIssueFindMany.mockResolvedValue([]);
     mockWakaFindMany.mockResolvedValue([
@@ -340,6 +376,8 @@ describe("correlateWakaTime", () => {
     expect(result.matched).toHaveLength(1);
     expect(result.matched[0].ticketId).toBe("misc-1");
     expect(result.matched[0].totalSeconds).toBe(2700);
+    // Both original project names stay traceable instead of only the first hit.
+    expect(result.matched[0].repo).toBe(".pi, unknown");
   });
 
   it("merges same-day activity when a ticket has multiple linked repos", async () => {

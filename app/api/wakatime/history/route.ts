@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUserId } from "@/src/lib/auth";
 import { syncWakaTimeSummaries, queryWakaTimeHistory } from "@/src/lib/wakatime-sync";
+import { isRateLimited } from "@/src/lib/rate-limit";
 import { trackFailure } from "@/src/lib/telemetry";
 
 export const runtime = "nodejs";
@@ -34,6 +35,14 @@ export async function POST(request: NextRequest) {
   const apiKey = process.env.WAKATIME_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: "WakaTime not configured" }, { status: 503 });
+  }
+
+  // WAKATIME_API_KEY is shared app-wide — an unthrottled "sync" button can
+  // burn through WakaTime's own rate limit and lock the key for everyone,
+  // including the poller's background syncs.
+  const rl = isRateLimited({ key: `wakatime-history-sync:${userId}`, max: 5, windowMs: 60_000 });
+  if (rl.limited) {
+    return NextResponse.json({ error: "Rate limited" }, { status: 429 });
   }
 
   try {

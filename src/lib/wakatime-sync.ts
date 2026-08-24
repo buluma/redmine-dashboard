@@ -1,5 +1,5 @@
 import { prisma } from "@/src/lib/db";
-import { WakaTimeClient, type WakaTimeBreakdown, type WakaTimeSummaryDay, type WakaTimeGoalsResponse, type WakaTimeTodayResponse } from "@/src/lib/wakatime";
+import { WakaTimeClient, type WakaTimeBreakdown, type WakaTimeSummariesResponse, type WakaTimeSummaryDay, type WakaTimeGoalsResponse, type WakaTimeTodayResponse, asDateOnlyLocal, isWakaTimeApiError } from "@/src/lib/wakatime";
 import { trackInfo } from "@/src/lib/telemetry";
 
 function toBreakdownJson(items: WakaTimeBreakdown[]) {
@@ -11,9 +11,12 @@ function toBreakdownJson(items: WakaTimeBreakdown[]) {
   }));
 }
 
-function formatDate(d: Date): string {
-  return d.toISOString().split("T")[0];
-}
+// Local date, not UTC — must match getSummaryDateWindow's basis (wakatime.ts)
+// so "today"/"yesterday" here line up with what the stats route considers
+// "today". A UTC/local mismatch (e.g. server ahead of UTC) would otherwise
+// compute this run's recent-date window a day early, corrupting the
+// no-overwrite guard below.
+const formatDate = asDateOnlyLocal;
 
 export async function syncWakaTimeSummaries(
   userId: string,
@@ -51,10 +54,40 @@ export async function syncWakaTimeSummaries(
     batchEnd.setDate(batchEnd.getDate() + BATCH_DAYS - 1);
     if (batchEnd > end) batchEnd.setTime(end.getTime());
 
-    const resp = await client.getSummaries({
-      start: formatDate(batchStart),
-      end: formatDate(batchEnd),
-    });
+    // A 429 on one batch used to throw straight out of this loop and abort
+    // every remaining batch's sync for no reason — retry once after a short
+    // wait (WakaTime's limit is a rolling window, not a hard lockout), and
+    // if it's still rate-limited, skip just this batch and keep going.
+    let resp: WakaTimeSummariesResponse | null = null;
+    try {
+      resp = await client.getSummaries({
+        start: formatDate(batchStart),
+        end: formatDate(batchEnd),
+      });
+    } catch (error) {
+      if (isWakaTimeApiError(error) && error.status === 429) {
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+        try {
+          resp = await client.getSummaries({
+            start: formatDate(batchStart),
+            end: formatDate(batchEnd),
+          });
+        } catch (retryError) {
+          if (isWakaTimeApiError(retryError) && retryError.status === 429) {
+            trackInfo("wakatime.sync.batch_rate_limited", {
+              userId,
+              batchStart: formatDate(batchStart),
+              batchEnd: formatDate(batchEnd),
+            });
+            batchStart.setDate(batchStart.getDate() + BATCH_DAYS);
+            continue;
+          }
+          throw retryError;
+        }
+      } else {
+        throw error;
+      }
+    }
 
     const raw = resp.data as unknown;
     const summaries = Array.isArray(raw) ? raw as WakaTimeSummaryDay[] : (raw as { summaries?: WakaTimeSummaryDay[] }).summaries ?? [];

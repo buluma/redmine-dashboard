@@ -893,9 +893,16 @@ async function markSyncState(
     error?: string | null;
     full?: boolean;
     incremental?: boolean;
+    // Watermark to stamp for a successful incremental/full run. Must be the
+    // time the fetch *started*, not "now" at completion — see syncStartedAt
+    // at the executeSyncJob call site. Stamping completion time would let
+    // any Redmine update that lands between fetch-start and job-completion
+    // fall before the next run's `since` filter and get silently skipped
+    // forever (its updated_on is now older than the new watermark).
+    syncStartedAt?: Date;
   },
 ) {
-  const now = new Date();
+  const now = input.syncStartedAt ?? new Date();
   await prisma.syncState.upsert({
     where: { userId },
     update: {
@@ -916,10 +923,15 @@ async function markSyncState(
   });
 }
 
-export async function runSyncJob(
+/**
+ * Finds a reusable pending/running SyncJob for the user, or creates a new
+ * pending one. Does not execute it — callers decide whether to fire the
+ * execution in the background (runSyncJob) or await it (runSyncJobAndWait).
+ */
+async function getOrCreateSyncJob(
   userId: string,
   jobType: "incremental" | "full_manual",
-): Promise<{ jobId: string }> {
+): Promise<{ jobId: string; isNew: boolean }> {
   const now = new Date();
   const existing = await prisma.syncJob.findFirst({
     where: {
@@ -941,7 +953,7 @@ export async function runSyncJob(
           existingJobId: existing.id,
           existingStatus: existing.status,
         });
-        return { jobId: existing.id };
+        return { jobId: existing.id, isNew: false };
       }
 
       const staleMessage = `Sync job was pending for ${Math.round(ageMs / 1000)}s and was reset automatically`;
@@ -980,7 +992,7 @@ export async function runSyncJob(
           existingJobId: existing.id,
           existingStatus: existing.status,
         });
-        return { jobId: existing.id };
+        return { jobId: existing.id, isNew: false };
       }
 
       const orphanMessage = `Sync job was running for ${Math.round(runningAgeMs / 1000)}s without finishing and was reset as orphaned`;
@@ -1017,9 +1029,63 @@ export async function runSyncJob(
     },
   });
 
-  void executeSyncJob(job.id);
   logEvent("sync.job.created", { userId, jobType, jobId: job.id });
-  return { jobId: job.id };
+  return { jobId: job.id, isNew: true };
+}
+
+/**
+ * Enqueues a sync job and returns immediately — the actual sync runs in the
+ * background. Used by callers (manual pull, bootstrap, connect) that just
+ * need a jobId to poll status on, and shouldn't block on the sync itself.
+ */
+export async function runSyncJob(
+  userId: string,
+  jobType: "incremental" | "full_manual",
+): Promise<{ jobId: string }> {
+  const { jobId, isNew } = await getOrCreateSyncJob(userId, jobType);
+  if (isNew) {
+    void executeSyncJob(jobId);
+  }
+  return { jobId };
+}
+
+/**
+ * Like runSyncJob, but awaits the actual sync execution before returning.
+ * The poller needs this: it counts issue.created/issue.updated events across
+ * the run to size sync.tick.completed (see poller.ts), which requires the
+ * sync to have actually finished — not merely been enqueued — before the
+ * counter unsubscribes. Using fire-and-forget runSyncJob here previously
+ * caused sync.tick.completed to fire almost immediately with near-zero
+ * counts while the real sync was still running in the background.
+ */
+export async function runSyncJobAndWait(
+  userId: string,
+  jobType: "incremental" | "full_manual",
+): Promise<{ jobId: string }> {
+  const { jobId, isNew } = await getOrCreateSyncJob(userId, jobType);
+  if (isNew) {
+    await executeSyncJob(jobId);
+  } else {
+    // Reused an existing pending/running job (e.g. a manual pull already in
+    // flight for this user) — wait for it to leave pending/running instead
+    // of assuming it's done, so the caller still gets a real completion.
+    await waitForSyncJobToSettle(jobId);
+  }
+  return { jobId };
+}
+
+async function waitForSyncJobToSettle(jobId: string): Promise<void> {
+  const pollMs = 500;
+  const maxWaitMs = env.syncJobRunningStaleMs;
+  const deadline = Date.now() + maxWaitMs;
+  while (Date.now() < deadline) {
+    const job = await prisma.syncJob.findUnique({ where: { id: jobId }, select: { status: true } });
+    if (!job || job.status === "success" || job.status === "failed") {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+  logEvent("sync.job.wait_timeout", { jobId }, "warn");
 }
 
 export async function executeSyncJob(jobId: string): Promise<void> {
@@ -1069,6 +1135,9 @@ export async function executeSyncJob(jobId: string): Promise<void> {
           ? twentyFourHoursAgo
           : undefined;
 
+    // Captured before the fetch, not after — see markSyncState's
+    // syncStartedAt doc comment.
+    const syncStartedAt = new Date();
     const issueList = await client.listIssues(env.redmineSyncIssueScope, incrementalSince);
     const seenRemoteIssueIds = new Set<number>();
 
@@ -1170,6 +1239,7 @@ export async function executeSyncJob(jobId: string): Promise<void> {
       error: null,
       full: job.jobType === "full_manual",
       incremental: job.jobType === "incremental",
+      syncStartedAt,
     });
     logEvent("sync.job.succeeded", {
       jobId,

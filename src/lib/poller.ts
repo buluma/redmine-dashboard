@@ -4,7 +4,7 @@ import { env } from "@/src/lib/env";
 import { logEvent } from "@/src/lib/log";
 import { acquireLeaderLock } from "@/src/lib/leader-lock";
 import { emitEvent, subscribe } from "@/src/lib/event-bus";
-import { runSyncJob } from "@/src/lib/sync";
+import { runSyncJobAndWait } from "@/src/lib/sync";
 import { syncWakaTimeSummaries } from "@/src/lib/wakatime-sync";
 
 declare global {
@@ -47,11 +47,28 @@ export async function pollTick(): Promise<void> {
       }
     });
 
+    // acquireLeaderLock above grants a lease of leaderLockTtlMs. The sync
+    // work below can outlast that TTL on a busy Redmine instance — without
+    // renewal the lock would expire mid-tick and let a second instance
+    // acquire it and start a concurrent duplicate sync. Renew (same ownerId
+    // extends the lease, see acquireLeaderLock) well inside the TTL for as
+    // long as this tick's real work is running.
+    const renewalMs = Math.max(1000, Math.floor(env.leaderLockTtlMs / 3));
+    const renewalRef = setInterval(() => {
+      void acquireLeaderLock(LOCK_NAME, ownerId, env.leaderLockTtlMs).catch((error) => {
+        logEvent("poller.lock.renew_failed", { ownerId, error }, "warn");
+      });
+    }, renewalMs);
+    if (renewalRef.unref) {
+      renewalRef.unref();
+    }
+
     try {
       for (const u of users) {
-        await runSyncJob(u.userId, "incremental");
+        await runSyncJobAndWait(u.userId, "incremental");
       }
     } finally {
+      clearInterval(renewalRef);
       unsubscribe();
     }
 
