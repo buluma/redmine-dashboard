@@ -434,7 +434,6 @@ h3 {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--bg-soft);
   padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--line);
   transition: all 0.2s ease;
