@@ -401,11 +401,16 @@ export function StackedBarChart({
   colors,
   onClick,
   showValue = true,
+  fillWidth = false,
 }: {
   series: { name: string; data: { label: string; value: number }[] }[];
   colors?: string[];
   onClick?: (seriesName: string, label: string, value: number) => void;
   showValue?: boolean;
+  /** When true, each row's segments are sized as a share of that row's own
+   * total (always filling the track) instead of relative to the max total
+   * across all rows — trades magnitude-at-a-glance for a filled bar. */
+  fillWidth?: boolean;
 }) {
   // Get all unique labels (dates)
   const labels = Array.from(
@@ -454,7 +459,8 @@ export function StackedBarChart({
             {series.map((serie, serieIndex) => {
               const item = serie.data.find(d => d.label === label);
               const value = item?.value ?? 0;
-              const percentage = maxTotal > 0 ? (value / maxTotal) * 100 : 0;
+              const denominator = fillWidth ? totals[label] : maxTotal;
+              const percentage = denominator > 0 ? (value / denominator) * 100 : 0;
               
               return (
                 <div

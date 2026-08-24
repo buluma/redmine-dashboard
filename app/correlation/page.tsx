@@ -21,11 +21,16 @@ export default async function CorrelationPage() {
 
   return (
     <main className="dashboard reports-v2">
-      <header className="page-header">
-        <h1>⚡ Time Correlation</h1>
-        <p className="muted">
-          Match WakaTime coding hours to personal tickets via GitHub repo links.
-        </p>
+      <header className="card hero">
+        <div className="hero-top">
+          <div>
+            <p className="kicker">CORRELATION</p>
+            <h1>⚡ Time Correlation</h1>
+            <p className="muted">
+              Match WakaTime coding hours to personal tickets via GitHub repo links.
+            </p>
+          </div>
+        </div>
       </header>
       <CorrelationClient
         initialData={data}

@@ -154,6 +154,7 @@ export function HeimdallDashboardView({
               <div className="ai-overview">
                 <StackedBarChart
                   showValue
+                  fillWidth
                   series={[
                     { name: t("heimdall.statMbu"), data: trendDates.map((date, i) => ({
                       label: date,

@@ -406,6 +406,13 @@ h1 {
   font-size: clamp(1.5rem, 2vw + 0.6rem, 2.35rem);
 }
 
+/* Hero page titles (Heimdal, WakaTime, Correlation, ...) are fixed at 28px
+   rather than the generic h1 clamp above, which scaled up too large on
+   wide viewports. */
+.hero-top > :first-child > h1 {
+  font-size: 1.75rem;
+}
+
 h2 {
   font-size: 1.18rem;
   margin-bottom: 0.35rem;
@@ -485,7 +492,7 @@ h3 {
 
   @keyframes shrink-hero-title {
     from {
-      font-size: clamp(1.5rem, 2vw + 0.6rem, 2.35rem);
+      font-size: 1.75rem;
       line-height: 1.08;
     }
     to {
