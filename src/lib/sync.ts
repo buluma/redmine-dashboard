@@ -1181,6 +1181,15 @@ export async function executeSyncJob(jobId: string): Promise<void> {
       );
     }
 
+    // One issue's failure (a persistent 429/timeout after RedmineClient's own
+    // retries, a malformed payload) used to propagate straight out of this
+    // loop and abort the whole job — every issue after the failing one in
+    // this page simply never synced that run, with seenRemoteIssueIds so far
+    // discarded. Isolate each issue instead: log it, keep going, and let the
+    // job still complete for everything that did sync — a single bad issue
+    // will just retry on the next tick along with everything else.
+    const failedRemoteIssueIds: number[] = [];
+
     for (const issueRaw of issueList) {
       const remoteId = asNumber(asObject(issueRaw).id);
       if (!remoteId) {
@@ -1195,12 +1204,17 @@ export async function executeSyncJob(jobId: string): Promise<void> {
         continue;
       }
 
-      await syncSingleIssue(job.userId, client, remoteId, {
-        pruneTimeEntries: job.jobType === "full_manual",
-        pruneAttachments: true,
-        pruneRelations: true,
-        sendNotifications: env.slackNotifyEnabled,
-      });
+      try {
+        await syncSingleIssue(job.userId, client, remoteId, {
+          pruneTimeEntries: job.jobType === "full_manual",
+          pruneAttachments: true,
+          pruneRelations: true,
+          sendNotifications: env.slackNotifyEnabled,
+        });
+      } catch (error) {
+        failedRemoteIssueIds.push(remoteId);
+        logEvent("sync.job.issue_failed", { userId: job.userId, jobId, remoteIssueId: remoteId, error }, "warn");
+      }
     }
 
     // The "assigned" scope's Redmine query is assigned_to_id=me, so an issue
@@ -1236,12 +1250,17 @@ export async function executeSyncJob(jobId: string): Promise<void> {
               continue;
             }
             seenRemoteIssueIds.add(remoteId);
-            await syncSingleIssue(job.userId, client, remoteId, {
-              pruneTimeEntries: job.jobType === "full_manual",
-              pruneAttachments: true,
-              pruneRelations: true,
-              sendNotifications: env.slackNotifyEnabled,
-            });
+            try {
+              await syncSingleIssue(job.userId, client, remoteId, {
+                pruneTimeEntries: job.jobType === "full_manual",
+                pruneAttachments: true,
+                pruneRelations: true,
+                sendNotifications: env.slackNotifyEnabled,
+              });
+            } catch (error) {
+              failedRemoteIssueIds.push(remoteId);
+              logEvent("sync.job.issue_failed", { userId: job.userId, jobId, remoteIssueId: remoteId, error }, "warn");
+            }
           }
           logEvent("sync.job.recheck_reassigned", {
             userId: job.userId,
@@ -1272,18 +1291,27 @@ export async function executeSyncJob(jobId: string): Promise<void> {
     //   });
     // }
 
+    // A per-issue failure above doesn't fail the whole job — everything that
+    // did sync is real and shouldn't be thrown away — but it also shouldn't
+    // be invisible. Surface it as a non-fatal note on the otherwise-"success"
+    // job/state rows instead of silently discarding it.
+    const partialFailureNote = failedRemoteIssueIds.length > 0
+      ? `${failedRemoteIssueIds.length} issue(s) failed to sync this run: ${failedRemoteIssueIds.join(", ")}`
+      : null;
+
     await prisma.syncJob.update({
       where: { id: jobId },
       data: {
         status: "success",
         endedAt: new Date(),
+        error: partialFailureNote,
       },
     });
 
     await markSyncState(job.userId, {
       status: "success",
       runningJobId: null,
-      error: null,
+      error: partialFailureNote,
       full: job.jobType === "full_manual",
       incremental: job.jobType === "incremental",
       syncStartedAt,
@@ -1293,6 +1321,7 @@ export async function executeSyncJob(jobId: string): Promise<void> {
       userId: job.userId,
       jobType: job.jobType,
       syncedIssueCount: seenRemoteIssueIds.size,
+      failedIssueCount: failedRemoteIssueIds.length,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown sync error";

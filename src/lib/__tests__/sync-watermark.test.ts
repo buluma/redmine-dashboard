@@ -10,6 +10,10 @@ const {
   mockEnumerationCatalogUpsert,
   mockIssueFindMany,
   mockIssueFindFirst,
+  mockIssueFindUnique,
+  mockIssueUpsert,
+  mockIssueAttachmentDeleteMany,
+  mockIssueRelationDeleteMany,
 } = vi.hoisted(() => ({
   mockSyncJobFindUnique: vi.fn(),
   mockSyncJobUpdate: vi.fn(),
@@ -20,6 +24,10 @@ const {
   mockEnumerationCatalogUpsert: vi.fn(),
   mockIssueFindMany: vi.fn(),
   mockIssueFindFirst: vi.fn(),
+  mockIssueFindUnique: vi.fn(),
+  mockIssueUpsert: vi.fn(),
+  mockIssueAttachmentDeleteMany: vi.fn(),
+  mockIssueRelationDeleteMany: vi.fn(),
 }));
 
 vi.mock("@/src/lib/db", () => ({
@@ -29,7 +37,14 @@ vi.mock("@/src/lib/db", () => ({
     userRedmineCredential: { findUnique: mockCredentialFindUnique },
     statusCatalog: { upsert: mockStatusCatalogUpsert },
     enumerationCatalog: { upsert: mockEnumerationCatalogUpsert },
-    issue: { findMany: mockIssueFindMany, findFirst: mockIssueFindFirst },
+    issue: {
+      findMany: mockIssueFindMany,
+      findFirst: mockIssueFindFirst,
+      findUnique: mockIssueFindUnique,
+      upsert: mockIssueUpsert,
+    },
+    issueAttachment: { deleteMany: mockIssueAttachmentDeleteMany },
+    issueRelation: { deleteMany: mockIssueRelationDeleteMany },
   },
 }));
 
@@ -55,6 +70,7 @@ vi.mock("@/src/lib/redmine", () => ({
     this.getIssuePriorities = vi.fn().mockResolvedValue([]);
     this.listIssues = listIssuesMock;
     this.getIssue = getIssueMock;
+    this.listIssueTimeEntries = vi.fn().mockResolvedValue([]);
   }),
 }));
 
@@ -180,5 +196,72 @@ describe("executeSyncJob skips unchanged issues on incremental ticks", () => {
     await executeSyncJob(JOB_ID);
 
     expect(mockIssueFindMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("executeSyncJob isolates a single issue's failure", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSyncJobUpdate.mockResolvedValue({});
+    mockSyncStateUpsert.mockResolvedValue({});
+    mockSyncStateFindUnique.mockResolvedValue({ lastIncrementalSyncAt: null });
+    mockIssueFindMany.mockResolvedValue([]); // nothing cached — every issue is "changed"
+    mockIssueFindFirst.mockResolvedValue(null); // not a hybrid mirror
+    mockIssueFindUnique.mockResolvedValue(null); // existingBeforeUpsert — treat every issue as newly-created
+    mockIssueUpsert.mockImplementation(async ({ create }: { create: Record<string, unknown> }) => ({
+      id: `local-${create.redmineIssueId}`,
+      redmineIssueId: create.redmineIssueId,
+      subject: create.subject,
+      statusName: create.statusName,
+    }));
+    mockIssueAttachmentDeleteMany.mockResolvedValue({ count: 0 });
+    mockIssueRelationDeleteMany.mockResolvedValue({ count: 0 });
+    mockCredentialFindUnique.mockResolvedValue({
+      userId: USER_ID,
+      isActive: true,
+      baseUrl: "https://redmine.example.com",
+      apiKeyEncrypted: "enc",
+      apiKeyIv: "iv",
+    });
+    mockSyncJobFindUnique.mockResolvedValue({
+      id: JOB_ID, userId: USER_ID, jobType: "incremental", status: "pending",
+    });
+  });
+
+  it("keeps syncing the rest of the batch after one issue throws, and still ends the job as success", async () => {
+    listIssuesMock.mockResolvedValue([
+      { id: 1, updated_on: "2026-06-20T10:00:00Z" },
+      { id: 2, updated_on: "2026-06-20T10:00:00Z" },
+      { id: 3, updated_on: "2026-06-20T10:00:00Z" },
+    ]);
+    // Issue 2's own detail fetch fails (persistent timeout, malformed
+    // payload, etc.) — issues 1 and 3 must still sync.
+    getIssueMock.mockImplementation(async (remoteId: number) => {
+      if (remoteId === 2) throw new Error("Redmine timeout");
+      return { issue: { id: remoteId, subject: `Issue ${remoteId}`, status: { id: 1, name: "New" } } };
+    });
+
+    await executeSyncJob(JOB_ID);
+
+    // Issue 1 and 3 both actually synced (a real DB upsert happened) — the
+    // loop didn't abort when issue 2 threw partway through the batch.
+    expect(mockIssueUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({ create: expect.objectContaining({ redmineIssueId: 1 }) })
+    );
+    expect(mockIssueUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({ create: expect.objectContaining({ redmineIssueId: 3 }) })
+    );
+    // Issue 2 never made it to upsert — it failed before that point.
+    expect(mockIssueUpsert).not.toHaveBeenCalledWith(
+      expect.objectContaining({ create: expect.objectContaining({ redmineIssueId: 2 }) })
+    );
+
+    const jobUpdateCall = mockSyncJobUpdate.mock.calls.find((call) => call[0]?.data?.status === "success");
+    expect(jobUpdateCall).toBeDefined();
+    // The failure isn't silently discarded — it's surfaced on the otherwise-successful job.
+    expect(jobUpdateCall![0].data.error).toBe("1 issue(s) failed to sync this run: 2");
+    expect(mockSyncJobUpdate).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: "failed" }) })
+    );
   });
 });
