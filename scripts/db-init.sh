@@ -11,7 +11,7 @@ fi
 case "$DATABASE_URL_VALUE" in
   postgres://*|postgresql://*)
     echo "PostgreSQL DATABASE_URL detected, attempting Prisma migrations..."
-    if ! npx prisma migrate deploy; then
+    if ! bunx prisma migrate deploy; then
       echo "Prisma migrate deploy failed; continuing startup with existing schema." >&2
       echo "Set RUN_DB_MIGRATIONS_ON_START=true and resolve migration history if you need strict migration gating." >&2
     fi
@@ -59,7 +59,7 @@ SQL
 
     SQLITE_SCHEMA_PATH="${PRISMA_SCHEMA_PATH:-prisma/schema.dev.sqlite.prisma}"
     echo "Applying Prisma schema to SQLite DB using ${SQLITE_SCHEMA_PATH}..."
-    npx prisma db push --skip-generate --accept-data-loss --schema="$SQLITE_SCHEMA_PATH"
+    bunx prisma db push --skip-generate --accept-data-loss --schema="$SQLITE_SCHEMA_PATH"
     ;;
   *)
     echo "Unsupported DATABASE_URL format: $DATABASE_URL_VALUE" >&2

@@ -68,19 +68,19 @@ backup:
 # Database migrations
 migrate:
 	@echo "Applying database migrations..."
-	@npx prisma migrate deploy
+	@bunx prisma migrate deploy
 	@echo "Migrations applied successfully"
 
 migrate-rollback:
 	@echo "⚠️  Rolling back last migration..."
 	@read -p "Are you sure? This may cause data loss. Type 'yes' to confirm: " confirm && [ "$$confirm" = "yes" ] || exit 1
 	@echo "Rolling back..."
-	@npx prisma migrate rollback
+	@bunx prisma migrate rollback
 	@echo "Migration rolled back"
 
 db-status:
 	@echo "=== Migration Status ==="
-	@npx prisma migrate status
+	@bunx prisma migrate status
 
 clean:
 	echo "Cleaning build artifacts..."
