@@ -152,7 +152,7 @@ describe("useDashboardData", () => {
       await mountWithUser();
       const last = eventStreamCalls[eventStreamCalls.length - 1] as { enabled: boolean; handlers: Record<string, unknown> };
       expect(last.enabled).toBe(true);
-      expect(Object.keys(last.handlers)).toEqual(expect.arrayContaining(["issue.created", "issue.updated"]));
+      expect(Object.keys(last.handlers)).toEqual(expect.arrayContaining(["issue.created", "issue.updated", "sync.tick.completed"]));
     });
 
     it("coalesces a burst of SSE issue events into a single refreshAll call", async () => {
@@ -187,6 +187,60 @@ describe("useDashboardData", () => {
         await vi.advanceTimersByTimeAsync(600);
       });
       expect(issuesCalls).toBe(callsBeforeBurst + 1);
+    });
+
+    it("caps a slow trickle of SSE events to one refresh per max-wait window", async () => {
+      let issuesCalls = 0;
+      vi.mocked(fetch).mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.includes("/api/session/me")) return jsonResponse({ user: { id: "u1", username: "a", displayName: "A" } });
+        if (url.includes("/api/issues?")) { issuesCalls += 1; return jsonResponse({ items: [], total: 0, filters: {} }); }
+        return jsonResponse({ state: null, activities: [], favorites: [] });
+      });
+      const { result } = renderData();
+      await waitFor(() => expect(result.current.user).not.toBeNull());
+      await waitFor(() => expect(issuesCalls).toBeGreaterThanOrEqual(1));
+      const callsBeforeTrickle = issuesCalls;
+
+      const last = eventStreamCalls[eventStreamCalls.length - 1] as { handlers: Record<string, (data: unknown) => void> };
+      // A slow sync round-trips to Redmine between issues, so events land
+      // seconds apart — each arrival keeps resetting the 1s quiet window,
+      // which alone would defer the refresh indefinitely.
+      for (let i = 0; i < 6; i += 1) {
+        act(() => { last.handlers["issue.updated"]?.({ redmineIssueId: i }); });
+        await act(async () => { await vi.advanceTimersByTimeAsync(900); });
+      }
+
+      // The 5s max-wait backstop fires despite the quiet window never elapsing.
+      expect(issuesCalls).toBe(callsBeforeTrickle + 1);
+    });
+
+    it("refreshes immediately on sync.tick.completed, bypassing debounce/max-wait", async () => {
+      let issuesCalls = 0;
+      vi.mocked(fetch).mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.includes("/api/session/me")) return jsonResponse({ user: { id: "u1", username: "a", displayName: "A" } });
+        if (url.includes("/api/issues?")) { issuesCalls += 1; return jsonResponse({ items: [], total: 0, filters: {} }); }
+        return jsonResponse({ state: null, activities: [], favorites: [] });
+      });
+      const { result } = renderData();
+      await waitFor(() => expect(result.current.user).not.toBeNull());
+      await waitFor(() => expect(issuesCalls).toBeGreaterThanOrEqual(1));
+      const callsBefore = issuesCalls;
+
+      const last = eventStreamCalls[eventStreamCalls.length - 1] as { handlers: Record<string, (data: unknown) => void> };
+      act(() => {
+        last.handlers["issue.updated"]?.({ redmineIssueId: 1 });
+        last.handlers["sync.tick.completed"]?.({ durationMs: 4000, issueCount: 1 });
+      });
+
+      await waitFor(() => expect(issuesCalls).toBe(callsBefore + 1));
+
+      // The now-cleared debounce/max-wait timers must not fire a second refresh.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6_000);
+      });
+      expect(issuesCalls).toBe(callsBefore + 1);
     });
   });
 

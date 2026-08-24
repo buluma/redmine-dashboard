@@ -3,6 +3,7 @@ import { prisma } from "@/src/lib/db";
 import { env } from "@/src/lib/env";
 import { logEvent } from "@/src/lib/log";
 import { acquireLeaderLock } from "@/src/lib/leader-lock";
+import { emitEvent, subscribe } from "@/src/lib/event-bus";
 import { runSyncJob } from "@/src/lib/sync";
 import { syncWakaTimeSummaries } from "@/src/lib/wakatime-sync";
 
@@ -15,7 +16,8 @@ const ownerId = randomUUID();
 let intervalRef: NodeJS.Timeout | null = null;
 let tickInFlight = false;
 
-async function pollTick(): Promise<void> {
+// Exported for tests only — production code drives this via ensurePollerStarted's interval.
+export async function pollTick(): Promise<void> {
   if (tickInFlight) {
     return;
   }
@@ -33,8 +35,24 @@ async function pollTick(): Promise<void> {
     });
     logEvent("poller.tick.started", { ownerId, activeUserCount: users.length });
 
-    for (const u of users) {
-      await runSyncJob(u.userId, "incremental");
+    // A sync run emits one issue.created/issue.updated event per issue
+    // touched, which is too chatty for the dashboard to refresh on directly
+    // (see sync.tick.completed below). Count them here so the single
+    // completion event tells the client how much actually changed.
+    const tickStartedAt = Date.now();
+    let issueEventCount = 0;
+    const unsubscribe = subscribe((event) => {
+      if (event.type === "issue.created" || event.type === "issue.updated") {
+        issueEventCount += 1;
+      }
+    });
+
+    try {
+      for (const u of users) {
+        await runSyncJob(u.userId, "incremental");
+      }
+    } finally {
+      unsubscribe();
     }
 
     const wakaKey = process.env.WAKATIME_API_KEY;
@@ -46,7 +64,15 @@ async function pollTick(): Promise<void> {
       }
     }
 
-    logEvent("poller.tick.completed", { ownerId, activeUserCount: users.length });
+    // Single authoritative "the batch is done" signal — the dashboard
+    // refreshes on this instead of on every individual issue event.
+    emitEvent({
+      type: "sync.tick.completed",
+      durationMs: Date.now() - tickStartedAt,
+      issueCount: issueEventCount,
+    });
+
+    logEvent("poller.tick.completed", { ownerId, activeUserCount: users.length, issueEventCount });
   } catch (error) {
     logEvent("poller.tick.failed", { ownerId, error }, "error");
   } finally {
