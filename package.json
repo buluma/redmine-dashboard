@@ -60,6 +60,13 @@
     "nanoid": ">=3.3.18",
     "deepmerge-ts": ">=8.0.0"
   },
+  "trustedDependencies": [
+    "@sentry/cli",
+    "@sentry/node-cpu-profiler",
+    "@tree-sitter-grammars/tree-sitter-yaml",
+    "core-js-pure",
+    "unrs-resolver"
+  ],
   "devDependencies": {
     "@axe-core/playwright": "^4.11.3",
     "@playwright/test": "^1.59.1",

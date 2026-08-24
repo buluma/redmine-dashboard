@@ -21,24 +21,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run lint
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
 
   typecheck:
     needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run typecheck
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
 
   test:
     needs: typecheck
@@ -49,13 +47,12 @@ jobs:
       SESSION_SECRET: ci-test-secret
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - run: npx prisma generate --schema=prisma/schema.dev.sqlite.prisma
-      - run: npm run test
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bunx prisma generate --schema=prisma/schema.dev.sqlite.prisma
+      - run: bun run test
 
   build:
     needs: test
@@ -67,27 +64,25 @@ jobs:
       NEXT_TELEMETRY_DISABLED: 1
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - run: npx prisma generate --schema=prisma/schema.dev.sqlite.prisma
-      - run: npm run build
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bunx prisma generate --schema=prisma/schema.dev.sqlite.prisma
+      - run: bun run build
 
   a11y:
     needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npx prisma generate --schema=prisma/schema.dev.sqlite.prisma
-      - run: npm run test:a11y
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bunx prisma generate --schema=prisma/schema.dev.sqlite.prisma
+      - run: bun run test:a11y
         env:
           DATABASE_URL: file:./test.db
           APP_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
@@ -98,16 +93,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npx prisma db push --schema=prisma/schema.dev.sqlite.prisma
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bunx prisma db push --schema=prisma/schema.dev.sqlite.prisma
         env:
           DATABASE_URL: file:./test.db
-      - run: npx playwright test e2e/external-api.spec.ts
+      - run: bunx playwright test e2e/external-api.spec.ts
         env:
           DATABASE_URL: file:./test.db
           APP_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
