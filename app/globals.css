@@ -2458,8 +2458,9 @@ kbd {
   color: var(--warn);
 }
 
-/* .activity-row background: intentionally not set — theme-dark.css's rule
-   handles this class and leaves it transparent on purpose, see its comment. */
+/* .activity-row background: see theme-dark.css's rule — it sets var(--card)
+   there to override the hardcoded #fcfdff light background in
+   dashboard-detail.css, which was rendering white in dark mode. */
 
 /* [data-theme="dark"] .window-btn {
   background: var(--card);

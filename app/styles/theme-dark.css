@@ -87,6 +87,17 @@
   color: var(--ink);
 }
 
+/* .issues-table-wrap and .activity-row carry hardcoded light backgrounds
+   (#ffffff / #fcfdff) in dashboard-detail.css that the batch rule above
+   never overrode, so they showed as white patches in dark mode. */
+[data-theme="dark"] .issues-table-wrap {
+  background: var(--surface-1);
+}
+
+[data-theme="dark"] .activity-row {
+  background: var(--card);
+}
+
 [data-theme="dark"] .dashboard-widgets .stat-card,
 [data-theme="dark"] .dashboard-widgets .stat-card.open,
 [data-theme="dark"] .dashboard-widgets .stat-card.closed,
@@ -220,8 +231,6 @@
 [data-theme="dark"] .qa-tabs,
 [data-theme="dark"] .status-chip,
 [data-theme="dark"] .saved-view-pill,
-[data-theme="dark"] .favorite-btn,
-[data-theme="dark"] .favorite-filter,
 [data-theme="dark"] .report-list-row,
 [data-theme="dark"] .secondary-button,
 [data-theme="dark"] .report-btn,
@@ -234,6 +243,32 @@
 [data-theme="dark"] .chat-status-badge {
   border-color: var(--line);
   color: var(--ink);
+}
+
+/* .favorite-btn/.favorite-filter carry hardcoded light backgrounds
+   (#f0ece2 / #f5f2eb) and cream hover states (#fff3cd) in components.css
+   that were never overridden, showing as beige/cream patches in dark mode.
+   .favorited/.active gold states are left alone — gold reads fine on dark. */
+[data-theme="dark"] .favorite-btn {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .favorite-btn:hover {
+  background: var(--warn-soft);
+  color: var(--warn-strong);
+}
+
+[data-theme="dark"] .favorite-filter {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .favorite-filter:hover {
+  background: var(--warn-soft);
+  color: var(--warn-strong);
 }
 
 [data-theme="dark"] .quick-filter-btn,

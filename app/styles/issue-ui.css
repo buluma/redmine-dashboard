@@ -851,6 +851,7 @@
 .issue-preview-tooltip {
   position: fixed;
   z-index: 1000;
+  background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -1185,6 +1186,7 @@
 }
 
 [data-theme="dark"] .issue-preview-tooltip {
+  background: var(--surface-1);
   border-color: var(--line);
 }
 
