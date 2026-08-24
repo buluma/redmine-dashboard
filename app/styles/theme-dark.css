@@ -721,9 +721,13 @@
 }
 
 [data-theme="dark"] .markdown code,
-[data-theme="dark"] .markdown pre,
-[data-theme="dark"] .markdown .redmine-collapse {
+[data-theme="dark"] .markdown pre {
   background: var(--bg-soft);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .markdown .redmine-collapse {
   border-color: var(--line);
   color: var(--ink);
 }

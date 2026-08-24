@@ -2097,7 +2097,6 @@ label {
   margin: 0.55rem 0;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #f6f9fc;
   overflow: hidden;
 }
 
@@ -2107,7 +2106,6 @@ label {
   user-select: none;
   font-weight: 700;
   color: var(--ink-soft);
-  background: #eaf2f9;
   padding: 0.4rem 0.6rem;
 }
 
