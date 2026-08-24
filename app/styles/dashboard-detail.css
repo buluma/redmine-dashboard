@@ -168,11 +168,7 @@ textarea {
 } */
 
 .metric-ai-insights {
-  background: linear-gradient(135deg, #ffffff 0%, #f3f0ff 50%, #ede9fe 100%);
   border: 1px solid #c4b5fd;
-  box-shadow:
-    0 4px 14px rgba(139, 92, 246, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
   position: relative;
   overflow: hidden;
 }
@@ -195,10 +191,6 @@ textarea {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   font-weight: 800;
-}
-
-.metric-health {
-  background: linear-gradient(180deg, #ffffff 0%, #e8f4f8 100%);
 }
 
 .metric-signal-row {
@@ -737,21 +729,11 @@ textarea {
 
 .dashboard-widgets .stat-card {
   border-color: #c6d5e2;
-  background: linear-gradient(180deg, #ffffff 0%, #f5f9fc 100%);
   box-shadow: 0 4px 12px rgba(18, 38, 55, 0.08);
-}
-
-.dashboard-widgets .stat-card.open {
-  background: linear-gradient(180deg, #f7fcf9 0%, #eaf6ef 100%);
-}
-
-.dashboard-widgets .stat-card.closed {
-  background: linear-gradient(180deg, #f4fafc 0%, #e9f3f8 100%);
 }
 
 .dashboard-widgets .widget-card {
   border-color: #c9d7e3;
-  background: linear-gradient(180deg, #ffffff 0%, #f7fbfd 100%);
   box-shadow: 0 4px 12px rgba(18, 38, 55, 0.07);
 }
 
