@@ -16,10 +16,15 @@ import type {
 const POLL_INTERVAL_MS = 90_000;
 const FETCH_PAGE_SIZE = 200;
 // A sync run emits one issue.created/issue.updated SSE event per issue
-// touched, so a batch of 200 issues would otherwise fire 200 back-to-back
-// refreshes. Coalesce bursts into a single refreshAll() after the stream
-// goes quiet for this long.
+// touched. Coalesce a fast burst into a single refreshAll() after the
+// stream goes quiet for this long...
 const SSE_REFRESH_DEBOUNCE_MS = 1_000;
+// ...but a slow sync (Redmine round-trips spaced seconds apart) never goes
+// quiet long enough to hit that window, so cap how long a stream of events
+// can defer a refresh before one fires anyway. The poller's
+// sync.tick.completed event (below) is the real completion signal and
+// fires a refresh immediately, making this a backstop for long-running ticks.
+const SSE_REFRESH_MAX_WAIT_MS = 5_000;
 
 interface AiStatusInfo {
   available: boolean;
@@ -216,24 +221,34 @@ export function useDashboardData({
 
   // Live updates via Server-Sent Events. The polling loop above stays
   // as a backstop in case the stream is dropped by an intermediate proxy.
-  const sseRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    return () => {
-      if (sseRefreshTimerRef.current) clearTimeout(sseRefreshTimerRef.current);
-    };
-  }, []);
+  const sseQuietTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sseMaxWaitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearSseTimers = () => {
+    if (sseQuietTimerRef.current) clearTimeout(sseQuietTimerRef.current);
+    if (sseMaxWaitTimerRef.current) clearTimeout(sseMaxWaitTimerRef.current);
+    sseQuietTimerRef.current = null;
+    sseMaxWaitTimerRef.current = null;
+  };
+  useEffect(() => clearSseTimers, []);
+  const fireSseRefresh = () => {
+    clearSseTimers();
+    void refreshAll();
+  };
   const scheduleSseRefresh = () => {
-    if (sseRefreshTimerRef.current) clearTimeout(sseRefreshTimerRef.current);
-    sseRefreshTimerRef.current = setTimeout(() => {
-      sseRefreshTimerRef.current = null;
-      void refreshAll();
-    }, SSE_REFRESH_DEBOUNCE_MS);
+    if (sseQuietTimerRef.current) clearTimeout(sseQuietTimerRef.current);
+    sseQuietTimerRef.current = setTimeout(fireSseRefresh, SSE_REFRESH_DEBOUNCE_MS);
+    if (!sseMaxWaitTimerRef.current) {
+      sseMaxWaitTimerRef.current = setTimeout(fireSseRefresh, SSE_REFRESH_MAX_WAIT_MS);
+    }
   };
   useEventStream({
     enabled: Boolean(user),
     handlers: {
       "issue.created": scheduleSseRefresh,
       "issue.updated": scheduleSseRefresh,
+      // Authoritative "the sync batch is done" signal from the poller —
+      // refresh right away instead of waiting out the debounce/max-wait.
+      "sync.tick.completed": fireSseRefresh,
     },
   });
 
