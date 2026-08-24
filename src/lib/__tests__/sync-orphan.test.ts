@@ -6,12 +6,18 @@ const {
   mockSyncJobCreate,
   mockSyncJobUpdate,
   mockSyncStateUpsert,
+  mockSyncStateUpdateMany,
+  mockSyncStateFindUnique,
+  mockSyncStateCreate,
 } = vi.hoisted(() => ({
   mockSyncJobFindFirst: vi.fn(),
   mockSyncJobFindUnique: vi.fn(),
   mockSyncJobCreate: vi.fn(),
   mockSyncJobUpdate: vi.fn(),
   mockSyncStateUpsert: vi.fn(),
+  mockSyncStateUpdateMany: vi.fn(),
+  mockSyncStateFindUnique: vi.fn(),
+  mockSyncStateCreate: vi.fn(),
 }));
 
 vi.mock("@/src/lib/db", () => ({
@@ -22,7 +28,15 @@ vi.mock("@/src/lib/db", () => ({
       create: mockSyncJobCreate,
       update: mockSyncJobUpdate,
     },
-    syncState: { upsert: mockSyncStateUpsert },
+    syncState: {
+      upsert: mockSyncStateUpsert,
+      // getOrCreateSyncJob's atomic claim (SyncState.userId is a real
+      // unique key) — always "wins" the claim in these tests so the
+      // existing reuse/reset assertions below aren't affected by it.
+      updateMany: mockSyncStateUpdateMany,
+      findUnique: mockSyncStateFindUnique,
+      create: mockSyncStateCreate,
+    },
   },
 }));
 
@@ -53,6 +67,7 @@ describe("runSyncJob orphaned running jobs", () => {
     mockSyncJobFindUnique.mockResolvedValue(null);
     mockSyncJobUpdate.mockResolvedValue({});
     mockSyncStateUpsert.mockResolvedValue({});
+    mockSyncStateUpdateMany.mockResolvedValue({ count: 1 }); // always wins the atomic claim
     mockSyncJobCreate.mockResolvedValue({
       id: "job-new",
       userId: USER_ID,
@@ -110,5 +125,48 @@ describe("runSyncJob orphaned running jobs", () => {
         data: expect.objectContaining({ status: "failed" }),
       }),
     );
+  });
+});
+
+describe("runSyncJob concurrent-caller dedup", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSyncJobFindUnique.mockResolvedValue(null);
+    mockSyncJobUpdate.mockResolvedValue({});
+    mockSyncStateUpsert.mockResolvedValue({});
+    // Both callers' findFirst races before either has created a job yet.
+    mockSyncJobFindFirst.mockResolvedValue(null);
+  });
+
+  it("only creates one SyncJob when two callers race findFirst→create with nothing existing yet", async () => {
+    // Both callers' very first findFirst — before either has created
+    // anything — sees no job at all. This is the actual race: without the
+    // atomic claim, both would fall straight through to create().
+    // Call order (A runs to completion before B starts, so it's
+    // deterministic): 1) A's initial findFirst, 2) B's initial findFirst,
+    // 3) B's fallback lookup after it loses the claim — by which point A's
+    // job genuinely exists.
+    const winnerJob = { id: "job-winner", userId: USER_ID, status: "pending", createdAt: new Date() };
+    mockSyncJobFindFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(winnerJob);
+
+    // Simulates the real DB: userId is SyncState's unique key, so only the
+    // first updateMany actually matches a row (or, for a first-ever sync,
+    // only the first create succeeds and the second hits SyncState's real
+    // unique constraint) — here that's the first call in program order.
+    mockSyncStateUpdateMany
+      .mockResolvedValueOnce({ count: 1 }) // caller A claims it
+      .mockResolvedValueOnce({ count: 0 }); // caller B loses the claim
+    mockSyncStateFindUnique.mockResolvedValue({ userId: USER_ID, lastSyncStatus: "pending" });
+    mockSyncJobCreate.mockResolvedValue({ id: "job-winner", userId: USER_ID, jobType: "incremental", status: "pending" });
+
+    const resultA = await runSyncJob(USER_ID, "incremental");
+    const resultB = await runSyncJob(USER_ID, "incremental");
+
+    expect(mockSyncJobCreate).toHaveBeenCalledTimes(1);
+    expect(resultA.jobId).toBe("job-winner");
+    expect(resultB.jobId).toBe("job-winner");
   });
 });

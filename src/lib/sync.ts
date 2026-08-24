@@ -1033,6 +1033,53 @@ async function getOrCreateSyncJob(
     }
   }
 
+  // The findFirst above and the create below are two separate round-trips —
+  // two near-simultaneous callers for the same user (a double-clicked manual
+  // pull, or a manual pull racing a poller tick) can both pass findFirst
+  // with no existing job, then both create one, doubling Redmine API load
+  // and DB writes concurrently. SyncState.userId is a real unique key (@id),
+  // so use a conditional update on it as an atomic claim: only the caller
+  // whose update actually matches a row (or wins the create race on a
+  // brand-new user) proceeds to create the SyncJob; everyone else falls back
+  // to whatever job the winner is about to create.
+  const claimed = await prisma.syncState.updateMany({
+    where: { userId, lastSyncStatus: { notIn: ["pending", "running"] } },
+    data: { lastSyncStatus: "pending" },
+  });
+
+  if (claimed.count === 0) {
+    const state = await prisma.syncState.findUnique({ where: { userId } });
+    if (!state) {
+      try {
+        await prisma.syncState.create({ data: { userId, lastSyncStatus: "pending" } });
+      } catch (error) {
+        if ((error as { code?: string }).code !== "P2002") {
+          throw error;
+        }
+        // Lost the create race too — fall through to the "lost the claim" lookup below.
+      }
+    }
+
+    // Re-check: either we lost the claim outright, or the create-race branch
+    // above also lost. Either way another caller now owns this — find the
+    // job it's creating/created instead of inserting a duplicate.
+    const stillClaimed = await prisma.syncState.findUnique({ where: { userId } });
+    if (stillClaimed && stillClaimed.lastSyncStatus === "pending") {
+      const winner = await prisma.syncJob.findFirst({
+        where: { userId, status: { in: ["pending", "running"] } },
+        orderBy: { createdAt: "desc" },
+      });
+      if (winner) {
+        logEvent("sync.job.claim_lost", { userId, jobType, winnerJobId: winner.id }, "warn");
+        return { jobId: winner.id, isNew: false };
+      }
+      // Extremely narrow window: the winner claimed SyncState but hasn't
+      // inserted its SyncJob row yet. Rather than block or loop, fall
+      // through and create anyway — worse-case a rare duplicate, which is
+      // exactly today's behavior, not a regression.
+    }
+  }
+
   const job = await prisma.syncJob.create({
     data: {
       userId,
