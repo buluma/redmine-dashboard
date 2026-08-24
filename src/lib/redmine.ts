@@ -391,6 +391,33 @@ export class RedmineClient {
     return out;
   }
 
+  // Fetches specific issues by id with no assigned_to_id filter — unlike
+  // listIssues("assigned", ...), this still returns an issue after it's been
+  // reassigned away from the credential owner. Used to re-check issues our
+  // cache believes are still assigned to the user, since a scoped incremental
+  // poll can never observe that belief going stale (the reassigned issue
+  // simply stops matching the scope query and drops out of every future
+  // fetch, so its cached assignee sticks forever otherwise).
+  async listIssuesByIds(issueIds: number[]): Promise<Array<Record<string, unknown>>> {
+    if (issueIds.length === 0) {
+      return [];
+    }
+
+    const limit = 100;
+    const out: Array<Record<string, unknown>> = [];
+
+    // Redmine's issue_id filter accepts a comma list; chunk to stay well
+    // under typical URL/query length limits.
+    for (let i = 0; i < issueIds.length; i += limit) {
+      const chunk = issueIds.slice(i, i + limit);
+      const path = `/issues.json?issue_id=${chunk.join(",")}&status_id=*&limit=${limit}`;
+      const data = await this.request<RedmineIssueListResponse>(path);
+      out.push(...data.issues);
+    }
+
+    return out;
+  }
+
   async getIssue(issueId: number, include: string[] = []): Promise<RedmineIssueDetail> {
     const query = include.length > 0 ? `?include=${include.join(",")}` : "";
     return this.request<RedmineIssueDetail>(`/issues/${issueId}.json${query}`);

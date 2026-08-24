@@ -1087,6 +1087,61 @@ export async function executeSyncJob(jobId: string): Promise<void> {
       });
     }
 
+    // The "assigned" scope's Redmine query is assigned_to_id=me, so an issue
+    // reassigned away from the user simply stops matching and drops out of
+    // every future scoped fetch above — its cached assignee would otherwise
+    // stick forever. Re-check, by explicit id with no assigned_to filter,
+    // any issue our cache still believes is assigned to the user but that
+    // this tick's scoped fetch didn't see. Self-limiting: once corrected,
+    // the issue's cached assignee no longer matches "me" and it drops out
+    // of this set on its own.
+    if (env.redmineSyncIssueScope === "assigned") {
+      try {
+        const me = await client.getCurrentUser();
+        const cachedMine = await prisma.issue.findMany({
+          where: {
+            userId: job.userId,
+            source: "redmine",
+            redmineBaseUrl: client.normalizedBaseUrl,
+            assignedToId: me.id,
+            redmineIssueId: { not: null },
+          },
+          select: { redmineIssueId: true },
+        });
+        const missingIds = cachedMine
+          .map((i) => i.redmineIssueId)
+          .filter((id): id is number => id != null && !seenRemoteIssueIds.has(id));
+
+        if (missingIds.length > 0) {
+          const recheckList = await client.listIssuesByIds(missingIds);
+          for (const issueRaw of recheckList) {
+            const remoteId = asNumber(asObject(issueRaw).id);
+            if (!remoteId || seenRemoteIssueIds.has(remoteId)) {
+              continue;
+            }
+            seenRemoteIssueIds.add(remoteId);
+            await syncSingleIssue(job.userId, client, remoteId, {
+              pruneTimeEntries: job.jobType === "full_manual",
+              pruneAttachments: true,
+              pruneRelations: true,
+              sendNotifications: env.slackNotifyEnabled,
+            });
+          }
+          logEvent("sync.job.recheck_reassigned", {
+            userId: job.userId,
+            jobId,
+            checkedCount: missingIds.length,
+            foundCount: recheckList.length,
+          });
+        }
+      } catch (error) {
+        // Non-fatal: the main scoped sync above already succeeded. Losing
+        // this pass just means reassignment detection reverts to waiting
+        // for the next full_manual pull, not a failed sync job.
+        logEvent("sync.job.recheck_failed", { userId: job.userId, jobId, error }, "warn");
+      }
+    }
+
     // SAFETY: Do NOT delete issues that weren't seen during sync.
     // The sync may not fetch ALL issues (pagination limits, rate limiting,
     // interrupted jobs, or scoped queries like assigned/open).

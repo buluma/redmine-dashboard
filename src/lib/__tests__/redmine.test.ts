@@ -177,4 +177,61 @@ describe("RedmineClient", () => {
     expect(body.issue).not.toHaveProperty("custom_fields");
     expect(body.issue).not.toHaveProperty("parent_issue_id");
   });
+
+  describe("listIssuesByIds", () => {
+    it("queries by explicit issue_id with no assigned_to filter, so a reassigned issue still comes back", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ issues: [{ id: 116762 }], total_count: 1, offset: 0, limit: 100 }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+
+      const client = new RedmineClient("https://redmine.example.com", "apikey");
+      const result = await client.listIssuesByIds([116762]);
+
+      expect(result).toEqual([{ id: 116762 }]);
+      const [url] = fetchMock.mock.calls[0];
+      expect(String(url)).toContain("issue_id=116762");
+      expect(String(url)).toContain("status_id=*");
+      expect(String(url)).not.toContain("assigned_to_id");
+    });
+
+    it("returns an empty list without calling fetch when given no ids", async () => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+
+      const client = new RedmineClient("https://redmine.example.com", "apikey");
+      const result = await client.listIssuesByIds([]);
+
+      expect(result).toEqual([]);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("chunks large id lists into multiple requests", async () => {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ issues: [{ id: 1 }], total_count: 1, offset: 0, limit: 100 }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ issues: [{ id: 101 }], total_count: 1, offset: 0, limit: 100 }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      vi.stubGlobal("fetch", fetchMock);
+
+      const client = new RedmineClient("https://redmine.example.com", "apikey");
+      const ids = Array.from({ length: 101 }, (_, i) => i + 1);
+      const result = await client.listIssuesByIds(ids);
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(result).toEqual([{ id: 1 }, { id: 101 }]);
+    });
+  });
 });
