@@ -27,7 +27,7 @@
   },
   "nav": {
     "dashboard": "Paneel",
-    "heimdall": "Heimdall-logboeke",
+    "heimdall": "Heimdal-logboeke",
     "personalTickets": "Persoonlike kaartjies",
     "reports": "Verslae",
     "aiSummaries": "KI-opsommings",
@@ -643,7 +643,7 @@
   },
   "heimdall": {
     "kicker": "Streamline",
-    "title": "Heimdall",
+    "title": "Heimdal",
     "summary": "Streamline toepassingslogboeke — {total} rekords · {errors} foute/waarskuwings · {hosts} gasheer(s)",
     "refreshBtn": "Ververs",
     "autoRefreshOn": "Outo-ververs AAN",

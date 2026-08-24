@@ -27,7 +27,7 @@
   },
   "nav": {
     "dashboard": "Панель",
-    "heimdall": "Журнали Heimdall",
+    "heimdall": "Журнали Heimdal",
     "personalTickets": "Особисті тикети",
     "reports": "Звіти",
     "aiSummaries": "Підсумки ІІ",
@@ -649,7 +649,7 @@
   },
   "heimdall": {
     "kicker": "Streamline",
-    "title": "Heimdall",
+    "title": "Heimdal",
     "summary": "Логи застосунку — {total} записів · {errors} помилок/попереджень · {hosts} хост(ів)",
     "refreshBtn": "Оновити",
     "autoRefreshOn": "Автооновлення УВІМКНЕНО",

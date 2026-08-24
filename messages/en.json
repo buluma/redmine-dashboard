@@ -27,7 +27,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
-    "heimdall": "Heimdall Logs",
+    "heimdall": "Heimdal Logs",
     "personalTickets": "Personal Tickets",
     "reports": "Reports",
     "aiSummaries": "AI Summaries",
@@ -641,7 +641,7 @@
   },
   "heimdall": {
     "kicker": "Streamline",
-    "title": "Heimdall",
+    "title": "Heimdal",
     "summary": "Streamline Application Logs — {total} records · {errors} errors/warnings · {hosts} host(s)",
     "refreshBtn": "Refresh",
     "autoRefreshOn": "Auto-refresh ON",
