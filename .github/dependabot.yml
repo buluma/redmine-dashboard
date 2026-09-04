@@ -8,8 +8,6 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
-    labels:
-      - "deps"
 
   # Dockerfile / Dockerfile.pi base images
   - package-ecosystem: "docker"
@@ -19,8 +17,6 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
-    labels:
-      - "deps"
 
   # GitHub Actions workflows
   - package-ecosystem: "github-actions"
@@ -30,5 +26,3 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
-    labels:
-      - "deps"
