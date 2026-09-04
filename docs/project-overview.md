@@ -10,7 +10,7 @@ The system works by syncing Redmine issues to a local database, providing fast l
 - **Reporting:** A reports page provides insights with trends, a heatmap of activity, data drilldowns, and a CSV export feature.
 - **Issue Detail Page:** Clicking an issue opens a dedicated route (`/issues/[id]`) with Redmine-style sections and tabs (`history`, `notes`,
   `property changes`, `spent time`).
-- **Issue Editing:** Inline editing of issue title, description, priority, dates, estimated hours, and custom fields — pushed to Redmine on save.
+- **Issue Editing:** Inline editing of issue title, description, priority, dates, estimated hours, and custom fields — pushed to Redmine on save for Redmine-backed issues (`PUT /api/issues/[id]/edit`, which requires a numeric Redmine id). Local-only issues (no Redmine id) are edited through a separate DB-only route (`PATCH /api/issues/local/[id]`) instead — the local database is authoritative for them, there's nothing to push.
 - **Breadcrumb Navigation:** Parent-issue breadcrumbs traverse the full chain, linking to each ancestor issue.
 - **Child Issues:** Collapsible section listing all sub-tasks with tracker type chips (Task, Bug, HOT FIX).
 - **User Assignment:** Quick Actions panel supports assigning issues to any Redmine user synced to the local `RedmineUser` table.
