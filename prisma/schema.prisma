@@ -330,10 +330,12 @@ model TimeEntry {
   spentOn            DateTime
   source             String?
   wakaTimeDate       String?
+  calendarEventUid   String?
   createdAt          DateTime @default(now())
 
   @@unique([issueId, redmineTimeEntryId])
   @@unique([issueId, wakaTimeDate])
+  @@unique([issueId, calendarEventUid])
   @@index([userId, spentOn])
   @@index([issueId])
 }
