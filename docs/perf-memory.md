@@ -1,12 +1,10 @@
 # Memory Profiling Guide
 
-This guide defines a repeatable process to measure and compare Converge runtime
-memory before and after optimization changes.
+This guide defines a repeatable process to measure and compare Converge runtime memory before and after optimization changes.
 
 ## Goals
 
-- Measure memory behavior in development (`next dev`) and production
-  (`next start`).
+- Measure memory behavior in development (`next dev`) and production (`next start`).
 - Compare baseline and post-change medians using the same navigation flow.
 - Keep captures simple and reproducible with built-in scripts.
 
@@ -31,8 +29,7 @@ bun run build
 bun run mem:start
 ```
 
-Both scripts emit `runtime.memory.usage` structured log events once per minute
-when `MEMORY_LOGGING=true`.
+Both scripts emit `runtime.memory.usage` structured log events once per minute when `MEMORY_LOGGING=true`.
 
 ## Measurement Protocol
 

@@ -59,8 +59,7 @@ Rate limiting is implemented to prevent abuse:
 
 - **In-Memory**: For single-instance deployments
 - **Database-Backed**: For distributed deployments using `ApiRateLimit` table
-- **Redis-Backed**: For distributed deployments using Upstash Redis
-  (`rate-limit-redis.ts`)
+- **Redis-Backed**: For distributed deployments using Upstash Redis (`rate-limit-redis.ts`)
 - **Per-User Limits**:
   - Manual sync: 3 requests/minute
   - Issue mutations: 20 requests/minute
@@ -108,8 +107,7 @@ The `/api/external/tickets` endpoint requires authentication:
 
 - **Header**: `X-API-Key: {key}`
 - **Query**: `?api_key={key}`
-- **Keys**: Configured via `EXTERNAL_API_KEYS` environment variable
-  (comma-separated)
+- **Keys**: Configured via `EXTERNAL_API_KEYS` environment variable (comma-separated)
 
 ## Mobile API
 

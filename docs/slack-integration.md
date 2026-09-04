@@ -1,7 +1,6 @@
 # Slack Integration
 
-Converge supports bidirectional Slack integration: reading messages from Slack
-channels and sending Redmine issue updates to Slack.
+Converge supports bidirectional Slack integration: reading messages from Slack channels and sending Redmine issue updates to Slack.
 
 ## Configuration
 
@@ -55,10 +54,8 @@ SLACK_NOTIFY_FORMAT=compact
 
 ### 4. Get Channel IDs
 
-1. Enable **Channel ID** in Slack settings: Settings → Advanced → Check "Show
-   channel IDs in messages"
-2. Right-click a channel → **Copy link** → extract the channel ID (e.g.,
-   `C0123456789`)
+1. Enable **Channel ID** in Slack settings: Settings → Advanced → Check "Show channel IDs in messages"
+2. Right-click a channel → **Copy link** → extract the channel ID (e.g., `C0123456789`)
 
 ## Features
 
@@ -74,8 +71,7 @@ Access the Slack page at `/slack` (linked from the dashboard navigation).
 
 ### Sending Notifications
 
-When `SLACK_NOTIFY_ENABLED=true`, the sync workflow automatically sends
-notifications:
+When `SLACK_NOTIFY_ENABLED=true`, the sync workflow automatically sends notifications:
 
 | Event               | Notification                          |
 | ------------------- | ------------------------------------- |

@@ -1,7 +1,6 @@
 # API Reference
 
-This document describes the Converge backend API, including web and mobile
-routes.
+This document describes the Converge backend API, including web and mobile routes.
 
 ## Auth and Redmine Connection
 
@@ -28,8 +27,7 @@ Request body:
 
 Notes:
 
-- Returns `502` when Converge cannot reach Redmine due to upstream network/TLS
-  issues.
+- Returns `502` when Converge cannot reach Redmine due to upstream network/TLS issues.
 
 ### GET /api/redmine/bootstrap
 
@@ -56,18 +54,15 @@ Query params:
 
 Response includes:
 
-- `items[]` with `journals`, `timeEntries`, `githubLinks`, `attachments`,
-  `relations`, `allowedStatuses`, `children`
+- `items[]` with `journals`, `timeEntries`, `githubLinks`, `attachments`, `relations`, `allowedStatuses`, `children`
 - `filters.statuses`, `filters.priorities`
 - `source=local_cache|hybrid`
 
 Hybrid mode behavior:
 
-- Remote search results are merged with local cache rows and de-duplicated by
-  Redmine issue id.
+- Remote search results are merged with local cache rows and de-duplicated by Redmine issue id.
 - Result ordering honors the requested `sort` mode after merge.
-- `total` represents full pagination semantics for hybrid responses (not only
-  current-page merged count).
+- `total` represents full pagination semantics for hybrid responses (not only current-page merged count).
 
 ### POST /api/issues
 
@@ -91,8 +86,7 @@ Response includes the synced `Issue` object.
 
 ### GET /api/issues/[id]
 
-Returns enriched issue detail for the selected issue id (cache-backed),
-including:
+Returns enriched issue detail for the selected issue id (cache-backed), including:
 
 - `journals`
 - `githubLinks`
@@ -104,13 +98,11 @@ including:
 
 ### GET /api/issues/[id]/status
 
-Returns allowed workflow transitions from Redmine (`allowedStatuses`,
-`allowedStatusIds`).
+Returns allowed workflow transitions from Redmine (`allowedStatuses`, `allowedStatusIds`).
 
 ### POST /api/issues/[id]/status
 
-Updates issue status (validated against allowed transitions when provided by
-Redmine).
+Updates issue status (validated against allowed transitions when provided by Redmine).
 
 ### POST /api/issues/[id]/comment
 
@@ -193,8 +185,7 @@ Current limit: `10MB`.
 
 ### GET /api/issues/[id]/attachments/[attachmentId]
 
-Proxies attachment download through Converge backend (API key never exposed to
-clients).
+Proxies attachment download through Converge backend (API key never exposed to clients).
 
 ## Relations (Web)
 
@@ -214,8 +205,7 @@ Request body:
 
 Allowed `relationType` values:
 
-- `relates`, `duplicates`, `duplicated`, `blocks`, `blocked`, `precedes`,
-  `follows`, `copied_to`, `copied_from`
+- `relates`, `duplicates`, `duplicated`, `blocks`, `blocked`, `precedes`, `follows`, `copied_to`, `copied_from`
 
 ### DELETE /api/issues/[id]/relations/[relationId]
 
@@ -264,13 +254,11 @@ Deletes Redmine time entry (requires ownership in local cache).
 
 ### GET /api/events/stream
 
-Server-Sent Events stream for real-time dashboard updates. Delivers the
-following event types:
+Server-Sent Events stream for real-time dashboard updates. Delivers the following event types:
 
 - `issue.created` — New issue synced to local cache
 - `issue.updated` — Existing issue updated during sync
-- `sync.tick.completed` — A full sync tick finished (dashboard refreshes on this
-  single event rather than per-issue updates)
+- `sync.tick.completed` — A full sync tick finished (dashboard refreshes on this single event rather than per-issue updates)
 
 ## Sync and Ops
 
@@ -297,8 +285,7 @@ Optional query params for remote time-entry mode:
 
 ### GET /api/internal/activities
 
-Returns time-entry activity catalog (cached from Redmine enumerations when
-available).
+Returns time-entry activity catalog (cached from Redmine enumerations when available).
 
 Notes:
 
@@ -307,13 +294,11 @@ Notes:
 
 ### GET /api/internal/users
 
-Returns assignable Redmine users (from Redmine API if admin access, else local
-`RedmineUser` cache).
+Returns assignable Redmine users (from Redmine API if admin access, else local `RedmineUser` cache).
 
 ### GET /api/internal/priorities
 
-Returns issue priority enumerations (from Redmine API if available, else local
-`RedmineEnumeration` cache).
+Returns issue priority enumerations (from Redmine API if available, else local `RedmineEnumeration` cache).
 
 ### GET /api/internal/enumerations
 
@@ -353,8 +338,7 @@ Query params:
 
 ### POST /api/chat
 
-The primary chat endpoint. Returns a message from the LLM, optionally including
-`pendingToolCalls` if the model wants to take an action.
+The primary chat endpoint. Returns a message from the LLM, optionally including `pendingToolCalls` if the model wants to take an action.
 
 Request body:
 
@@ -397,8 +381,7 @@ System health probe.
 
 ## Mobile API
 
-All `/api/mobile/v1/*` routes require `Authorization: Bearer <token>` except
-pairing.
+All `/api/mobile/v1/*` routes require `Authorization: Bearer <token>` except pairing.
 
 ### POST /api/mobile/v1/pair/connect
 
@@ -406,8 +389,7 @@ Pairs mobile device and returns token.
 
 Notes:
 
-- Returns `502` when Converge cannot reach Redmine due to upstream network/TLS
-  issues.
+- Returns `502` when Converge cannot reach Redmine due to upstream network/TLS issues.
 
 ### GET /api/mobile/v1/me
 
@@ -419,15 +401,12 @@ Same filtering and search options as `/api/issues`.
 
 ### POST /api/mobile/v1/issues
 
-Creates a new issue in Redmine from a mobile device. Requires Bearer
-authentication. Same request body as `/api/issues`.
+Creates a new issue in Redmine from a mobile device. Requires Bearer authentication. Same request body as `/api/issues`.
 
 ### GET /api/mobile/v1/issues/[id]
 
-Returns enriched issue detail including attachments, relations, allowed
-statuses, and children. **Note:** `[id]` accepts both **integer Redmine IDs**
-(e.g., `123`) and **string cuids** for local-only issues (e.g., `clx...`). The
-route resolves the correct lookup based on whether the ID is numeric.
+Returns enriched issue detail including attachments, relations, allowed statuses, and children. **Note:** `[id]` accepts both **integer Redmine IDs**
+(e.g., `123`) and **string cuids** for local-only issues (e.g., `clx...`). The route resolves the correct lookup based on whether the ID is numeric.
 
 ### POST /api/mobile/v1/issues/[id]/comment
 
@@ -455,10 +434,8 @@ Attachment list/upload/download proxy for mobile.
 
 Relation management for mobile.
 
-**Note:** For all mobile endpoints above, `[id]` accepts integer Redmine IDs and
-string cuids. Local-only issues (`source: "local"`) cannot be synced to Redmine
-— time entry updates, status changes, and comments on local issues are blocked
-at the route level.
+**Note:** For all mobile endpoints above, `[id]` accepts integer Redmine IDs and string cuids. Local-only issues (`source: "local"`) cannot be synced to Redmine
+— time entry updates, status changes, and comments on local issues are blocked at the route level.
 
 ### POST /api/mobile/v1/tokens/rotate
 
@@ -516,8 +493,7 @@ Request body:
 }
 ```
 
-**Note:** `redmineIssueId` is nullable (`number | null`) for local-only issues.
-When `null`, the issue has no Redmine counterpart.
+**Note:** `redmineIssueId` is nullable (`number | null`) for local-only issues. When `null`, the issue has no Redmine counterpart.
 
 ### GET /api/slack/notify
 

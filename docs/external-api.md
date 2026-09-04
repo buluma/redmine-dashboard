@@ -4,11 +4,12 @@ REST API for fetching Redmine tickets from external systems like n8n, Zapier, or
 
 ## Overview
 
-The External Tickets API provides read-only access to tickets stored in Converge. It supports:
+The External Tickets API provides access to tickets stored in Converge. It supports:
 - Fetching by Redmine ID
 - Semantic search (subject/description)
 - Filtering by status, project, assignee
 - Pagination
+- Creating local tickets and updating existing ones (see [Write Endpoints](#write-endpoints) below — this is not a read-only API)
 
 ## Authentication
 
@@ -26,10 +27,8 @@ curl "https://your-server/api/external/tickets?api_key=your-api-key"
 ```
 
 **Setup:**
-1. Set `EXTERNAL_API_KEYS` in your `.env` file:
-   ```
-   EXTERNAL_API_KEYS=key1,key2,key3
-   ```
+1. Set `EXTERNAL_API_KEYS` in your `.env` file: ```
+   EXTERNAL_API_KEYS=key1,key2,key3 ```
 2. Restart the server
 
 ### Session (For browser testing)
@@ -86,7 +85,7 @@ GET /api/external/tickets/{id}
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `id` | string | Local ID (cuid) or Redmine issue ID (number) |
+| `id` | string | Local ID (cuid), Redmine issue ID (number), or local issue number in `L-N` / `LN` form |
 
 **Example:**
 
@@ -97,6 +96,26 @@ curl "https://your-server/api/external/tickets/clx123abc456?api_key=your-key"
 # By Redmine ID
 curl "https://your-server/api/external/tickets/1234?api_key=your-key"
 ```
+
+## Write Endpoints
+
+Both require a valid `X-API-Key` — session auth does not work here, unlike the read endpoints above.
+
+### Create a Local Ticket
+
+```
+POST /api/external/tickets
+```
+
+Creates a local (not Redmine-synced) ticket. Body: `subject` (required), `description`, `tracker`, `priority`. A subject matching an unresolved email-parse placeholder (e.g. `(no subject)`) is rejected with `422` — fix the upstream extraction instead of submitting it. Returns `201` with `{ "ticket": {...} }` on success.
+
+### Update a Ticket
+
+```
+PATCH /api/external/tickets/{id}
+```
+
+For a local ticket, updates fields directly (`subject`, `description`, `tracker`, `priority`, `projectName`, `status`/`statusId`). For a Redmine-synced ticket, proxies the update through the Redmine API instead (`status`/`statusId`, `notes`, `assignedToId`, `doneRatio`, `priorityId`) and re-syncs the issue afterward — closing or resolving a ticket this way also reassigns it away from its author. `status` accepts a status name (looked up against the status catalog); `statusId` accepts the numeric id directly.
 
 ## Response Format
 
@@ -230,4 +249,4 @@ There is no built-in rate limiting. If you need rate limiting:
 1. **API Keys** - Keep them secure, don't expose in client-side code
 2. **HTTPS** - Always use HTTPS in production
 3. **IP Restrictions** - Consider adding IP allowlists in your firewall
-4. **Read-Only** - This API is read-only, no write operations
+4. **Write endpoints require the API key** - `POST /api/external/tickets` and `PATCH /api/external/tickets/{id}` don't fall back to session auth like the read endpoints do — anyone with the key can create or update tickets, so treat it accordingly

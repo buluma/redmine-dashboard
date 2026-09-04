@@ -67,7 +67,8 @@ node scripts/sync-assigned.js
 - Fetches `assigned_to_id=me` and `author_id=me` separately
 - Merges and deduplicates by issue ID
 - Upserts all issues in parallel batches of 50
-- Supabase acts as source of truth — syncs are strictly additive (upsert only)
+- The local database acts as the operational cache — syncs are strictly additive
+  (upsert only)
 
 ### `scripts/sync-children.js`
 
@@ -118,12 +119,12 @@ node scripts/sync-query-details.js 754 755 749 743 744 747
 
 - Fetches issue IDs from all specified queries (lightweight)
 - For each unique issue: fetches children + time entries from Redmine
-- Upserts directly into Supabase
+- Upserts directly into the local database
 - Processes 5 issues in parallel for speed
 
 ### `scripts/sync-time-entries.js`
 
-Compares time entries between Redmine API and local Supabase database. Shows
+Compares time entries between Redmine API and the local database. Shows
 discrepancies for data integrity verification.
 
 ```bash
@@ -176,7 +177,7 @@ node scripts/db-status.js
 **Sample output:**
 
 ```
-📊 Supabase Issue Table
+📊 Local Issue Table
 ━━━━━━━━━━━━━━━━━━━━━━━━
 Total issues:          393
   With parent:         381
@@ -188,7 +189,7 @@ Total issues:          393
 
 ### `scripts/check-issues.js`
 
-Quick check of issue count and latest issue in Supabase.
+Quick check of issue count and latest issue in the local database.
 
 ```bash
 node scripts/check-issues.js
@@ -217,7 +218,7 @@ All scripts require these in `.env`:
 ```bash
 REDMINE_BASE_URL="https://redmine.nasctech.com"
 REDMINE_API_KEY="your-api-key"
-DATABASE_URL="postgresql://..."   # Supabase connection
+DATABASE_URL="postgresql://..."   # local database connection
 ```
 
 ## Data Safety

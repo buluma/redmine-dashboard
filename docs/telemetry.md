@@ -2,8 +2,7 @@
 
 This document defines the standard for operational telemetry in Converge.
 
-Telemetry in this codebase is emitted through
-[`src/lib/telemetry.ts`](../src/lib/telemetry.ts), which wraps:
+Telemetry in this codebase is emitted through [`src/lib/telemetry.ts`](../src/lib/telemetry.ts), which wraps:
 
 - Structured app logs (`src/lib/log.ts`)
 - Sentry logs (`Sentry.logger`)
@@ -118,8 +117,7 @@ These routes already follow this standard:
 - Mobile Issue Creation routes (`/api/mobile/v1/issues` POST)
 - Push Notification subscription routes (`/api/push/subscribe`)
 
-When adding a new mutation route, follow the same pattern from the start.
-The client-side offline sync queue (`lib/sync-queue.ts`) doesn't post through a dedicated server route — its telemetry, where added, should live on the same routes it calls (`/api/issues/[id]/status`, etc.), not a separate `sync.queue.*` domain that implies a server-side queue endpoint.
+When adding a new mutation route, follow the same pattern from the start. The client-side offline sync queue (`lib/sync-queue.ts`) doesn't post through a dedicated server route — its telemetry, where added, should live on the same routes it calls (`/api/issues/[id]/status`, etc.), not a separate `sync.queue.*` domain that implies a server-side queue endpoint.
 
 ## PWA & Offline Sync Telemetry
 
@@ -139,8 +137,7 @@ The client-side offline sync queue (`lib/sync-queue.ts`) doesn't post through a 
 
 ### Sync Queue Tags
 
-- `type`: Operation type (`issue_status_update`, `issue_comment`,
-  `issue_timelog`, etc.)
+- `type`: Operation type (`issue_status_update`, `issue_comment`, `issue_timelog`, etc.)
 - `status_class`: `2xx`, `4xx`, `5xx`
 - `reason`: `rate_limited`, `validation`, `upstream_error`, `network_error`
 
@@ -236,18 +233,13 @@ export async function notifyIssueAssignment(
 
 Runtime telemetry volume is controlled through environment variables:
 
-- `SENTRY_TRACES_SAMPLE_RATE`: Defaults to `0.0` in development and `0.1` in
-  production.
-- `SENTRY_PROFILE_SAMPLE_RATE`: Defaults to `0.0` unless profiling is explicitly
-  needed.
+- `SENTRY_TRACES_SAMPLE_RATE`: Defaults to `0.0` in development and `0.1` in production.
+- `SENTRY_PROFILE_SAMPLE_RATE`: Defaults to `0.0` unless profiling is explicitly needed.
 - `SENTRY_ENABLE_LOGS`: Defaults to `false`.
 - `SENTRY_ENABLE_CONSOLE_LOGGING`: Defaults to `false`.
 - `SENTRY_SEND_DEFAULT_PII`: Defaults to `false`.
-- `NEXT_PUBLIC_SENTRY_*`: Browser-side trace/profile/log/PII controls. These are
-  intentionally separate from server variables because they are exposed to
+- `NEXT_PUBLIC_SENTRY_*`: Browser-side trace/profile/log/PII controls. These are intentionally separate from server variables because they are exposed to
   client builds.
-- `ENABLE_SENTRY_TEST_ROUTES` and `NEXT_PUBLIC_ENABLE_SENTRY_TEST_ROUTES`:
-  Defaults to `false`; enable only for intentional Sentry smoke tests.
+- `ENABLE_SENTRY_TEST_ROUTES` and `NEXT_PUBLIC_ENABLE_SENTRY_TEST_ROUTES`: Defaults to `false`; enable only for intentional Sentry smoke tests.
 
-These defaults keep error reporting active while reducing memory and CPU
-overhead from high-volume tracing, profiling, and console-log ingestion.
+These defaults keep error reporting active while reducing memory and CPU overhead from high-volume tracing, profiling, and console-log ingestion.
