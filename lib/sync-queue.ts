@@ -41,7 +41,7 @@ async function processSyncItem(item: SyncQueueItem): Promise<boolean> {
       }
 
       case "log_time": {
-        const res = await fetch(`/api/time-entries`, {
+        const res = await fetch(`/api/issues/${item.issueId}/timelog`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(item.payload),

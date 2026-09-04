@@ -123,7 +123,7 @@ export async function processSyncQueue(): Promise<
 | `update_status` | `POST /api/issues/[id]/status`  |
 | `assign`        | `POST /api/issues/[id]/assign`  |
 | `comment`       | `POST /api/issues/[id]/comment` |
-| `log_time`      | `POST /api/time-entries`        |
+| `log_time`      | `POST /api/issues/[id]/timelog` |
 
 `attachSyncQueueTriggers()` also flushes the queue on the browser's `online`
 event and once on load if already online — the Background Sync tag isn't the
@@ -176,7 +176,7 @@ export function useOfflineAction() {
           url = `/api/issues/${issueId}/comment`;
           break;
         case "log_time":
-          url = `/api/time-entries`;
+          url = `/api/issues/${issueId}/timelog`;
           break;
       }
       const res = await fetch(url, {

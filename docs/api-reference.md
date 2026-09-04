@@ -655,7 +655,7 @@ Deletes a custom report.
 
 ## Offline Sync
 
-There is no server-side sync-queue API. Offline mutations are queued entirely client-side (IndexedDB, `lib/offline-db.ts`) and, once back online, are flushed straight to the same routes an online client would call — `/api/issues/[id]/status`, `/api/issues/[id]/assign`, `/api/issues/[id]/comment`, `/api/time-entries` — see [offline-sync.md](offline-sync.md) for the full mechanism.
+There is no server-side sync-queue API. Offline mutations are queued entirely client-side (IndexedDB, `lib/offline-db.ts`) and, once back online, are flushed straight to the same routes an online client would call — `/api/issues/[id]/status`, `/api/issues/[id]/assign`, `/api/issues/[id]/comment`, `/api/issues/[id]/timelog` — see [offline-sync.md](offline-sync.md) for the full mechanism.
 
 ## Webhook APIs
 
