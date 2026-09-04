@@ -28,20 +28,13 @@ export function createSessionToken(userId: string): string {
 
 ### CSRF Protection
 
-All mutating API requests (POST, PUT, PATCH, DELETE) require CSRF validation:
-
-- **CSRF Token**: Generated as a random 64-character hex string
-- **Cookie**: `rd_csrf` with `httpOnly: true`, `sameSite: "strict"`
-- **Validation Methods**:
-  1. `X-CSRF-Token` header matching cookie value
-  2. Same-origin check via `Origin` or `Referer` header
+CSRF defense is a same-origin check, not a token. For cookie-authenticated mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) it's enforced centrally in `proxy.ts` (Next 16 uses `proxy.ts`, not `middleware.ts`) via the `Origin` or `Referer` header — no CSRF cookie or `X-CSRF-Token` header is issued or checked. Bearer-token requests (mobile, external integrations) have no session cookie and are inherently CSRF-immune, so they're allowed through regardless of `Origin`/`Referer`.
 
 ```typescript
-// src/lib/session.ts
-export async function validateCsrfToken(): Promise<boolean> {
-  const storedToken = cookies().get(CSRF_COOKIE)?.value;
-  const requestToken = headers().get("x-csrf-token");
-  return requestToken === storedToken;
+// proxy.ts
+function isCsrfBlocked(request: NextRequest): boolean {
+  // same-origin check against Origin/Referer for cookie-authenticated
+  // mutating requests; see src/lib/auth.ts's CSRF_PROTECTED_METHODS
 }
 ```
 
@@ -49,12 +42,12 @@ export async function validateCsrfToken(): Promise<boolean> {
 
 Users are assigned one of four roles with decreasing permission levels:
 
-| Role | Permissions |
-|------|-------------|
-| **ADMIN** | Full access: users, audit logs, webhooks, all CRUD |
-| **EDITOR** | Most CRUD, can trigger syncs, no user management |
-| **USER** | Own data only, view access to issues/notes/time entries |
-| **VIEWER** | Read-only access to issues and time entries |
+| Role       | Permissions                                             |
+| ---------- | ------------------------------------------------------- |
+| **ADMIN**  | Full access: users, audit logs, webhooks, all CRUD      |
+| **EDITOR** | Most CRUD, can trigger syncs, no user management        |
+| **USER**   | Own data only, view access to issues/notes/time entries |
+| **VIEWER** | Read-only access to issues and time entries             |
 
 See [rbac.md](rbac.md) for detailed implementation.
 
@@ -66,6 +59,8 @@ Rate limiting is implemented to prevent abuse:
 
 - **In-Memory**: For single-instance deployments
 - **Database-Backed**: For distributed deployments using `ApiRateLimit` table
+- **Redis-Backed**: For distributed deployments using Upstash Redis
+  (`rate-limit-redis.ts`)
 - **Per-User Limits**:
   - Manual sync: 3 requests/minute
   - Issue mutations: 20 requests/minute
@@ -86,11 +81,14 @@ API keys are encrypted at rest using AES-256-GCM:
 
 ```typescript
 // src/lib/crypto.ts
-encryptText(plaintext: string, key: string): { encrypted: string, iv: string }
-decryptText(encrypted: string, iv: string, key: string): string
+encryptText(plainText: string): { encrypted: string, iv: string }
+decryptText(encrypted: string, iv: string): string
 ```
 
+Both read the encryption key from `APP_ENCRYPTION_KEY` internally — callers never pass it in.
+
 Credentials are stored in `UserRedmineCredential` table with:
+
 - `apiKeyEncrypted` - AES-256-GCM encrypted
 - `apiKeyIv` - Initialization vector
 - `isActive` - Can be disabled without deletion
@@ -110,13 +108,14 @@ The `/api/external/tickets` endpoint requires authentication:
 
 - **Header**: `X-API-Key: {key}`
 - **Query**: `?api_key={key}`
-- **Keys**: Configured via `EXTERNAL_API_KEYS` environment variable (comma-separated)
+- **Keys**: Configured via `EXTERNAL_API_KEYS` environment variable
+  (comma-separated)
 
 ## Mobile API
 
 Mobile authentication uses token-based auth:
 
-- Tokens generated and stored in `MobileToken` table
+- Tokens generated and stored in `MobileApiToken` table
 - Token includes device fingerprint and expiration
 - Validated via `Authorization: Bearer {token}` header
 
@@ -136,15 +135,16 @@ See [mobile/README.md](mobile/README.md) for details.
 
 Key security-related environment variables:
 
-| Variable | Purpose |
-|----------|---------|
-| `SESSION_SECRET` | HMAC signing key for sessions |
-| `APP_ENCRYPTION_KEY` | AES encryption for credentials |
-| `EXTERNAL_API_KEYS` | API keys for external integrations |
-| `DIRECT_URL` | Database connection (production) |
+| Variable             | Purpose                            |
+| -------------------- | ---------------------------------- |
+| `SESSION_SECRET`     | HMAC signing key for sessions      |
+| `APP_ENCRYPTION_KEY` | AES encryption for credentials     |
+| `EXTERNAL_API_KEYS`  | API keys for external integrations |
+| `DIRECT_URL`         | Database connection (production)   |
 
 ## Reporting Security Issues
 
 If you discover a security vulnerability, please report it responsibly:
+
 - Do not open a public GitHub issue
 - Contact the maintainer directly

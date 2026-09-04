@@ -1,61 +1,109 @@
 # Project Overview
 
-Converge is a unified operations dashboard designed to connect your tools and workflows into one cohesive platform. Originally built as a Redmine command center, it has evolved to support Slack integration, AI insights, mobile access, and more.
+Converge is a unified operations dashboard designed to connect your tools and
+workflows into one cohesive platform. Originally built as a Redmine command
+center, it has evolved to support Slack integration, AI insights, mobile access,
+and more.
 
-The system works by syncing Redmine issues to a local database, providing fast local reads from this cache. All state changes are ultimately persisted back to Redmine, which remains the single source of truth.
+The system works by syncing Redmine issues to a local database, providing fast
+local reads from this cache. All state changes are ultimately persisted back to
+Redmine, which remains the single source of truth.
 
 ## Core Features
 
-- **Reporting:** A reports page provides insights with trends, a heatmap of activity, data drilldowns, and a CSV export feature.
-- **Issue Detail Page:** Clicking an issue opens a dedicated route (`/issues/[id]`) with Redmine-style sections and tabs (`history`, `notes`, `property changes`, `spent time`).
-- **Issue Editing:** Inline editing of issue title, description, priority, dates, estimated hours, and custom fields — pushed to Redmine on save.
-- **Breadcrumb Navigation:** Parent-issue breadcrumbs traverse the full chain, linking to each ancestor issue.
-- **Child Issues:** Collapsible section listing all sub-tasks with tracker type chips (Task, Bug, HOT FIX).
-- **User Assignment:** Quick Actions panel supports assigning issues to any Redmine user synced to the local `RedmineUser` table.
-- **Text/Markdown Parity:** Redmine-style content is normalized for web rendering, including collapse macros, source references, pre/code blocks, and escaped newline formatting.
-- **Hybrid Search:** Issue list can use local cache search or hybrid mode (Redmine search + cache hydration).
-- **Attachments + Relations:** Issues now support Redmine attachment upload/download and relation management (`blocks`, `precedes`, `follows`, etc.).
-- **Attachment Preview:** Issue detail page supports inline previews for images and PDFs.
-- **GitHub Linking:** Issue detail supports add/remove links to GitHub issues/PRs and keeps link metadata in local cache.
-- **Workflow-Aware Statusing:** Status changes use Redmine `allowed_statuses` data for transition-safe updates.
-- **Expanded Time Entries:** Beyond creation, the backend supports list/update/delete for Redmine time entries.
-- **Slack Integration:** Read messages from monitored Slack channels with auto-refresh, multi-channel support, and thread navigation. Send Redmine issue updates to Slack channels automatically via sync workflow or webhook.
-- **AI Summaries:** Generate AI-powered summaries of issues using LLM providers (Ollama, OpenAI, Anthropic). Grouped by project, priority, and confidence scoring.
-- **AI Chat:** Per-issue AI chat history with token usage tracking and copy-to-clipboard.
-- **Heimdall (Streamline Logs):** Fetch and display Streamline application logs directly from the Streamline API. MBU logs, server-side rules, and traces with error filtering.
-- **Wakatime Integration:** Track coding time with Wakatime API for work-life balance monitoring.
-- **Reports V2:** Enhanced reporting with StatCard components, donut charts, and bar charts.
-- **Webhook Subscriptions:** Configure webhooks that fire on ticket events (created, updated, status_changed, assigned, completed) with HMAC signature verification and delivery logging.
-- **External API:** REST API for n8n/Zapier integrations to search and fetch tickets, with API key authentication.
-- **AI Chat:** Standalone chat interface at `/chat` for general AI assistance with access to system context (issues, sync jobs, errors) and **Redmine action support** (tool-calling).
-- **Persistent Sidebar:** Collapsible sidebar navigation across all pages with sticky headers.
-- **Webhook Delivery Logs:** Admin UI to view webhook delivery history, retry failed deliveries, and inspect response bodies.
-- [x] **Analytics Reports:** Time-tracking export (CSV), burndown charts, custom report builder with persistence.
-- [x] **Tailscale Aperture:** Private LLM gateway support for internal model access without exposing API keys.
-- [x] **Offline-First PWA:** Advanced mutation queuing for status updates, comments, and time logs. Changes are captured offline and synced automatically via the Background Sync API.
-- [x] **Push Notifications:** Native PWA push alerts for new issue assignments, status changes, and critical priority updates.
+- **Reporting:** A reports page provides insights with trends, a heatmap of
+  activity, data drilldowns, and a CSV export feature.
+- **Issue Detail Page:** Clicking an issue opens a dedicated route
+  (`/issues/[id]`) with Redmine-style sections and tabs (`history`, `notes`,
+  `property changes`, `spent time`).
+- **Issue Editing:** Inline editing of issue title, description, priority,
+  dates, estimated hours, and custom fields — pushed to Redmine on save.
+- **Breadcrumb Navigation:** Parent-issue breadcrumbs traverse the full chain,
+  linking to each ancestor issue.
+- **Child Issues:** Collapsible section listing all sub-tasks with tracker type
+  chips (Task, Bug, HOT FIX).
+- **User Assignment:** Quick Actions panel supports assigning issues to any
+  Redmine user synced to the local `RedmineUser` table.
+- **Text/Markdown Parity:** Redmine-style content is normalized for web
+  rendering, including collapse macros, source references, pre/code blocks, and
+  escaped newline formatting.
+- **Hybrid Search:** Issue list can use local cache search or hybrid mode
+  (Redmine search + cache hydration).
+- **Attachments + Relations:** Issues now support Redmine attachment
+  upload/download and relation management (`blocks`, `precedes`, `follows`,
+  etc.).
+- **Attachment Preview:** Issue detail page supports inline previews for images
+  and PDFs.
+- **GitHub Linking:** Issue detail supports add/remove links to GitHub
+  issues/PRs and keeps link metadata in local cache.
+- **Workflow-Aware Statusing:** Status changes use Redmine `allowed_statuses`
+  data for transition-safe updates.
+- **Expanded Time Entries:** Beyond creation, the backend supports
+  list/update/delete for Redmine time entries.
+- **Slack Integration:** Read messages from monitored Slack channels with
+  auto-refresh, multi-channel support, and thread navigation. Send Redmine issue
+  updates to Slack channels automatically via sync workflow or webhook.
+- **AI Summaries:** Generate AI-powered summaries of issues using LLM providers
+  (Ollama, OpenAI, Anthropic). Grouped by project, priority, and confidence
+  scoring.
+- **AI Chat (Per-Issue):** Per-issue AI chat history with token usage tracking
+  and copy-to-clipboard.
+- **Heimdall (Streamline Logs):** Fetch and display Streamline application logs
+  directly from the Streamline API. MBU logs, server-side rules, and traces with
+  error filtering.
+- **Wakatime Integration:** Track coding time with Wakatime API for work-life
+  balance monitoring.
+- **Reports V2:** Enhanced reporting with StatCard components, donut charts, and
+  bar charts.
+- **Webhook Subscriptions:** Configure webhooks that fire on ticket events
+  (created, updated, status_changed, assigned, completed) with HMAC signature
+  verification and delivery logging.
+- **External API:** REST API for n8n/Zapier integrations to search and fetch
+  tickets, with API key authentication.
+- **AI Chat (Global):** Standalone chat interface at `/chat` for general AI
+  assistance with access to system context (issues, sync jobs, errors) and
+  **Redmine action support** (tool-calling).
+- **Persistent Sidebar:** Collapsible sidebar navigation across all pages with
+  sticky headers.
+- **Webhook Delivery Logs:** Admin UI to view webhook delivery history, retry
+  failed deliveries, and inspect response bodies.
+- [x] **Analytics Reports:** Time-tracking export (CSV), burndown charts, custom
+      report builder with persistence.
+- [x] **Tailscale Aperture:** Private LLM gateway support for internal model
+      access without exposing API keys.
+- [x] **Offline-First PWA:** Advanced mutation queuing for status updates,
+      comments, and time logs. Changes are captured offline and synced
+      automatically via the Background Sync API.
+- [x] **Push Notifications:** Native PWA push alerts for new issue assignments,
+      status changes, and critical priority updates.
+- [x] **Odysseus Calendar Meetings:** Automatically log Odysseus calendar
+      meeting durations as time entries on recurring ticket series via fuzzy
+      summary-to-series matching.
 
 ## LLM Providers
 
 Converge supports multiple LLM backends for AI features:
 
-| Provider | Description | Use Case |
-|----------|-------------|----------|
-| **Ollama** | Local models running on localhost | Privacy, no API costs |
-| **Tailscale Aperture** | Private gateway via Tailscale network | Internal org models |
-| **OpenAI** | GPT-4, GPT-4o | Most capable models |
-| **Anthropic** | Claude models | Best reasoning |
-| **OpenRouter** | Aggregated models | Variety, fallback |
+| Provider               | Description                           | Use Case              |
+| ---------------------- | ------------------------------------- | --------------------- |
+| **Ollama**             | Local models running on localhost     | Privacy, no API costs |
+| **Tailscale Aperture** | Private gateway via Tailscale network | Internal org models   |
+| **OpenAI**             | GPT-4, GPT-4o                         | Most capable models   |
+| **Anthropic**          | Claude models                         | Best reasoning        |
+| **OpenRouter**         | Aggregated models                     | Variety, fallback     |
 
-Configuration via `LLM_PROVIDER` environment variable. See [aperture.md](aperture.md) for Tailscale setup.
+Configuration via `LLM_PROVIDER` environment variable. See
+[aperture.md](aperture.md) for Tailscale setup.
 
 ## Security
 
 Converge implements robust security measures:
 
-- **Session Management:** HMAC-signed session tokens with httpOnly, SameSite=strict cookies
-- **CSRF Protection:** Token-based validation on all mutating API endpoints
-- **RBAC:** Four role levels (Admin, Editor, User, Viewer) with permission-based access
+- **Session Management:** HMAC-signed session tokens with httpOnly,
+  SameSite=strict cookies
+- **CSRF Protection:** Same-origin (Origin/Referer) check on all cookie-authenticated mutating API endpoints, enforced in `proxy.ts`
+- **RBAC:** Four role levels (Admin, Editor, User, Viewer) with permission-based
+  access
 - **Rate Limiting:** Per-user limits on sync operations and mutations
 - **Encrypted Credentials:** AES-256-GCM encryption for Redmine API keys
 
@@ -63,37 +111,47 @@ See [security.md](security.md) for detailed implementation.
 
 ## Local Data Model
 
-Converge syncs and caches the following Redmine entities in Supabase (via Prisma):
+Converge syncs and caches the following Redmine entities in the local database
+(via Prisma):
 
-| Table | Source | Notes |
-|---|---|---|
-| `Issue` | `/issues.json?status_id=*` | ~109K issues. `redmineIssueId` nullable for local-only issues. New `source` field (`"redmine"` | `"local"`) and `localIssueNumber` for auto-incremented local issues. |
-| `IssueRelation` | `/issues/.../relations` | Redmine relations (blocks, relates, etc.) |
-| `IssueAttachment` | issue detail | File metadata and download URLs |
-| `TimeEntry` | `/time_entries.json` | Time entries synced with issue detail |
-| `RedmineUser` | extracted from issues | ~162 users with id, name, login |
-| `RedmineEnumeration` | `/enumerations/...` | Issue priorities, time entry activities |
-| `UserRedmineCredential` | user setup | Encrypted API key for Redmine access |
-| `IssueJournal`, `IssueGithubLink` | issue detail / local | Notes and GitHub cross-references |
-| `AiToolDefinition` | `src/lib/ai-tools.ts` | Code-defined Redmine actions exposed to LLM |
-| `AiSummary` | AI generation | Generated issue summaries with confidence scores |
-| `AiChatMessage` | AI chat | Chat history with token usage tracking |
-| `MbuLog`, `ServerSideRulesLog`, `Trace` | Streamline API | Application logs from Streamline |
+| Table                                   | Source                     | Notes                                                                                          |
+| --------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------- |
+| `Issue`                                 | `/issues.json?status_id=*` | ~109K issues. `redmineIssueId` nullable for local-only issues. New `source` field (`"redmine"` |
+| `IssueRelation`                         | `/issues/.../relations`    | Redmine relations (blocks, relates, etc.)                                                      |
+| `IssueAttachment`                       | issue detail               | File metadata and download URLs                                                                |
+| `TimeEntry`                             | `/time_entries.json`       | Time entries synced with issue detail                                                          |
+| `RedmineUser`                           | extracted from issues      | ~162 users with id, name, login                                                                |
+| `RedmineEnumeration`                    | `/enumerations/...`        | Issue priorities, time entry activities                                                        |
+| `UserRedmineCredential`                 | user setup                 | Encrypted API key for Redmine access                                                           |
+| `IssueJournal`, `IssueGithubLink`       | issue detail / local       | Notes and GitHub cross-references                                                              |
+| `AiToolDefinition`                      | `src/lib/ai-tools.ts`      | Code-defined Redmine actions exposed to LLM                                                    |
+| `AiSummary`                             | AI generation              | Generated issue summaries with confidence scores                                               |
+| `AiChatMessage`                         | AI chat                    | Chat history with token usage tracking                                                         |
+| `MbuLog`, `ServerSideRulesLog`, `Trace` | Streamline API             | Application logs from Streamline                                                               |
 
 ## Mobile Support
 
-Converge provides support for mobile clients, allowing users to manage their Redmine issues on the go.
+Converge provides support for mobile clients, allowing users to manage their
+Redmine issues on the go.
 
-- **Clients:** The project includes a ready-to-build [Flutter application](../mobile/flutter_nrcc) and provides guidance for creating a [native Android client](./mobile/android.md).
-- **Secure Pairing:** Mobile clients can be paired securely using a token-based authentication system, avoiding the need for browser cookies.
-- **Mobile-Specific API:** A dedicated set of endpoints under `/api/mobile/v1/` is available for mobile clients, now supporting **issue creation**.
-- **Core Functionality:** Mobile users can search, post comments, manage GitHub links, and use attachments/relations through token-authenticated APIs.
-- **Offline Experience:** Fully integrated Sync Queue captures actions while offline and flushes them when connectivity returns.
+- **Clients:** The project includes a ready-to-build
+  [Flutter application](../mobile/flutter_nrcc) and provides guidance for
+  creating a [native Android client](./mobile/android.md).
+- **Secure Pairing:** Mobile clients can be paired securely using a token-based
+  authentication system, avoiding the need for browser cookies.
+- **Mobile-Specific API:** A dedicated set of endpoints under `/api/mobile/v1/`
+  is available for mobile clients, now supporting **issue creation**.
+- **Core Functionality:** Mobile users can search, post comments, manage GitHub
+  links, and use attachments/relations through token-authenticated APIs.
+- **Offline Experience:** Fully integrated Sync Queue captures actions while
+  offline and flushes them when connectivity returns.
 - **Push Notifications:** Native OS notifications for important ticket events.
 
 ## Technology Stack
 
 - **Framework:** Next.js (App Router)
-- **Database:** Prisma Client with SQLite (for the MVP).
+- **Database:** Prisma Client with PostgreSQL (production) / SQLite (local
+  development).
 - **Validation:** Zod for data validation.
-- **Synchronization:** An in-process poller with a leader lock mechanism to handle data synchronization.
+- **Synchronization:** An in-process poller with a leader lock mechanism to
+  handle data synchronization.

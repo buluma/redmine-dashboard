@@ -1,6 +1,7 @@
 # Slack Integration
 
-Converge supports bidirectional Slack integration: reading messages from Slack channels and sending Redmine issue updates to Slack.
+Converge supports bidirectional Slack integration: reading messages from Slack
+channels and sending Redmine issue updates to Slack.
 
 ## Configuration
 
@@ -54,8 +55,10 @@ SLACK_NOTIFY_FORMAT=compact
 
 ### 4. Get Channel IDs
 
-1. Enable **Channel ID** in Slack settings: Settings → Advanced → Check "Show channel IDs in messages"
-2. Right-click a channel → **Copy link** → extract the channel ID (e.g., `C0123456789`)
+1. Enable **Channel ID** in Slack settings: Settings → Advanced → Check "Show
+   channel IDs in messages"
+2. Right-click a channel → **Copy link** → extract the channel ID (e.g.,
+   `C0123456789`)
 
 ## Features
 
@@ -71,16 +74,17 @@ Access the Slack page at `/slack` (linked from the dashboard navigation).
 
 ### Sending Notifications
 
-When `SLACK_NOTIFY_ENABLED=true`, the sync workflow automatically sends notifications:
+When `SLACK_NOTIFY_ENABLED=true`, the sync workflow automatically sends
+notifications:
 
-| Event | Notification |
-|-------|--------------|
-| New issue created | 📋 New Issue |
-| Issue updated | ✏️ Issue Updated (with field changes) |
-| Issue closed | ✅ Issue Closed |
-| Issue assigned | 👤 Issue Assigned |
-| Internal note added | 💬 Internal Note |
-| Sync complete | 🔄 Sync Summary |
+| Event               | Notification                          |
+| ------------------- | ------------------------------------- |
+| New issue created   | 📋 New Issue                          |
+| Issue updated       | ✏️ Issue Updated (with field changes) |
+| Issue closed        | ✅ Issue Closed                       |
+| Issue assigned      | 👤 Issue Assigned                     |
+| Internal note added | 💬 Internal Note                      |
+| Sync complete       | 🔄 Sync Summary                       |
 
 ### Webhook API
 
@@ -117,13 +121,15 @@ curl -X POST http://localhost:3000/api/slack/test
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/slack/messages` | Fetch channel messages |
-| GET | `/api/slack/thread` | Fetch thread replies |
-| POST | `/api/slack/test` | Send test notification |
-| POST | `/api/slack/notify` | Send custom notification (webhook) |
-| GET | `/api/slack/notify` | Check notifier status |
+| Method | Endpoint                  | Description                                    |
+| ------ | ------------------------- | ---------------------------------------------- |
+| GET    | `/api/slack/messages`     | Fetch channel messages                         |
+| GET    | `/api/slack/thread`       | Fetch thread replies                           |
+| POST   | `/api/slack/test`         | Send test notification                         |
+| POST   | `/api/slack/notify`       | Send custom notification (webhook)             |
+| GET    | `/api/slack/notify`       | Check notifier status                          |
+| POST   | `/api/slack/create-issue` | Create Redmine issue from Slack message via AI |
+| GET    | `/api/slack/create-issue` | Analyze Slack messages for potential issues    |
 
 ## Architecture
 
@@ -143,17 +149,17 @@ curl -X POST http://localhost:3000/api/slack/test
 
 ## Environment Variables Reference
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SLACK_BOT_TOKEN` | - | Bot OAuth token (required) |
-| `SLACK_DEFAULT_CHANNEL_ID` | - | Primary channel to read from |
-| `SLACK_MONITOR_CHANNEL_IDS` | [] | Additional channels to monitor |
-| `SLACK_REFRESH_INTERVAL_MS` | 30000 | Auto-refresh interval (30s) |
-| `SLACK_NOTIFY_ENABLED` | false | Enable Redmine→Slack notifications |
-| `SLACK_NOTIFY_CHANNEL_ID` | - | Channel for notifications |
-| `SLACK_NOTIFY_ON_CREATE` | true | Notify on new issues |
-| `SLACK_NOTIFY_ON_UPDATE` | true | Notify on updates |
-| `SLACK_NOTIFY_ON_STATUS_CHANGE` | true | Notify on status changes |
-| `SLACK_NOTIFY_ON_ASSIGNMENT` | true | Notify on assignment changes |
-| `SLACK_NOTIFY_ON_INTERNAL_NOTE` | true | Notify when internal notes are added |
-| `SLACK_NOTIFY_FORMAT` | compact | Message format (compact/detailed) |
+| Variable                        | Default | Description                          |
+| ------------------------------- | ------- | ------------------------------------ |
+| `SLACK_BOT_TOKEN`               | -       | Bot OAuth token (required)           |
+| `SLACK_DEFAULT_CHANNEL_ID`      | -       | Primary channel to read from         |
+| `SLACK_MONITOR_CHANNEL_IDS`     | []      | Additional channels to monitor       |
+| `SLACK_REFRESH_INTERVAL_MS`     | 30000   | Auto-refresh interval (30s)          |
+| `SLACK_NOTIFY_ENABLED`          | false   | Enable Redmine→Slack notifications   |
+| `SLACK_NOTIFY_CHANNEL_ID`       | -       | Channel for notifications            |
+| `SLACK_NOTIFY_ON_CREATE`        | true    | Notify on new issues                 |
+| `SLACK_NOTIFY_ON_UPDATE`        | true    | Notify on updates                    |
+| `SLACK_NOTIFY_ON_STATUS_CHANGE` | true    | Notify on status changes             |
+| `SLACK_NOTIFY_ON_ASSIGNMENT`    | true    | Notify on assignment changes         |
+| `SLACK_NOTIFY_ON_INTERNAL_NOTE` | true    | Notify when internal notes are added |
+| `SLACK_NOTIFY_FORMAT`           | compact | Message format (compact/detailed)    |
