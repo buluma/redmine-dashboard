@@ -23,6 +23,6 @@ jobs:
       # `Validation Failed: target_commitish` because it tries to set
       # the release target to `refs/pull/<n>/merge`, which the GitHub
       # Releases REST API rejects. Revisit once upstream cuts a v7 patch.
-      - uses: release-drafter/release-drafter@v6
+      - uses: release-drafter/release-drafter@v7
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
