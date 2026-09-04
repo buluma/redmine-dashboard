@@ -114,7 +114,7 @@ The `/api/external/tickets` endpoint requires authentication:
 Mobile authentication uses token-based auth:
 
 - Tokens generated and stored in `MobileApiToken` table
-- Token includes device fingerprint and expiration
+- `createMobileToken` sets `expiresAt: null` — tokens don't expire by default; there's no device-fingerprint field
 - Validated via `Authorization: Bearer {token}` header
 
 See [mobile/README.md](mobile/README.md) for details.

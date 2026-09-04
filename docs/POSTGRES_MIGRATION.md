@@ -38,7 +38,9 @@ docker compose version               # >= 2.20
 
 ```bash
 cd ~/converge                        # adjust to your checkout path
-make backup                          # writes backups/dev.db.<timestamp>
+./scripts/backup.sh                  # writes backups/sqlite_backup_<timestamp>.db.gz
+# `make backup` won't work here — it runs pg_dump via `docker compose exec postgres`,
+# which requires the Postgres container to already be running (it isn't yet).
 ls -lh backups/ | tail -5
 ```
 
@@ -62,8 +64,7 @@ ENV
 make up-pg
 ```
 
-Compose forces the dashboard's `DATABASE_URL` / `DIRECT_URL` to the Postgres service (`postgres:5432`) inside the network, so the same `.env` works both
-inside and outside the container.
+Compose forces the dashboard *container's* `DATABASE_URL` / `DIRECT_URL` to `DOCKER_POSTGRES_DATABASE_URL`, which points at the Postgres service by its Docker-network hostname (`postgres:5432`) — that hostname only resolves inside the Compose network. Anything run from the host directly (`psql`, a local Prisma CLI, `scripts/sqlite-to-postgres-copy.py` invoked outside a container) needs the host-reachable DSN instead: `postgresql://converge:<change-me>@localhost:${DOCKER_POSTGRES_PORT:-5433}/converge`.
 
 5. **Create the schema on Postgres**
 
@@ -107,10 +108,7 @@ docker compose exec postgres \
 
 `Issue` row count should grow as the poller backfills. Streamline logs and mobile tokens populate as their respective producers run.
 
-**Caddy note**: if `converge.opsio.space` (or your equivalent) proxies to `reverse_proxy dashboard:3000` using the Docker network alias (not a host
-port), no Caddy change is needed — both compose files default to the same Compose project name (the directory name), so they share one network and
-the `dashboard` alias simply resolves to whichever dashboard container is currently up. Confirmed live 2026-07-12: `docker exec caddy wget -qO-
-http://dashboard:3000/api/health` hit the new Postgres-backed container immediately after cutover, zero Caddy edits.
+**Caddy note**: if `converge.opsio.space` (or your equivalent) proxies to `reverse_proxy dashboard:3000` using the Docker network alias (not a host port), no Caddy change is needed — the `dashboard` alias simply resolves to whichever dashboard container is currently up on the Compose network (`redmine-dashboard_default`, named after the checkout directory). Confirmed live 2026-07-12, back when this was still a two-compose-file setup: `docker exec caddy wget -qO- http://dashboard:3000/api/health` hit the new Postgres-backed container immediately after cutover, zero Caddy edits. There's only one compose file now (see the 2026-07-16 update above), so this isn't even a two-container-name collision anymore — just the normal single-stack case.
 
 8. **Rollback** (if needed)
 
@@ -120,8 +118,7 @@ mv .env.sqlite.bak .env
 make up
 ```
 
-The SQLite cache snapshot from step 2 is at `backups/dev.db.<timestamp>` — restore by copying it over `prisma/dev.db` before `make up` if the bind
-mount wiped it.
+The SQLite cache snapshot from step 2 is at `backups/sqlite_backup_<timestamp>.db.gz` — restore by `gunzip`-ing it and copying the result over `prisma/dev.db` before `make up` if the bind mount wiped it.
 
 ## Strategy B — Carry over local-only data
 
@@ -166,8 +163,7 @@ migration has real saved views to carry over.
 docker compose up -d postgres
 ```
 
-5. **Create and baseline the schema** — same `db push` + `migrate resolve` loop as Strategy A step 5, run against the empty database *before*
-   loading any data.
+5. **Create and baseline the schema** — same `db push` + `migrate resolve` loop as Strategy A step 5, run against the empty database *before* loading any data. One difference: the `dashboard` container isn't running yet at this point in Strategy B (step 4 only started `postgres`), so use `docker compose run --rm dashboard` for every command in the loop, not `docker compose exec -T dashboard` — `exec` needs an already-running container, `run` starts a throwaway one.
 
 6. **Run the copy script** against the snapshot SQLite file (find your network name via `docker network ls` — both compose files share one
    Compose project, so it's the same network `up -d postgres` already joined):

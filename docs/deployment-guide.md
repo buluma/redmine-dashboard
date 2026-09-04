@@ -32,8 +32,7 @@ Open the `.env` file and set the following variables:
 - `DATABASE_URL`: The connection string for the database. For local development, the default is `file:./dev.db`.
 - `APP_ENCRYPTION_KEY`: A secret key used for encrypting stored Redmine API keys. Generate a secure random string for this.
 - `SESSION_SECRET`: A secret key used for signing session cookies. Generate a secure random string for this.
-- `SECURE_COOKIES`: Set to `false` for plain-HTTP Docker/Pi/homelab access so browsers keep the login cookie. Omit or set to `true` only when users always
-  access the app over HTTPS.
+- `SECURE_COOKIES`: Set to `false` for plain-HTTP Docker/Pi/homelab access so browsers keep the login cookie. Only do this on a trusted local network — over plain HTTP the `rd_session` cookie is sent in cleartext and can be intercepted by anything on the same network path. Omit or set to `true` (and require HTTPS) for any deployment reachable over an untrusted or public network.
 
 **Recommended (Sentry error/performance/logs/profiling):**
 
@@ -96,11 +95,11 @@ The application will be available at [http://localhost:3000](http://localhost:30
 ## Docker Setup
 
 A Docker setup is provided for a containerized development environment. For more details, see
-[DOCKER.md](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/DOCKER.md).
+[DOCKER.md](../DOCKER.md).
 
 ### Quick Start
 
-1. **Configure Environment:** Copy the `.env.example` file to `.env`. The default `DOCKER_DATABASE_URL` is recommended for use with Docker Compose.
+1. **Configure Environment:** Copy the `.env.example` file to `.env`. `make up` starts the PostgreSQL-backed stack (`docker-compose.yml`'s `dashboard` service reads `DOCKER_POSTGRES_DATABASE_URL`), so that's the connection string that matters here — `DOCKER_DATABASE_URL` isn't referenced by the current Compose setup at all.
    ```bash cp .env.example .env
    ```
 2. **Start Services:** Use the Makefile to build and start the containers. ```bash
@@ -118,8 +117,12 @@ A Docker setup is provided for a containerized development environment. For more
 
 If you want Docker to run on a local Postgres copy of Supabase data:
 
-1. Import Supabase into local Docker Postgres: ```bash
-   make import-supabase SUPABASE_DATABASE_URL="postgresql://user:pass@host:5432/postgres" ```
+1. Import Supabase into local Docker Postgres. Passing the URL directly on the `make` command line leaves it in your shell history and visible to other processes on the same machine (`ps`) — export it first instead:
+   ```bash
+   export SUPABASE_DATABASE_URL="postgresql://user:pass@host:5432/postgres"
+   make import-supabase
+   unset SUPABASE_DATABASE_URL
+   ```
    The importer excludes Supabase-managed extension objects (`pg_graphql`, `supabase_vault`) during restore.
 2. Start Postgres-mode stack: ```bash
    make up-pg ```
@@ -128,12 +131,12 @@ If you want Docker to run on a local Postgres copy of Supabase data:
 4. Stop Postgres-mode stack: ```bash
    make down-pg ```
 
-A full list of helper targets is available in the [Makefile](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/Makefile).
+A full list of helper targets is available in the [Makefile](../Makefile).
 
 ## Environment Variables Reference
 
 - `DATABASE_URL`: SQLite file path for local development (default: `file:./dev.db`).
-- `DOCKER_DATABASE_URL`: Optional Docker-only SQLite path override. Recommended to use `file:./prisma/dev.db` for Docker Compose setups.
+- `DOCKER_DATABASE_URL`: not referenced by the current `docker-compose.yml` — the dashboard service reads `DOCKER_POSTGRES_DATABASE_URL` instead. Left here only in case a future SQLite-mode Compose file reintroduces it.
 - `DOCKER_POSTGRES_DB`: Local Docker Postgres DB name.
 - `DOCKER_POSTGRES_USER`: Local Docker Postgres username.
 - `DOCKER_POSTGRES_PASSWORD`: Local Docker Postgres password.

@@ -3,8 +3,7 @@
 Converge is a unified operations dashboard designed to connect your tools and workflows into one cohesive platform. Originally built as a Redmine command
 center, it has evolved to support Slack integration, AI insights, mobile access, and more.
 
-The system works by syncing Redmine issues to a local database, providing fast local reads from this cache. All state changes are ultimately persisted back to
-Redmine, which remains the single source of truth.
+The system works by syncing Redmine issues to a local database, providing fast local reads from this cache. For Redmine-backed issues, state changes are ultimately persisted back to Redmine, which remains the single source of truth for them. Local-only issues (`source: "local"`, `redmineIssueId: null`) have no Redmine counterpart to sync to — the local database is authoritative for those.
 
 ## Core Features
 

@@ -184,7 +184,10 @@ export function useOfflineAction() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error(`Action failed with status ${res.status}`);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `Action failed with status ${res.status}`);
+      }
       if (successMessage) showToast(successMessage, "success");
       onSuccess?.();
     } catch (err) {
@@ -209,10 +212,7 @@ Key points:
 
 ## Retry Logic
 
-`lib/sync-queue.ts` retries a failed item on the _next_ flush — there is no
-scheduled/exponential backoff timer. `MAX_RETRIES = 3`: once an item has failed
-that many times it's dropped from the queue (counted as `failed`, not retried
-again) rather than kept forever.
+`lib/sync-queue.ts` retries a failed item on the _next_ flush — there is no scheduled/exponential backoff timer. `MAX_RETRIES = 3`: an item's first 3 failures each get retried on the next flush; the 4th failure hits `retries >= MAX_RETRIES` and the item is dropped from the queue (counted as `failed`, not retried again) rather than kept forever.
 
 ## Debugging
 
@@ -246,11 +246,10 @@ await db.clear("syncQueue");
 
 ### Test Offline Mode
 
-```javascript
-// In browser console, toggle offline mode
-navigator.onLine = false; // Simulate offline
-navigator.onLine = true; // Simulate online
-```
+`navigator.onLine` is read-only in real browsers — assigning to it does nothing. Use genuine offline control instead:
+
+- **Chrome DevTools:** Network tab → Throttling → **Offline**. Switch back to **No throttling** (or **Online**) to restore connectivity.
+- **Playwright (e2e):** `await context.setOffline(true)` / `await context.setOffline(false)`.
 
 ### Verify Queue Persistence
 
