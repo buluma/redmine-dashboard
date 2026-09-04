@@ -4,7 +4,9 @@ This document provides a summary of the Converge codebase structure.
 
 ## High-Level Overview
 
-The project is a [Next.js](https://nextjs.org/) application written in [TypeScript](https://www.typescriptlang.org/). It uses [Prisma](https://www.prisma.io/) as an ORM for a Supabase PostgreSQL database. The code is organized into several main directories.
+The project is a [Next.js](https://nextjs.org/) application written in [TypeScript](https://www.typescriptlang.org/). It uses
+[Prisma](https://www.prisma.io/) as an ORM for a PostgreSQL (production) or
+SQLite (local dev) database. The code is organized into several main directories.
 
 ## Directory Structure
 
@@ -12,7 +14,8 @@ The project is a [Next.js](https://nextjs.org/) application written in [TypeScri
 
 This directory contains the core of the Next.js application, following the App Router structure.
 
-- **`app/layout.tsx` and `app/page.tsx`:** The main application layout and entry point. `app/page.tsx` is the authenticated dashboard shell (787 lines as of 2026-07-11, down from 2039) — most of its state and rendering lives in `src/hooks/` and `src/components/dashboard/` (see below).
+- **`app/layout.tsx` and `app/page.tsx`:** The main application layout and entry point. `app/page.tsx` is the authenticated dashboard shell (787 lines as of
+  2026-07-11, down from 2039) — most of its state and rendering lives in `src/hooks/` and `src/components/dashboard/` (see below).
 - **`app/globals.css` and `app/page.module.css`:** Global and page-specific styles.
 - **`app/api/`:** Contains all the backend API route handlers. Each subdirectory corresponds to an API endpoint.
   - `app/api/issues/`: Issue CRUD, creation, edit, assign, bulk-status, attachments, relations, timelog.
@@ -50,7 +53,8 @@ This directory contains reusable library code, components, and other source file
   - `llm-provider.ts`: Multi-provider LLM manager with tool-calling support.
   - `ai-prompt.ts`: Prompt construction for AI features.
   - `push.ts`: Server-side PWA push notification delivery (Web Push).
-- **`src/hooks/`:** Custom hooks for shared logic. `app/page.tsx` was split 2026-07-11 (2039 → 787 lines) into most of these — each owns one slice of dashboard state/behavior and is unit-tested independently in `src/hooks/__tests__/`.
+- **`src/hooks/`:** Custom hooks for shared logic. `app/page.tsx` was split 2026-07-11 (2039 → 787 lines) into most of these — each owns one slice of
+  dashboard state/behavior and is unit-tested independently in `src/hooks/__tests__/`.
   - `useAuth.ts` / `useSyncState.ts` / `useIssues.ts` / `useSavedViews.ts`: Pre-split shared data hooks.
   - `useDashboardSavedViews.ts`: Saved-view CRUD + active-view tracking for the dashboard.
   - `useEventStream.ts`: SSE subscription to `/api/events/stream` with a ref-held handler map.
@@ -59,9 +63,11 @@ This directory contains reusable library code, components, and other source file
   - `useInternalNotes.ts`: Internal note CRUD for the issue detail page.
   - `useIssueHoverPreview.ts`: 300ms-delayed issue hover tooltip state.
   - `useDashboardKeyboardShortcuts.ts`: Global dashboard keyboard shortcuts (`/`, `f`, `r`, `g`, `o`, `?`, `a`, `Alt+1-4`, `Escape`).
-  - `useIssueFiltering.ts`: Priority-option derivation, project/advanced/favorites/status filter pipeline, the `summary` aggregation (status/priority mix, at-risk, recent activity).
+  - `useIssueFiltering.ts`: Priority-option derivation, project/advanced/favorites/status filter pipeline, the `summary` aggregation
+    (status/priority mix, at-risk, recent activity).
   - `useBulkIssueActions.ts`: Bulk status/priority update, mark-done, kanban drag-drop status change.
-  - `useDashboardData.ts`: Session/bootstrap/AI-status/issues/sync/activities/favorites loading, the startup + poll-and-SSE-refresh effects. The biggest of the split hooks.
+  - `useDashboardData.ts`: Session/bootstrap/AI-status/issues/sync/activities/favorites loading, the
+    startup + poll-and-SSE-refresh effects. The biggest of the split hooks.
   - `useFilterPresets.ts`: In-session (non-persisted) saved filter presets.
 - **`src/components/`:** Reusable React components.
   - `QuickActionsPanel.tsx`: Status, assign, and time logging panel.
@@ -75,7 +81,8 @@ This directory contains reusable library code, components, and other source file
   - `IssueCreateModal.tsx`: New issue creation form.
   - `ColumnPicker.tsx`: Table column visibility toggle.
   - `ai/`: AI-powered search bar and issue actions.
-  - `dashboard/`: The other half of the 2026-07-11 `app/page.tsx` split — presentational components paired with the hooks above, each with a co-located `__tests__/` file.
+  - `dashboard/`: The other half of the 2026-07-11 `app/page.tsx` split — presentational components paired with the hooks above, each with a
+    co-located `__tests__/` file.
     - `DashboardLoginScreen.tsx`: Unauthenticated connect-to-Redmine form.
     - `IssueHoverTooltip.tsx`: Renders `useIssueHoverPreview`'s state.
     - `DashboardHero.tsx`: Top metrics grid (compact/expanded).
@@ -83,7 +90,9 @@ This directory contains reusable library code, components, and other source file
     - `OpsAlertsCard.tsx` / `ActivityFeedCard.tsx`: At-risk alerts panel, recent-activity feed.
     - `DashboardFiltersPanel.tsx`: Status/priority/sort/search filters + saved-views panel + AI/FTS search toggles.
     - `IssueQueueRow.tsx`: Single table row.
-    - `IssueQueueCard.tsx`: The issue-queue card as a whole — header stats, bulk-action toolbar, quick filters, filter-presets UI, project/favorites/export controls, view-mode tabs, and the table/kanban/gantt + pagination rendering. Kept as one flat component (not decomposed further) since it was the highest-risk/densest piece of the split.
+    - `IssueQueueCard.tsx`: The issue-queue card as a whole — header stats, bulk-action toolbar, quick filters, filter-presets UI,
+      project/favorites/export controls, view-mode tabs, and the table/kanban/gantt + pagination rendering. Kept as one flat component (not
+      decomposed further) since it was the highest-risk/densest piece of the split.
 
 ### `mobile/`
 
@@ -103,12 +112,21 @@ This directory contains all Prisma-related files.
 Operational scripts for syncing and maintaining data. See [sync-scripts.md](./sync-scripts.md) for details.
 
 - `sync-all-issues.js` — Full paginated sync of all Redmine issues.
-- `sync-children-quick.js` — Update children data for specific issues.
-- `sync-issue-children.js` — Full recursive child sync.
-- `sync-redmine-users.js` — Extract and sync Redmine users.
-- `sync-enumerations.js` — Sync priorities, activities, categories.
-- `check-issues.js` / `check-children.js` / `check-enums.js` — Quick database inspection.
-- `test-time-entries.js` — Compare time entries between Redmine and local DB.
+- `sync-children.js` — Update children data for specific issues (full recursive child sync).
+- `sync-users.js` — Extract and sync Redmine users.
+- `sync-enums.js` — Sync priorities, activities, categories.
+- `sync-assigned.js` — Sync assigned-to user data.
+- `sync-time-entries.js` — Sync time entries from Redmine.
+- `sync-query.js` / `sync-query-details.js` — Query and inspect sync state.
+- `check-issues.js` / `check-sync-jobs.js` / `db-status.js` — Quick database inspection.
+- `cleanup-old-issues.js` — Remove stale issues from local DB.
+- `import-streamline-logs.js` — Import Streamline log data.
+- `migrate-sqlite.js` — SQLite migration helper.
+- `verify-import.js` — Verify imported data integrity.
+- `generate-openapi.js` / `generate-openapi.ts` — Generate OpenAPI spec.
+- `memory-profiler.js` — Memory usage profiling.
+- `recurring-tickets-sync.sh` — Sync recurring ticket series.
+- `trigger-sync.js` — Manually trigger a sync tick.
 
 ### `docs/`
 

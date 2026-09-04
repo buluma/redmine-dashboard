@@ -16,7 +16,7 @@ export default defineConfig({
     },
     globals: true,
     setupFiles: ["src/test-setup.ts"],
-    include: ["src/**/*.test.{ts,tsx}", "app/**/*.test.{ts,tsx}"],
+    include: ["src/**/*.test.{ts,tsx}", "app/**/*.test.{ts,tsx}", "lib/**/*.test.{ts,tsx}"],
     env: {
       DATABASE_URL: "file:./test.db",
       APP_ENCRYPTION_KEY: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",

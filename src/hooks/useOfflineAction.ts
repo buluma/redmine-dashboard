@@ -54,7 +54,7 @@ export function useOfflineAction() {
           url = `/api/issues/${issueId}/comment`;
           break;
         case "log_time":
-          url = `/api/time-entries`;
+          url = `/api/issues/${issueId}/timelog`;
           break;
       }
 

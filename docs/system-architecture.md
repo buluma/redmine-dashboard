@@ -67,13 +67,15 @@ This document provides a high-level overview of the system architecture for Conv
 
 - **Flutter:** A cross-platform mobile application built with Flutter.
 - **Native Android:** A reference implementation for a native Android client using Jetpack Compose.
-- **Functionality:** Both clients provide a mobile-friendly interface for managing Redmine issues, including viewing issues, allowed transitions, comments, attachments, relations, and GitHub links. They interact with the backend via a dedicated set of mobile API endpoints.
+- **Functionality:** Both clients provide a mobile-friendly interface for managing Redmine issues, including viewing issues, allowed transitions,
+  comments, attachments, relations, and GitHub links. They interact with the backend via a dedicated set of mobile API endpoints.
 
 ### 3. API Routes
 
 - **Framework:** Next.js API Routes.
 - **Functionality:**
-  - Exposes endpoints for session management, issue data, mutations, synchronization, time-entry lifecycle operations, attachments, and relations.
+  - Exposes endpoints for session management, issue data, mutations, synchronization, time-entry lifecycle operations, attachments, and
+    relations.
   - **AI Tool Calls:** Provides endpoints for LLM-driven actions (`/api/chat`, `/api/chat/execute-tools`) with a multi-step confirmation loop.
   - Provides a dedicated set of token-authenticated endpoints for mobile clients under `/api/mobile/v1/*`.
   - Enforces rate limiting on mutation endpoints.
@@ -81,7 +83,7 @@ This document provides a high-level overview of the system architecture for Conv
 
 ### 4. Database
 
-- **Engine:** SQLite (as a starting point for the MVP).
+- **Engine:** PostgreSQL (production) / SQLite (local development).
 - **ORM:** [Prisma](https://www.prisma.io/) is used for database access.
 - **Purpose:** Acts as an operational cache for Redmine data to provide fast reads for the user. It is not the source of truth.
 
@@ -89,8 +91,15 @@ This document provides a high-level overview of the system architecture for Conv
 
 - **Implementation:** An in-process poller that runs within the Next.js server.
 - **Polling:** Periodically fetches data from the Redmine API to keep the local cache up to date. The default polling interval is 5 minutes.
-- **Synced Redmine surfaces:** `issues`, `issue_statuses`, enumerations (time entry activities + issue priorities), issue `attachments`, issue `relations`, `allowed_statuses`, and `children`.
+- **Synced Redmine surfaces:** `issues`, `issue_statuses`, enumerations (time entry activities + issue priorities), issue `attachments`, issue `relations`,
+  `allowed_statuses`, and `children`.
 - **Leader Lock:** A leader lock mechanism is used to ensure that only one instance of the poller is active at a time in a multi-instance environment.
+  The lock is periodically renewed during long-running sync ticks to prevent concurrent duplicate syncs.
+- **WakaTime Sync:** When `WAKATIME_API_KEY` is set, the poller fetches daily WakaTime coding summaries and correlates them with local issues.
+- **Odysseus Calendar Meetings:** When `ODYSSEUS_BASE_URL` and `ODYSSEUS_API_TOKEN` are set, the poller fetches calendar meeting durations
+  and logs them as time entries on recurring ticket series via fuzzy summary-to-series matching.
+- **Event Bus:** Dashboard refreshes on a single `sync.tick.completed` event-bus signal rather than per-issue update events, avoiding UI thrash during large
+  sync runs.
 
 ### 6. Streamline Log Poller
 
@@ -117,7 +126,7 @@ This document provides a high-level overview of the system architecture for Conv
 ## Technology Stack
 
 - **Framework:** Next.js App Router
-- **Database:** Prisma Client + SQLite
+- **Database:** Prisma Client + PostgreSQL (production), SQLite (local dev)
 - **Validation:** Zod
 - **Synchronization:** In-process sync poller with a leader lock
 - **AI Tool Calls:** Multi-step confirmation loop using OpenAI-format function calling
@@ -127,18 +136,24 @@ This document provides a high-level overview of the system architecture for Conv
 The AI assistant at `/chat` uses a structured tool-calling implementation to perform Redmine actions.
 
 ### 1. Tool Engine (`src/lib/ai-tools.ts`)
-Defines Redmine operations (update status, log time, close issue) in OpenAI-compatible JSON Schema. It includes a dispatcher that executes these calls via `RedmineClient` after validation.
+
+Defines Redmine operations (update status, log time, close issue) in OpenAI-compatible JSON Schema. It includes a dispatcher that executes these
+calls via `RedmineClient` after validation.
 
 ### 2. Confirmation Loop
+
 To prevent accidental data mutation, the system uses a two-step confirmation process:
+
 1. **Selection:** The LLM proposes actions. The `/api/chat` route identifies "mutating" tools and returns them as `pendingToolCalls`.
-2. **Execution:** The client displays a **Confirmation Card**. Once the user clicks "Confirm", the client calls `/api/chat/execute-tools`, which performs the actual Redmine update and returns a summary.
+2. **Execution:** The client displays a **Confirmation Card**. Once the user clicks "Confirm", the client calls `/api/chat/execute-tools`, which performs
+   the actual Redmine update and returns a summary.
 
 Read-only tools (search, get issue) are **auto-executed** during the first step to provide immediate context to the model.
 
 ## Production Considerations
 
-The current implementation uses SQLite and an in-process poller, which is suitable for a minimal viable product or a single-user deployment. For a larger-scale production environment, the following changes are recommended:
+For larger-scale production environments, consider the following enhancements:
 
-- **Database:** Switch from SQLite to a more robust database like PostgreSQL.
-- **Synchronization:** Move the synchronization logic out of the web server process and into an external, dedicated scheduler (e.g., a cron job, or a service like `node-cron` running in a separate container).
+- **Database:** Already migrated to PostgreSQL for production (see [POSTGRES_MIGRATION.md](POSTGRES_MIGRATION.md)).
+- **Synchronization:** The in-process poller with leader lock works well for single-instance deployments. For multi-instance deployments, consider external
+  scheduling (e.g., a cron job, or a service like `node-cron` running in a separate container).

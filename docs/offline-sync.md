@@ -1,15 +1,21 @@
 # Offline Sync Queue
 
-Converge implements an offline-first architecture using IndexedDB and the Background Sync API. This allows users to perform actions while offline, with changes automatically synced when connectivity is restored.
+Converge implements an offline-first architecture using IndexedDB and the
+Background Sync API. This allows users to perform actions while offline, with
+changes automatically synced when connectivity is restored.
 
 ## Overview
 
 The offline sync queue enables:
 
-- **Offline Mutations**: Create, update, delete operations while offline
-- **Automatic Sync**: Background sync when connection returns
+- **Offline Mutations**: status/assign/comment/time-log actions while offline
+- **Automatic Sync**: flush triggers on reconnect and on Background Sync
 - **Queue Persistence**: IndexedDB storage survives browser restarts
-- **Retry Logic**: Failed operations are retried with exponential backoff
+- **Retry Logic**: a failed item is retried on the next flush, up to a fixed
+  retry cap
+
+There is no server-side sync-queue API — the whole queue lives in the browser. A
+flushed item posts directly to the same route an online client would call.
 
 ## Architecture
 
@@ -19,27 +25,30 @@ The offline sync queue enables:
 │                                                         │
 │  ┌─────────────────┐     ┌─────────────────────────┐   │
 │  │   UI Layer      │────▶│  enqueueSync()          │   │
-│  │   (React)       │     │  mutations queued       │   │
+│  │  (useOfflineAction)   │  mutation queued        │   │
 │  └────────┬────────┘     └─────────────────────────┘   │
 │           │                                             │
 │           ▼                                             │
 │  ┌──────────────────────────────────────────────┐      │
-│  │  IndexedDB (idb library)                     │      │
-│  │  Table: sync_queue                           │      │
-│  │  Fields: type, payload, timestamp, retries   │      │
+│  │  IndexedDB (idb library, db "converge-offline")│     │
+│  │  Object store: syncQueue                      │      │
+│  │  Fields: type, issueId, payload, createdAt,   │      │
+│  │  retries                                      │      │
 │  └──────────────────────────────────────────────┘      │
 │           │                                             │
-│           │ Check online + Register background sync     │
+│           │ "online" event, or Background Sync tag       │
+│           │ "sync-queue" via Service Worker              │
 │           ▼                                             │
 │  ┌─────────────────┐     ┌─────────────────────────┐   │
-│  │ Service Worker  │────▶│  sync-queue handler     │   │
-│  │  (sw.ts)        │     │  processes queue items  │   │
-│  └────────┬────────┘     └─────────────────────────┘   │
-│           │                                             │
-│           │ POST /api/issues, etc.                      │
-│           ▼                                             │
+│  │ processSyncQueue│────▶│  processSyncItem(item)  │   │
+│  │ (lib/sync-queue.ts)   │  posts directly to the  │   │
+│  └─────────────────┘     │  matching API route      │   │
+│                           └────────────┬────────────┘   │
+│                                        │                 │
+│                                        │ fetch(...)      │
+│                                        ▼                 │
 │  ┌──────────────────────────────────────────────┐      │
-│  │  Next.js API Routes                          │      │
+│  │  Next.js API Routes (/api/issues/..., etc.)   │      │
 │  └──────────────────────────────────────────────┘      │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -48,25 +57,22 @@ The offline sync queue enables:
 
 ### Sync Queue Item
 
-```typescript
-interface SyncQueueItem {
-  id: string;              // Unique ID (cuid)
-  type: SyncQueueType;     // Operation type
-  payload: any;           // Operation data
-  status: "pending" | "processing" | "completed" | "failed";
-  retries: number;        // Number of retry attempts
-  createdAt: string;      // ISO timestamp
-  lastAttemptAt?: string; // Last retry timestamp
-}
+`lib/offline-db.ts`:
 
-type SyncQueueType =
-  | "issue_status_update"
-  | "issue_comment"
-  | "issue_timelog"
-  | "issue_create"
-  | "issue_relation"
-  | "issue_attachment";
+```typescript
+export interface SyncQueueItem {
+  id?: number; // auto-increment key
+  type: "update_status" | "assign" | "comment" | "log_time";
+  issueId: string;
+  payload: Record<string, unknown>;
+  createdAt: string; // ISO timestamp
+  retries: number;
+}
 ```
+
+There is no `status` field on the item itself — a pending item simply exists in
+the `syncQueue` object store; a successfully flushed (or permanently failed)
+item is deleted from it.
 
 ## Usage
 
@@ -74,168 +80,139 @@ type SyncQueueType =
 
 ```typescript
 import { enqueueSync } from "@/lib/offline-db";
-import { syncIssues } from "@/lib/sync";
 
-// Example: Update issue status
-async function updateIssueStatus(issueId: number, statusId: number) {
-  // Check if online
-  if (navigator.onLine) {
-    // Online: Direct API call
-    await syncIssues.updateStatus(issueId, statusId);
-    return;
-  }
-
-  // Offline: Queue for sync
-  await enqueueSync("issue_status_update", {
-    issueId,
-    statusId,
-  });
-
-  // Show user feedback
-  toast.info("Changes saved locally. Syncing when online...");
-}
+// enqueueSync(issueId, type, payload) — three arguments
+await enqueueSync(issueId, "update_status", { statusId });
 ```
+
+`useOfflineAction()` (`src/hooks/useOfflineAction.ts`) wraps this: when
+`navigator.onLine` is false it calls `enqueueSync` and shows a toast; when
+online it posts directly to the matching API route instead.
 
 ### Service Worker Handler
 
-The service worker (`app/sw.ts`) processes the sync queue:
+The service worker (`app/sw.ts`) listens for the Background Sync API's
+`sync-queue` tag and delegates to `lib/sync-queue.ts`:
 
 ```typescript
-// Listen for background sync events
+// app/sw.ts
 self.addEventListener("sync", (event) => {
   if (event.tag === "sync-queue") {
     event.waitUntil(processSyncQueue());
   }
 });
-
-async function processSyncQueue() {
-  const items = await getPendingSyncItems();
-
-  for (const item of items) {
-    try {
-      await processSyncItem(item);
-      await completeSyncItem(item.id);
-    } catch (error) {
-      await retrySyncItem(item.id);
-    }
-  }
-}
 ```
 
-### Processing Individual Items
+### Processing the Queue
 
 ```typescript
-// app/api/internal/sync-queue/process/route.ts
-export async function POST(request: Request) {
+// lib/sync-queue.ts
+export async function processSyncQueue(): Promise<
+  { synced: number; failed: number }
+> {
   const items = await getPendingSyncItems();
-
-  for (const item of items) {
-    try {
-      await processSyncItem(item);
-      await completeSyncItem(item.id);
-    } catch (error) {
-      // Retry with exponential backoff
-      await incrementRetry(item.id);
-    }
-  }
-
-  return Response.json({ processed: items.length });
+  // ... for each item, processSyncItem(item); on success clear it,
+  // on failure increment its retry count (or drop it past MAX_RETRIES)
 }
 ```
 
-## API Endpoints
+`processSyncItem` posts each queued item straight to its matching route:
 
-### Queue Operations
+| `type`          | Route                           |
+| --------------- | ------------------------------- |
+| `update_status` | `POST /api/issues/[id]/status`  |
+| `assign`        | `POST /api/issues/[id]/assign`  |
+| `comment`       | `POST /api/issues/[id]/comment` |
+| `log_time`      | `POST /api/issues/[id]/timelog` |
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/issues` | Create issue (online) or queue (offline) |
-| `PATCH` | `/api/issues/[id]` | Update issue (online) or queue (offline) |
-| `POST` | `/api/issues/[id]/comment` | Add comment (online) or queue (offline) |
-| `POST` | `/api/issues/[id]/timelog` | Log time (online) or queue (offline) |
-
-### Internal Sync API
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/internal/sync-queue/pending` | Get pending items |
-| `POST` | `/api/internal/sync-queue/process` | Process queue items |
-| `DELETE` | `/api/internal/sync-queue/clear` | Clear failed items |
+`attachSyncQueueTriggers()` also flushes the queue on the browser's `online`
+event and once on load if already online — the Background Sync tag isn't the
+only trigger.
 
 ## Client-Side Hook
 
 ```typescript
 // src/hooks/useOfflineAction.ts
-export function useOfflineAction<T = void>() {
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+interface OfflineActionOptions {
+  type: "update_status" | "assign" | "comment" | "log_time";
+  issueId: string;
+  payload: Record<string, unknown>;
+  onSuccess?: () => void;
+  onError?: (error: Error) => void;
+  successMessage?: string;
+}
 
-  useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
+export function useOfflineAction() {
+  const { show: showToast } = useToast();
+  const [isBusy, setIsBusy] = useState(false);
 
-  const execute = async (
-    onlineFn: () => Promise<T>,
-    offlinePayload: any
-  ): Promise<T> => {
-    if (navigator.onLine) {
-      return onlineFn();
+  const performAction = useCallback(async (options: OfflineActionOptions) => {
+    const { type, issueId, payload, onSuccess, onError, successMessage } =
+      options;
+
+    // Offline: enqueue for background sync
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      await enqueueSync(issueId, type, payload);
+      showToast(
+        "Action queued offline. It will sync automatically when you are back online.",
+        "info",
+      );
+      onSuccess?.();
+      return;
     }
 
-    await enqueueSync(offlinePayload);
-    throw new Error("Offline - action queued");
-  };
+    // Online: route to the appropriate API endpoint
+    setIsBusy(true);
+    try {
+      let url = "";
+      switch (type) {
+        case "update_status":
+          url = `/api/issues/${issueId}/status`;
+          break;
+        case "assign":
+          url = `/api/issues/${issueId}/assign`;
+          break;
+        case "comment":
+          url = `/api/issues/${issueId}/comment`;
+          break;
+        case "log_time":
+          url = `/api/issues/${issueId}/timelog`;
+          break;
+      }
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `Action failed with status ${res.status}`);
+      }
+      if (successMessage) showToast(successMessage, "success");
+      onSuccess?.();
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error("Action failed");
+      showToast(error.message, "error");
+      onError?.(error);
+    } finally {
+      setIsBusy(false);
+    }
+  }, [showToast]);
 
-  return { isOffline, execute };
+  return { performAction, isBusy };
 }
 ```
+
+Key points:
+
+- `enqueueSync(issueId, type, payload)` takes three arguments (not two)
+- Operations route to different API URLs based on `type`
+- Returns `{ performAction, isBusy }` (not `{ isOffline, execute }`)
+- Uses `useToast()` for user feedback instead of raw `toast.info()`
 
 ## Retry Logic
 
-### Exponential Backoff
-
-```typescript
-// lib/offline-db.ts
-export async function incrementRetry(itemId: string) {
-  const item = await getSyncItem(itemId);
-  const maxRetries = 5;
-  const retryDelay = Math.min(30000 * 2 ** item.retries, 3600000); // Max 1 hour
-
-  if (item.retries >= maxRetries) {
-    await markSyncFailed(itemId);
-    return;
-  }
-
-  await updateSyncItem(itemId, {
-    retries: item.retries + 1,
-    lastAttemptAt: new Date().toISOString(),
-    status: "pending",
-  });
-
-  // Re-register background sync
-  if ("serviceWorker" in navigator) {
-    const registration = await navigator.serviceWorker.ready;
-    await registration.sync.register("sync-queue");
-  }
-}
-```
-
-### Retry Schedule
-
-| Attempt | Delay |
-|---------|-------|
-| 1st | 30 seconds |
-| 2nd | 1 minute |
-| 3rd | 2 minutes |
-| 4th | 4 minutes |
-| 5th | 8 minutes |
-| 6th+ | 1 hour (max) |
+`lib/sync-queue.ts` retries a failed item on the _next_ flush — there is no scheduled/exponential backoff timer. `MAX_RETRIES = 3`: an item's first 3 failures each get retried on the next flush; the 4th failure hits `retries >= MAX_RETRIES` and the item is dropped from the queue (counted as `failed`, not retried again) rather than kept forever.
 
 ## Debugging
 
@@ -244,40 +221,35 @@ export async function incrementRetry(itemId: string) {
 ```javascript
 // In browser console
 const db = await idb.openDB("converge-offline", 1);
-const tx = db.transaction("sync_queue", "readonly");
-const store = tx.objectStore("sync_queue");
-const items = await store.getAll();
-console.log("Pending items:", items.filter(i => i.status === "pending"));
+const tx = db.transaction("syncQueue", "readonly");
+const items = await tx.store.getAll();
+console.log("Pending items:", items);
 ```
 
 ### Force Sync
 
 ```javascript
-// Force background sync
 if ("serviceWorker" in navigator) {
   const registration = await navigator.serviceWorker.ready;
   await registration.sync.register("sync-queue");
 }
 ```
 
-### Clear Failed Items
+### Clear the Queue
 
 ```javascript
 const db = await idb.openDB("converge-offline", 1);
-const tx = db.transaction("sync_queue", "readwrite");
-const store = tx.objectStore("sync_queue");
-await store.clear(); // Clears all items
+await db.clear("syncQueue");
 ```
 
 ## Testing
 
 ### Test Offline Mode
 
-```javascript
-// In browser console, toggle offline mode
-navigator.onLine = false; // Simulate offline
-navigator.onLine = true;  // Simulate online
-```
+`navigator.onLine` is read-only in real browsers — assigning to it does nothing. Use genuine offline control instead:
+
+- **Chrome DevTools:** Network tab → Throttling → **Offline**. Switch back to **No throttling** (or **Online**) to restore connectivity.
+- **Playwright (e2e):** `await context.setOffline(true)` / `await context.setOffline(false)`.
 
 ### Verify Queue Persistence
 
@@ -293,23 +265,26 @@ navigator.onLine = true;  // Simulate online
 2. Go offline
 3. Perform actions
 4. Go online
-5. Check Network tab for sync API calls
+5. Check Network tab for the direct API calls `processSyncItem` makes
 
 ## Performance Considerations
 
-1. **Batch Processing**: Process items in batches to avoid blocking UI
+1. **Batch Processing**: `processSyncQueue` processes queued items sequentially,
+   not in parallel, to avoid bursting the API
 
 2. **Rate Limiting**: Respect API rate limits when flushing queue
 
 3. **Conflict Resolution**: Last-write-wins for same-item conflicts
 
-4. **Storage Limits**: IndexedDB has ~50% of available disk space; monitor for large queues
+4. **Storage Limits**: IndexedDB has ~50% of available disk space; monitor for
+   large queues
 
 ## Future Enhancements
 
+- [ ] A real server-side sync-queue API (status tracking, exponential backoff)
 - [ ] Conflict detection and resolution UI
 - [ ] Manual queue management page
 - [ ] Sync history/audit log
 - [ ] Priority-based queue processing
-- [ ]Selective sync (only certain item types)
+- [ ] Selective sync (only certain item types)
 - [ ] Queue size warnings and pruning

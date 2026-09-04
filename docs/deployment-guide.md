@@ -7,14 +7,14 @@ This guide provides instructions for setting up the Converge application for loc
 ### Prerequisites
 
 - Node.js (version specified in `.nvmrc` if available)
-- npm
+- [bun](https://bun.sh/) (package manager)
 
 ### 1. Install Dependencies
 
-Clone the repository and install the required npm packages:
+Clone the repository and install the required packages:
 
 ```bash
-npm install
+bun install
 ```
 
 ### 2. Configure Environment Variables
@@ -32,7 +32,7 @@ Open the `.env` file and set the following variables:
 - `DATABASE_URL`: The connection string for the database. For local development, the default is `file:./dev.db`.
 - `APP_ENCRYPTION_KEY`: A secret key used for encrypting stored Redmine API keys. Generate a secure random string for this.
 - `SESSION_SECRET`: A secret key used for signing session cookies. Generate a secure random string for this.
-- `SECURE_COOKIES`: Set to `false` for plain-HTTP Docker/Pi/homelab access so browsers keep the login cookie. Omit or set to `true` only when users always access the app over HTTPS.
+- `SECURE_COOKIES`: Set to `false` for plain-HTTP Docker/Pi/homelab access so browsers keep the login cookie. Only do this on a trusted local network — over plain HTTP the `rd_session` cookie is sent in cleartext and can be intercepted by anything on the same network path. Omit or set to `true` (and require HTTPS) for any deployment reachable over an untrusted or public network.
 
 **Recommended (Sentry error/performance/logs/profiling):**
 
@@ -43,7 +43,9 @@ Open the `.env` file and set the following variables:
 - `SENTRY_ENABLE_LOGS`: Enables Sentry logs pipeline (`false` by default).
 - `SENTRY_ENABLE_CONSOLE_LOGGING`: Sends `console.log/warn/error` to Sentry (`false` by default).
 - `SENTRY_SEND_DEFAULT_PII`: Sends default server-side PII to Sentry (`false` by default).
-- `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`, `NEXT_PUBLIC_SENTRY_PROFILE_SAMPLE_RATE`, `NEXT_PUBLIC_SENTRY_ENABLE_LOGS`, `NEXT_PUBLIC_SENTRY_ENABLE_CONSOLE_LOGGING`, `NEXT_PUBLIC_SENTRY_SEND_DEFAULT_PII`: Browser-side Sentry controls; keep aligned with the server settings you intentionally want exposed to client builds.
+- `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`, `NEXT_PUBLIC_SENTRY_PROFILE_SAMPLE_RATE`, `NEXT_PUBLIC_SENTRY_ENABLE_LOGS`,
+  `NEXT_PUBLIC_SENTRY_ENABLE_CONSOLE_LOGGING`, `NEXT_PUBLIC_SENTRY_SEND_DEFAULT_PII`: Browser-side Sentry controls; keep
+  aligned with the server settings you intentionally want exposed to client builds.
 - `ENABLE_SENTRY_TEST_ROUTES` and `NEXT_PUBLIC_ENABLE_SENTRY_TEST_ROUTES`: Enables local Sentry smoke-test routes/pages (`false` by default).
 
 **Recommended (runtime memory controls):**
@@ -65,16 +67,19 @@ Open the `.env` file and set the following variables:
 
 - `REDMINE_BASE_URL`: The base URL of your Redmine instance (e.g., `https://redmine.example.com`).
 - `REDMINE_API_KEY`: Your Redmine API key.
-- `REDMINE_ALLOWED_BASE_URLS`: Optional comma-separated allowlist for connect/pair flows (e.g., `https://redmine.example.com,https://redbrick.opsio.space`).
-- `REDMINE_INSECURE_TLS_HOSTS`: Optional comma-separated hostnames allowed to bypass TLS verification (recommended only for staging with incomplete certificate chains).
-- `REDMINE_SYNC_ISSUE_SCOPE`: Sync scope for `/issues.json` pulls. Allowed values: `assigned` (default, `assigned_to_id=me`), `open` (`status_id=open`), `all` (`status_id=*`).
+- `REDMINE_ALLOWED_BASE_URLS`: Optional comma-separated allowlist for connect/pair flows (e.g.,
+  `https://redmine.example.com,https://redbrick.opsio.space`).
+- `REDMINE_INSECURE_TLS_HOSTS`: Optional comma-separated hostnames allowed to bypass TLS verification (recommended only for staging with incomplete
+  certificate chains).
+- `REDMINE_SYNC_ISSUE_SCOPE`: Sync scope for `/issues.json` pulls. Allowed values: `assigned` (default, `assigned_to_id=me`), `open` (`status_id=open`),
+  `all` (`status_id=*`).
 
 ### 3. Initialize the Database
 
 Run the following command to initialize the local SQLite database schema:
 
 ```bash
-npm run db:init
+bun run db:init
 ```
 
 ### 4. Start the Application
@@ -82,67 +87,56 @@ npm run db:init
 Start the Next.js development server:
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 The application will be available at [http://localhost:3000](http://localhost:3000).
 
 ## Docker Setup
 
-A Docker setup is provided for a containerized development environment. For more details, see [DOCKER.md](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/DOCKER.md).
+A Docker setup is provided for a containerized development environment. For more details, see
+[DOCKER.md](../DOCKER.md).
 
 ### Quick Start
 
-1.  **Configure Environment:** Copy the `.env.example` file to `.env`. The default `DOCKER_DATABASE_URL` is recommended for use with Docker Compose.
-    ```bash
-    cp .env.example .env
-    ```
-2.  **Start Services:** Use the Makefile to build and start the containers.
-    ```bash
-    make up
-    ```
-3.  **View Logs:**
-    ```bash
-    make logs
-    ```
-4.  **Stop Services:**
-    ```bash
-    make down
-    ```
-5.  **Reset Database:** To wipe the Docker Postgres volume and start fresh (destructive — this deletes all data in the `postgres-data` volume):
-    ```bash
-    docker compose down -v
-    make up
-    ```
+1. **Configure Environment:** Copy the `.env.example` file to `.env`. `make up` starts the PostgreSQL-backed stack (`docker-compose.yml`'s `dashboard` service reads `DOCKER_POSTGRES_DATABASE_URL`), so that's the connection string that matters here — `DOCKER_DATABASE_URL` isn't referenced by the current Compose setup at all.
+   ```bash cp .env.example .env
+   ```
+2. **Start Services:** Use the Makefile to build and start the containers. ```bash
+   make up ```
+3. **View Logs:** ```bash
+   make logs ```
+4. **Stop Services:** ```bash
+   make down ```
+5. **Reset Database:** To wipe the Docker Postgres volume and start fresh (destructive — this deletes all data in the `postgres-data` volume):
+   ```bash docker compose down -v
+   make up
+   ```
 
 ### Supabase -> Local Docker Postgres Import
 
 If you want Docker to run on a local Postgres copy of Supabase data:
 
-1. Import Supabase into local Docker Postgres:
+1. Import Supabase into local Docker Postgres. Passing the URL directly on the `make` command line leaves it in your shell history and visible to other processes on the same machine (`ps`) — export it first instead:
    ```bash
-   make import-supabase SUPABASE_DATABASE_URL="postgresql://user:pass@host:5432/postgres"
+   export SUPABASE_DATABASE_URL="postgresql://user:pass@host:5432/postgres"
+   make import-supabase
+   unset SUPABASE_DATABASE_URL
    ```
    The importer excludes Supabase-managed extension objects (`pg_graphql`, `supabase_vault`) during restore.
-2. Start Postgres-mode stack:
-   ```bash
-   make up-pg
-   ```
-3. Tail logs:
-   ```bash
-   make logs-pg
-   ```
-4. Stop Postgres-mode stack:
-   ```bash
-   make down-pg
-   ```
+2. Start Postgres-mode stack: ```bash
+   make up-pg ```
+3. Tail logs: ```bash
+   make logs-pg ```
+4. Stop Postgres-mode stack: ```bash
+   make down-pg ```
 
-A full list of helper targets is available in the [Makefile](/Users/shadowwalker/Documents/GitHub/redmine-dashboard/Makefile).
+A full list of helper targets is available in the [Makefile](../Makefile).
 
 ## Environment Variables Reference
 
 - `DATABASE_URL`: SQLite file path for local development (default: `file:./dev.db`).
-- `DOCKER_DATABASE_URL`: Optional Docker-only SQLite path override. Recommended to use `file:./prisma/dev.db` for Docker Compose setups.
+- `DOCKER_DATABASE_URL`: not referenced by the current `docker-compose.yml` — the dashboard service reads `DOCKER_POSTGRES_DATABASE_URL` instead. Left here only in case a future SQLite-mode Compose file reintroduces it.
 - `DOCKER_POSTGRES_DB`: Local Docker Postgres DB name.
 - `DOCKER_POSTGRES_USER`: Local Docker Postgres username.
 - `DOCKER_POSTGRES_PASSWORD`: Local Docker Postgres password.
@@ -159,10 +153,11 @@ A full list of helper targets is available in the [Makefile](/Users/shadowwalker
 - `SENTRY_ENABLE_CONSOLE_LOGGING`: Sends `console.log/warn/error` to Sentry (`false` by default).
 - `SENTRY_SEND_DEFAULT_PII`: Sends default server-side PII to Sentry (`false` by default).
 - `NEXT_PUBLIC_SENTRY_*`: Browser-side equivalents for trace/profile/log/PII controls.
-- `ENABLE_SENTRY_TEST_ROUTES` / `NEXT_PUBLIC_ENABLE_SENTRY_TEST_ROUTES`: Optional Sentry smoke-test surface; leave disabled outside intentional telemetry checks.
+- `ENABLE_SENTRY_TEST_ROUTES` / `NEXT_PUBLIC_ENABLE_SENTRY_TEST_ROUTES`: Optional Sentry smoke-test surface; leave disabled outside intentional
+  telemetry checks.
 - `ENABLE_SYNC_POLLER`: Enables background sync polling. Defaults to `false` in development and `true` in production.
 - `POLL_INTERVAL_MS`: The interval for the sync poller in milliseconds (default: `300000`).
-- `LEADER_LOCK_TTL_MS`: The time-to-live for the leader lock in milliseconds (default: `300000`).
+- `LEADER_LOCK_TTL_MS`: The time-to-live for the leader lock in milliseconds (default: `90000`).
 - `SYNC_JOB_STALE_MS`: Timeout in milliseconds for resetting stale running or pending sync jobs (default: `600000`).
 - `MOBILE_API_ENABLED`: Enables the mobile API surface (`true` by default; set to `false` to disable `/api/mobile/v1/*`).
 - `MEMORY_LOGGING`: Enables structured memory usage logging (`false` by default).
@@ -186,22 +181,22 @@ A full list of helper targets is available in the [Makefile](/Users/shadowwalker
 
 ## Available Scripts
 
-- `npm run dev`: Starts the development server.
-- `npm run mem:dev`: Starts the development server with periodic memory usage logging enabled.
-- `npm run build`: Creates a production build of the application.
-- `npm run start`: Starts a production server.
-- `npm run mem:start`: Starts the production server with periodic memory usage logging enabled.
-- `npm run lint`: Lints the codebase for errors and style issues.
-- `npm run test`: Runs the test suite.
-- `npm run prisma:generate`: Regenerates the Prisma client.
-- `npm run db:init`: Initializes the database schema.
+- `bun run dev`: Starts the development server.
+- `bun run mem:dev`: Starts the development server with periodic memory usage logging enabled.
+- `bun run build`: Creates a production build of the application.
+- `bun run start`: Starts a production server.
+- `bun run mem:start`: Starts the production server with periodic memory usage logging enabled.
+- `bun run lint`: Lints the codebase for errors and style issues.
+- `bun run test`: Runs the test suite.
+- `bun run prisma:generate`: Regenerates the Prisma client.
+- `bun run db:init`: Initializes the database schema.
 
 ## Production Runtime Profile
 
 For memory-constrained production environments, start the app with:
 
 ```bash
-NODE_ENV=production NODE_OPTIONS=--max-old-space-size=768 npm run start
+NODE_ENV=production NODE_OPTIONS=--max-old-space-size=768 bun run start
 ```
 
 Use this as a starting point and tune heap size based on GC behavior and request latency.
@@ -209,7 +204,8 @@ Use this as a starting point and tune heap size based on GC behavior and request
 ## Continuous Integration (CI) and Branch Protection
 
 - **CI Workflow:** The CI pipeline is defined in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
-- **Job chain:** `lint → typecheck → test → build → a11y → e2e`, run sequentially via `needs:` so a failure early (e.g. lint) skips the rest instead of burning CI minutes on jobs that were never going to matter.
+- **Job chain:** `lint → typecheck → test → build → a11y → e2e`, run sequentially via `needs:` so a failure early (e.g. lint) skips the rest
+  instead of burning CI minutes on jobs that were never going to matter.
 - **Concurrency:** A new push to the same branch cancels any in-flight run for that branch (`concurrency:` block at the top of the workflow).
 - **Required Status Checks:** All six jobs (`lint`, `typecheck`, `test`, `build`, `a11y`, `e2e`) should be required for pull requests to be mergeable.
 

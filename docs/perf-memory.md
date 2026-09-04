@@ -19,14 +19,14 @@ This guide defines a repeatable process to measure and compare Converge runtime 
 - Development with memory logs:
 
 ```bash
-npm run mem:dev
+bun run mem:dev
 ```
 
 - Production with memory logs:
 
 ```bash
-npm run build
-npm run mem:start
+bun run build
+bun run mem:start
 ```
 
 Both scripts emit `runtime.memory.usage` structured log events once per minute when `MEMORY_LOGGING=true`.
@@ -52,12 +52,12 @@ Run each scenario for 10 minutes and capture logs:
 
 Fill this table for each run:
 
-| Scenario | Median RSS (bytes) | Median heapUsed (bytes) | Notes |
-| --- | ---: | ---: | --- |
-| Dev baseline | TBD | TBD | |
-| Dev optimized | TBD | TBD | |
-| Prod baseline | TBD | TBD | |
-| Prod optimized | TBD | TBD | |
+| Scenario       | Median RSS (bytes) | Median heapUsed (bytes) | Notes |
+| -------------- | -----------------: | ----------------------: | ----- |
+| Dev baseline   |                TBD |                     TBD |       |
+| Dev optimized  |                TBD |                     TBD |       |
+| Prod baseline  |                TBD |                     TBD |       |
+| Prod optimized |                TBD |                     TBD |       |
 
 ## Acceptance Target
 
@@ -69,7 +69,7 @@ Fill this table for each run:
 For memory-constrained deployments, cap V8 old-space heap:
 
 ```bash
-NODE_ENV=production NODE_OPTIONS=--max-old-space-size=768 npm run start
+NODE_ENV=production NODE_OPTIONS=--max-old-space-size=768 bun run start
 ```
 
 Adjust based on GC pauses and request latency.

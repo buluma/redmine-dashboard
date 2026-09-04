@@ -1,6 +1,7 @@
 # Code Standards
 
-This document outlines the coding standards and conventions used in the Converge project. Adhering to these standards ensures consistency and maintainability across the codebase.
+This document outlines the coding standards and conventions used in the Converge project. Adhering to these standards ensures consistency and maintainability
+across the codebase.
 
 ## General Principles
 
@@ -16,7 +17,8 @@ The `tsconfig.json` is configured with `strict: true` enabled. This enforces a h
 - **Type Safety:** Write strongly typed code. Avoid using `any` unless absolutely necessary.
 - **Module Resolution:** The project uses `moduleResolution: "bundler"`.
 - **ES Modules:** Use ES module syntax (`import`/`export`).
-- **Path Aliases:** The project uses the `@/*` path alias to refer to the root of the project. For example, instead of `import { db } from '../../lib/db'`, use `import { db } from '@/src/lib/db'`.
+- **Path Aliases:** The project uses the `@/*` path alias to refer to the root of the project. For example, instead of `import { db } from '../../lib/db'`,
+  use `import { db } from '@/src/lib/db'`.
 
 ## React
 
@@ -42,4 +44,4 @@ The `tsconfig.json` is configured with `strict: true` enabled. This enforces a h
 - **Client:** The Prisma client is initialized in `src/lib/db.ts`.
 - **Schema:** The database schema is defined in `prisma/schema.prisma`.
 - **Migrations:** After changing the schema, generate a new migration: `npx prisma migrate dev`.
-- **Client Generation:** If the client is out of date, regenerate it with `npm run prisma:generate`.
+- **Client Generation:** If the client is out of date, regenerate it with `bun run prisma:generate`.

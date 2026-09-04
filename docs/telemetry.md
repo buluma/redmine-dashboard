@@ -116,26 +116,24 @@ These routes already follow this standard:
 - Issue GitHub link mutation routes (web and mobile)
 - Mobile Issue Creation routes (`/api/mobile/v1/issues` POST)
 - Push Notification subscription routes (`/api/push/subscribe`)
-- **Offline Sync Queue** routes (`/api/internal/sync-queue/*`)
-- **Mobile Sync Queue** routes (`/api/mobile/v1/sync-queue/*`)
 
-When adding a new mutation route, follow the same pattern from the start.
+When adding a new mutation route, follow the same pattern from the start. The client-side offline sync queue (`lib/sync-queue.ts`) doesn't post through a dedicated server route — its telemetry, where added, should live on the same routes it calls (`/api/issues/[id]/status`, etc.), not a separate `sync.queue.*` domain that implies a server-side queue endpoint.
 
 ## PWA & Offline Sync Telemetry
 
-The offline sync system emits telemetry for:
+**Not yet implemented.** `lib/sync-queue.ts` only logs via `console.*` today — no `trackInfo`/`trackSuccess`/`trackFailure` calls. The naming below is the proposed convention to adopt if/when this gets wired to `telemetry.ts`, not a description of current behavior.
 
-### Sync Queue Operations
+### Sync Queue Operations (proposed)
 
-| Event | Description | Metric Suffix |
-|-------|-------------|---------------|
-| `sync.queue.enqueue` | Item added to queue | `sync_queue_enqueued` |
-| `sync.queue.flush` | Queue processing started | `sync_queue_flushed` |
-| `sync.queue.processed` | Items processed | `sync_queue_processed` |
-| `sync.queue.success` | Item processed successfully | `sync_queue_success` |
-| `sync.queue.failed` | Item processing failed | `sync_queue_failed` |
-| `sync.queue.retried` | Item scheduled for retry | `sync_queue_retried` |
-| `sync.queue.cleared` | Failed items cleared | `sync_queue_cleared` |
+| Event                  | Description                 | Metric Suffix          |
+| ---------------------- | --------------------------- | ---------------------- |
+| `sync.queue.enqueue`   | Item added to queue         | `sync_queue_enqueued`  |
+| `sync.queue.flush`     | Queue processing started    | `sync_queue_flushed`   |
+| `sync.queue.processed` | Items processed             | `sync_queue_processed` |
+| `sync.queue.success`   | Item processed successfully | `sync_queue_success`   |
+| `sync.queue.failed`    | Item processing failed      | `sync_queue_failed`    |
+| `sync.queue.retried`   | Item scheduled for retry    | `sync_queue_retried`   |
+| `sync.queue.cleared`   | Failed items cleared        | `sync_queue_cleared`   |
 
 ### Sync Queue Tags
 
@@ -143,12 +141,14 @@ The offline sync system emits telemetry for:
 - `status_class`: `2xx`, `4xx`, `5xx`
 - `reason`: `rate_limited`, `validation`, `upstream_error`, `network_error`
 
-### Offline Sync Example
+### Offline Sync Example (proposed)
 
 ```typescript
-import { trackInfo, trackSuccess, trackFailure } from "@/src/lib/telemetry";
+import { trackFailure, trackInfo, trackSuccess } from "@/src/lib/telemetry";
 
-export async function processSyncItem(item: SyncQueueItem) {
+// lib/sync-queue.ts's real processSyncItem(item: SyncQueueItem) currently
+// uses console.* only — this shows what adopting the pattern would look like.
+async function processSyncItem(item: SyncQueueItem) {
   const startedAt = Date.now();
 
   try {
@@ -182,22 +182,22 @@ export async function processSyncItem(item: SyncQueueItem) {
 
 ### Push Notification Telemetry
 
-| Event | Description | Metric Suffix |
-|-------|-------------|---------------|
-| `push.subscribe` | User subscribes to push | `push_subscribed` |
-| `push.unsubscribe` | User unsubscribes | `push_unsubscribed` |
-| `push.send` | Notification sent | `push_sent` |
-| `push.failed` | Notification delivery failed | `push_failed` |
+| Event              | Description                  | Metric Suffix       |
+| ------------------ | ---------------------------- | ------------------- |
+| `push.subscribe`   | User subscribes to push      | `push_subscribed`   |
+| `push.unsubscribe` | User unsubscribes            | `push_unsubscribed` |
+| `push.send`        | Notification sent            | `push_sent`         |
+| `push.failed`      | Notification delivery failed | `push_failed`       |
 
 ### Push Notification Example
 
 ```typescript
 import { sendPushNotification } from "@/lib/push";
-import { trackInfo, trackSuccess, trackFailure } from "@/src/lib/telemetry";
+import { trackFailure, trackInfo, trackSuccess } from "@/src/lib/telemetry";
 
 export async function notifyIssueAssignment(
   userId: string,
-  issue: Issue
+  issue: Issue,
 ) {
   const startedAt = Date.now();
 
@@ -231,8 +231,6 @@ export async function notifyIssueAssignment(
 
 ## Sentry Runtime Controls
 
-## Sentry Runtime Controls
-
 Runtime telemetry volume is controlled through environment variables:
 
 - `SENTRY_TRACES_SAMPLE_RATE`: Defaults to `0.0` in development and `0.1` in production.
@@ -240,7 +238,8 @@ Runtime telemetry volume is controlled through environment variables:
 - `SENTRY_ENABLE_LOGS`: Defaults to `false`.
 - `SENTRY_ENABLE_CONSOLE_LOGGING`: Defaults to `false`.
 - `SENTRY_SEND_DEFAULT_PII`: Defaults to `false`.
-- `NEXT_PUBLIC_SENTRY_*`: Browser-side trace/profile/log/PII controls. These are intentionally separate from server variables because they are exposed to client builds.
+- `NEXT_PUBLIC_SENTRY_*`: Browser-side trace/profile/log/PII controls. These are intentionally separate from server variables because they are exposed to
+  client builds.
 - `ENABLE_SENTRY_TEST_ROUTES` and `NEXT_PUBLIC_ENABLE_SENTRY_TEST_ROUTES`: Defaults to `false`; enable only for intentional Sentry smoke tests.
 
 These defaults keep error reporting active while reducing memory and CPU overhead from high-volume tracing, profiling, and console-log ingestion.
