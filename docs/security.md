@@ -28,7 +28,7 @@ export function createSessionToken(userId: string): string {
 
 ### CSRF Protection
 
-CSRF defense is a same-origin check, not a token. For cookie-authenticated mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) it's enforced centrally in `proxy.ts` (Next 16 uses `proxy.ts`, not `middleware.ts`) via the `Origin` or `Referer` header — no CSRF cookie or `X-CSRF-Token` header is issued or checked. Bearer-token requests (mobile, external integrations) have no session cookie and are inherently CSRF-immune, so they're allowed through regardless of `Origin`/`Referer`.
+CSRF defense is a same-origin check, not a token. For cookie-authenticated mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) it's enforced centrally in `proxy.ts` (Next 16 uses `proxy.ts`, not `middleware.ts`) via the `Origin` or `Referer` header — no CSRF cookie or `X-CSRF-Token` header is issued or checked. A request is blocked only when `Origin` or `Referer` is present and its host doesn't match the request's own `Host`; if both are absent it's allowed through, since a real browser always sends one on a state-changing request. Bearer-token requests (mobile, external integrations) have no session cookie and are inherently CSRF-immune, so they're allowed through regardless of `Origin`/`Referer`.
 
 ```typescript
 // proxy.ts

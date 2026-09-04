@@ -66,7 +66,7 @@ Configuration via `LLM_PROVIDER` environment variable. See [aperture.md](apertur
 Converge implements robust security measures:
 
 - **Session Management:** HMAC-signed session tokens with httpOnly, SameSite=strict cookies
-- **CSRF Protection:** Same-origin (Origin/Referer) check on all cookie-authenticated mutating API endpoints, enforced in `proxy.ts`
+- **CSRF Protection:** `proxy.ts` blocks a cookie-authenticated mutating request whose `Origin` or `Referer` host doesn't match the request's own `Host` — but allows it through when both headers are absent (a real browser always sends one on a state-changing request, so their absence means this isn't a browser CSRF vector)
 - **RBAC:** Four role levels (Admin, Editor, User, Viewer) with permission-based access
 - **Rate Limiting:** Per-user limits on sync operations and mutations
 - **Encrypted Credentials:** AES-256-GCM encryption for Redmine API keys
@@ -79,7 +79,7 @@ Converge syncs and caches the following Redmine entities in the local database (
 
 | Table                                   | Source                     | Notes                                                                                          |
 | --------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------- |
-| `Issue`                                 | `/issues.json?status_id=*` | ~109K issues. `redmineIssueId` nullable for local-only issues. New `source` field (`"redmine"` |
+| `Issue`                                 | `/issues.json?status_id=*` | ~109K issues. `redmineIssueId` nullable for local-only issues. `source` field is `"redmine"` or `"local"`. |
 | `IssueRelation`                         | `/issues/.../relations`    | Redmine relations (blocks, relates, etc.)                                                      |
 | `IssueAttachment`                       | issue detail               | File metadata and download URLs                                                                |
 | `TimeEntry`                             | `/time_entries.json`       | Time entries synced with issue detail                                                          |
