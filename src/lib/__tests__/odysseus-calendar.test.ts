@@ -39,6 +39,49 @@ describe("OdysseusCalendarClient", () => {
     const [url, opts] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe("http://odysseus.local/api/converge/calendar/events?start=2026-09-01&end=2026-09-02");
     expect(opts.headers.Authorization).toBe("Bearer tok123");
+    expect(opts.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("aborts the request once the timeout elapses", async () => {
+    vi.useFakeTimers();
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation((_url: string, opts: { signal: AbortSignal }) => {
+      return new Promise((_resolve, reject) => {
+        opts.signal.addEventListener("abort", () => reject(new Error("aborted")));
+      });
+    });
+
+    const client = new OdysseusCalendarClient("http://odysseus.local", "tok");
+    const promise = client.listEvents("a", "b");
+    const assertion = expect(promise).rejects.toThrow(OdysseusCalendarApiError);
+    await vi.advanceTimersByTimeAsync(15000);
+    await assertion;
+    vi.useRealTimers();
+  });
+
+  it("drops events that fail shape validation but keeps valid ones", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        events: [
+          { uid: "e1", summary: "Standup", dtstart: "a", dtend: "b" },
+          { uid: "", summary: "Bad", dtstart: "a", dtend: "b" },
+          { summary: "Missing uid", dtstart: "a", dtend: "b" },
+          "not an object",
+        ],
+      }),
+    });
+    const client = new OdysseusCalendarClient("http://odysseus.local", "tok");
+    const events = await client.listEvents("a", "b");
+    expect(events).toEqual([{ uid: "e1", summary: "Standup", dtstart: "a", dtend: "b" }]);
+  });
+
+  it("throws OdysseusCalendarApiError when events isn't an array", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ events: "not-an-array" }),
+    });
+    const client = new OdysseusCalendarClient("http://odysseus.local", "tok");
+    await expect(client.listEvents("a", "b")).rejects.toThrow(OdysseusCalendarApiError);
   });
 
   it("returns an empty array when the response has no events field", async () => {

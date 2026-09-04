@@ -94,6 +94,30 @@ describe("matchScore", () => {
   it("returns 0 for empty input", () => {
     expect(matchScore("", "DRC Support")).toBe(0);
   });
+
+  it("returns 0 for a single shared token even if that's every token in the shorter side", () => {
+    // "Standup" alone is too common a word to trust as a match on its own.
+    expect(matchScore("Standup", "Standup")).toBe(0);
+    expect(matchScore("Daily Standup", "Standup")).toBe(0);
+  });
+});
+
+describe("findBestSeriesMatch (via syncCalendarMeetings)", () => {
+  it("does not match when two series tie for the top score", async () => {
+    mockSeriesFindMany.mockResolvedValue([
+      series({ id: "series-1", key: "drc-a", name: "DRC Support" }),
+      series({ id: "series-2", key: "drc-b", name: "DRC Support" }),
+    ]);
+    // Both series share the exact same name (a plausible duplicate), so
+    // "DRC Support Call" scores identically (1.0) against each — a genuine tie.
+    const client = makeClient([event({ summary: "DRC Support Call" })]);
+
+    const result = await syncCalendarMeetings("user-1", client, { start: "a", end: "b" });
+
+    expect(result.unmatched).toBe(1);
+    expect(result.matched).toBe(0);
+    expect(mockInstanceFindFirst).not.toHaveBeenCalled();
+  });
 });
 
 describe("syncCalendarMeetings", () => {

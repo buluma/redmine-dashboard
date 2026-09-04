@@ -37,6 +37,11 @@ function tokenize(text: string): Set<string> {
   );
 }
 
+// A single shared token ("standup", "sync") is too common across unrelated
+// meetings and series names to trust on its own — require at least two
+// shared tokens so a real match needs more than one coincidental word.
+const MIN_SHARED_TOKENS = 2;
+
 export function matchScore(summary: string, seriesName: string): number {
   const a = tokenize(summary);
   const b = tokenize(seriesName);
@@ -45,22 +50,33 @@ export function matchScore(summary: string, seriesName: string): number {
   for (const token of a) {
     if (b.has(token)) shared++;
   }
+  if (shared < MIN_SHARED_TOKENS) return 0;
   return shared / Math.min(a.size, b.size);
 }
 
+/**
+ * Picks the single best-scoring series for a meeting summary. Returns null
+ * (no match) rather than guessing when two or more series tie for the top
+ * score — logging a meeting against the wrong ticket on an arbitrary
+ * tiebreak is worse than leaving it unmatched for a human to sort out.
+ */
 function findBestSeriesMatch(
   summary: string,
   seriesList: RecurringTicketSeries[],
 ): RecurringTicketSeries | null {
   let best: { series: RecurringTicketSeries; score: number } | null = null;
+  let tied = false;
   for (const series of seriesList) {
     const score = matchScore(summary, series.name);
     if (score < MATCH_THRESHOLD) continue;
     if (!best || score > best.score) {
       best = { series, score };
+      tied = false;
+    } else if (score === best.score) {
+      tied = true;
     }
   }
-  return best?.series ?? null;
+  return tied ? null : (best?.series ?? null);
 }
 
 export type CalendarTimelogResult = {

@@ -21,8 +21,14 @@ let tickInFlight = false;
 // Cursor for the calendar-meeting poll window (SHA-172) — the end of the
 // previous successful poll becomes the start of the next one, so a slow or
 // delayed tick still covers every meeting that ended in between rather than
-// only the last pollIntervalMs. Reset to "one interval back" on first run.
+// only the last pollIntervalMs. Process-local, so it resets to null on
+// every restart/failover — COLD_START_LOOKBACK_MS below bounds how far back
+// that first post-restart poll looks, so a deploy or outage doesn't lose
+// meetings that ended while this instance was down. TimeEntry's
+// (issueId, calendarEventUid) uniqueness makes the resulting overlap with
+// whatever the previous instance already covered safe to re-poll.
 let lastCalendarSyncEnd: Date | null = null;
+const COLD_START_LOOKBACK_MS = 24 * 60 * 60 * 1000;
 
 // Exported for tests only — production code drives this via ensurePollerStarted's interval.
 export async function pollTick(): Promise<void> {
@@ -93,7 +99,7 @@ export async function pollTick(): Promise<void> {
     const odysseusToken = process.env.ODYSSEUS_API_TOKEN;
     if (odysseusBaseUrl && odysseusToken && users.length > 0) {
       const windowEnd = new Date();
-      const windowStart = lastCalendarSyncEnd ?? new Date(windowEnd.getTime() - env.pollIntervalMs);
+      const windowStart = lastCalendarSyncEnd ?? new Date(windowEnd.getTime() - COLD_START_LOOKBACK_MS);
       try {
         const client = new OdysseusCalendarClient(odysseusBaseUrl, odysseusToken);
         const calResult = await syncCalendarMeetings(users[0].userId, client, {
