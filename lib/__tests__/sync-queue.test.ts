@@ -63,4 +63,37 @@ describe("processSyncQueue log_time", () => {
     expect(mockIncrementSyncRetries).toHaveBeenCalledWith(1);
     expect(mockClearSyncItems).not.toHaveBeenCalled();
   });
+
+  // Regression test: items enqueued by a pre-fix build still sit in a
+  // user's IndexedDB with the old /api/time-entries payload shape
+  // ({hours, comments}, often no activityId). Without normalization
+  // they'd fail timeLogSchema validation instead of the old 405 --
+  // still stuck, just differently.
+  it("normalizes a legacy payload (comments, no activityId) before posting", async () => {
+    mockGetPendingSyncItems.mockResolvedValue([
+      item({ payload: { hours: 2, comments: "legacy note" } }),
+    ]);
+    mockClearSyncItems.mockResolvedValue(undefined);
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true });
+
+    await processSyncQueue();
+
+    const [, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const body = JSON.parse(options.body);
+    expect(body).toEqual({ hours: 2, comment: "legacy note", activityId: 31 });
+  });
+
+  it("leaves an already-correct payload (comment, activityId) untouched", async () => {
+    mockGetPendingSyncItems.mockResolvedValue([
+      item({ payload: { hours: 1, activityId: 9, comment: "current" } }),
+    ]);
+    mockClearSyncItems.mockResolvedValue(undefined);
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true });
+
+    await processSyncQueue();
+
+    const [, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const body = JSON.parse(options.body);
+    expect(body).toEqual({ hours: 1, activityId: 9, comment: "current" });
+  });
 });

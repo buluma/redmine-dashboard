@@ -7,6 +7,10 @@ import {
 
 const MAX_RETRIES = 3;
 
+// "Development" — same default used for the quick-log form
+// (app/issues/[id]/page.tsx) and the local-issue timelog route.
+const DEFAULT_LOG_TIME_ACTIVITY_ID = 31;
+
 async function processSyncItem(item: SyncQueueItem): Promise<boolean> {
   try {
     switch (item.type) {
@@ -41,10 +45,23 @@ async function processSyncItem(item: SyncQueueItem): Promise<boolean> {
       }
 
       case "log_time": {
+        // Normalize items enqueued by a pre-fix build of the app: they were
+        // written for /api/time-entries' shape ({hours, comments}, often
+        // without activityId at all) and would otherwise fail
+        // timeLogSchema validation against the real route below. Leaves
+        // already-correct payloads (comment, activityId present) untouched.
+        const payload = item.payload as Record<string, unknown>;
+        const normalizedPayload: Record<string, unknown> = {
+          ...payload,
+          comment: payload.comment ?? payload.comments,
+          activityId: payload.activityId ?? DEFAULT_LOG_TIME_ACTIVITY_ID,
+        };
+        delete normalizedPayload.comments;
+
         const res = await fetch(`/api/issues/${item.issueId}/timelog`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(item.payload),
+          body: JSON.stringify(normalizedPayload),
         });
         if (!res.ok) throw new Error(`Time log failed: ${res.status}`);
         return true;
