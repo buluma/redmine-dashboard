@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { ConstellationBackground } from "@/src/components/ConstellationBackground";
 import { ThemeProvider } from "@/src/components/ThemeProvider";
@@ -18,6 +18,17 @@ const matchMediaMock = vi.fn().mockImplementation((query: string) => ({
   dispatchEvent: vi.fn(),
 }));
 Object.defineProperty(window, "matchMedia", { value: matchMediaMock, writable: true });
+
+// jsdom intentionally does not implement canvas rendering. These tests cover
+// the component's DOM and lifecycle behavior, so a null context is sufficient
+// and keeps jsdom from emitting its unimplemented-canvas warning.
+const getContextMock = vi
+  .spyOn(HTMLCanvasElement.prototype, "getContext")
+  .mockReturnValue(null);
+
+afterAll(() => {
+  getContextMock.mockRestore();
+});
 
 function Wrapper({ children }: { children: React.ReactNode }) {
   return <ThemeProvider>{children}</ThemeProvider>;
