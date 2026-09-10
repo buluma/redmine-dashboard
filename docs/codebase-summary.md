@@ -96,9 +96,9 @@ This directory contains reusable library code, components, and other source file
 
 ### `mobile/`
 
-This directory contains the source code for the mobile applications.
+This directory contains the source code for the mobile application.
 
-- **`mobile/flutter_nrcc/`:** A complete Flutter project for the cross-platform mobile app.
+- **`mobile/android-native/`:** A native Android application built with Kotlin and Jetpack Compose.
 
 ### `prisma/`
 

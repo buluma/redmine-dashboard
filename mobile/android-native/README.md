@@ -1,6 +1,6 @@
 # Converge-Compose Android MVP
 
-Standalone native Android client for Converge, branded as `Converge-Compose` because it is built with Kotlin + Jetpack Compose. This project is intentionally separate from `mobile/converge` so the existing Flutter app stays untouched.
+Standalone native Android client for Converge, branded as `Converge-Compose` because it is built with Kotlin + Jetpack Compose.
 
 ## MVP Scope
 
@@ -39,4 +39,4 @@ For local development, the app permits cleartext `http://` traffic through `netw
 ## Notes
 
 - Local-only issues can be viewed, but comments/status changes are blocked in the MVP because those operations do not sync to Redmine.
-- Attachments, GitHub links, relations, time entries, offline cache, and push notifications are intentionally deferred from this first native build.
+- Offline cache and push notifications are intentionally deferred from this native build. Attachments, GitHub links, relations, and time entries are supported where the mobile API provides them.
