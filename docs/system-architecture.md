@@ -15,12 +15,11 @@ This document provides a high-level overview of the system architecture for Conv
                  │   User's Browser  │
                  └─────────┬─────────┘
                            │
-  ┌────────────────┐       │       ┌────────────────┐
-  │ Flutter Client │───────┘       │ Android Client │
-  └────────────────┘               └────────────────┘
-          │ (HTTPS, /api/mobile/v1/*) │
-          │                         │
-          ▼                         ▼
+                    ┌────────────────┐
+                    │ Android Client │
+                    └───────┬────────┘
+                            │ (HTTPS, /api/mobile/v1/*)
+                            ▼
 ┌─────────────────────────────────────────────┐
 │                Next.js Server               │
 │                                             │
@@ -65,9 +64,8 @@ This document provides a high-level overview of the system architecture for Conv
 
 ### 2. Mobile Clients
 
-- **Flutter:** A cross-platform mobile application built with Flutter.
-- **Native Android:** A reference implementation for a native Android client using Jetpack Compose.
-- **Functionality:** Both clients provide a mobile-friendly interface for managing Redmine issues, including viewing issues, allowed transitions,
+- **Native Android:** The checked-in Android application is built with Kotlin and Jetpack Compose.
+- **Functionality:** It provides a mobile-friendly interface for managing Redmine issues, including viewing issues, allowed transitions,
   comments, attachments, relations, and GitHub links. They interact with the backend via a dedicated set of mobile API endpoints.
 
 ### 3. API Routes

@@ -32,5 +32,4 @@ Welcome to the documentation for Converge. This documentation is intended to hel
 
 ## Mobile Development
 
-- **[Flutter Guide](./mobile/flutter.md):** Guide for the Flutter application.
-- **[Android Guide](./mobile/android.md):** Guide for the native Android client.
+- **[Android Guide](./mobile/android.md):** Guide for the checked-in native Android client.

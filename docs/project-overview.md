@@ -96,8 +96,7 @@ Converge syncs and caches the following Redmine entities in the local database (
 
 Converge provides support for mobile clients, allowing users to manage their Redmine issues on the go.
 
-- **Clients:** The project includes a ready-to-build [Flutter application](../mobile/flutter_nrcc) and provides guidance for
-  creating a [native Android client](./mobile/android.md).
+- **Client:** The project includes a ready-to-build [native Android application](../mobile/android-native) built with Kotlin and Jetpack Compose.
 - **Secure Pairing:** Mobile clients can be paired securely using a token-based authentication system, avoiding the need for browser cookies.
 - **Mobile-Specific API:** A dedicated set of endpoints under `/api/mobile/v1/` is available for mobile clients, now supporting **issue creation**.
 - **Core Functionality:** Mobile users can search, post comments, manage GitHub links, and use attachments/relations through token-authenticated APIs.

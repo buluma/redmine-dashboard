@@ -47,10 +47,10 @@ Mobile/Android integration is available through token-authenticated endpoints un
 
 ### Local Setup
 
-1.  **Install dependencies:** `npm install`
+1.  **Install dependencies:** `bun install`
 2.  **Configure environment:** `cp .env.example .env` (and fill in the values)
-3.  **Initialize database:** `npm run db:init`
-4.  **Start application:** `npm run dev`
+3.  **Initialize database:** `bun run db:init`
+4.  **Start application:** `bun run dev`
 
 ### Docker Setup
 
@@ -106,10 +106,10 @@ Install from Chrome/Edge: click the install icon in the address bar, or "Add to 
 
 ```bash
 # Run all tests once
-npm test
+bun run test
 
 # Run tests in watch mode
-npm run test:watch
+bun run test:watch
 ```
 
 ### Test Coverage
