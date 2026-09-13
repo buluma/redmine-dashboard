@@ -37,14 +37,3 @@ export async function GET() {
 
   return NextResponse.json(response);
 }
-
-// Function to record metrics (can be called from routes)
-export function recordRequest(endpoint: string, error = false) {
-  metrics.requests++;
-  if (error) {
-    metrics.errors++;
-    metrics.lastError = `${endpoint} at ${new Date().toISOString()}`;
-  }
-  const count = metrics.endpoints.get(endpoint) ?? 0;
-  metrics.endpoints.set(endpoint, count + 1);
-}
