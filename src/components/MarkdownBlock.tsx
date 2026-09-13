@@ -9,7 +9,14 @@ import { useI18n } from "@/src/components/I18nProvider";
 import { filenamesMatch, attachmentUrl } from "@/src/lib/issue-utils";
 import type { Attachment } from "@/src/types/dashboard";
 
-export function MarkdownBlock({ content, attachments = [], issueId }: { content: string; attachments?: Attachment[]; issueId?: number }) {
+type MarkdownBlockProps = {
+  content: string;
+  attachments?: Attachment[];
+  issueId?: number;
+  onImageClick?: (src: string, alt: string) => void;
+};
+
+export function MarkdownBlock({ content, attachments = [], issueId, onImageClick }: MarkdownBlockProps) {
   const segments = useMemo(() => splitRedmineCollapseSegments(content), [content]);
   const { t } = useI18n();
 
@@ -27,6 +34,7 @@ export function MarkdownBlock({ content, attachments = [], issueId }: { content:
     return textFromNode(props?.children ?? "");
   }
 
+  // Custom img component to handle attachment images in markdown
   function MarkdownImage({ src, alt }: { src?: string | Blob; alt?: string }) {
     if (!src || typeof src === "object") return null;
     const srcText = src.toString();
@@ -42,7 +50,13 @@ export function MarkdownBlock({ content, attachments = [], issueId }: { content:
       return (
         <span className="markdown-image-frame">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="attachment-preview-image clickable" src={url} alt={alt ?? filename} loading="lazy" />
+          <img
+            className="attachment-preview-image clickable"
+            src={url}
+            alt={alt ?? filename}
+            loading="lazy"
+            onClick={() => onImageClick?.(url, alt ?? filename)}
+          />
         </span>
       );
     }
@@ -50,7 +64,13 @@ export function MarkdownBlock({ content, attachments = [], issueId }: { content:
     return (
       <span className="markdown-image-frame">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="attachment-preview-image clickable" src={srcText} alt={alt ?? filename} loading="lazy" />
+        <img
+          className="attachment-preview-image clickable"
+          src={srcText}
+          alt={alt ?? filename}
+          loading="lazy"
+          onClick={() => onImageClick?.(srcText, alt ?? filename)}
+        />
       </span>
     );
   }

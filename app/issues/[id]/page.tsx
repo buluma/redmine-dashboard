@@ -21,42 +21,7 @@ import { IssueStandardMetadataFields, type IssueMetadataDraft } from "@/src/comp
 import { IssueOverviewCards } from "@/src/components/issue-detail/IssueOverviewCards";
 import { RelationsSection } from "@/src/components/issue-detail/RelationsSection";
 import { SubticketsSection } from "@/src/components/issue-detail/SubticketsSection";
-
-type JournalDetail = {
-  property: string;
-  name: string;
-  old_value: string;
-  new_value: string;
-};
-
-type Journal = {
-  id: string;
-  author: string | null;
-  notes: string | null;
-  details?: JournalDetail[];
-  createdOnRemote: string;
-};
-
-type TimeEntry = {
-  id: string;
-  redmineTimeEntryId: number | null;
-  hours: number;
-  activityId: number;
-  activityName: string | null;
-  authorName: string | null;
-  comments: string | null;
-  spentOn: string;
-};
-
-type Attachment = {
-  id: string;
-  redmineAttachmentId: number;
-  filename: string;
-  filesize: number;
-  contentType: string | null;
-  author: string | null;
-  createdOnRemote: string | null;
-};
+import type { Attachment, Journal, TimeEntry } from "@/src/types/dashboard";
 
 type Relation = {
   id: string;

@@ -7,7 +7,7 @@ vi.mock("@/src/components/I18nProvider", () => ({
   useI18n: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("@/src/components/issue-detail/MarkdownBlock", () => ({
+vi.mock("@/src/components/MarkdownBlock", () => ({
   MarkdownBlock: ({ content }: { content: string }) => <div data-testid="markdown">{content}</div>,
 }));
 

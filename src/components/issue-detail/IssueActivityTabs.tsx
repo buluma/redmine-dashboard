@@ -6,28 +6,11 @@ import type { Ref, ReactNode } from "react";
 import { useI18n } from "@/src/components/I18nProvider";
 import { TimeTrackingPanel } from "@/src/components/TimeTrackingPanel";
 import { InternalNotesSection } from "@/src/components/issue-detail/InternalNotesSection";
-import { MarkdownBlock } from "@/src/components/issue-detail/MarkdownBlock";
+import { MarkdownBlock } from "@/src/components/MarkdownBlock";
 import type { InternalNote } from "@/src/hooks/useInternalNotes";
-import type { Attachment } from "@/src/types/dashboard";
+import type { Attachment, Journal, TimeEntry } from "@/src/types/dashboard";
 
 export type IssueActivityTab = "history" | "notes" | "internal-notes" | "properties" | "time_entries";
-
-type Journal = {
-  id: string;
-  author: string | null;
-  notes: string | null;
-  details?: Array<{ property: string; name: string; old_value: string; new_value: string }>;
-  createdOnRemote: string;
-};
-
-type TimeEntry = {
-  id: string;
-  hours: number;
-  activityName: string | null;
-  authorName: string | null;
-  comments: string | null;
-  spentOn: string;
-};
 
 type IssueActivityTabsProps = {
   issueId: string;
@@ -83,6 +66,35 @@ export function IssueActivityTabs({
     />
   );
 
+  // History/notes/properties are the same timeline shape (author/date header
+  // + notes body), differing only in the empty-state copy, the item's CSS
+  // modifier, and whether the raw property-change details list is shown.
+  function renderJournalTimeline(
+    journals: Journal[],
+    options: { emptyKey: string; itemClass: string; showDetails?: boolean },
+  ): ReactNode {
+    if (journals.length === 0) {
+      return <p className="muted">{t(options.emptyKey)}</p>;
+    }
+    return journals.map((journal) => (
+      <article key={journal.id} className={`timeline-item ${options.itemClass}`}>
+        <p className="muted">
+          <strong>{journal.author ?? t("issues.empty.unknown")}</strong> • {formatAgo(journal.createdOnRemote)}
+        </p>
+        {journal.notes?.trim() ? renderMarkdown(journal.notes) : null}
+        {options.showDetails && journal.details.length > 0 && (
+          <ul className="journal-details">
+            {journal.details.map((detail, index) => (
+              <li key={index}>
+                <strong>{detail.name}</strong> changed from <em>{detail.old_value || "(none)"}</em> to <em>{detail.new_value || "(none)"}</em>
+              </li>
+            ))}
+          </ul>
+        )}
+      </article>
+    ));
+  }
+
   return (
     <>
       <div className="issue-tabs" ref={tabsRef}>
@@ -117,37 +129,19 @@ export function IssueActivityTabs({
         </p>
         {activeTab === "history" && (
           <div className="timeline">
-            {historyJournals.length === 0 && <p className="muted">{t("issues.empty.history")}</p>}
-            {historyJournals.map((journal) => (
-              <article key={journal.id} className="timeline-item timeline-item-history">
-                <p className="muted">
-                  <strong>{journal.author ?? t("issues.empty.unknown")}</strong> • {formatAgo(journal.createdOnRemote)}
-                </p>
-                {journal.notes?.trim() ? renderMarkdown(journal.notes) : null}
-                {Array.isArray(journal.details) && journal.details.length > 0 && (
-                  <ul className="journal-details">
-                    {journal.details.map((detail, index) => (
-                      <li key={index}>
-                        <strong>{detail.name}</strong> changed from <em>{detail.old_value || "(none)"}</em> to <em>{detail.new_value || "(none)"}</em>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </article>
-            ))}
+            {renderJournalTimeline(historyJournals, {
+              emptyKey: "issues.empty.history",
+              itemClass: "timeline-item-history",
+              showDetails: true,
+            })}
           </div>
         )}
         {activeTab === "notes" && (
           <div className="timeline">
-            {noteJournals.length === 0 && <p className="muted">{t("issues.empty.notes")}</p>}
-            {noteJournals.map((journal) => (
-              <article key={journal.id} className="timeline-item timeline-item-note">
-                <p className="muted">
-                  <strong>{journal.author ?? t("issues.empty.unknown")}</strong> • {formatAgo(journal.createdOnRemote)}
-                </p>
-                {renderMarkdown(journal.notes ?? "")}
-              </article>
-            ))}
+            {renderJournalTimeline(noteJournals, {
+              emptyKey: "issues.empty.notes",
+              itemClass: "timeline-item-note",
+            })}
           </div>
         )}
         {activeTab === "internal-notes" && (
@@ -164,15 +158,10 @@ export function IssueActivityTabs({
         )}
         {activeTab === "properties" && (
           <div className="timeline">
-            {propertyJournals.length === 0 && <p className="muted">{t("issues.empty.properties")}</p>}
-            {propertyJournals.map((journal) => (
-              <article key={journal.id} className="timeline-item timeline-item-property">
-                <p className="muted">
-                  <strong>{journal.author ?? t("issues.empty.unknown")}</strong> • {formatAgo(journal.createdOnRemote)}
-                </p>
-                {renderMarkdown(journal.notes ?? "")}
-              </article>
-            ))}
+            {renderJournalTimeline(propertyJournals, {
+              emptyKey: "issues.empty.properties",
+              itemClass: "timeline-item-property",
+            })}
           </div>
         )}
         {activeTab === "time_entries" && (

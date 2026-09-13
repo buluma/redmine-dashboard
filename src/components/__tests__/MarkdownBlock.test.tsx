@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { MarkdownBlock } from "@/src/components/issue-detail/MarkdownBlock";
+import { MarkdownBlock } from "@/src/components/MarkdownBlock";
 
 vi.mock("@/src/components/I18nProvider", () => ({
   useI18n: () => ({ t: (key: string, data?: Record<string, string | number>) => `${key}:${data?.count ?? ""}` }),
