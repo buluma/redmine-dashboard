@@ -1,96 +1,28 @@
 "use client";
 
-import { AllowedStatusView, isLocalOnlyIssue } from "@/src/lib/issue-shape";
+import { isLocalOnlyIssue } from "@/src/lib/issue-shape";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@/src/components/I18nProvider";
-import { normalizeRedmineText } from "@/src/lib/redmine-text-format";
 import { AiIssueActions } from "@/src/components/ai/AiIssueActions";
 import { ChatFab } from "@/src/components/ai/ChatFab";
 import { QuickActionsPanel } from "@/src/components/QuickActionsPanel";
 import { useOfflineAction } from "@/src/hooks/useOfflineAction";
 import { useInternalNotes } from "@/src/hooks/useInternalNotes";
+import { useIssueDetail, type Issue } from "@/src/hooks/useIssueDetail";
+import { useIssueEditDraft } from "@/src/hooks/useIssueEditDraft";
+import { useGithubLinkActions } from "@/src/hooks/useGithubLinkActions";
 import { AttachmentsSection } from "@/src/components/issue-detail/AttachmentsSection";
 import { GithubLinksSection, type GithubLinkCreatePayload } from "@/src/components/issue-detail/GithubLinksSection";
 import { IssueActivityTabs, type IssueActivityTab } from "@/src/components/issue-detail/IssueActivityTabs";
 import { IssueCommentForm } from "@/src/components/issue-detail/IssueCommentForm";
 import { IssueDescriptionSection } from "@/src/components/issue-detail/IssueDescriptionSection";
 import { IssueImageLightbox } from "@/src/components/issue-detail/IssueImageLightbox";
-import { IssueStandardMetadataFields, type IssueMetadataDraft } from "@/src/components/issue-detail/IssueStandardMetadataFields";
+import { IssueStandardMetadataFields } from "@/src/components/issue-detail/IssueStandardMetadataFields";
 import { IssueOverviewCards } from "@/src/components/issue-detail/IssueOverviewCards";
 import { RelationsSection } from "@/src/components/issue-detail/RelationsSection";
 import { SubticketsSection } from "@/src/components/issue-detail/SubticketsSection";
-import type { Attachment, Journal, TimeEntry } from "@/src/types/dashboard";
-
-type Relation = {
-  id: string;
-  redmineRelationId: number;
-  targetIssueId: number;
-  relationType: string;
-  delay: number | null;
-};
-
-type GithubLink = {
-  id: string;
-  repositoryFullName: string;
-  githubIssueNumber: number | null;
-  githubPrNumber: number | null;
-  url: string;
-  title: string | null;
-  createdAt: string;
-};
-
-type IssueChild = {
-  id: number;
-  subject: string;
-  tracker?: string | null;
-  statusName?: string | null;
-  assignedToName?: string | null;
-};
-
-type Issue = {
-  id: string;
-  redmineIssueId: number | null;
-  redmineBaseUrl: string | null;
-  source: string;
-  localIssueNumber: number | null;
-  subject: string;
-  description: string | null;
-  projectName: string | null;
-  parentIssueId: number | null;
-  parentIssueLabel: string | null;
-  tracker: string | null;
-  priority: string | null;
-  priorityId: number | null;
-  statusId: number;
-  statusName: string;
-  assignedToName: string | null;
-  authorName: string | null;
-  categoryId: number | null;
-  categoryName: string | null;
-  startDate: string | null;
-  estimatedHours: number | null;
-  spentHours: number | null;
-  customFieldsJson: Array<{
-    id: number;
-    name: string;
-    value: string | null;
-  }> | null;
-  breadcrumbs: Array<{ id: number; subject: string; tracker?: string; isCached?: boolean }>;
-  updatedOnRemote: string;
-  lastActivityAt: string | null;
-  lastActivityType: string | null;
-  dueDate: string | null;
-  doneRatio: number | null;
-  githubLinks: GithubLink[];
-  journals: Journal[];
-  timeEntries: TimeEntry[];
-  attachments: Attachment[];
-  relations: Relation[];
-  allowedStatuses: AllowedStatusView[];
-  children: IssueChild[];
-};
 
 function redmineIssueUrl(issue: Pick<Issue, "redmineBaseUrl" | "redmineIssueId">): string | null {
   const baseUrl = issue.redmineBaseUrl?.trim().replace(/\/+$/, "");
@@ -173,27 +105,6 @@ function translateTrackerLabel(raw: string | null | undefined, t: (key: string, 
   };
   const key = map[normalized];
   return key ? t(key, raw) : raw;
-}
-
-const ATTACHMENT_MARKER_RE = /\/api\/issues\/_ATTACHMENT_\/([^)]+)/gi;
-
-function normalizeAttachmentFilename(value: string): string {
-  const decoded = decodeURIComponent(value).trim();
-  const baseName = decoded.split("/").pop() ?? decoded;
-  return baseName.toLowerCase();
-}
-
-function extractAttachmentRefsFromText(content: string): string[] {
-  const refs: string[] = [];
-  const normalized = normalizeRedmineText(content);
-  ATTACHMENT_MARKER_RE.lastIndex = 0;
-  let match: RegExpExecArray | null = null;
-  while ((match = ATTACHMENT_MARKER_RE.exec(normalized)) !== null) {
-    if (match[1]) {
-      refs.push(decodeURIComponent(match[1]));
-    }
-  }
-  return refs;
 }
 
 type IssueTab = IssueActivityTab;
@@ -299,34 +210,31 @@ export default function IssueDetailPage() {
   const activeTab = normalizeTab(searchParams.get("tab"));
   const tabFromUrl = searchParams.get("tab");
   const hasScrolledRef = useRef(false);
-  const [issue, setIssue] = useState<Issue | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [githubBusy, setGithubBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionInfo, setActionInfo] = useState<string | null>(null);
   const [comment, setComment] = useState("");
-  const [aiStatus, setAiStatus] = useState<{ available: boolean } | null>(null);
   const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
-  const [transitionStatuses, setTransitionStatuses] = useState<AllowedStatusView[]>([]);
-  const [activities, setActivities] = useState<Array<{ id: number; name: string }>>([]);
-  const [users, setUsers] = useState<Array<{ id: number; name: string }>>([]);
-  const [priorities, setPriorities] = useState<Array<{ id: number; name: string; isDefault: boolean }>>([]);
-  const [customFieldDefs, setCustomFieldDefs] = useState<Array<{
-    id: number;
-    name: string;
-    fieldFormat: string;
-    possibleValues: Array<{ value: string }> | null;
-    required: boolean;
-  }>>([]);
-  const [isFavorited, setIsFavorited] = useState(false);
-  const [refreshBusy, setRefreshBusy] = useState(false);
-  const [hydratedRelatedIds, setHydratedRelatedIds] = useState<Set<number>>(new Set());
   const tabsRef = useRef<HTMLDivElement | null>(null);
-  const prefetchedRelatedIdsRef = useRef<Set<number>>(new Set());
-  const attachmentRefreshAttemptedRef = useRef<Set<number>>(new Set());
   const { performAction, isBusy: commentBusy } = useOfflineAction();
   const { t, locale } = useI18n();
+
+  const {
+    issue,
+    loading,
+    error,
+    reloadIssue,
+    refreshIssueFromRedmine: refreshFromHook,
+    refreshBusy,
+    aiStatus,
+    transitionStatuses,
+    activities,
+    users,
+    priorities,
+    customFieldDefs,
+    isFavorited,
+    toggleFavorite,
+    hydratedRelatedIds,
+  } = useIssueDetail(issueId, t);
 
   const {
     notes: internalNotes,
@@ -342,414 +250,79 @@ export default function IssueDetailPage() {
     t,
   });
 
-  // Edit mode state
-  const [editMode, setEditMode] = useState(false);
-  const [editDraft, setEditDraft] = useState<
-    (IssueMetadataDraft & {
-      subject: string;
-      description: string;
-      customFields: Record<string, string>;
-    }) | null
-  >(null);
-  const [editSaving, setEditSaving] = useState(false);
+  const {
+    editMode,
+    editDraft,
+    setEditDraft,
+    editSaving,
+    startEditMode: startEditModeFromHook,
+    saveEdit: saveEditFromHook,
+    cancelEditMode: cancelEditModeFromHook,
+    updateCustomField,
+  } = useIssueEditDraft({
+    onSaved: reloadIssue,
+    onSuccess: setActionInfo,
+    onError: setActionError,
+    t,
+  });
 
-  async function reloadIssue() {
-    const res = await fetch(`/api/issues/${issueId}?fresh=1`, { cache: "no-store" });
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error ?? "Failed to load issue");
-    }
-    setIssue(data.issue ?? null);
-  }
+  const {
+    busy: githubBusy,
+    submitGithubLink: submitGithubLinkFromHook,
+    deleteGithubLink: deleteGithubLinkFromHook,
+  } = useGithubLinkActions({
+    issueId,
+    onChanged: reloadIssue,
+    onSuccess: setActionInfo,
+    onError: setActionError,
+    t,
+  });
 
   async function refreshIssueFromRedmine() {
-    setRefreshBusy(true);
     setActionError(null);
     setActionInfo(null);
     try {
-      const res = await fetch(`/api/issues/${issueId}/refresh`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? "Unable to refresh issue");
-      }
-      await reloadIssue();
+      await refreshFromHook();
       setActionInfo(t("issues.messages.refreshed"));
     } catch (e) {
       setActionError(e instanceof Error ? e.message : t("issues.messages.refreshed"));
-    } finally {
-      setRefreshBusy(false);
     }
   }
 
   function startEditMode() {
     if (!issue) return;
-    // Build custom fields map
-    const customFields: Record<string, string> = {};
-    if (issue.customFieldsJson) {
-      for (const field of issue.customFieldsJson) {
-        customFields[field.id] = field.value ?? "";
-      }
-    }
-    setEditDraft({
-      subject: issue.subject,
-      description: issue.description ?? "",
-      priorityId: issue.priorityId != null ? String(issue.priorityId) : "",
-      dueDate: issue.dueDate ? new Date(issue.dueDate).toISOString().split("T")[0] : "",
-      estimatedHours: issue.estimatedHours != null ? String(issue.estimatedHours) : "",
-      startDate: issue.startDate ? new Date(issue.startDate).toISOString().split("T")[0] : "",
-      categoryId: issue.categoryId != null ? String(issue.categoryId) : "",
-      customFields,
-    });
-    setEditMode(true);
+    startEditModeFromHook(issue);
     setActionInfo(null);
     setActionError(null);
   }
 
   async function saveEdit() {
-    if (!editDraft || !issue) return;
-    setEditSaving(true);
+    if (!issue) return;
     setActionError(null);
-    try {
-      let res: Response;
-
-      if (isLocalOnlyIssue(issue)) {
-        // True local-only issue (no real Redmine ticket to push to) → PATCH to local API
-        res = await fetch(`/api/issues/local/${issue.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            subject: editDraft.subject || undefined,
-            description: editDraft.description || null,
-            tracker: issue.tracker ?? null,
-            priority: editDraft.priorityId ? undefined : (issue.priority ?? null),
-            priorityId: editDraft.priorityId ? parseInt(editDraft.priorityId, 10) : undefined,
-            statusId: issue.statusId,
-            statusName: issue.statusName,
-            dueDate: editDraft.dueDate
-              ? new Date(`${editDraft.dueDate}T00:00:00`).toISOString()
-              : editDraft.dueDate === "" ? null : undefined,
-            startDate: editDraft.startDate
-              ? new Date(`${editDraft.startDate}T00:00:00`).toISOString()
-              : editDraft.startDate === "" ? null : undefined,
-            estimatedHours: editDraft.estimatedHours ? parseFloat(editDraft.estimatedHours) : undefined,
-            doneRatio: issue.doneRatio ?? 0,
-            parentIssueId: issue.parentIssueId ?? undefined,
-            parentIssueLabel: issue.parentIssueLabel ?? undefined,
-          }),
-        });
-      } else {
-        // Real Redmine ticket (including source:"local" hybrid mirrors that
-        // carry a redmineIssueId, e.g. recurring-tickets' auto-created
-        // tickets) → PUT via Redmine API then re-sync, so the edit actually
-        // lands before the next sync cycle pulls Redmine's copy back over it.
-        res = await fetch(`/api/issues/${issueId}/edit`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            subject: editDraft.subject || undefined,
-            description: editDraft.description,
-            priorityId: editDraft.priorityId ? parseInt(editDraft.priorityId, 10) : undefined,
-            dueDate: editDraft.dueDate || undefined,
-            estimatedHours: editDraft.estimatedHours ? parseFloat(editDraft.estimatedHours) : undefined,
-            startDate: editDraft.startDate || undefined,
-            categoryId: editDraft.categoryId ? parseInt(editDraft.categoryId, 10) : undefined,
-            customFields: Object.entries(editDraft.customFields)
-              .filter(([, v]) => v !== "")
-              .map(([fieldId, value]) => ({ id: parseInt(fieldId, 10), value })),
-          }),
-        });
-      }
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to update issue");
-      }
-      await reloadIssue();
-      setEditMode(false);
-      setEditDraft(null);
-      setActionInfo(
-        isLocalOnlyIssue(issue)
-          ? t("issues.messages.personalUpdated")
-          : t("issues.messages.redmineUpdated"),
-      );
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Failed to update issue");
-    } finally {
-      setEditSaving(false);
-    }
+    await saveEditFromHook(issue);
   }
 
   function cancelEditMode() {
-    setEditMode(false);
-    setEditDraft(null);
+    cancelEditModeFromHook();
     setActionError(null);
   }
-
-  function updateCustomField(fieldId: string, value: string) {
-    if (!editDraft) return;
-    setEditDraft({
-      ...editDraft,
-      customFields: { ...editDraft.customFields, [fieldId]: value },
-    });
-  }
-
-  useEffect(() => {
-    if (!issueId || issueId.trim().length === 0) {
-      setError(t("common.error"));
-      setLoading(false);
-      return;
-    }
-    let mounted = true;
-    void (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`/api/issues/${issueId}`, { cache: "no-store" });
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error ?? "Failed to load issue");
-        }
-        if (mounted) {
-          setIssue(data.issue ?? null);
-        }
-      } catch (e) {
-        if (mounted) {
-          setError(e instanceof Error ? e.message : "Failed to load issue");
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [issueId, t]);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await fetch("/api/ai/status", { cache: "no-store" });
-        if (res.ok) {
-          const data = await res.json();
-          setAiStatus(data);
-        }
-      } catch {
-        setAiStatus(null);
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    if (!issue) {
-      return;
-    }
-    setTransitionStatuses(issue.allowedStatuses ?? []);
-    
-    // Only fetch live statuses for Redmine issues, not local issues
-    if (!issue.redmineIssueId) {
-      return;
-    }
-    
-    let mounted = true;
-    void (async () => {
-      try {
-        const res = await fetch(`/api/issues/${issue.redmineIssueId}/status`, { cache: "no-store" });
-        if (!res.ok) {
-          return;
-        }
-        const data = await res.json();
-        if (mounted && Array.isArray(data.allowedStatuses)) {
-          setTransitionStatuses(data.allowedStatuses);
-        }
-      } catch {
-        // Keep cached allowed statuses when the live lookup is unavailable.
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [issue]);
-
-  // Load activities and assignable users
-  useEffect(() => {
-    void (async () => {
-      try {
-        const [activitiesRes, usersRes, prioritiesRes, customFieldsRes] = await Promise.all([
-          fetch("/api/internal/activities", { cache: "no-store" }),
-          fetch("/api/internal/users", { cache: "no-store" }),
-          fetch("/api/internal/priorities", { cache: "no-store" }),
-          fetch("/api/internal/custom-fields", { cache: "no-store" }),
-        ]);
-        if (activitiesRes.ok) {
-          const data = await activitiesRes.json();
-          setActivities(data.activities ?? []);
-        }
-        if (usersRes.ok) {
-          const data = await usersRes.json();
-          setUsers(data.users ?? []);
-        }
-        if (prioritiesRes.ok) {
-          const data = await prioritiesRes.json();
-          setPriorities(data.priorities ?? []);
-        }
-        if (customFieldsRes.ok) {
-          const data = await customFieldsRes.json();
-          setCustomFieldDefs(data.customFields ?? []);
-        }
-      } catch {
-        // Ignore errors
-      }
-    })();
-  }, []);
 
   async function submitGithubLink(payload: GithubLinkCreatePayload): Promise<boolean> {
-    setGithubBusy(true);
     setActionError(null);
     setActionInfo(null);
-    try {
-      const res = await fetch(`/api/issues/${issueId}/github-links`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? "Unable to link GitHub reference");
-      }
-      await reloadIssue();
-      setActionInfo(t("issues.messages.githubLinked"));
-      return true;
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Unable to link GitHub reference");
-      return false;
-    } finally {
-      setGithubBusy(false);
-    }
+    return submitGithubLinkFromHook(payload);
   }
 
   async function deleteGithubLink(linkId: string) {
-    setGithubBusy(true);
     setActionError(null);
     setActionInfo(null);
-    try {
-      const res = await fetch(`/api/issues/${issueId}/github-links/${linkId}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? "Unable to remove GitHub link");
-      }
-      await reloadIssue();
-      setActionInfo(t("issues.messages.githubRemoved"));
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Unable to remove GitHub link");
-    } finally {
-      setGithubBusy(false);
-    }
+    await deleteGithubLinkFromHook(linkId);
   }
-
-  async function toggleFavorite() {
-    if (!issue?.redmineIssueId) return;
-    try {
-      const res = await fetch(`/api/issues/${issue.redmineIssueId}/favorite`, {
-        method: isFavorited ? "DELETE" : "POST",
-      });
-      if (res.ok) {
-        setIsFavorited(!isFavorited);
-      }
-    } catch {
-      // Ignore errors
-    }
-  }
-
-  useEffect(() => {
-    if (!issue || issue.source === "local") return;
-    (async () => {
-      try {
-        const res = await fetch(`/api/issues/${issue.redmineIssueId}/favorite`);
-        if (res.ok) {
-          const data = await res.json();
-          setIsFavorited(data.favorited ?? false);
-        }
-      } catch {
-        // Ignore errors
-      }
-    })();
-  }, [issue]);
 
   const totalSpent = useMemo(() => {
     if (!issue) return 0;
     return issue.timeEntries.reduce((sum, entry) => sum + entry.hours, 0);
   }, [issue]);
-
-  const relatedPrefetchKey = issue
-    ? Array.from(new Set([
-      ...issue.children.map((child) => child.id),
-      ...issue.breadcrumbs
-        .map((crumb) => crumb.id)
-        .filter((crumbId) => crumbId !== issue.redmineIssueId),
-    ]))
-      .sort((a, b) => a - b)
-      .join(",")
-    : "";
-
-  useEffect(() => {
-    if (!issue) {
-      return;
-    }
-
-    const breadcrumbIds = issue.breadcrumbs
-      .map((crumb) => crumb.id)
-      .filter((crumbId) => crumbId !== issue.redmineIssueId);
-    const childIds = issue.children
-      .map((child) => child.id)
-      .filter((childId) => childId !== issue.redmineIssueId);
-
-    const orderedRelatedIds = [...new Set([...breadcrumbIds, ...childIds])];
-    const pendingIds = orderedRelatedIds
-      .filter((relatedId) => !prefetchedRelatedIdsRef.current.has(relatedId))
-      .slice(0, 30);
-
-    if (pendingIds.length === 0) {
-      return;
-    }
-
-    let cancelled = false;
-    const batchSize = 3;
-
-    const timer = window.setTimeout(() => {
-      void (async () => {
-        for (let i = 0; i < pendingIds.length && !cancelled; i += batchSize) {
-          const batch = pendingIds.slice(i, i + batchSize);
-          await Promise.allSettled(
-            batch.map(async (relatedId) => {
-              if (cancelled) return;
-              prefetchedRelatedIdsRef.current.add(relatedId);
-              const res = await fetch(`/api/issues/${relatedId}`, { cache: "no-store" });
-              if (!res.ok) {
-                // Retry eligible on a future parent view if hydration failed this time.
-                prefetchedRelatedIdsRef.current.delete(relatedId);
-                return;
-              }
-              setHydratedRelatedIds((prev) => {
-                if (prev.has(relatedId)) return prev;
-                const next = new Set(prev);
-                next.add(relatedId);
-                return next;
-              });
-            }),
-          );
-        }
-      })();
-    }, 300);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [issue, relatedPrefetchKey]);
 
   useEffect(() => {
     if (!issue) {
@@ -788,57 +361,6 @@ export default function IssueDetailPage() {
     const propertySignals = /\b(set to|changed|updated|status|priority|assignee|parent|category)\b/i;
     return issue.journals.filter((journal) => propertySignals.test(journal.notes ?? ""));
   }, [issue]);
-
-  const hasUnresolvedAttachmentRefs = useMemo(() => {
-    if (!issue) return false;
-    const attachmentNames = new Set(
-      issue.attachments.map((attachment) => normalizeAttachmentFilename(attachment.filename)),
-    );
-    const refs = [
-      ...(issue.description ? extractAttachmentRefsFromText(issue.description) : []),
-      ...issue.journals.flatMap((journal) => extractAttachmentRefsFromText(journal.notes ?? "")),
-    ];
-    if (refs.length === 0) return false;
-    return refs.some((ref) => !attachmentNames.has(normalizeAttachmentFilename(ref)));
-  }, [issue]);
-
-  useEffect(() => {
-    if (!issue || !hasUnresolvedAttachmentRefs || !issue.redmineIssueId) {
-      return;
-    }
-    if (attachmentRefreshAttemptedRef.current.has(issue.redmineIssueId)) {
-      return;
-    }
-    attachmentRefreshAttemptedRef.current.add(issue.redmineIssueId);
-
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch(`/api/issues/${issue.redmineIssueId}/attachments?refresh=1`, { cache: "no-store" });
-        if (!res.ok) {
-          return;
-        }
-        const data = await res.json();
-        if (!cancelled && Array.isArray(data.items)) {
-          setIssue((current) => {
-            if (!current || current.redmineIssueId !== issue.redmineIssueId) {
-              return current;
-            }
-            return {
-              ...current,
-              attachments: data.items,
-            };
-          });
-        }
-      } catch {
-        // Keep current payload when attachment refresh fails.
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [issue, hasUnresolvedAttachmentRefs]);
 
   const externalIssueUrl = issue ? redmineIssueUrl(issue) : null;
   const breadcrumbItems = issue?.breadcrumbs
