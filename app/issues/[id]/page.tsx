@@ -17,6 +17,7 @@ import { IssueActivityTabs, type IssueActivityTab } from "@/src/components/issue
 import { IssueCommentForm } from "@/src/components/issue-detail/IssueCommentForm";
 import { IssueDescriptionSection } from "@/src/components/issue-detail/IssueDescriptionSection";
 import { IssueImageLightbox } from "@/src/components/issue-detail/IssueImageLightbox";
+import { IssueStandardMetadataFields, type IssueMetadataDraft } from "@/src/components/issue-detail/IssueStandardMetadataFields";
 import { IssueOverviewCards } from "@/src/components/issue-detail/IssueOverviewCards";
 import { RelationsSection } from "@/src/components/issue-detail/RelationsSection";
 import { SubticketsSection } from "@/src/components/issue-detail/SubticketsSection";
@@ -1180,113 +1181,25 @@ export default function IssueDetailPage() {
                 </div>
               )}
               <div className="metadata-grid">
-                {/* Show read-only fields only when NOT in edit mode */}
-                {!editMode && issue.authorName && (
-                  <div className="metadata-item">
-                    <span className="metadata-label">{t("issues.fields.author")}</span>
-                    <span className="metadata-value">{issue.authorName}</span>
-                  </div>
-                )}
-                {issue.categoryName && !editMode && (
-                  <div className="metadata-item">
-                    <span className="metadata-label">{t("issues.fields.category")}</span>
-                    <span className="metadata-value">{issue.categoryName}</span>
-                  </div>
-                )}
-                {editMode && editDraft ? (
-                  <>
-                    <div className="metadata-item metadata-item-editable">
-                      <span className="metadata-label">{t("issues.fields.startDate")}</span>
-                      <input
-                        type="date"
-                        className="edit-metadata-input edit-date-input"
-                        value={editDraft.startDate}
-                        onChange={(e) => setEditDraft({ ...editDraft, startDate: e.target.value })}
-                      />
-                    </div>
-                    <div className="metadata-item metadata-item-editable">
-                      <span className="metadata-label">{t("issues.fields.dueDate")}</span>
-                      <input
-                        type="date"
-                        className="edit-metadata-input edit-date-input"
-                        value={editDraft.dueDate}
-                        onChange={(e) => setEditDraft({ ...editDraft, dueDate: e.target.value })}
-                      />
-                    </div>
-                    <div className="metadata-item metadata-item-editable">
-                      <span className="metadata-label">{t("issues.fields.category")}</span>
-                      <select
-                        className="edit-metadata-input edit-category-select"
-                        value={editDraft.categoryId}
-                        onChange={(e) => setEditDraft({ ...editDraft, categoryId: e.target.value })}
-                      >
-                        <option value="">— {t("issues.empty.noCategory")} —</option>
-                        <option value="32">activities</option>
-                        <option value="33">bugs</option>
-                        <option value="34">features</option>
-                      </select>
-                    </div>
-                    <div className="metadata-item metadata-item-editable">
-                      <span className="metadata-label">{t("issues.fields.priority")}</span>
-                      <select
-                        className="edit-metadata-input edit-priority-select"
-                        value={editDraft.priorityId}
-                        onChange={(e) => setEditDraft({ ...editDraft, priorityId: e.target.value })}
-                      >
-                        <option value="">— {t("issues.empty.noPriority")} —</option>
-                        {priorities.map((p) => (
-                          <option key={p.id} value={p.id}>{p.name}{p.isDefault ? " (default)" : ""}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="metadata-item metadata-item-editable">
-                      <span className="metadata-label">{t("issues.fields.estimatedHours")}</span>
-                      <input
-                        type="number"
-                        className="edit-metadata-input"
-                        value={editDraft.estimatedHours}
-                        onChange={(e) => setEditDraft({ ...editDraft, estimatedHours: e.target.value })}
-                        step="0.25"
-                        min="0"
-                        placeholder="0"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {issue.startDate && (
-                      <div className="metadata-item">
-                        <span className="metadata-label">{t("issues.fields.startDate")}</span>
-                        <span className="metadata-value">{new Date(issue.startDate).toLocaleDateString(locale)}</span>
-                      </div>
-                    )}
-                    {issue.dueDate && (
-                      <div className="metadata-item">
-                        <span className="metadata-label">{t("issues.fields.dueDate")}</span>
-                        <span className="metadata-value">{new Date(issue.dueDate).toLocaleDateString(locale)}</span>
-                      </div>
-                    )}
-                    {issue.priority && (
-                      <div className="metadata-item">
-                        <span className="metadata-label">{t("issues.fields.priority")}</span>
-                        <span className="metadata-value">{translatePriorityLabel(issue.priority, t)}</span>
-                      </div>
-                    )}
-                    {issue.estimatedHours != null && (
-                      <div className="metadata-item">
-                        <span className="metadata-label">{t("issues.fields.estimatedHours")}</span>
-                        <span className="metadata-value">{issue.estimatedHours.toFixed(2)}h</span>
-                      </div>
-                    )}
-                  </>
-                )}
-                {/* Always show spent hours as read-only (not editable) */}
-                {issue.spentHours != null && (
-                  <div className="metadata-item metadata-item-readonly">
-                    <span className="metadata-label">{t("issues.fields.spentHours")} (Redmine)</span>
-                    <span className="metadata-value">{issue.spentHours.toFixed(2)}h</span>
-                  </div>
-                )}
+                <IssueStandardMetadataFields
+                  isEditing={editMode}
+                  draft={editDraft as IssueMetadataDraft | null}
+                  authorName={issue.authorName}
+                  categoryName={issue.categoryName}
+                  startDate={issue.startDate}
+                  dueDate={issue.dueDate}
+                  priority={issue.priority}
+                  estimatedHours={issue.estimatedHours}
+                  spentHours={issue.spentHours}
+                  priorities={priorities}
+                  locale={locale}
+                  formatPriority={(priority) => translatePriorityLabel(priority, t)}
+                  onDraftChange={(field, value) => {
+                    if (editDraft) {
+                      setEditDraft({ ...editDraft, [field]: value });
+                    }
+                  }}
+                />
 
                 {/* Custom fields with values */}
                 {issue.customFieldsJson && issue.customFieldsJson
