@@ -33,6 +33,22 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run lint
 
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun audit --audit-level=high
+
   typecheck:
     needs: lint
     runs-on: ubuntu-latest
@@ -121,13 +137,90 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bunx playwright install --with-deps chromium
       - run: bunx prisma generate --schema=prisma/schema.dev.sqlite.prisma
+      - run: bunx prisma db push --schema=prisma/schema.dev.sqlite.prisma
+        env:
+          DATABASE_URL: file:./test.db
       - run: bun run test:a11y
         env:
           DATABASE_URL: file:./test.db
           APP_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           SESSION_SECRET: ci-axe-secret
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: playwright-a11y-results
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
 
-  e2e:
+  e2e-smoke:
+    needs: a11y
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bunx prisma db push --schema=prisma/schema.dev.sqlite.prisma
+        env:
+          DATABASE_URL: file:./test.db
+      - run: bunx playwright test e2e/smoke.spec.ts
+        env:
+          DATABASE_URL: file:./test.db
+          APP_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+          SESSION_SECRET: ci-smoke-secret
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: playwright-smoke-results
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+
+  e2e-auth-csrf:
+    needs: a11y
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bunx prisma db push --schema=prisma/schema.dev.sqlite.prisma
+        env:
+          DATABASE_URL: file:./test.db
+      - run: bunx playwright test e2e/auth-csrf.spec.ts
+        env:
+          DATABASE_URL: file:./test.db
+          APP_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+          SESSION_SECRET: ci-auth-csrf-secret
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: playwright-auth-csrf-results
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+
+  e2e-external-api:
     needs: a11y
     runs-on: ubuntu-latest
     steps:
@@ -151,3 +244,11 @@ jobs:
           DATABASE_URL: file:./test.db
           APP_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           SESSION_SECRET: ci-e2e-secret
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: playwright-external-api-results
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
