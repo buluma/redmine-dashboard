@@ -453,7 +453,7 @@ export async function autoCreateTicketsForUnmatched(
 
 // Below this, a day's growth since it was last logged is treated as float
 // noise from the two-decimal rounding on both sides, not real new work.
-const MIN_HOURS_GROWTH = 0.005;
+export const MIN_HOURS_GROWTH = 0.005;
 
 /**
  * Apply WakaTime hours as TimeEntry rows on matched tickets.
@@ -539,24 +539,45 @@ export async function applyTimeEntries(
           }
         }
 
+        let staleRead = false;
         try {
-          await prisma.$transaction([
-            prisma.timeEntry.update({ where: { id: existing.id }, data: { hours } }),
-            prisma.issue.update({
+          await prisma.$transaction(async (tx) => {
+            // Pin the update to the hours value this pass read `existing`
+            // as: a concurrent run (the 6h cron overlapping a manual apply
+            // or a recurring-ticket close) may have already applied this
+            // same correction between our read and this write. Guarding the
+            // write on the old value means a losing run's updateMany
+            // matches zero rows instead of re-incrementing spentHours for a
+            // correction that already landed.
+            const result = await tx.timeEntry.updateMany({
+              where: { id: existing.id, hours: existing.hours },
+              data: { hours },
+            });
+            if (result.count === 0) {
+              staleRead = true;
+              return;
+            }
+            await tx.issue.update({
               where: { id: row.ticketId },
               data: {
                 lastActivityAt: new Date(),
                 lastActivityType: "wakatime_time_logged",
                 spentHours: { increment: delta },
               },
-            }),
-          ]);
+            });
+          });
         } catch (error) {
           // The Redmine side (if any) is already corrected at this point —
           // record the local-write failure so it's visible, but don't retry
           // the Redmine call above on a later pass over the same data.
           const message = error instanceof Error ? error.message : String(error);
           updateFailures.push({ ticketId: row.ticketId, date: day.date, error: message });
+          continue;
+        }
+
+        if (staleRead) {
+          // Another run already applied this correction — nothing left to do.
+          skipped++;
           continue;
         }
 
