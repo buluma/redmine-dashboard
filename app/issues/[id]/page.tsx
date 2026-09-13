@@ -16,6 +16,7 @@ import { GithubLinksSection, type GithubLinkCreatePayload } from "@/src/componen
 import { IssueActivityTabs, type IssueActivityTab } from "@/src/components/issue-detail/IssueActivityTabs";
 import { IssueCommentForm } from "@/src/components/issue-detail/IssueCommentForm";
 import { IssueDescriptionSection } from "@/src/components/issue-detail/IssueDescriptionSection";
+import { IssueOverviewCards } from "@/src/components/issue-detail/IssueOverviewCards";
 import { RelationsSection } from "@/src/components/issue-detail/RelationsSection";
 import { SubticketsSection } from "@/src/components/issue-detail/SubticketsSection";
 
@@ -1136,23 +1137,17 @@ export default function IssueDetailPage() {
           </div>
         </div>
 
-        <div className="reports-grid issue-overview-grid">
-          <article className="report-card overview-card overview-card-status">
-            <p className="report-label">{t("issues.fields.status")}</p>
-            <p className="report-value">{translateStatusLabel(issue.statusName, t)}</p>
-            <p className="report-foot">{t("issues.fields.priority")}: {translatePriorityLabel(issue.priority, t)}</p>
-          </article>
-          <article className="report-card overview-card overview-card-due">
-            <p className="report-label">{t("issues.fields.dueDate")}</p>
-            <p className="report-value">{issue.dueDate ? new Date(issue.dueDate).toLocaleDateString(locale) : "-"}</p>
-            <p className="report-foot">{t("issues.fields.done")}: {issue.doneRatio ?? 0}%</p>
-          </article>
-          <article className="report-card overview-card overview-card-time">
-            <p className="report-label">{t("issues.fields.spentHours")}</p>
-            <p className="report-value">{totalSpent.toFixed(1)}h</p>
-            <p className="report-foot">{t("issues.fields.assignee")}: {issue.assignedToName ?? t("issues.empty.unassigned")}</p>
-          </article>
-        </div>
+        <IssueOverviewCards
+          statusName={issue.statusName}
+          priority={issue.priority}
+          dueDate={issue.dueDate}
+          doneRatio={issue.doneRatio}
+          totalSpent={totalSpent}
+          assignedToName={issue.assignedToName}
+          locale={locale}
+          formatStatus={(statusName) => translateStatusLabel(statusName, t)}
+          formatPriority={(priority) => translatePriorityLabel(priority, t)}
+        />
 
         <IssueDescriptionSection
           description={issue.description}
