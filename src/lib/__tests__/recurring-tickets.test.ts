@@ -18,6 +18,7 @@ const {
   mockTimeEntryUpdate,
   mockTimeEntryAggregate,
   mockApplyTimeEntries,
+  mockLogEvent,
 } = vi.hoisted(() => ({
   mockSeriesFindMany: vi.fn(),
   mockInstanceFindUnique: vi.fn(),
@@ -34,6 +35,7 @@ const {
   mockTimeEntryUpdate: vi.fn(),
   mockTimeEntryAggregate: vi.fn(),
   mockApplyTimeEntries: vi.fn(),
+  mockLogEvent: vi.fn(),
 }));
 
 vi.mock("@/src/lib/db", () => ({
@@ -63,6 +65,10 @@ vi.mock("@/src/lib/activity-index", () => ({
 
 vi.mock("@/src/lib/correlation", () => ({
   applyTimeEntries: mockApplyTimeEntries,
+}));
+
+vi.mock("@/src/lib/log", () => ({
+  logEvent: mockLogEvent,
 }));
 
 import {
@@ -210,8 +216,20 @@ describe("computeScheduledWindow", () => {
       { cadence: "monthly", createWeekday: 1, closeWeekday: 7, createDayOfMonth: 31, closeDayOfMonth: 31 },
       "2026-02",
     );
+    // Both configured as day 31, both clamp to Feb's 28th — same day as
+    // createDate, which the rollover guard below rejects (no time window to
+    // log against) and rolls into next month's occurrence instead.
     expect(window.createDate.toISOString()).toBe("2026-02-28T00:00:00.000Z");
-    expect(window.closeDate.toISOString()).toBe("2026-02-28T00:00:00.000Z");
+    expect(window.closeDate.toISOString()).toBe("2026-03-31T00:00:00.000Z");
+  });
+
+  it("rolls a same-or-before closeDayOfMonth into the following month", () => {
+    const window = computeScheduledWindow(
+      { cadence: "monthly", createWeekday: 1, closeWeekday: 7, createDayOfMonth: 25, closeDayOfMonth: 5 },
+      "2026-06",
+    );
+    expect(window.createDate.toISOString()).toBe("2026-06-25T00:00:00.000Z");
+    expect(window.closeDate.toISOString()).toBe("2026-07-05T00:00:00.000Z");
   });
 });
 
@@ -406,7 +424,7 @@ describe("pushPendingWakaTimeEntriesToRedmine", () => {
 describe("closeInstance", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockApplyTimeEntries.mockResolvedValue({ created: 0, skipped: 0, totalHours: 0, entries: [] });
+    mockApplyTimeEntries.mockResolvedValue({ created: 0, updated: 0, skipped: 0, totalHours: 0, entries: [], updateFailures: [] });
     mockIssueFindUnique.mockResolvedValue({ redmineIssueId: 9001 });
     mockTimeEntryFindMany.mockResolvedValue([]);
     // sumPushedHours: total pushed WakaTime hours for the issue.
@@ -426,6 +444,35 @@ describe("closeInstance", () => {
     expect(mockIssueUpdate).toHaveBeenCalledWith({
       where: { id: "issue-1" },
       data: expect.objectContaining({ statusId: 5, statusName: "Closed" }),
+    });
+  });
+
+  it("logs and notes a failed growth correction instead of silently dropping it, but still closes", async () => {
+    mockApplyTimeEntries.mockResolvedValue({
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      totalHours: 0,
+      entries: [],
+      updateFailures: [{ ticketId: "issue-1", date: "2026-07-13", error: "closed ticket" }],
+    });
+    const client = fakeClient();
+
+    await closeInstance(fakeInstance(), client);
+
+    expect(mockLogEvent).toHaveBeenCalledWith(
+      "recurring_tickets.close_correction_failed",
+      expect.objectContaining({
+        instanceId: "instance-1",
+        updateFailures: [{ ticketId: "issue-1", date: "2026-07-13", error: "closed ticket" }],
+      }),
+      "warn",
+    );
+    // The close itself still proceeds — a failed correction shouldn't block it.
+    expect(client.updateIssueStatus).toHaveBeenCalledWith(9001, 5, expect.stringContaining("1 hours correction failed to apply"));
+    expect(mockInstanceUpdate).toHaveBeenCalledWith({
+      where: { id: "instance-1" },
+      data: expect.objectContaining({ status: "closed" }),
     });
   });
 
@@ -499,7 +546,7 @@ describe("closeInstance", () => {
 describe("runRecurringTicketsTick", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockApplyTimeEntries.mockResolvedValue({ created: 0, skipped: 0, totalHours: 0, entries: [] });
+    mockApplyTimeEntries.mockResolvedValue({ created: 0, updated: 0, skipped: 0, totalHours: 0, entries: [], updateFailures: [] });
     mockTimeEntryAggregate.mockResolvedValue({ _sum: { hours: 0 } });
   });
 

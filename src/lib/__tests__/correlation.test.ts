@@ -11,6 +11,7 @@ const {
   mockTimeEntryFindMany,
   mockTimeEntryCreate,
   mockTimeEntryUpdate,
+  mockTimeEntryUpdateMany,
   mockUserFindUnique,
   mockGithubLinkFindFirst,
   mockGithubLinkCreate,
@@ -26,31 +27,42 @@ const {
   mockTimeEntryFindMany: vi.fn(),
   mockTimeEntryCreate: vi.fn(),
   mockTimeEntryUpdate: vi.fn(),
+  mockTimeEntryUpdateMany: vi.fn(),
   mockUserFindUnique: vi.fn(),
   mockGithubLinkFindFirst: vi.fn(),
   mockGithubLinkCreate: vi.fn(),
   mockTransaction: vi.fn(),
 }));
 
-vi.mock("@/src/lib/db", () => ({
-  prisma: {
-    issue: {
-      findMany: mockIssueFindMany,
-      findFirst: mockIssueFindFirst,
-      update: mockIssueUpdate,
-      aggregate: mockIssueAggregate,
-      create: mockIssueCreate,
-      findUnique: mockIssueFindUnique,
-    },
-    wakaTimeDailySummary: { findMany: mockWakaFindMany },
-    timeEntry: { findMany: mockTimeEntryFindMany, create: mockTimeEntryCreate, update: mockTimeEntryUpdate },
-    user: { findUnique: mockUserFindUnique },
-    issueGithubLink: { findFirst: mockGithubLinkFindFirst, create: mockGithubLinkCreate },
-    // applyTimeEntries batches the TimeEntry insert + spentHours increment in a
-    // $transaction([...]); default behaviour just resolves the built ops so the
-    // underlying create/update mocks still record their calls.
-    $transaction: mockTransaction,
+const prismaMock = vi.hoisted(() => ({
+  issue: {
+    findMany: mockIssueFindMany,
+    findFirst: mockIssueFindFirst,
+    update: mockIssueUpdate,
+    aggregate: mockIssueAggregate,
+    create: mockIssueCreate,
+    findUnique: mockIssueFindUnique,
   },
+  wakaTimeDailySummary: { findMany: mockWakaFindMany },
+  timeEntry: {
+    findMany: mockTimeEntryFindMany,
+    create: mockTimeEntryCreate,
+    update: mockTimeEntryUpdate,
+    updateMany: mockTimeEntryUpdateMany,
+  },
+  user: { findUnique: mockUserFindUnique },
+  issueGithubLink: { findFirst: mockGithubLinkFindFirst, create: mockGithubLinkCreate },
+  // applyTimeEntries batches the TimeEntry insert + spentHours increment in a
+  // $transaction([...]); default behaviour just resolves the built ops so the
+  // underlying create/update mocks still record their calls. The hours-
+  // correction path instead uses the interactive $transaction(async (tx) =>
+  // ...) form so it can bail out on a stale read — the default here calls
+  // straight through to the same mocked model methods via `tx`.
+  $transaction: mockTransaction,
+}));
+
+vi.mock("@/src/lib/db", () => ({
+  prisma: prismaMock,
 }));
 
 vi.mock("@/src/lib/activity-index", () => ({
@@ -406,7 +418,10 @@ describe("correlateWakaTime", () => {
 describe("applyTimeEntries", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockTransaction.mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops));
+    mockTransaction.mockImplementation((arg: Promise<unknown>[] | ((tx: typeof prismaMock) => unknown)) =>
+      typeof arg === "function" ? arg(prismaMock) : Promise.all(arg),
+    );
+    mockTimeEntryUpdateMany.mockResolvedValue({ count: 1 });
   });
 
   function setupCorrelation() {
@@ -469,7 +484,6 @@ describe("applyTimeEntries", () => {
     mockTimeEntryFindMany.mockResolvedValue([
       { id: "te-1", issueId: "t1", wakaTimeDate: "2026-06-20", hours: 1, redmineTimeEntryId: null },
     ]);
-    mockTimeEntryUpdate.mockResolvedValue({});
     mockIssueUpdate.mockResolvedValue({});
 
     const result = await applyTimeEntries(USER_ID, { start: "2026-06-20", end: "2026-06-20" });
@@ -478,11 +492,37 @@ describe("applyTimeEntries", () => {
     expect(result.created).toBe(0);
     expect(result.skipped).toBe(0);
     expect(result.totalHours).toBeCloseTo(1); // the delta, not the new total
-    expect(mockTimeEntryUpdate).toHaveBeenCalledWith({ where: { id: "te-1" }, data: { hours: 2 } });
+    // Pinned to the previously-read hours value so a concurrent run that
+    // already applied this correction is detected (see the stale-read test
+    // below) instead of double-incrementing spentHours.
+    expect(mockTimeEntryUpdateMany).toHaveBeenCalledWith({
+      where: { id: "te-1", hours: 1 },
+      data: { hours: 2 },
+    });
     expect(mockIssueUpdate).toHaveBeenCalledWith({
       where: { id: "t1" },
       data: expect.objectContaining({ spentHours: { increment: 1 } }),
     });
+  });
+
+  it("skips a stale correction without double-incrementing spentHours when a concurrent run already applied it", async () => {
+    mockIssueFindMany.mockResolvedValue([localIssue("t1", 1, "SL2", ["buluma/SL2"])]);
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-20", [{ name: "SL2", total_seconds: 7200 }]), // 2h now
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([
+      { id: "te-1", issueId: "t1", wakaTimeDate: "2026-06-20", hours: 1, redmineTimeEntryId: null },
+    ]);
+    // A concurrent apply already corrected this row between our read and our
+    // write — updateMany's where clause (pinned to hours: 1) no longer
+    // matches, so it reports zero rows updated.
+    mockTimeEntryUpdateMany.mockResolvedValue({ count: 0 });
+
+    const result = await applyTimeEntries(USER_ID, { start: "2026-06-20", end: "2026-06-20" });
+
+    expect(result.updated).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(mockIssueUpdate).not.toHaveBeenCalled();
   });
 
   it("pushes an hours correction to Redmine for an already-pushed entry, given a client", async () => {
@@ -493,7 +533,6 @@ describe("applyTimeEntries", () => {
     mockTimeEntryFindMany.mockResolvedValue([
       { id: "te-1", issueId: "t1", wakaTimeDate: "2026-06-20", hours: 1, redmineTimeEntryId: 555 },
     ]);
-    mockTimeEntryUpdate.mockResolvedValue({});
     mockIssueUpdate.mockResolvedValue({});
     const client = { updateTimeEntry: vi.fn().mockResolvedValue(undefined) };
 
@@ -505,7 +544,10 @@ describe("applyTimeEntries", () => {
 
     expect(client.updateTimeEntry).toHaveBeenCalledWith(555, { hours: 2 });
     expect(result.updated).toBe(1);
-    expect(mockTimeEntryUpdate).toHaveBeenCalledWith({ where: { id: "te-1" }, data: { hours: 2 } });
+    expect(mockTimeEntryUpdateMany).toHaveBeenCalledWith({
+      where: { id: "te-1", hours: 1 },
+      data: { hours: 2 },
+    });
   });
 
   it("records an update failure instead of writing locally when the Redmine push fails", async () => {
@@ -527,7 +569,7 @@ describe("applyTimeEntries", () => {
     expect(result.updated).toBe(0);
     expect(result.updateFailures).toHaveLength(1);
     expect(result.updateFailures[0]).toMatchObject({ ticketId: "t1", date: "2026-06-20" });
-    expect(mockTimeEntryUpdate).not.toHaveBeenCalled();
+    expect(mockTimeEntryUpdateMany).not.toHaveBeenCalled();
   });
 
   it("records an update failure when an already-pushed entry grew but no client was given", async () => {
@@ -543,7 +585,7 @@ describe("applyTimeEntries", () => {
 
     expect(result.updated).toBe(0);
     expect(result.updateFailures).toHaveLength(1);
-    expect(mockTimeEntryUpdate).not.toHaveBeenCalled();
+    expect(mockTimeEntryUpdateMany).not.toHaveBeenCalled();
   });
 
   it("dryRun returns summary without writing", async () => {
@@ -707,7 +749,10 @@ describe("autoCreateTicketsForUnmatched", () => {
 describe("applyTimeEntries with autoCreate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockTransaction.mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops));
+    mockTransaction.mockImplementation((arg: Promise<unknown>[] | ((tx: typeof prismaMock) => unknown)) =>
+      typeof arg === "function" ? arg(prismaMock) : Promise.all(arg),
+    );
+    mockTimeEntryUpdateMany.mockResolvedValue({ count: 1 });
   });
 
   it("auto-creates a ticket for unmatched activity, then logs it as matched in the same call", async () => {

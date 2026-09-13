@@ -7,7 +7,8 @@ import {
   WAKATIME_RANGE_OPTIONS,
   type WakaTimeRange,
 } from "@/src/lib/wakatime";
-import type { CorrelationResult, ApplyResult } from "@/src/lib/correlation";
+import type { CorrelationResult, ApplyResult, CorrelationRow } from "@/src/lib/correlation";
+import { MIN_HOURS_GROWTH } from "@/src/lib/correlation";
 
 type Props = {
   initialData: CorrelationResult;
@@ -25,6 +26,17 @@ function formatHours(seconds: number): string {
 
 function formatDecimalHours(seconds: number): string {
   return (seconds / 3600).toFixed(1);
+}
+
+// A day is only "done" once it's both logged AND its logged hours have
+// caught up with WakaTime's current total for that day — a day logged
+// early (the 6h cron, or a ticket close) can still be short.
+function dayNeedsApply(row: CorrelationRow, date: string, seconds: number): boolean {
+  if (!row.alreadyLoggedDates.includes(date)) return true;
+  const existing = row.existingEntriesByDate[date];
+  if (!existing) return false;
+  const hours = Math.round((seconds / 3600) * 100) / 100;
+  return hours - existing.hours >= MIN_HOURS_GROWTH;
 }
 
 export function CorrelationClient({ initialData, initialRange, initialStart, initialEnd }: Props) {
@@ -87,8 +99,8 @@ export function CorrelationClient({ initialData, initialRange, initialStart, ini
       setLastApply(result);
       setPreview(null);
       toast.success(
-        result.created > 0
-          ? `Logged ${result.totalHours.toFixed(1)}h across ${result.created} entries`
+        result.created > 0 || result.updated > 0
+          ? `Logged ${result.totalHours.toFixed(1)}h across ${result.created} new and ${result.updated} corrected entries`
           : "Nothing to apply — all dates already logged",
       );
       // Refresh data to reflect new logged state
@@ -103,7 +115,7 @@ export function CorrelationClient({ initialData, initialRange, initialStart, ini
   const totalMatchedSeconds = data.matched.reduce((s, r) => s + r.totalSeconds, 0);
   const totalUnmatchedSeconds = data.unmatched.reduce((s, r) => s + r.totalSeconds, 0);
   const pendingDays = data.matched.reduce(
-    (count, r) => count + r.perDay.filter((d) => !r.alreadyLoggedDates.includes(d.date)).length,
+    (count, r) => count + r.perDay.filter((d) => dayNeedsApply(r, d.date, d.seconds)).length,
     0,
   );
 
@@ -169,14 +181,14 @@ export function CorrelationClient({ initialData, initialRange, initialStart, ini
             >
               {busy ? "Loading..." : "Preview"}
             </button>
-            {preview && preview.created > 0 && (
+            {preview && (preview.created > 0 || preview.updated > 0) && (
               <button
                 type="button"
                 className="primary-button"
                 disabled={busy}
                 onClick={handleApply}
               >
-                Apply {preview.created} entries ({preview.totalHours.toFixed(1)}h)
+                Apply {preview.created} new, {preview.updated} corrected ({preview.totalHours.toFixed(1)}h)
               </button>
             )}
           </div>
@@ -199,8 +211,8 @@ export function CorrelationClient({ initialData, initialRange, initialStart, ini
             </thead>
             <tbody>
               {data.matched.map((row) => {
-                const pending = row.perDay.filter((d) => !row.alreadyLoggedDates.includes(d.date));
-                const logged = row.perDay.filter((d) => row.alreadyLoggedDates.includes(d.date));
+                const pending = row.perDay.filter((d) => dayNeedsApply(row, d.date, d.seconds));
+                const logged = row.perDay.filter((d) => !dayNeedsApply(row, d.date, d.seconds));
                 return (
                   <tr key={row.ticketId}>
                     <td>
@@ -221,15 +233,18 @@ export function CorrelationClient({ initialData, initialRange, initialStart, ini
                     <td>{formatHours(row.totalSeconds)}</td>
                     <td>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
-                        {row.perDay.map((d) => (
-                          <span
-                            key={d.date}
-                            className={`badge ${row.alreadyLoggedDates.includes(d.date) ? "badge-success" : "badge-warning"}`}
-                            title={`${d.date}: ${formatHours(d.seconds)} ${row.alreadyLoggedDates.includes(d.date) ? "(logged)" : "(pending)"}`}
-                          >
-                            {d.date.slice(5)} {formatHours(d.seconds)}
-                          </span>
-                        ))}
+                        {row.perDay.map((d) => {
+                          const needsApply = dayNeedsApply(row, d.date, d.seconds);
+                          return (
+                            <span
+                              key={d.date}
+                              className={`badge ${needsApply ? "badge-warning" : "badge-success"}`}
+                              title={`${d.date}: ${formatHours(d.seconds)} ${needsApply ? "(pending)" : "(logged)"}`}
+                            >
+                              {d.date.slice(5)} {formatHours(d.seconds)}
+                            </span>
+                          );
+                        })}
                       </div>
                     </td>
                     <td>
@@ -250,7 +265,10 @@ export function CorrelationClient({ initialData, initialRange, initialStart, ini
         {/* Preview / last apply summary */}
         {preview && (
           <div className="card" style={{ marginTop: "1rem", background: "var(--bg-muted, #f5f5f5)", padding: "1rem" }}>
-            <h3>Preview: {preview.created} new entries, {preview.skipped} skipped, {preview.totalHours.toFixed(1)}h total</h3>
+            <h3>
+              Preview: {preview.created} new entries, {preview.updated} corrections, {preview.skipped} skipped,{" "}
+              {preview.totalHours.toFixed(1)}h total
+            </h3>
             <ul style={{ margin: 0, paddingLeft: "1.5rem" }}>
               {preview.entries.map((e, i) => (
                 <li key={i}>{e.date}: {e.hours}h → ticket {e.ticketId.slice(0, 8)}…</li>
@@ -260,7 +278,14 @@ export function CorrelationClient({ initialData, initialRange, initialStart, ini
         )}
         {lastApply && (
           <div className="card" style={{ marginTop: "1rem", background: "var(--bg-success, #e6ffe6)", padding: "1rem" }}>
-            <strong>Applied:</strong> {lastApply.created} entries, {lastApply.totalHours.toFixed(1)}h logged
+            <strong>Applied:</strong> {lastApply.created} new, {lastApply.updated} corrected,{" "}
+            {lastApply.totalHours.toFixed(1)}h logged
+            {lastApply.updateFailures.length > 0 && (
+              <div className="badge badge-warning" style={{ marginTop: "0.5rem" }}>
+                {lastApply.updateFailures.length} correction{lastApply.updateFailures.length === 1 ? "" : "s"} failed
+                to apply — will be retried on a later run
+              </div>
+            )}
           </div>
         )}
       </section>

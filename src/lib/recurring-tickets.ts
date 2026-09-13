@@ -96,11 +96,20 @@ export function computeScheduledWindow(
     const month = Number(match[2]);
     const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
     const createDay = Math.min(series.createDayOfMonth, lastDay);
-    const closeDay = Math.min(series.closeDayOfMonth ?? lastDay, lastDay);
-    return {
-      createDate: nairobiDayMarker(year, month, createDay),
-      closeDate: nairobiDayMarker(year, month, closeDay),
-    };
+    const closeDayOfMonth = series.closeDayOfMonth ?? lastDay;
+    const createDate = nairobiDayMarker(year, month, createDay);
+    let closeDate = nairobiDayMarker(year, month, Math.min(closeDayOfMonth, lastDay));
+    // A closeDayOfMonth on or before createDayOfMonth (e.g. both day 1, or an
+    // explicit 5 vs 25) would otherwise land the close date on or before the
+    // create date within the same month, mirroring the weekly rollover below
+    // — roll it into next month's occurrence of that day instead.
+    if (closeDate.getTime() <= createDate.getTime()) {
+      const nextMonth = month === 12 ? 1 : month + 1;
+      const nextYear = month === 12 ? year + 1 : year;
+      const nextLastDay = new Date(Date.UTC(nextYear, nextMonth, 0)).getUTCDate();
+      closeDate = nairobiDayMarker(nextYear, nextMonth, Math.min(closeDayOfMonth, nextLastDay));
+    }
+    return { createDate, closeDate };
   }
 
   const match = /^(\d{4})-W(\d{2})$/.exec(periodKey);
@@ -371,13 +380,28 @@ export async function closeInstance(instance: RecurringTicketInstance, client: R
 
   const startDate = instance.scheduledCreateDate.toISOString().slice(0, 10);
   const endDate = instance.scheduledCloseDate.toISOString().slice(0, 10);
-  await applyTimeEntries(instance.userId, { start: startDate, end: endDate, client });
+  const { updateFailures } = await applyTimeEntries(instance.userId, { start: startDate, end: endDate, client });
+  if (updateFailures.length > 0) {
+    // The close proceeds regardless (a closed Redmine ticket typically
+    // rejects the time-entry edit anyway, and this instance won't be
+    // revisited once closed) — but a growth correction failing here is
+    // otherwise invisible: recorded nowhere, no retry path. Surface it.
+    logEvent(
+      "recurring_tickets.close_correction_failed",
+      { instanceId: instance.id, issueId: instance.issueId, updateFailures },
+      "warn",
+    );
+  }
 
   const { pushed } = await pushPendingWakaTimeEntriesToRedmine(instance.issueId, client);
   // Cumulative total actually in Redmine for this issue, not just this call's
   // push — so a close spread across retries still records the real figure.
   const appliedHours = await sumPushedHours(instance.issueId);
-  const closeNote = `Auto-closed by recurring ticket automation. ${pushed} time entr${pushed === 1 ? "y" : "ies"} pushed this run (${appliedHours.toFixed(2)}h total).`;
+  const correctionWarning =
+    updateFailures.length > 0
+      ? ` ${updateFailures.length} hours correction${updateFailures.length === 1 ? "" : "s"} failed to apply and may be missing from this total.`
+      : "";
+  const closeNote = `Auto-closed by recurring ticket automation. ${pushed} time entr${pushed === 1 ? "y" : "ies"} pushed this run (${appliedHours.toFixed(2)}h total).${correctionWarning}`;
 
   try {
     await client.updateIssueStatus(instance.redmineIssueId, REDMINE_STATUS_CLOSED, closeNote);

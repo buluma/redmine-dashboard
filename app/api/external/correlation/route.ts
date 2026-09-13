@@ -53,8 +53,23 @@ export async function POST(request: NextRequest) {
 
     // Needed to push an hours correction to an already-pushed WakaTime entry
     // (see applyTimeEntries) — optional because a user without Redmine
-    // connected can still use the local-only create path.
-    const client = await requireRedmineClientForUser(user.id).then((r) => r.client).catch(() => undefined);
+    // connected can still use the local-only create path. Only the expected
+    // "not connected" case is treated as optional; anything else (a broken
+    // credential decrypt, a DB blip) is tracked so it doesn't look identical
+    // to a user who simply hasn't connected Redmine.
+    let client;
+    try {
+      client = (await requireRedmineClientForUser(user.id)).client;
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== "Redmine account not connected") {
+        trackFailure({
+          event: "external.correlation.redmine_client_lookup_failed",
+          error,
+          metricName: "external_correlation_redmine_client_lookup_failed",
+        });
+      }
+      client = undefined;
+    }
 
     const result = await applyTimeEntries(user.id, {
       start,
