@@ -1,7 +1,7 @@
 "use client";
 
 import { useI18n } from "@/src/components/I18nProvider";
-import { MarkdownBlock } from "@/src/components/issue-detail/MarkdownBlock";
+import { MarkdownBlock } from "@/src/components/MarkdownBlock";
 import type { Attachment } from "@/src/types/dashboard";
 
 type IssueDescriptionSectionProps = {
