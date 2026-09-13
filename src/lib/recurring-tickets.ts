@@ -110,7 +110,15 @@ export function computeScheduledWindow(
   const monday = isoWeekMonday(isoYear, isoWeek);
   const mondayUtcMs = Date.UTC(monday.year, monday.month - 1, monday.day);
   const createDay = new Date(mondayUtcMs + (series.createWeekday - 1) * 86400000);
-  const closeDay = new Date(mondayUtcMs + (series.closeWeekday - 1) * 86400000);
+  let closeDay = new Date(mondayUtcMs + (series.closeWeekday - 1) * 86400000);
+  // closeWeekday <= createWeekday would otherwise land the close date on or
+  // before the create date within the same week — e.g. both set to Monday to
+  // close the outgoing instance right as the incoming one opens (eliminating
+  // the old Sun-close/Mon-create gap where nothing was open to log against).
+  // Roll it into the following week's occurrence of that day instead.
+  if (closeDay.getTime() <= createDay.getTime()) {
+    closeDay = new Date(closeDay.getTime() + 7 * 86400000);
+  }
   return {
     createDate: nairobiDayMarker(createDay.getUTCFullYear(), createDay.getUTCMonth() + 1, createDay.getUTCDate()),
     closeDate: nairobiDayMarker(closeDay.getUTCFullYear(), closeDay.getUTCMonth() + 1, closeDay.getUTCDate()),
@@ -471,24 +479,14 @@ export async function runRecurringTicketsTick(
     logEvent("recurring_tickets.current_user_check_failed", { error }, "warn");
   }
 
-  const dueSeries = await getDueSeriesForCreate(userId, today);
-  for (const series of dueSeries) {
-    const periodKey = computePeriodKey(series, today);
-    try {
-      const instance = await createInstance(series, periodKey, client);
-      result.created.push({
-        seriesKey: series.key,
-        periodKey,
-        issueId: instance.issueId as string,
-        redmineIssueId: instance.redmineIssueId,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logEvent("recurring_tickets.create_failed", { seriesKey: series.key, periodKey, error: message }, "error");
-      result.createFailures.push({ seriesKey: series.key, periodKey, error: message });
-    }
-  }
-
+  // Close due instances BEFORE creating the next period's — a series whose
+  // closeWeekday/createWeekday land on the same day (see the rollover note
+  // in computeScheduledWindow) would otherwise have createInstance() swap
+  // the IssueGithubLink onto the new issue first, and closeInstance()'s
+  // applyTimeEntries() call (which resolves WakaTime rows to a ticket via
+  // the *current* link, not one pinned to the closing period) would then
+  // misattribute the outgoing week's last WakaTime hours to the new issue
+  // instead of the one actually closing.
   const dueClose = await getInstancesDueForClose(userId, today);
   for (const instance of dueClose) {
     try {
@@ -507,6 +505,24 @@ export async function runRecurringTicketsTick(
       const message = error instanceof Error ? error.message : String(error);
       logEvent("recurring_tickets.close_failed", { instanceId: instance.id, error: message }, "error");
       result.closeFailures.push({ instanceId: instance.id, error: message });
+    }
+  }
+
+  const dueSeries = await getDueSeriesForCreate(userId, today);
+  for (const series of dueSeries) {
+    const periodKey = computePeriodKey(series, today);
+    try {
+      const instance = await createInstance(series, periodKey, client);
+      result.created.push({
+        seriesKey: series.key,
+        periodKey,
+        issueId: instance.issueId as string,
+        redmineIssueId: instance.redmineIssueId,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logEvent("recurring_tickets.create_failed", { seriesKey: series.key, periodKey, error: message }, "error");
+      result.createFailures.push({ seriesKey: series.key, periodKey, error: message });
     }
   }
 

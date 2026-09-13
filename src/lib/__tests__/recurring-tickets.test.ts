@@ -185,6 +185,17 @@ describe("computeScheduledWindow", () => {
     expect(window.closeDate.toISOString()).toBe("2026-07-19T00:00:00.000Z");
   });
 
+  it("rolls the close date into the following week when closeWeekday <= createWeekday", () => {
+    // Same-day create/close (both Monday) so the outgoing instance closes
+    // right as the next one opens, instead of on or before its own create date.
+    const window = computeScheduledWindow(
+      { cadence: "weekly", createWeekday: 1, closeWeekday: 1, createDayOfMonth: 1, closeDayOfMonth: null },
+      "2026-W29",
+    );
+    expect(window.createDate.toISOString()).toBe("2026-07-13T00:00:00.000Z");
+    expect(window.closeDate.toISOString()).toBe("2026-07-20T00:00:00.000Z");
+  });
+
   it("defaults closeDayOfMonth to the last day of the month for a monthly series", () => {
     const window = computeScheduledWindow(
       { cadence: "monthly", createWeekday: 1, closeWeekday: 7, createDayOfMonth: 1, closeDayOfMonth: null },
@@ -496,8 +507,8 @@ describe("runRecurringTicketsTick", () => {
     const client = fakeClient();
     mockSeriesFindMany.mockResolvedValue([fakeSeries()]);
     mockInstanceFindUnique
-      .mockResolvedValueOnce(null) // getDueSeriesForCreate's existence check
-      .mockResolvedValueOnce(fakeInstance({ status: "closed", finalHoursApplied: 0 })); // post-close re-fetch
+      .mockResolvedValueOnce(fakeInstance({ status: "closed", finalHoursApplied: 0 })) // post-close re-fetch (close now runs first)
+      .mockResolvedValueOnce(null); // getDueSeriesForCreate's existence check
     mockIssueAggregate.mockResolvedValue({ _max: { localIssueNumber: 5 } });
     mockIssueCreate.mockResolvedValue({ id: "issue-1", createdAt: new Date("2026-07-13T00:00:00Z") });
     mockGithubLinkCreate.mockResolvedValue({ id: "link-1" });
