@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockRequireCurrentUser = vi.fn();
 const mockPrisma: Record<string, Record<string, ReturnType<typeof vi.fn>>> = {
-  savedView: { count: vi.fn(), create: vi.fn(), findMany: vi.fn() },
+  savedView: { count: vi.fn(), create: vi.fn(), findMany: vi.fn(), aggregate: vi.fn() },
 };
 const mockTransaction = vi.fn();
 
@@ -38,6 +38,7 @@ describe("POST /api/saved-views", () => {
 
   it("creates a view when under the cap", async () => {
     mockPrisma.savedView.count.mockResolvedValue(3);
+    mockPrisma.savedView.aggregate.mockResolvedValue({ _max: { position: 2 } });
     mockPrisma.savedView.create.mockResolvedValue({
       id: "view-1",
       name: "My view",
@@ -55,8 +56,36 @@ describe("POST /api/saved-views", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(mockPrisma.savedView.create).toHaveBeenCalled();
+    expect(mockPrisma.savedView.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ position: 3 }) }),
+    );
     expect(mockTransaction).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({ isolationLevel: "Serializable" }));
+  });
+
+  it("fills a gap left by a deleted view instead of colliding with a surviving position", async () => {
+    // 3 views total but the middle one (position 1) was deleted, leaving
+    // positions 0 and 2 — count() alone would wrongly suggest position 2.
+    mockPrisma.savedView.count.mockResolvedValue(2);
+    mockPrisma.savedView.aggregate.mockResolvedValue({ _max: { position: 2 } });
+    mockPrisma.savedView.create.mockResolvedValue({
+      id: "view-2",
+      name: "New view",
+      filters: filters(),
+      position: 3,
+      updatedAt: new Date("2026-09-13T00:00:00.000Z"),
+    });
+
+    const { POST } = await import("@/app/api/saved-views/route");
+    await POST(
+      new Request("http://localhost/api/saved-views", {
+        method: "POST",
+        body: JSON.stringify({ name: "New view", filters: filters() }),
+      }),
+    );
+
+    expect(mockPrisma.savedView.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ position: 3 }) }),
+    );
   });
 
   it("rejects creation at the saved-view cap without ever calling create", async () => {

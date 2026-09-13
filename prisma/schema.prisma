@@ -76,7 +76,11 @@ model SavedView {
   updatedAt    DateTime @updatedAt
 
   @@index([userId])
-  @@index([userId, position])
+  // Enforces the invariant application code otherwise only maintains by
+  // convention (every write path routing through withSavedViewWrite) — a
+  // unique index makes a duplicate position a hard DB error instead of a
+  // silent data-integrity gap if some future write path forgets to.
+  @@unique([userId, position])
 }
 
 model RedmineUser {

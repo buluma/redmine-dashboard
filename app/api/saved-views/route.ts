@@ -56,10 +56,20 @@ export async function POST(request: Request) {
     }
 
     const view = await withSavedViewWrite(async (tx) => {
-      const position = await tx.savedView.count({
+      const count = await tx.savedView.count({
         where: { userId: user.id },
       });
-      if (position >= MAX_SAVED_VIEWS) return null;
+      if (count >= MAX_SAVED_VIEWS) return null;
+
+      // Deleting a view never renumbers the ones that survive it, so
+      // `count` can collide with a still-in-use position after a delete
+      // (e.g. views at 0/1/2, delete 1, count is now 2 — but so is the
+      // survivor's position). Go one past the current max instead.
+      const { _max } = await tx.savedView.aggregate({
+        where: { userId: user.id },
+        _max: { position: true },
+      });
+      const position = (_max.position ?? -1) + 1;
 
       return tx.savedView.create({
         data: {
