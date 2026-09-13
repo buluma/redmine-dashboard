@@ -15,7 +15,7 @@ import { AttachmentsSection } from "@/src/components/issue-detail/AttachmentsSec
 import { GithubLinksSection, type GithubLinkCreatePayload } from "@/src/components/issue-detail/GithubLinksSection";
 import { IssueActivityTabs, type IssueActivityTab } from "@/src/components/issue-detail/IssueActivityTabs";
 import { IssueCommentForm } from "@/src/components/issue-detail/IssueCommentForm";
-import { MarkdownBlock } from "@/src/components/issue-detail/MarkdownBlock";
+import { IssueDescriptionSection } from "@/src/components/issue-detail/IssueDescriptionSection";
 import { RelationsSection } from "@/src/components/issue-detail/RelationsSection";
 import { SubticketsSection } from "@/src/components/issue-detail/SubticketsSection";
 
@@ -1154,22 +1154,19 @@ export default function IssueDetailPage() {
           </article>
         </div>
 
-        <article className="report-card issue-description-card">
-          <p className="report-label">{t("issues.fields.description")}</p>
-          {editMode && editDraft ? (
-            <textarea
-              className="edit-description-textarea"
-              value={editDraft.description}
-              onChange={(e) => setEditDraft({ ...editDraft, description: e.target.value })}
-              rows={8}
-              placeholder={t("issues.placeholders.description")}
-            />
-          ) : issue.description ? (
-            <MarkdownBlock content={issue.description} attachments={issue.attachments} issueId={issue.redmineIssueId ?? undefined} onImageClick={(src, alt) => setLightboxImage({ src, alt })} />
-          ) : (
-            <p className="muted">{t("issues.empty.noDescription")}</p>
-          )}
-        </article>
+        <IssueDescriptionSection
+          description={issue.description}
+          attachments={issue.attachments}
+          redmineIssueId={issue.redmineIssueId}
+          isEditing={editMode && editDraft !== null}
+          editingDescription={editDraft?.description ?? ""}
+          onDescriptionChange={(description) => {
+            if (editDraft) {
+              setEditDraft({ ...editDraft, description });
+            }
+          }}
+          onImageClick={(src, alt) => setLightboxImage({ src, alt })}
+        />
 
         {/* Issue Metadata Section */}
         {(issue.authorName || issue.categoryName || issue.startDate || issue.estimatedHours || issue.spentHours || (issue.customFieldsJson && issue.customFieldsJson.length > 0)) && (
