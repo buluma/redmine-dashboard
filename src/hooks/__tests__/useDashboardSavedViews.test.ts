@@ -114,6 +114,74 @@ describe("useDashboardSavedViews", () => {
     );
   });
 
+  it("re-fetches the server list instead of using stale legacy ids when import loses a migration race", async () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([
+        { id: "legacy", name: "Legacy", ...snapshot({ statusFilter: "Open" }) },
+      ]),
+    );
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(json({ views: [] })) // initial GET: server empty
+      .mockResolvedValueOnce(json({ error: "Saved views already exist" }, 409)) // import loses the race
+      .mockResolvedValueOnce(
+        json({
+          // the winning tab's import already landed
+          views: [
+            { id: "winner", name: "Legacy", ...snapshot({ statusFilter: "Open" }), position: 0 },
+          ],
+        }),
+      );
+
+    const { result } = renderHook(() => useDashboardSavedViews());
+
+    await waitFor(() =>
+      expect(result.current.savedViews[0]?.id).toBe("winner"),
+    );
+    // The other tab's views are now authoritative — legacy snapshot is done.
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("keeps the legacy snapshot in localStorage when the import fails and the server is still genuinely empty", async () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([
+        { id: "legacy", name: "Legacy", ...snapshot({ statusFilter: "Open" }) },
+      ]),
+    );
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(json({ views: [] })) // initial GET: server empty
+      .mockResolvedValueOnce(json({ error: "Failed to import saved views" }, 500)) // real failure
+      .mockResolvedValueOnce(json({ views: [] })); // re-fetch: still empty, not a race
+
+    const { result } = renderHook(() => useDashboardSavedViews());
+
+    await waitFor(() =>
+      expect(result.current.savedViews[0]?.id).toBe("legacy"),
+    );
+    // Kept so a later hydration can retry the migration instead of losing it.
+    expect(window.localStorage.getItem(STORAGE_KEY)).not.toBeNull();
+  });
+
+  it("rejects a reorder list with a duplicate id even when every existing id is present", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      json({
+        views: [
+          { id: "a", name: "A", ...snapshot(), position: 0 },
+          { id: "b", name: "B", ...snapshot(), position: 1 },
+        ],
+      }),
+    );
+    const { result } = renderHook(() => useDashboardSavedViews());
+    await waitFor(() => expect(result.current.savedViews).toHaveLength(2));
+
+    await expect(
+      act(async () => result.current.reorderViews(["a", "b", "a"])),
+    ).rejects.toThrow("Saved view reorder does not match the current views");
+    // Order is untouched — the bogus reorder never got applied.
+    expect(result.current.savedViews.map((view) => view.id)).toEqual(["a", "b"]);
+  });
+
   it("creates a view through the API and marks the server view active", async () => {
     const { result } = renderHook(() => useDashboardSavedViews());
     await waitFor(() => expect(fetch).toHaveBeenCalled());

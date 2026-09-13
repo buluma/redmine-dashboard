@@ -10,6 +10,11 @@ export const savedViewFiltersSchema = z.object({
   assignedToMe: z.boolean(),
 });
 
+// Cap on saved views per user — was previously enforced only client-side
+// (a `.slice(0, MAX_VIEWS)` on the optimistic array) before views moved to
+// the server; enforce it here too so a direct API call can't exceed it.
+export const MAX_SAVED_VIEWS = 12;
+
 export const saveSavedViewSchema = z.object({
   name: z.string().trim().min(1).max(100),
   filters: savedViewFiltersSchema,
@@ -25,7 +30,7 @@ export const updateSavedViewSchema = z
   });
 
 export const importSavedViewsSchema = z.object({
-  views: z.array(saveSavedViewSchema).min(1).max(12),
+  views: z.array(saveSavedViewSchema).min(1).max(MAX_SAVED_VIEWS),
 });
 
 export type SavedViewFilters = z.infer<typeof savedViewFiltersSchema>;
