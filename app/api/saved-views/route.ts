@@ -7,7 +7,7 @@ import {
   savedViewLegacyFields,
   toDashboardSavedView,
 } from "@/src/lib/saved-view-contract";
-import { withSavedViewWrite } from "@/src/lib/saved-view-write";
+import { SavedViewWriteConflictError, withSavedViewWrite } from "@/src/lib/saved-view-write";
 
 // GET /api/saved-views - List all saved views for current user
 export async function GET() {
@@ -81,6 +81,9 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return jsonError("Unauthorized", 401);
+    }
+    if (error instanceof SavedViewWriteConflictError) {
+      return jsonError(error.message, 503);
     }
     return jsonError("Failed to create saved view", 500);
   }

@@ -73,4 +73,18 @@ describe("POST /api/saved-views", () => {
     expect(response.status).toBe(409);
     expect(mockPrisma.savedView.create).not.toHaveBeenCalled();
   });
+
+  it("returns 503 (not a generic 500) when serialization retries are exhausted", async () => {
+    mockTransaction.mockRejectedValue({ code: "P2034" });
+
+    const { POST } = await import("@/app/api/saved-views/route");
+    const response = await POST(
+      new Request("http://localhost/api/saved-views", {
+        method: "POST",
+        body: JSON.stringify({ name: "Contended view", filters: filters() }),
+      }),
+    );
+
+    expect(response.status).toBe(503);
+  });
 });

@@ -78,10 +78,12 @@ docker compose run --rm dashboard \
   npx prisma db push --accept-data-loss   # safe: db push targets an empty database
 
 # baseline: mark every existing migration as applied so future deploys
-# don't try to replay history against a schema db push already created
-for m in $(ls prisma/migrations | sort); do
+# don't try to replay history against a schema db push already created.
+# The trailing slash on the glob matters: prisma/migrations/ also holds
+# migration_lock.toml, which "migrate resolve" would reject as a migration name.
+for d in prisma/migrations/*/; do
   docker compose exec -T dashboard \
-    npx prisma migrate resolve --applied "$m"
+    npx prisma migrate resolve --applied "$(basename "$d")"
 done
 docker compose exec -T dashboard \
   npx prisma migrate status   # should say "Database schema is up to date!"

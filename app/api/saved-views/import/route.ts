@@ -5,7 +5,7 @@ import {
   savedViewLegacyFields,
   toDashboardSavedView,
 } from "@/src/lib/saved-view-contract";
-import { withSavedViewWrite } from "@/src/lib/saved-view-write";
+import { SavedViewWriteConflictError, withSavedViewWrite } from "@/src/lib/saved-view-write";
 
 // POST /api/saved-views/import - Atomically import a legacy browser-only list.
 export async function POST(request: Request) {
@@ -45,6 +45,9 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return jsonError("Unauthorized", 401);
+    }
+    if (error instanceof SavedViewWriteConflictError) {
+      return jsonError(error.message, 503);
     }
     return jsonError("Failed to import saved views", 500);
   }
