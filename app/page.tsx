@@ -464,29 +464,45 @@ export default function Home() {
     setActiveViewId(view.id);
   }
 
-  function saveCurrentView() {
+  async function saveCurrentView() {
     const fallbackName = t('views.defaultName', { count: savedViews.length + 1 });
-    const { view, replaced } = saveView(
-      {
-        statusFilter,
-        priorityFilter,
-        search,
-        sort,
-        assignedToMe: advancedFilters.assignedToMe,
-      },
-      fallbackName,
-    );
-    toast.info(
-      replaced
-        ? t('toasts.viewSavedChanges', { name: view.name })
-        : t('toasts.viewSaved', { name: view.name }),
-    );
+    try {
+      const { view, replaced } = await saveView(
+        {
+          statusFilter,
+          priorityFilter,
+          search,
+          sort,
+          assignedToMe: advancedFilters.assignedToMe,
+        },
+        fallbackName,
+      );
+      toast.info(
+        replaced
+          ? t('toasts.viewSavedChanges', { name: view.name })
+          : t('toasts.viewSaved', { name: view.name }),
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('common.error'));
+    }
   }
 
-  function deleteSavedView(viewId: string) {
-    const target = deleteView(viewId);
-    if (target) {
-      toast.info(t('toasts.viewRemoved', { name: target.name }));
+  async function deleteSavedView(viewId: string) {
+    try {
+      const target = await deleteView(viewId);
+      if (target) {
+        toast.info(t('toasts.viewRemoved', { name: target.name }));
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('common.error'));
+    }
+  }
+
+  async function reorderSavedViews(viewIds: string[]) {
+    try {
+      await reorderViews(viewIds);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('common.error'));
     }
   }
 
@@ -605,7 +621,7 @@ export default function Home() {
         activeViewId={activeViewId}
         onApplySavedView={applySavedView}
         onDeleteSavedView={deleteSavedView}
-        onReorderSavedViews={reorderViews}
+        onReorderSavedViews={reorderSavedViews}
         onSaveCurrentView={saveCurrentView}
         viewDraftName={viewDraftName}
         setViewDraftName={setViewDraftName}
