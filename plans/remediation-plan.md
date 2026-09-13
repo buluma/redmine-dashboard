@@ -18,6 +18,7 @@ These items from the original audit are done and merged — kept here as a recor
 8. **`src/lib/sync.ts` split** — the 1399-line file is now a 12-line barrel re-exporting the same public surface from `src/lib/sync/parsers.ts` (raw Redmine-JSON parsing), `issue-cache.ts` (per-issue upserts: issue row, attachments, relations, journals, time entries), `catalog.ts` (status/enumeration catalogs), `breadcrumbs.ts` (parent-chain walk), `single-issue.ts` (`syncSingleIssue` orchestrator plus push/Slack/webhook notification fan-out), and `jobs.ts` (SyncJob claim/create/execute lifecycle). No call site changed — every existing `from "@/src/lib/sync"` import still resolves the same names. Purely mechanical: no logic changed, verified by the existing `sync.test.ts`/`sync-watermark.test.ts`/`sync-hybrid-local-mirror.test.ts`/`sync-orphan.test.ts` suite passing unmodified.
 9. **`src/lib/ai-tools.ts` split** — the 975-line file is now a 13-line barrel re-exporting the same public surface from `src/lib/ai-tools/types.ts`, `permissions.ts` (role/confirmation requirements), `definitions.ts` (the static OpenAI-format tool schemas), `issue-ref.ts` (shared Redmine-#ID-vs-local-L-N resolution), `read-handlers.ts`/`write-handlers.ts` (one handler per tool, split by whether it mutates), `execute.ts` (the `executeTool`/`runTool` dispatcher), and `presentation.ts` (cross-provider formatting). No call site changed. Purely mechanical, verified by the existing `ai-tools.test.ts` suite passing unmodified.
 10. **`src/lib/llm-provider.ts` fixed, then split** — writing per-provider regression tests first (thin coverage before this: 208 lines of tests for 768 of implementation, and every test secretly ran through ollama only, since the env mock hardcoded `llmProvider: 'ollama'`) surfaced a real bug: `chat()`/`checkHealth()` did `return this.xChat(...)`/`return this.checkXHealth()` with no `await` inside their try/catch, so the documented "fall back to Ollama when a provider fails" safety net silently never fired for openai/anthropic/openrouter/aperture. Fixed, with 21 new tests actually exercising each provider (health/chat/streaming/tool-calls/fallback). Then split the 768-line single-class file into `src/lib/llm-provider/types.ts` and one free-function module per provider (`ollama.ts`, `openai.ts`, `anthropic.ts`, `openrouter.ts`, `aperture.ts`, `embeddings.ts`), with `manager.ts` keeping the thin `LLMProviderManager` class that just dispatches to them. `src/lib/llm-provider.ts` is now a 17-line barrel; no call site changed.
+11. **Slack modules reviewed, no split needed** — `slack.ts` (299 lines, `SlackClient`), `slack-notifier.ts` (449 lines, `SlackNotifier`), and `slack-notification-service.ts` (400 lines, `SlackNotificationService`) are each already one focused, single-responsibility class in its own file — unlike sync.ts/ai-tools.ts/llm-provider.ts, there's no monolith here mixing unrelated concerns to untangle. Splitting further would mean carving up cohesive classes' own methods for size alone, not a real complexity win. Left as-is.
 
 ## Descoped
 
@@ -26,21 +27,9 @@ These items from the original audit are done and merged — kept here as a recor
 
 ## Ordered work
 
-### 1. Finish reducing high-risk module complexity
+Module complexity reduction (section 7-11 above) is done. The only thing left is documentation upkeep:
 
-Priority: high
-
-- `app/issues/[id]/page.tsx`, `src/lib/sync.ts`, `src/lib/ai-tools.ts`, and `src/lib/llm-provider.ts` are done (see Shipped #7-10).
-- Apply the same incremental approach to the large Slack modules (`slack-notifier.ts`, `slack-notification-service.ts`, `slack.ts`). Avoid broad mechanical refactors.
-- Add regression tests before each extraction and keep API behavior unchanged.
-
-Completion criteria:
-
-- Each module has a clear owner/responsibility boundary.
-- Existing tests pass; new tests cover changed mutation/error paths.
-- Lint, typecheck, build, and the relevant browser specs are clean.
-
-### 2. Reconcile and maintain planning documentation
+### 1. Reconcile and maintain planning documentation
 
 Priority: follow-up
 
@@ -49,7 +38,3 @@ Priority: follow-up
 - Mark shipped items with their verification reference or move them to the completed-history section.
 - Keep only actionable items in the active backlog, with owner, priority, dependency, and acceptance criteria.
 - Update stale line-count and path references while touching each item.
-
-## Resuming from a terminal
-
-Start with section 1 (module complexity). Commit each numbered section separately so unrelated behavior changes remain easy to review and revert.
