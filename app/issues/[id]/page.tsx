@@ -1114,9 +1114,8 @@ export default function IssueDetailPage() {
                 type: "log_time",
                 issueId,
                 // timeLogSchema (POST /api/issues/[id]/timelog) requires
-                // activityId and a singular `comment` — 31 is the
-                // "Development" activity used as the default everywhere
-                // else in this codebase (see recurring-tickets.ts).
+                // activityId and a singular `comment` — 31 is the known-active
+                // Development activity for manual and WakaTime-derived entries.
                 payload: { hours, activityId: 31, comment },
                 onSuccess: reloadIssue,
                 successMessage: t("issues.messages.timeLogged"),
