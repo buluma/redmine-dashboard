@@ -8,13 +8,12 @@ import { useI18n } from "@/src/components/I18nProvider";
 import { normalizeRedmineText } from "@/src/lib/redmine-text-format";
 import { AiIssueActions } from "@/src/components/ai/AiIssueActions";
 import { ChatFab } from "@/src/components/ai/ChatFab";
-import { TimeTrackingPanel } from "@/src/components/TimeTrackingPanel";
 import { QuickActionsPanel } from "@/src/components/QuickActionsPanel";
 import { useOfflineAction } from "@/src/hooks/useOfflineAction";
 import { useInternalNotes } from "@/src/hooks/useInternalNotes";
-import { InternalNotesSection } from "@/src/components/issue-detail/InternalNotesSection";
 import { AttachmentsSection } from "@/src/components/issue-detail/AttachmentsSection";
 import { GithubLinksSection, type GithubLinkCreatePayload } from "@/src/components/issue-detail/GithubLinksSection";
+import { IssueActivityTabs, type IssueActivityTab } from "@/src/components/issue-detail/IssueActivityTabs";
 import { MarkdownBlock } from "@/src/components/issue-detail/MarkdownBlock";
 import { RelationsSection } from "@/src/components/issue-detail/RelationsSection";
 
@@ -227,7 +226,7 @@ function extractAttachmentRefsFromText(content: string): string[] {
   return refs;
 }
 
-type IssueTab = "history" | "notes" | "internal-notes" | "properties" | "time_entries";
+type IssueTab = IssueActivityTab;
 
 function normalizeTab(raw: string | null): IssueTab {
   if (raw === "notes") return "notes";
@@ -1578,147 +1577,36 @@ export default function IssueDetailPage() {
           </form>
         </article>
 
-        <div className="issue-tabs" ref={tabsRef}>
-          <Link href={`/issues/${issue.id}?tab=history`} scroll={false} className={activeTab === "history" ? "active" : ""}>
-            {t("issues.tabs.history")}
-            <span className="tab-count">{historyJournals.length}</span>
-          </Link>
-          <Link href={`/issues/${issue.id}?tab=notes`} scroll={false} className={activeTab === "notes" ? "active" : ""}>
-            {t("issues.tabs.notes")}
-            <span className="tab-count">{noteJournals.length}</span>
-          </Link>
-          <Link href={`/issues/${issue.id}?tab=internal-notes`} scroll={false} className={activeTab === "internal-notes" ? "active" : ""}>
-            {t("issues.tabs.internalNotes")}
-            <span className="tab-count">{internalNotes.length}</span>
-          </Link>
-          <Link href={`/issues/${issue.id}?tab=properties`} scroll={false} className={activeTab === "properties" ? "active" : ""}>
-            {t("issues.tabs.properties")}
-            <span className="tab-count">{propertyJournals.length}</span>
-          </Link>
-          <Link href={`/issues/${issue.id}?tab=time_entries`} scroll={false} className={activeTab === "time_entries" ? "active" : ""}>
-            {t("issues.tabs.timeEntries")}
-            <span className="tab-count">{issue.timeEntries.length}</span>
-          </Link>
-        </div>
-
-        <article className="report-card">
-          <p className="report-label">
-            {activeTab === "history" && t("issues.tabs.history")}
-            {activeTab === "notes" && t("issues.tabs.notes")}
-            {activeTab === "properties" && t("issues.tabs.properties")}
-            {activeTab === "time_entries" && t("issues.tabs.timeEntries")}
-          </p>
-          {activeTab === "history" && (
-            <div className="timeline">
-              {historyJournals.length === 0 && <p className="muted">{t("issues.empty.history")}</p>}
-              {historyJournals.map((journal) => (
-                <article key={journal.id} className="timeline-item timeline-item-history">
-                  <p className="muted">
-                    <strong>{journal.author ?? t("issues.empty.unknown")}</strong> • {formatAgo(journal.createdOnRemote, t)}
-                  </p>
-                  {journal.notes?.trim() ? (
-                    <MarkdownBlock
-                      content={journal.notes}
-                      attachments={issue.attachments}
-                      issueId={issue.redmineIssueId ?? undefined}
-                      onImageClick={(src, alt) => setLightboxImage({ src, alt })}
-                    />
-                  ) : null}
-                  {Array.isArray(journal.details) && journal.details.length > 0 && (
-                    <ul className="journal-details">
-                      {journal.details.map((d, i) => (
-                        <li key={i}>
-                          <strong>{d.name}</strong> changed from <em>{d.old_value || "(none)"}</em> to <em>{d.new_value || "(none)"}</em>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </article>
-              ))}
-            </div>
-          )}
-          {activeTab === "notes" && (
-            <div className="timeline">
-              {noteJournals.length === 0 && <p className="muted">{t("issues.empty.notes")}</p>}
-              {noteJournals.map((journal) => (
-                <article key={journal.id} className="timeline-item timeline-item-note">
-                  <p className="muted">
-                    <strong>{journal.author ?? t("issues.empty.unknown")}</strong> • {formatAgo(journal.createdOnRemote, t)}
-                  </p>
-                  <MarkdownBlock
-                    content={journal.notes ?? ""}
-                    attachments={issue.attachments}
-                    issueId={issue.redmineIssueId ?? undefined}
-                    onImageClick={(src, alt) => setLightboxImage({ src, alt })}
-                  />
-                </article>
-              ))}
-            </div>
-          )}
-          {activeTab === "internal-notes" && (
-            <InternalNotesSection
-              notes={internalNotes}
-              busy={noteBusy}
-              onCreate={createInternalNote}
-              onUpdate={updateInternalNote}
-              onDelete={deleteInternalNote}
-              renderMarkdown={(content) => (
-                <MarkdownBlock
-                  content={content}
-                  attachments={issue.attachments}
-                  issueId={issue.redmineIssueId ?? undefined}
-                  onImageClick={(src, alt) => setLightboxImage({ src, alt })}
-                />
-              )}
-              formatAgo={(iso) => formatAgo(iso, t)}
-              actionError={actionError}
-            />
-          )}
-          {activeTab === "properties" && (
-            <div className="timeline">
-              {propertyJournals.length === 0 && <p className="muted">{t("issues.empty.properties")}</p>}
-              {propertyJournals.map((journal) => (
-                <article key={journal.id} className="timeline-item timeline-item-property">
-                  <p className="muted">
-                    <strong>{journal.author ?? t("issues.empty.unknown")}</strong> • {formatAgo(journal.createdOnRemote, t)}
-                  </p>
-                  <MarkdownBlock
-                    content={journal.notes ?? ""}
-                    attachments={issue.attachments}
-                    issueId={issue.redmineIssueId ?? undefined}
-                    onImageClick={(src, alt) => setLightboxImage({ src, alt })}
-                  />
-                </article>
-              ))}
-            </div>
-          )}
-          {activeTab === "time_entries" && (
-            <div className="time-entries-section">
-              <TimeTrackingPanel
-                entries={issue.timeEntries.map(e => ({
-                  id: e.id,
-                  hours: e.hours,
-                  comments: e.comments,
-                  activityName: e.activityName || t("issues.empty.general"),
-                  spentOn: e.spentOn,
-                  authorName: e.authorName || t("issues.empty.unknown"),
-                }))}
-        onAddEntry={async (hours, activityId, comments, spentOn) => {
-          await performAction({
-            type: "log_time",
-            issueId,
-            // timeLogSchema expects `comment` (singular), not `comments`.
-            payload: { hours, activityId, comment: comments, spentOn },
-            onSuccess: reloadIssue,
-            successMessage: t("issues.messages.redmineUpdated"),
-          });
-        }}
-                activities={activities}
-                isLoading={false}
-              />
-            </div>
-          )}
-        </article>
+        <IssueActivityTabs
+          issueId={issue.id}
+          redmineIssueId={issue.redmineIssueId}
+          attachments={issue.attachments}
+          timeEntries={issue.timeEntries}
+          historyJournals={historyJournals}
+          noteJournals={noteJournals}
+          propertyJournals={propertyJournals}
+          activeTab={activeTab}
+          tabsRef={tabsRef}
+          internalNotes={internalNotes}
+          noteBusy={noteBusy}
+          onCreateInternalNote={createInternalNote}
+          onUpdateInternalNote={updateInternalNote}
+          onDeleteInternalNote={deleteInternalNote}
+          onAddTimeEntry={async (hours, activityId, comments, spentOn) => {
+            await performAction({
+              type: "log_time",
+              issueId,
+              // timeLogSchema expects `comment` (singular), not `comments`.
+              payload: { hours, activityId, comment: comments, spentOn },
+              onSuccess: reloadIssue,
+              successMessage: t("issues.messages.redmineUpdated"),
+            });
+          }}
+          onImageClick={(src, alt) => setLightboxImage({ src, alt })}
+          formatAgo={(iso) => formatAgo(iso, t)}
+          actionError={actionError}
+          activities={activities}
+        />
       </section>
 
       {lightboxImage && (
