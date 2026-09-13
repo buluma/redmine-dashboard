@@ -75,6 +75,7 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
+    environment: redmine
     env:
       DATABASE_URL: file:./test.db
       APP_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
