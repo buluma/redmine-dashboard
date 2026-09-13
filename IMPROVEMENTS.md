@@ -112,9 +112,9 @@ Verification at session end:
 - **Evidence (historical):** was 1996 lines, 55 `useState` hooks, multiple memos + effects in a single client component.
 - **Result:** 787 lines. Full split into 12 hooks/components — `useIssueHoverPreview`+`IssueHoverTooltip`, `DashboardLoginScreen`, `useDashboardKeyboardShortcuts`, `useIssueFiltering`, `InsightsGrid`, `OpsAlertsCard`+`ActivityFeedCard`, `useBulkIssueActions`, `DashboardFiltersPanel`, `useDashboardData`, `useFilterPresets`, `IssueQueueCard`. See `docs/codebase-summary.md` for what each owns. `useReducer` migration for filter/view state was not needed — the hook split already isolated each concern enough that prop drilling stopped being a problem.
 
-### 1.5 Reduce `app/issues/[id]/page.tsx` complexity — High ⏳ partial (1.5a–c shipped)
-- **Evidence:** 2117 lines. Mix of: rendering, comment posting, GitHub link mgmt, time entries, allowed statuses, edit mode, offline queue, AI panel.
-- **Action:** Sectionalize: `<IssueHeader>`, `<IssueDescription>`, `<IssueComments>`, `<IssueAttachments>`, `<IssueRelations>`, `<IssueGithubLinks>`, `<IssueTimeLog>`. Each owns its own fetch/mutation hook.
+### 1.5 Reduce `app/issues/[id]/page.tsx` complexity — High ✅ done
+- **Evidence (historical):** was 2117 lines. Mix of: rendering, comment posting, GitHub link mgmt, time entries, allowed statuses, edit mode, offline queue, AI panel.
+- **Result:** 943 lines. Full JSX split into `src/components/issue-detail/*` (description, subtickets, markdown rendering, activity tabs, comment form, overview cards, standard metadata fields, GitHub links, relations), plus the fetch/mutation logic itself into three hooks — `useIssueDetail`, `useIssueEditDraft`, `useGithubLinkActions` (see `plans/remediation-plan.md` Shipped #7).
 
 ### 1.6 Real-time updates (SSE/WebSocket) — Medium (already in TODO) ✅ done
 - **Evidence:** `TODO.md` flags. Today the page polls every `POLL_INTERVAL_MS = 90_000`. After a Redmine update users wait up to 90 s.
@@ -221,9 +221,9 @@ Bonus gaps not in a–h but worth tracking:
 - `versionCode=1, versionName=0.1.0` — Play submission needs a
   versioning policy.
 
-### 1.18 Saved-view sync across devices — Low ⛔ blocked on Prisma schema mismatch
-- **Evidence:** `app/page.tsx:71` — `SAVED_VIEWS_KEY = "nrcc.savedViews.v1"` (localStorage), although a server-side panel exists (`SavedViewsPanel`). Two sources of truth.
-- **Action:** Drop localStorage path, server-side only with optimistic update.
+### 1.18 Saved-view sync across devices — Low ✅ done
+- **Evidence (historical):** `app/page.tsx:71` — `SAVED_VIEWS_KEY = "nrcc.savedViews.v1"` (localStorage), although a server-side panel exists (`SavedViewsPanel`). Two sources of truth.
+- **Result:** `SavedView` (Prisma) is the single source of truth; `src/hooks/useDashboardSavedViews.ts` migrates any legacy localStorage views once on hydration and keeps optimistic UI updates. Position/cap invariants are DB-enforced (`(userId, position)` unique index, `MAX_SAVED_VIEWS`), writes are serializable to avoid the create/import/reorder races the old dual-shape design was blocked on.
 
 ### 1.19 Search-mode UX is muddled — Low ⛔ deferred
 - **Evidence:** `app/page.tsx:1216-1222` — three modes (`local | hybrid | fts`) plus a separate FTS panel toggle and AI search panel toggle. Easy to land in the wrong mode.
@@ -237,9 +237,9 @@ Bonus gaps not in a–h but worth tracking:
 - **Evidence:** `messages/` has `af, en, ru, uk` only. `translate-af.js` exists (one-off?). `i18n:audit` script available.
 - **Action:** Run `npm run i18n:audit`. Decide on supported locales, remove orphan translation files.
 
-### 1.22 No accessibility CI gate — Medium
-- **Evidence:** `package.json` deps have no `axe-core`/`@axe-core/playwright`/`pa11y`. CLAUDE.md emphasizes a11y as part of testing.
-- **Action:** Add `@axe-core/playwright`; one e2e test scans the dashboard and issue detail pages, failing on serious violations.
+### 1.22 No accessibility CI gate — Medium ✅ done
+- **Evidence (historical):** `package.json` deps had no `axe-core`/`@axe-core/playwright`/`pa11y`. CLAUDE.md emphasizes a11y as part of testing.
+- **Result:** `@axe-core/playwright` added; `e2e/a11y.spec.ts` scans `/` + `/login`; CI runs it as the `a11y` job in `.github/workflows/ci.yml` with real green runs on `master`.
 
 ---
 
@@ -349,10 +349,10 @@ Bonus gaps not in a–h but worth tracking:
 
 | Phase | Items |
 |-------|-------|
-| **Now (small, high payoff)** | ✅ 1.3, ⛔ 1.18 (blocked), ✅ 2.3, ✅ 2.4, ✅ 2.6, ✅ 2.7–2.8, ✅ 2.25 |
-| **Next (med)** | ✅ 1.4, ⏳ 1.5 (partial: 1.5a–c), ✅ 1.7, ✅ 1.9, ✅ 2.1, ✅ 2.2, ✅ 2.5, ✅ 2.12, ✅ 2.18, ✅ 2.24 |
+| **Now (small, high payoff)** | ✅ 1.3, ✅ 1.18, ✅ 2.3, ✅ 2.4, ✅ 2.6, ✅ 2.7–2.8, ✅ 2.25 |
+| **Next (med)** | ✅ 1.4, ✅ 1.5, ✅ 1.7, ✅ 1.9, ✅ 2.1, ✅ 2.2, ✅ 2.5, ✅ 2.12, ✅ 2.18, ✅ 2.24 |
 | **After** | ✅ 1.1, ✅ 1.6, ✅ 1.8 (runbook), ⛔ 1.12 (design needed), ✅ 1.13, 1.17 (mobile strategy), ✅ 2.19 |
-| **Polish / opportunistic** | 1.11, 1.14–1.16, 1.19–1.22, 2.9–2.11, 2.13–2.17, 2.20–2.23 |
+| **Polish / opportunistic** | 1.11, 1.14–1.16, 1.19–1.21, ✅ 1.22, 2.9–2.11, 2.13–2.17, 2.20–2.23 |
 
 Legend: ✅ done · ⏳ partial · ⛔ blocked
 

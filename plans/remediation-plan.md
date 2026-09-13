@@ -27,14 +27,6 @@ These items from the original audit are done and merged — kept here as a recor
 
 ## Ordered work
 
-Module complexity reduction (section 7-11 above) is done. The only thing left is documentation upkeep:
+Everything from the original audit is done. `IMPROVEMENTS.md`'s stale entries were caught up in the same pass: `1.5` (issue-detail split) and `1.18` (saved-view sync) were marked partial/blocked but had both since shipped (see Shipped #7 and #6 above); `1.22` (accessibility CI gate) was marked as an open gap in its own section heading despite the doc's own `0. Status` table already recording it done — all three now say `✅ done` with a current verification reference, and the Suggested Sequencing table's markers were updated to match.
 
-### 1. Reconcile and maintain planning documentation
-
-Priority: follow-up
-
-`IMPROVEMENTS.md` has its own `## 0. Status` section tracking shipped items, but line-count/path references elsewhere in the backlog can still drift from the current repository state as extractions land.
-
-- Mark shipped items with their verification reference or move them to the completed-history section.
-- Keep only actionable items in the active backlog, with owner, priority, dependency, and acceptance criteria.
-- Update stale line-count and path references while touching each item.
+There is no more open, actionable work on this plan. Reopen it (a new `## Ordered work` entry) if a future audit or product decision surfaces something new.
