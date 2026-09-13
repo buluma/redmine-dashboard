@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUserId } from "@/src/lib/auth";
+import { getAuthenticatedUserId, requireRedmineClientForUser } from "@/src/lib/auth";
 import { applyTimeEntries, getAutoCreateOptionsFromEnv } from "@/src/lib/correlation";
 import { isRateLimited } from "@/src/lib/rate-limit";
 import { trackFailure } from "@/src/lib/telemetry";
@@ -31,10 +31,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid request", details: parsed.error.flatten() }, { status: 400 });
     }
 
+    // Needed to push an hours correction to an already-pushed WakaTime entry
+    // (see applyTimeEntries) — optional because a user without Redmine
+    // connected can still use the local-only create path.
+    const client = await requireRedmineClientForUser(userId).then((r) => r.client).catch(() => undefined);
+
     const result = await applyTimeEntries(userId, {
       ...parsed.data,
       catchAllIssueId: process.env.MISC_UNLINKED_ISSUE_ID,
       autoCreate: getAutoCreateOptionsFromEnv(),
+      client,
     });
     return NextResponse.json(result);
   } catch (error) {
