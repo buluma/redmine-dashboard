@@ -16,6 +16,7 @@ import { GithubLinksSection, type GithubLinkCreatePayload } from "@/src/componen
 import { IssueActivityTabs, type IssueActivityTab } from "@/src/components/issue-detail/IssueActivityTabs";
 import { IssueCommentForm } from "@/src/components/issue-detail/IssueCommentForm";
 import { IssueDescriptionSection } from "@/src/components/issue-detail/IssueDescriptionSection";
+import { IssueImageLightbox } from "@/src/components/issue-detail/IssueImageLightbox";
 import { IssueOverviewCards } from "@/src/components/issue-detail/IssueOverviewCards";
 import { RelationsSection } from "@/src/components/issue-detail/RelationsSection";
 import { SubticketsSection } from "@/src/components/issue-detail/SubticketsSection";
@@ -1537,18 +1538,7 @@ export default function IssueDetailPage() {
         />
       </section>
 
-      {lightboxImage && (
-        <div className="lightbox-overlay" onClick={() => setLightboxImage(null)}>
-          <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
-            <button className="lightbox-close" onClick={() => setLightboxImage(null)} aria-label="Close">
-              ×
-            </button>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={lightboxImage.src} alt={lightboxImage.alt} className="lightbox-image" />
-            <p className="lightbox-caption">{lightboxImage.alt}</p>
-          </div>
-        </div>
-      )}
+      {lightboxImage && <IssueImageLightbox image={lightboxImage} onClose={() => setLightboxImage(null)} />}
       {issue.redmineIssueId && <ChatFab issueId={issue.redmineIssueId} />}
     </main>
   );
