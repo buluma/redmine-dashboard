@@ -90,15 +90,15 @@ export class LLMProviderManager {
   async checkHealth(): Promise<LLMStatus> {
     try {
       if (this.provider === "ollama") {
-        return this.checkOllamaHealth();
+        return await this.checkOllamaHealth();
       } else if (this.provider === "openai") {
-        return this.checkOpenAIHealth();
+        return await this.checkOpenAIHealth();
       } else if (this.provider === "anthropic") {
-        return this.checkAnthropicHealth();
+        return await this.checkAnthropicHealth();
       } else if (this.provider === "openrouter") {
-        return this.checkOpenRouterHealth();
+        return await this.checkOpenRouterHealth();
       } else if (this.provider === "aperture") {
-        return this.checkApertureHealth();
+        return await this.checkApertureHealth();
       }
       return { available: false, provider: this.provider, models: [], primaryModel: "", usingFallback: false, error: "Unknown provider" };
     } catch (error) {
@@ -290,15 +290,15 @@ export class LLMProviderManager {
 
     try {
       if (this.provider === "ollama") {
-        return this.ollamaChat(messages, { stream, temperature, maxTokens, tools });
+        return await this.ollamaChat(messages, { stream, temperature, maxTokens, tools });
       } else if (this.provider === "openai") {
-        return this.openaiChat(messages, { stream, temperature, maxTokens, tools });
+        return await this.openaiChat(messages, { stream, temperature, maxTokens, tools });
       } else if (this.provider === "anthropic") {
-        return this.anthropicChat(messages, { maxTokens, tools });
+        return await this.anthropicChat(messages, { maxTokens, tools });
       } else if (this.provider === "openrouter") {
-        return this.openrouterChat(messages, { temperature, maxTokens, tools });
+        return await this.openrouterChat(messages, { temperature, maxTokens, tools });
       } else if (this.provider === "aperture") {
-        return this.apertureChat(messages, { stream, temperature, maxTokens, tools });
+        return await this.apertureChat(messages, { stream, temperature, maxTokens, tools });
       }
       throw new Error(`Unsupported provider: ${this.provider}`);
     } catch (error) {
