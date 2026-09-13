@@ -233,11 +233,16 @@ async function ensureRuntimeTables(): Promise<void> {
   `);
 }
 
-void configureSqlitePragmas()
-  .then(() => ensureRuntimeTables())
-  .catch((error) => {
-    trackFailure({ event: "db.runtime_tables.failed", error, metricName: "db_runtime_tables_failed" });
-  });
+const isProductionBuild =
+  process.env.NEXT_PHASE === "phase-production-build" || process.env.npm_lifecycle_event === "build";
+
+if (!isProductionBuild) {
+  void configureSqlitePragmas()
+    .then(() => ensureRuntimeTables())
+    .catch((error) => {
+      trackFailure({ event: "db.runtime_tables.failed", error, metricName: "db_runtime_tables_failed" });
+    });
+}
 
 if (process.env.NODE_ENV !== "production") {
   global.prisma = prisma;
