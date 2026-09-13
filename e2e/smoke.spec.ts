@@ -2,6 +2,12 @@ import { test, expect, chromium, type Browser, type Page } from '@playwright/tes
 
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:3000';
 
+async function expectLoginRedirect(page: Page, path: string) {
+  await page.goto(`${BASE_URL}${path}`);
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.locator('.login-root')).toBeVisible();
+}
+
 test.describe('Converge E2E Tests', () => {
   let browser: Browser;
   let page: Page;
@@ -40,13 +46,8 @@ test.describe('Converge E2E Tests', () => {
       expect(body).toBeTruthy();
     });
 
-    test('should handle issue list page', async () => {
-      await page.goto(`${BASE_URL}/`);
-      await page.waitForLoadState('networkidle');
-      
-      // Try to find any issue table or content
-      const hasContent = await page.locator('main').count() > 0;
-      expect(hasContent).toBe(true);
+    test('redirects anonymous visitors from the dashboard to login', async () => {
+      await expectLoginRedirect(page, '/');
     });
 
     test('should handle API health endpoint', async () => {
@@ -56,44 +57,28 @@ test.describe('Converge E2E Tests', () => {
   });
 
   test.describe('Page Navigation', () => {
-    test('should load issues page', async () => {
-      await page.goto(`${BASE_URL}/issues`);
-      await page.waitForLoadState('networkidle');
-      
-      const main = await page.locator('main').count();
-      expect(main).toBeGreaterThan(0);
+    test('redirects anonymous visitors from issues to login', async () => {
+      await expectLoginRedirect(page, '/issues');
     });
 
-    test('should load personal-tickets page', async () => {
-      await page.goto(`${BASE_URL}/personal-tickets`);
-      await page.waitForLoadState('networkidle');
-      
-      const main = await page.locator('main').count();
-      expect(main).toBeGreaterThan(0);
+    test('redirects anonymous visitors from personal tickets to login', async () => {
+      await expectLoginRedirect(page, '/personal-tickets');
     });
 
-    test('should load wakatime page', async () => {
-      await page.goto(`${BASE_URL}/wakatime`);
-      await page.waitForLoadState('networkidle');
-      
-      const main = await page.locator('main').count();
-      expect(main).toBeGreaterThan(0);
+    test('redirects anonymous visitors from WakaTime to login', async () => {
+      await expectLoginRedirect(page, '/wakatime');
     });
 
-    test('should load ops page', async () => {
-      await page.goto(`${BASE_URL}/ops`);
-      await page.waitForLoadState('networkidle');
-      
-      const main = await page.locator('main').count();
-      expect(main).toBeGreaterThan(0);
+    test('redirects anonymous visitors from operations to login', async () => {
+      await expectLoginRedirect(page, '/ops');
     });
   });
 
   test.describe('API Endpoints', () => {
-    test('GET /api/session/me returns 401 when not authenticated', async () => {
+    test('GET /api/session/me returns an anonymous session when not authenticated', async () => {
       const response = await page.request.get(`${BASE_URL}/api/session/me`);
-      // Either 401 or redirect to login is acceptable
-      expect([401, 302, 307]).toContain(response.status());
+      expect(response.status()).toBe(200);
+      await expect(response.json()).resolves.toEqual({ user: null });
     });
 
     test('GET /api/health returns valid response', async () => {
