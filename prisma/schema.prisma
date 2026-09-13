@@ -60,6 +60,9 @@ model SavedView {
   search       String?
   sortBy       String?  @default("updated")
   sortOrder    String   @default("desc")
+  // Canonical dashboard filter snapshot. Legacy columns remain populated for
+  // compatibility with existing API consumers during the migration.
+  filters      Json?
   // Advanced filters
   statusIds    Int[]    @default([])
   priorityIds  Int[]    @default([])

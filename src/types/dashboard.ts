@@ -137,6 +137,7 @@ export type SavedView = {
   sort: string;
   position?: number;
   assignedToMe: boolean;
+  updatedAt?: string;
 };
 
 export type ActivityEvent = {

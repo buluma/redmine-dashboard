@@ -5,6 +5,59 @@ land first, and the slices that can be merged independently. Update these before
 
 ---
 
+## 1.11 Server-backed dashboard saved views
+
+### Problem
+
+The dashboard stores its active saved-view list in `nrcc.savedViews.v1`, while
+the application already has authenticated SavedView routes and a Prisma model.
+The local and server shapes differ, so create, update, and delete actions do
+not follow the same cross-device source of truth as reordering.
+
+### Contract
+
+`GET /api/saved-views` returns saved views ordered by `position`. The dashboard
+DTO is intentionally small and stable:
+
+```json
+{
+  "id": "view-id",
+  "name": "My open work",
+  "statusFilter": "Open",
+  "priorityFilter": "High",
+  "search": "release",
+  "sort": "updated_desc",
+  "assignedToMe": true,
+  "position": 0,
+  "updatedAt": "2026-09-13T00:00:00.000Z"
+}
+```
+
+`POST /api/saved-views` and `PATCH /api/saved-views/:id` accept `{ name,
+filters }`, where `filters` contains the five filter properties above.
+`DELETE /api/saved-views/:id` and `PATCH /api/saved-views/reorder` retain
+their ownership checks. The persisted `filters` JSON field is canonical;
+legacy columns remain populated for compatibility while older consumers are
+retired.
+
+### Migration and rollback
+
+On first successful hydration, if the server list is empty, import valid local
+entries through one transactional request. Remove `nrcc.savedViews.v1` only
+after the import succeeds. If a request fails, retain the key so a later
+session can retry.
+The UI applies optimistic create, update, delete, and reorder changes, then
+restores the previous list when a request fails. No database data is deleted by
+the client migration.
+
+### Tests
+
+Cover server hydration, one-time local import, optimistic rollback, ownership,
+and complete reorder payloads. Active selection remains browser-local UI state
+and is intentionally not migrated.
+
+---
+
 ## 1.12 Offline conflict resolution UI
 
 ### Problem
@@ -48,7 +101,7 @@ Add a sibling IndexedDB store next to `syncQueue`:
 ```ts
 interface OfflineConflict {
   id: number;
-  conflictKey: string;          // `${type}:${issueId}`
+  conflictKey: string; // `${type}:${issueId}`
   type: "update_status" | "comment" | "log_time" | "assign";
   issueId: string;
   payload: Record<string, unknown>;
@@ -129,12 +182,12 @@ transports later doesn't need a schema change. Initial seed:
 
 ```json
 {
-  "issue.assigned":          { "push": true  },
-  "issue.status_changed":    { "push": true  },
-  "issue.priority_changed":  { "push": true  },
-  "issue.commented_on_mine": { "push": true  },
-  "issue.due_soon":          { "push": false },
-  "issue.bulk_update":       { "push": false }
+  "issue.assigned": { "push": true },
+  "issue.status_changed": { "push": true },
+  "issue.priority_changed": { "push": true },
+  "issue.commented_on_mine": { "push": true },
+  "issue.due_soon": { "push": false },
+  "issue.bulk_update": { "push": false }
 }
 ```
 
