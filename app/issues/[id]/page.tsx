@@ -379,16 +379,13 @@ export default function IssueDetailPage() {
 
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
-  const [editDraft, setEditDraft] = useState<{
-    subject: string;
-    description: string;
-    priorityId: string;
-    dueDate: string;
-    estimatedHours: string;
-    startDate: string;
-    categoryId: string;
-    customFields: Record<string, string>;
-  } | null>(null);
+  const [editDraft, setEditDraft] = useState<
+    (IssueMetadataDraft & {
+      subject: string;
+      description: string;
+      customFields: Record<string, string>;
+    }) | null
+  >(null);
   const [editSaving, setEditSaving] = useState(false);
 
   async function reloadIssue() {
@@ -1183,7 +1180,7 @@ export default function IssueDetailPage() {
               <div className="metadata-grid">
                 <IssueStandardMetadataFields
                   isEditing={editMode}
-                  draft={editDraft as IssueMetadataDraft | null}
+                  draft={editDraft}
                   authorName={issue.authorName}
                   categoryName={issue.categoryName}
                   startDate={issue.startDate}
