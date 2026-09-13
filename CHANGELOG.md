@@ -2,7 +2,32 @@
 
 All notable changes to this project are documented in this file.
 
-## 2026-09-04 (Latest)
+## 2026-09-14 (Latest)
+
+### Added
+
+- **Server-backed saved views** — Persist dashboard views across browsers/devices, migrate valid legacy localStorage views once, retain optimistic UI updates, and add filter/order validation (`2a34811`, `#67`)
+- **Issue detail presentation** — Added an attachment image lightbox and extracted description, activity, comment-form, subticket, overview-card, and metadata surfaces into focused components (`e074611`, `918a95b`, `8e0311f`, `7ec5867`, `db34741`, `1f54777`, `26ed0b1`, `d084217`, `#68-#76`)
+
+### Fixed
+
+- **WakaTime and recurring tickets** — Prevent correction double-counting, surface pending hours corrections, preserve correction failures, and roll monthly closes into the following month when needed (`a23066a`, `#77`)
+- **Saved-view persistence** — Added the missing Postgres `filters` migration, restored the twelve-view limit, protected legacy imports and writes from concurrency conflicts, and fail closed when Postgres migrations cannot apply (`369ba48`, `ccb361c`, `#78`, `#82`)
+- **Issue metadata editing** — Keep Redmine-computed spent hours visible while editing an issue (`0b51060`, `#81`)
+- **LLM provider fallback** — Await failing provider calls so Ollama fallback works for chat and health checks (`6ac3325`, `#87`)
+- **Test/build hygiene** — Mock canvas context in constellation tests, update Next.js to 16.3.3, and remove build warnings (`ca04238`, `8ad71b9`, `c8bbc87`, `#63-#65`)
+
+### Changed
+
+- **Bun and Android documentation** — Updated setup, architecture, and mobile documentation for Bun and the supported native Android client (`9b7535e`, `#62`)
+- **CI and dependency remediation** — Added high-severity Bun audit gating, scoped ESLint exclusions, patched vulnerable transitive dependencies, and added a11y/smoke/auth-CSRF/external-API browser coverage; later consolidated E2E suites into a matrix (`8588186`, `dbbbdf6`, `#66`, `#80`)
+- **Issue detail architecture** — Moved issue loading, edit drafts, and GitHub-link mutations into dedicated hooks; aligned shared Markdown, Journal, and TimeEntry components/types (`4d52941`, `b5a7d11`, `#79`, `#84`)
+- **Core module boundaries** — Split sync, AI-tool, and LLM-provider implementations into responsibility/provider-focused modules while retaining their public APIs (`08d7043`, `106d10a`, `d12baaa`, `#85`, `#86`, `#88`)
+- **Planning maintenance** — Marked completed issue-detail work in the remediation plan, then folded the plan into `IMPROVEMENTS.md` and untracked the temporary `plans/` directory (`b7c18d9`, `ef92c3e`, `#83`)
+
+---
+
+## 2026-09-04
 
 ### Added
 
