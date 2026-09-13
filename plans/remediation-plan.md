@@ -14,7 +14,7 @@ These items from the original audit are done and merged — kept here as a recor
 4. **Transitive advisory overrides** — `package.json` pins the vulnerable `browserslist` and `js-yaml` resolution paths to patched releases, with the corresponding entries recorded in `bun.lock`.
 5. **Browser CI coverage** — `.github/workflows/ci.yml` runs an `a11y` job and a matrix `e2e` job (smoke, auth-csrf, external-api), each provisioning its own SQLite database and uploading Playwright artifacts on failure. These have real green runs on `master`, not just a local dry run.
 6. **Saved views unified on the server** — the competing localStorage/Prisma-backed shapes are gone. `SavedView` is the single source of truth, legacy localStorage views migrate once on hydration, and optimistic UI updates are retained (`src/hooks/useDashboardSavedViews.ts`, `app/api/saved-views/*`).
-7. **`app/issues/[id]/page.tsx` split (in progress, most of the way there)** — description, subtickets, markdown rendering, activity tabs (history/notes/internal-notes/properties/time-entries), comment form, and overview cards are extracted into `src/components/issue-detail/*`. Remaining: GitHub links/relations/metadata sections and the mutation logic itself are still inline; no dedicated data-fetching/mutation hooks yet.
+7. **`app/issues/[id]/page.tsx` split** — description, subtickets, markdown rendering, activity tabs (history/notes/internal-notes/properties/time-entries), comment form, overview cards, standard metadata fields, GitHub links, and relations are extracted into `src/components/issue-detail/*`. The data-fetching/mutation logic itself is out too, into three focused hooks: `useIssueDetail` (issue load/reload/refresh, live statuses, activity/user/priority/custom-field lookups, favorite, related-issue prefetch, attachment-refresh), `useIssueEditDraft` (the metadata edit-mode flow, including the local-vs-Redmine save split), and `useGithubLinkActions`. The page went from 1420 to 943 lines. Remaining: the quick-actions local-only status/assign/time-log branches and the assignee-custom-field-click-to-assign button are still small inline fetches — left as-is since extracting them didn't reduce complexity meaningfully on their own.
 
 ## Descoped
 
@@ -44,7 +44,7 @@ cd mobile/android-native
 
 Priority: high
 
-- Finish `app/issues/[id]/page.tsx`: extract the remaining GitHub links/relations/metadata sections and move fetching/mutations into focused hooks, matching the pattern already used for the sections listed under Shipped.
+- `app/issues/[id]/page.tsx` is done (see Shipped #7).
 - Apply the same incremental approach to `src/lib/sync.ts`, then the large Slack and AI client modules. Avoid broad mechanical refactors.
 - Add regression tests before each extraction and keep API behavior unchanged.
 
