@@ -87,8 +87,8 @@ docker compose exec -T dashboard \
   npx prisma migrate status   # should say "Database schema is up to date!"
 ```
 
-Skipping the baseline step doesn't break anything immediately, but every container start will log a P3005 error and silently skip the deploy step
-the entrypoint attempts — meaning any *future* migration added to the repo would never auto-apply.
+Skipping the baseline step prevents the dashboard from starting: its entrypoint fails closed when `prisma migrate deploy` cannot establish migration
+history. Baseline before deployment so future migrations can apply safely.
 
 6. **Trigger first sync from Redmine**
 

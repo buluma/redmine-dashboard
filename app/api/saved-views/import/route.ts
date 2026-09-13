@@ -1,11 +1,11 @@
 import { requireCurrentUser } from "@/src/lib/auth";
-import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import {
   importSavedViewsSchema,
   savedViewLegacyFields,
   toDashboardSavedView,
 } from "@/src/lib/saved-view-contract";
+import { withSavedViewWrite } from "@/src/lib/saved-view-write";
 
 // POST /api/saved-views/import - Atomically import a legacy browser-only list.
 export async function POST(request: Request) {
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const parsed = importSavedViewsSchema.safeParse(await request.json());
     if (!parsed.success) return jsonError("Invalid saved view import", 400);
 
-    const views = await prisma.$transaction(async (tx) => {
+    const views = await withSavedViewWrite(async (tx) => {
       const existingCount = await tx.savedView.count({
         where: { userId: user.id },
       });
