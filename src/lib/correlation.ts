@@ -1,5 +1,6 @@
 import { prisma } from "@/src/lib/db";
 import { recordIssueActivityEvent, recomputeIssueActivityIndex } from "@/src/lib/activity-index";
+import type { RedmineClient } from "@/src/lib/redmine";
 
 type WakaBreakdown = { name: string; total_seconds: number; percent: number; text: string };
 
@@ -18,6 +19,11 @@ type TicketMatch = {
   };
 };
 
+// An already-written TimeEntry for a given issue+day, as needed to decide
+// whether that day's total has grown since it was logged and, if so, how to
+// correct it (local-only update vs. a real Redmine PUT).
+export type ExistingWakaEntry = { id: string; hours: number; redmineTimeEntryId: number | null };
+
 export type CorrelationRow = {
   ticketId: string;
   localIssueNumber: number | null;
@@ -26,6 +32,7 @@ export type CorrelationRow = {
   totalSeconds: number;
   perDay: Array<{ date: string; seconds: number }>;
   alreadyLoggedDates: string[];
+  existingEntriesByDate: Record<string, ExistingWakaEntry>;
 };
 
 type UnmatchedProject = {
@@ -41,9 +48,11 @@ export type CorrelationResult = {
 
 export type ApplyResult = {
   created: number;
+  updated: number;
   skipped: number;
   totalHours: number;
   entries: Array<{ ticketId: string; date: string; hours: number }>;
+  updateFailures: Array<{ ticketId: string; date: string; error: string }>;
 };
 
 /**
@@ -227,11 +236,11 @@ export async function correlateWakaTime(
           issueId: { in: ticketIds },
           wakaTimeDate: { not: null },
         },
-        select: { issueId: true, wakaTimeDate: true },
+        select: { id: true, issueId: true, wakaTimeDate: true, hours: true, redmineTimeEntryId: true },
       })
     : [];
-  const loggedSet = new Set(
-    existingEntries.map((e) => `${e.issueId}:${e.wakaTimeDate}`)
+  const existingByKey = new Map(
+    existingEntries.map((e) => [`${e.issueId}:${e.wakaTimeDate}`, e]),
   );
 
   // Accumulate per-ticket, per-day data. Keyed by date so a ticket with
@@ -242,6 +251,7 @@ export async function correlateWakaTime(
     perDayMap: Map<string, number>;
     totalSeconds: number;
     alreadyLoggedDates: Set<string>;
+    existingByDate: Map<string, ExistingWakaEntry>;
     // Every distinct WakaTime project name that rolled into this ticket —
     // usually just one, but the catch-all bucket in particular can merge
     // several unrelated projects onto the same ticket+day. Kept so `repo`
@@ -275,13 +285,20 @@ export async function correlateWakaTime(
           perDayMap: new Map<string, number>(),
           totalSeconds: 0,
           alreadyLoggedDates: new Set<string>(),
+          existingByDate: new Map<string, ExistingWakaEntry>(),
           sourceProjects: new Set<string>(),
         };
         entry.perDayMap.set(row.date, (entry.perDayMap.get(row.date) ?? 0) + proj.total_seconds);
         entry.totalSeconds += proj.total_seconds;
         entry.sourceProjects.add(proj.name);
-        if (loggedSet.has(loggedKey)) {
+        const existingRow = existingByKey.get(loggedKey);
+        if (existingRow) {
           entry.alreadyLoggedDates.add(row.date);
+          entry.existingByDate.set(row.date, {
+            id: existingRow.id,
+            hours: existingRow.hours,
+            redmineTimeEntryId: existingRow.redmineTimeEntryId,
+          });
         }
         if (!existing) matchedMap.set(key, entry);
       } else {
@@ -318,6 +335,7 @@ export async function correlateWakaTime(
       .map(([date, seconds]) => ({ date, seconds }))
       .sort((a, b) => a.date.localeCompare(b.date)),
     alreadyLoggedDates: Array.from(m.alreadyLoggedDates),
+    existingEntriesByDate: Object.fromEntries(m.existingByDate),
   }));
 
   const unmatched: UnmatchedProject[] = Array.from(unmatchedMap.values());
@@ -433,9 +451,22 @@ export async function autoCreateTicketsForUnmatched(
   return created;
 }
 
+// Below this, a day's growth since it was last logged is treated as float
+// noise from the two-decimal rounding on both sides, not real new work.
+const MIN_HOURS_GROWTH = 0.005;
+
 /**
  * Apply WakaTime hours as TimeEntry rows on matched tickets.
- * Idempotent: skips dates already logged (unique on issueId + wakaTimeDate).
+ * Idempotent: skips dates already logged (unique on issueId + wakaTimeDate)
+ * *unless* that day's WakaTimeDailySummary total has grown since — the
+ * summary keeps accumulating through the day, so a day logged early (the 6h
+ * cron, or a ticket close) originally captured only a partial total. When it
+ * has grown, the existing entry is corrected upward (never shrunk) instead
+ * of left stale: a local-only row just gets its hours updated, but one
+ * that's already been pushed to Redmine (redmineTimeEntryId set) needs
+ * `client` to PUT the correction there too — without a client, or if that
+ * PUT fails (e.g. a closed ticket rejecting the edit), the correction is
+ * recorded in `updateFailures` and left for a later run.
  * dryRun: returns summary without writing.
  *
  * When `autoCreate` is given (and dryRun isn't set), unmatched projects
@@ -452,6 +483,7 @@ export async function applyTimeEntries(
     dryRun?: boolean;
     catchAllIssueId?: string;
     autoCreate?: { thresholdSeconds: number; defaultOwner: string };
+    client?: RedmineClient;
   }
 ): Promise<ApplyResult & { autoCreatedTickets?: AutoCreatedTicket[] }> {
   let autoCreatedTickets: AutoCreatedTicket[] | undefined;
@@ -463,18 +495,74 @@ export async function applyTimeEntries(
   const correlation = await correlateWakaTime(userId, options);
 
   let created = 0;
+  let updated = 0;
   let skipped = 0;
   let totalHours = 0;
   const entries: ApplyResult["entries"] = [];
+  const updateFailures: ApplyResult["updateFailures"] = [];
 
   for (const row of correlation.matched) {
     for (const day of row.perDay) {
       if (day.seconds <= 0) continue;
 
       const hours = Math.round((day.seconds / 3600) * 100) / 100;
+      const existing = row.existingEntriesByDate[day.date];
 
-      if (row.alreadyLoggedDates.includes(day.date)) {
-        skipped++;
+      if (existing) {
+        const delta = hours - existing.hours;
+        if (delta < MIN_HOURS_GROWTH) {
+          skipped++;
+          continue;
+        }
+
+        if (options.dryRun) {
+          updated++;
+          totalHours += delta;
+          entries.push({ ticketId: row.ticketId, date: day.date, hours });
+          continue;
+        }
+
+        if (existing.redmineTimeEntryId !== null) {
+          if (!options.client) {
+            // No client to push the correction with — leave it for a caller
+            // that has one (the recurring-ticket close path, or a re-run of
+            // this one with a client) to pick up later.
+            updateFailures.push({ ticketId: row.ticketId, date: day.date, error: "No Redmine client to push the correction" });
+            continue;
+          }
+          try {
+            await options.client.updateTimeEntry(existing.redmineTimeEntryId, { hours });
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            updateFailures.push({ ticketId: row.ticketId, date: day.date, error: message });
+            continue;
+          }
+        }
+
+        try {
+          await prisma.$transaction([
+            prisma.timeEntry.update({ where: { id: existing.id }, data: { hours } }),
+            prisma.issue.update({
+              where: { id: row.ticketId },
+              data: {
+                lastActivityAt: new Date(),
+                lastActivityType: "wakatime_time_logged",
+                spentHours: { increment: delta },
+              },
+            }),
+          ]);
+        } catch (error) {
+          // The Redmine side (if any) is already corrected at this point —
+          // record the local-write failure so it's visible, but don't retry
+          // the Redmine call above on a later pass over the same data.
+          const message = error instanceof Error ? error.message : String(error);
+          updateFailures.push({ ticketId: row.ticketId, date: day.date, error: message });
+          continue;
+        }
+
+        updated++;
+        totalHours += delta;
+        entries.push({ ticketId: row.ticketId, date: day.date, hours });
         continue;
       }
 
@@ -529,5 +617,5 @@ export async function applyTimeEntries(
     }
   }
 
-  return { created, skipped, totalHours, entries, autoCreatedTickets };
+  return { created, updated, skipped, totalHours, entries, updateFailures, autoCreatedTickets };
 }

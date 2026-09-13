@@ -371,7 +371,7 @@ export async function closeInstance(instance: RecurringTicketInstance, client: R
 
   const startDate = instance.scheduledCreateDate.toISOString().slice(0, 10);
   const endDate = instance.scheduledCloseDate.toISOString().slice(0, 10);
-  await applyTimeEntries(instance.userId, { start: startDate, end: endDate });
+  await applyTimeEntries(instance.userId, { start: startDate, end: endDate, client });
 
   const { pushed } = await pushPendingWakaTimeEntriesToRedmine(instance.issueId, client);
   // Cumulative total actually in Redmine for this issue, not just this call's

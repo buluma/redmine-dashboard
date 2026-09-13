@@ -10,6 +10,7 @@ const {
   mockWakaFindMany,
   mockTimeEntryFindMany,
   mockTimeEntryCreate,
+  mockTimeEntryUpdate,
   mockUserFindUnique,
   mockGithubLinkFindFirst,
   mockGithubLinkCreate,
@@ -24,6 +25,7 @@ const {
   mockWakaFindMany: vi.fn(),
   mockTimeEntryFindMany: vi.fn(),
   mockTimeEntryCreate: vi.fn(),
+  mockTimeEntryUpdate: vi.fn(),
   mockUserFindUnique: vi.fn(),
   mockGithubLinkFindFirst: vi.fn(),
   mockGithubLinkCreate: vi.fn(),
@@ -41,7 +43,7 @@ vi.mock("@/src/lib/db", () => ({
       findUnique: mockIssueFindUnique,
     },
     wakaTimeDailySummary: { findMany: mockWakaFindMany },
-    timeEntry: { findMany: mockTimeEntryFindMany, create: mockTimeEntryCreate },
+    timeEntry: { findMany: mockTimeEntryFindMany, create: mockTimeEntryCreate, update: mockTimeEntryUpdate },
     user: { findUnique: mockUserFindUnique },
     issueGithubLink: { findFirst: mockGithubLinkFindFirst, create: mockGithubLinkCreate },
     // applyTimeEntries batches the TimeEntry insert + spentHours increment in a
@@ -448,14 +450,100 @@ describe("applyTimeEntries", () => {
       wakaRow("2026-06-20", [{ name: "SL2", total_seconds: 7200 }]),
     ]);
     mockTimeEntryFindMany.mockResolvedValue([
-      { issueId: "t1", wakaTimeDate: "2026-06-20" },
+      { id: "te-1", issueId: "t1", wakaTimeDate: "2026-06-20", hours: 2, redmineTimeEntryId: 111 },
     ]);
 
     const result = await applyTimeEntries(USER_ID, { start: "2026-06-20", end: "2026-06-20" });
 
     expect(result.created).toBe(0);
+    expect(result.updated).toBe(0);
     expect(result.skipped).toBe(1);
     expect(mockTimeEntryCreate).not.toHaveBeenCalled();
+  });
+
+  it("updates a local-only entry in place when the day's WakaTime total grew", async () => {
+    mockIssueFindMany.mockResolvedValue([localIssue("t1", 1, "SL2", ["buluma/SL2"])]);
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-20", [{ name: "SL2", total_seconds: 7200 }]), // 2h now
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([
+      { id: "te-1", issueId: "t1", wakaTimeDate: "2026-06-20", hours: 1, redmineTimeEntryId: null },
+    ]);
+    mockTimeEntryUpdate.mockResolvedValue({});
+    mockIssueUpdate.mockResolvedValue({});
+
+    const result = await applyTimeEntries(USER_ID, { start: "2026-06-20", end: "2026-06-20" });
+
+    expect(result.updated).toBe(1);
+    expect(result.created).toBe(0);
+    expect(result.skipped).toBe(0);
+    expect(result.totalHours).toBeCloseTo(1); // the delta, not the new total
+    expect(mockTimeEntryUpdate).toHaveBeenCalledWith({ where: { id: "te-1" }, data: { hours: 2 } });
+    expect(mockIssueUpdate).toHaveBeenCalledWith({
+      where: { id: "t1" },
+      data: expect.objectContaining({ spentHours: { increment: 1 } }),
+    });
+  });
+
+  it("pushes an hours correction to Redmine for an already-pushed entry, given a client", async () => {
+    mockIssueFindMany.mockResolvedValue([localIssue("t1", 1, "SL2", ["buluma/SL2"])]);
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-20", [{ name: "SL2", total_seconds: 7200 }]), // 2h now
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([
+      { id: "te-1", issueId: "t1", wakaTimeDate: "2026-06-20", hours: 1, redmineTimeEntryId: 555 },
+    ]);
+    mockTimeEntryUpdate.mockResolvedValue({});
+    mockIssueUpdate.mockResolvedValue({});
+    const client = { updateTimeEntry: vi.fn().mockResolvedValue(undefined) };
+
+    const result = await applyTimeEntries(USER_ID, {
+      start: "2026-06-20",
+      end: "2026-06-20",
+      client: client as unknown as Parameters<typeof applyTimeEntries>[1]["client"],
+    });
+
+    expect(client.updateTimeEntry).toHaveBeenCalledWith(555, { hours: 2 });
+    expect(result.updated).toBe(1);
+    expect(mockTimeEntryUpdate).toHaveBeenCalledWith({ where: { id: "te-1" }, data: { hours: 2 } });
+  });
+
+  it("records an update failure instead of writing locally when the Redmine push fails", async () => {
+    mockIssueFindMany.mockResolvedValue([localIssue("t1", 1, "SL2", ["buluma/SL2"])]);
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-20", [{ name: "SL2", total_seconds: 7200 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([
+      { id: "te-1", issueId: "t1", wakaTimeDate: "2026-06-20", hours: 1, redmineTimeEntryId: 555 },
+    ]);
+    const client = { updateTimeEntry: vi.fn().mockRejectedValue(new Error("403: issue is closed")) };
+
+    const result = await applyTimeEntries(USER_ID, {
+      start: "2026-06-20",
+      end: "2026-06-20",
+      client: client as unknown as Parameters<typeof applyTimeEntries>[1]["client"],
+    });
+
+    expect(result.updated).toBe(0);
+    expect(result.updateFailures).toHaveLength(1);
+    expect(result.updateFailures[0]).toMatchObject({ ticketId: "t1", date: "2026-06-20" });
+    expect(mockTimeEntryUpdate).not.toHaveBeenCalled();
+  });
+
+  it("records an update failure when an already-pushed entry grew but no client was given", async () => {
+    mockIssueFindMany.mockResolvedValue([localIssue("t1", 1, "SL2", ["buluma/SL2"])]);
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-20", [{ name: "SL2", total_seconds: 7200 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([
+      { id: "te-1", issueId: "t1", wakaTimeDate: "2026-06-20", hours: 1, redmineTimeEntryId: 555 },
+    ]);
+
+    const result = await applyTimeEntries(USER_ID, { start: "2026-06-20", end: "2026-06-20" });
+
+    expect(result.updated).toBe(0);
+    expect(result.updateFailures).toHaveLength(1);
+    expect(mockTimeEntryUpdate).not.toHaveBeenCalled();
   });
 
   it("dryRun returns summary without writing", async () => {

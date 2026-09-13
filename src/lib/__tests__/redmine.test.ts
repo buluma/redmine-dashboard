@@ -96,6 +96,43 @@ describe("RedmineClient", () => {
     );
   });
 
+  it("PUTs hours to /time_entries/{id}.json for updateTimeEntry", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new RedmineClient("https://redmine.example.com", "apikey");
+    await client.updateTimeEntry(693688, { hours: 3.1 });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://redmine.example.com/time_entries/693688.json",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ time_entry: { hours: 3.1 } }),
+      }),
+    );
+  });
+
+  it("surfaces a RedmineError from updateTimeEntry when the issue rejects the edit (e.g. closed)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ errors: ["Issue is closed"] }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+
+    const client = new RedmineClient("https://redmine.example.com", "apikey");
+    await expect(client.updateTimeEntry(693688, { hours: 3.1 })).rejects.toMatchObject({
+      name: "RedmineError",
+      status: 403,
+      errors: ["Issue is closed"],
+    });
+  });
+
   it("throws typed Redmine errors without exposing upstream body in the Error message", async () => {
     vi.stubGlobal(
       "fetch",

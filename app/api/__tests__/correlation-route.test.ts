@@ -21,6 +21,9 @@ const {
 
 vi.mock("@/src/lib/auth", () => ({
   getAuthenticatedUserId: mockGetAuthenticatedUserId,
+  // No Redmine account wired up in these tests — applyTimeEntries's `client`
+  // stays undefined, same as a real user who hasn't connected Redmine.
+  requireRedmineClientForUser: vi.fn().mockRejectedValue(new Error("Redmine account not connected")),
 }));
 
 vi.mock("@/src/lib/db", () => ({
@@ -130,7 +133,7 @@ describe("Correlation API routes", () => {
 
       // Second apply — now the entry exists
       mockTimeEntryFindMany.mockResolvedValue([
-        { issueId: "t1", wakaTimeDate: "2026-06-20" },
+        { id: "te-1", issueId: "t1", wakaTimeDate: "2026-06-20", hours: 2, redmineTimeEntryId: null },
       ]);
       mockTimeEntryCreate.mockClear();
 
