@@ -2,6 +2,7 @@ import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import {
+  MAX_SAVED_VIEWS,
   saveSavedViewSchema,
   savedViewLegacyFields,
   toDashboardSavedView,
@@ -56,6 +57,9 @@ export async function POST(request: Request) {
     const position = await prisma.savedView.count({
       where: { userId: user.id },
     });
+    if (position >= MAX_SAVED_VIEWS) {
+      return jsonError(`Saved view limit reached (max ${MAX_SAVED_VIEWS})`, 409);
+    }
     const view = await prisma.savedView.create({
       data: {
         userId: user.id,

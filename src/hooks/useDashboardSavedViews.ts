@@ -117,8 +117,32 @@ export function useDashboardSavedViews(): UseDashboardSavedViewsResult {
           setSavedViews(migrated.views);
         }
       } catch {
-        // Keep legacy state until a future hydration can migrate it safely.
-        if (!cancelled) setSavedViews(legacyViews);
+        // The import can fail because another tab already migrated these
+        // same legacy views (a 409 "already exist" race) — in that case the
+        // server now has the authoritative list, so re-fetch it instead of
+        // falling back to stale legacy ids that were never actually
+        // persisted (saveView/deleteView against them would 404). Only fall
+        // back to the legacy snapshot if that re-fetch itself fails.
+        if (cancelled) return;
+        try {
+          const data = await responseJson<{ views: SavedView[] }>(
+            await fetch("/api/saved-views", { cache: "no-store" }),
+          );
+          if (cancelled) return;
+          if (data.views.length > 0) {
+            // Another tab's import won the race — its views are now the
+            // authoritative server state, so the local snapshot is done.
+            window.localStorage.removeItem(SAVED_VIEWS_KEY);
+            setSavedViews(data.views);
+          } else {
+            // Genuinely still empty server-side (a real failure, not a
+            // race) — keep the legacy snapshot in localStorage so a later
+            // hydration can retry the import instead of losing it.
+            setSavedViews(legacyViews);
+          }
+        } catch {
+          if (!cancelled) setSavedViews(legacyViews);
+        }
       }
     }
 
@@ -225,7 +249,13 @@ export function useDashboardSavedViews(): UseDashboardSavedViewsResult {
       const previousViews = savedViews;
       const positions = new Map(viewIds.map((id, index) => [id, index]));
       if (
-        positions.size !== savedViews.length ||
+        // A duplicate id collapses in the Map, so also check the raw array
+        // length against the deduped size — otherwise a malformed list like
+        // [a, b, a] (every existing id present, but with a dupe) would slip
+        // through: positions.size and savedViews.length can coincidentally
+        // match even though the reorder is bogus.
+        viewIds.length !== savedViews.length ||
+        positions.size !== viewIds.length ||
         savedViews.some((view) => !positions.has(view.id))
       ) {
         throw new Error("Saved view reorder does not match the current views");
