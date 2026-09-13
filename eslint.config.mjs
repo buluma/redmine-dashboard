@@ -37,6 +37,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local design exports are intentionally gitignored and are not product
+    // source. Excluding them keeps `bun run lint` deterministic in developer
+    // worktrees where they are present.
+    "Redmine dashboard revamp/**",
   ]),
 ]);
 

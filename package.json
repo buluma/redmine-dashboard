@@ -27,6 +27,13 @@
     "mobile:dev": "npm run dev --prefix mobile/ionic",
     "mobile:build": "npm run build --prefix mobile/ionic"
   },
+  "overrides": {
+    "postcss": ">=8.5.10",
+    "nanoid": ">=3.3.18",
+    "deepmerge-ts": ">=8.0.0",
+    "browserslist": "4.28.7",
+    "js-yaml": "4.3.2"
+  },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
@@ -54,11 +61,6 @@
     "web-push": "^3.6.7",
     "zod": "^4.3.6",
     "zustand": "^5.0.12"
-  },
-  "overrides": {
-    "postcss": ">=8.5.10",
-    "nanoid": ">=3.3.18",
-    "deepmerge-ts": ">=8.0.0"
   },
   "trustedDependencies": [
     "@sentry/cli",
