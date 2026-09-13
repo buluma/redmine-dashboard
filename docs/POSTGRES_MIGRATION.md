@@ -78,17 +78,19 @@ docker compose run --rm dashboard \
   npx prisma db push --accept-data-loss   # safe: db push targets an empty database
 
 # baseline: mark every existing migration as applied so future deploys
-# don't try to replay history against a schema db push already created
-for m in $(ls prisma/migrations | sort); do
+# don't try to replay history against a schema db push already created.
+# The trailing slash on the glob matters: prisma/migrations/ also holds
+# migration_lock.toml, which "migrate resolve" would reject as a migration name.
+for d in prisma/migrations/*/; do
   docker compose exec -T dashboard \
-    npx prisma migrate resolve --applied "$m"
+    npx prisma migrate resolve --applied "$(basename "$d")"
 done
 docker compose exec -T dashboard \
   npx prisma migrate status   # should say "Database schema is up to date!"
 ```
 
-Skipping the baseline step doesn't break anything immediately, but every container start will log a P3005 error and silently skip the deploy step
-the entrypoint attempts — meaning any *future* migration added to the repo would never auto-apply.
+Skipping the baseline step prevents the dashboard from starting: its entrypoint fails closed when `prisma migrate deploy` cannot establish migration
+history. Baseline before deployment so future migrations can apply safely.
 
 6. **Trigger first sync from Redmine**
 
