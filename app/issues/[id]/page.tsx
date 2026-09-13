@@ -14,6 +14,7 @@ import { useInternalNotes } from "@/src/hooks/useInternalNotes";
 import { AttachmentsSection } from "@/src/components/issue-detail/AttachmentsSection";
 import { GithubLinksSection, type GithubLinkCreatePayload } from "@/src/components/issue-detail/GithubLinksSection";
 import { IssueActivityTabs, type IssueActivityTab } from "@/src/components/issue-detail/IssueActivityTabs";
+import { IssueCommentForm } from "@/src/components/issue-detail/IssueCommentForm";
 import { MarkdownBlock } from "@/src/components/issue-detail/MarkdownBlock";
 import { RelationsSection } from "@/src/components/issue-detail/RelationsSection";
 
@@ -1537,45 +1538,25 @@ export default function IssueDetailPage() {
           onDelete={deleteGithubLink}
         />
 
-        <article className="report-card comment-card">
-          <div className="comment-card-head">
-            <div>
-              <p className="report-label">Redmine Comment</p>
-              <p className="muted">Add a note to this issue in Redmine.</p>
-            </div>
-          </div>
-          {actionError && <p className="error-banner">{actionError}</p>}
-          {actionInfo && <p className="info-banner">{actionInfo}</p>}
-          <form
-            className="form"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              await performAction({
-                type: "comment",
-                issueId,
-                payload: { notes: comment },
-                onSuccess: () => {
-                  setComment("");
-                  void reloadIssue();
-                },
-                successMessage: "Comment posted to Redmine.",
-              });
-            }}
-          >
-            <label>
-              Comment
-              <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder={t("issues.placeholders.comment")}
-                rows={4}
-              />
-            </label>
-            <button type="submit" disabled={commentBusy || comment.trim().length === 0}>
-              {commentBusy ? t("common.loading") : t("issues.actions.postToRedmine")}
-            </button>
-          </form>
-        </article>
+        <IssueCommentForm
+          value={comment}
+          busy={commentBusy}
+          actionError={actionError}
+          actionInfo={actionInfo}
+          onChange={setComment}
+          onSubmit={async () => {
+            await performAction({
+              type: "comment",
+              issueId,
+              payload: { notes: comment },
+              onSuccess: () => {
+                setComment("");
+                void reloadIssue();
+              },
+              successMessage: "Comment posted to Redmine.",
+            });
+          }}
+        />
 
         <IssueActivityTabs
           issueId={issue.id}
