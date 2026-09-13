@@ -94,6 +94,33 @@ Verification at session end:
 
 ---
 
+## 0c. Status (2026-09-14 working session)
+
+Closes out the September 2026 remediation plan (previously tracked as `plans/remediation-plan.md`, now folded in here and untracked):
+
+| Item | Status | Where |
+|------|--------|-------|
+| Dependency remediation (`bun audit fix`) | ✅ done | patched `@xmldom/xmldom`, `browserslist`, `fast-uri`, `js-yaml`, `sharp`, Vitest internals; `bun audit --audit-level=high` clean |
+| CI audit gate | ✅ done | `.github/workflows/ci.yml` `audit` job running `bun run audit` |
+| Browser CI coverage (a11y + e2e) | ✅ done | `a11y` job + matrix `e2e` job (smoke, auth-csrf, external-api), each with its own SQLite DB; real green runs on `master` |
+| Saved views unified on the server | ✅ done | see 1.18 below |
+| `app/issues/[id]/page.tsx` split | ✅ done | see 1.5 below |
+| `src/lib/sync.ts` split | ✅ done | 1399-line file → 12-line barrel + `src/lib/sync/{parsers,issue-cache,catalog,breadcrumbs,single-issue,jobs}.ts`, pure move, no call site changed |
+| `src/lib/ai-tools.ts` split | ✅ done | 975-line file → 13-line barrel + `src/lib/ai-tools/{types,permissions,definitions,issue-ref,read-handlers,write-handlers,execute,presentation}.ts` |
+| `src/lib/llm-provider.ts` fixed, then split | ✅ done | found and fixed a real bug first: `chat()`/`checkHealth()` were missing `await` on their provider dispatch, so the "fall back to Ollama" safety net never actually caught a failing provider — added 21 regression tests, then split the 768-line class into one free-function module per provider under `src/lib/llm-provider/` |
+| Slack modules (`slack.ts`, `slack-notifier.ts`, `slack-notification-service.ts`) | ✅ reviewed, no split needed | each is already one focused single-responsibility class; not a monolith like the three above were |
+| WakaTime hours correction: double-counted `spentHours` | ✅ fixed | concurrent applies could double-increment; now a serializable transaction with retry |
+| WakaTime hours correction: unreachable from the UI | ✅ fixed | dashboard only gated Preview/Apply on `created`, so a day needing only an hours correction never showed an Apply button |
+| Recurring-ticket monthly close-before-create | ✅ fixed | monthly cadence was missing the same rollover guard the weekly cadence already had |
+| Recurring-ticket close silently dropping correction failures | ✅ fixed | now logged and noted on the close comment |
+| SavedView missing Postgres migration | ✅ fixed | `filters` column existed in `schema.prisma` with no migration; also found `migration_lock.toml` was never committed, so `migrate deploy` had likely been silently no-op'ing |
+| SavedView import race, unbounded views, reorder dedup | ✅ fixed | re-fetches authoritative server state on a losing race instead of using stale ids; DB-level `MAX_SAVED_VIEWS` cap + unique `(userId, position)` index (verified prod had 0 rows before adding it) |
+| Regression: issue metadata edit mode hid spent hours | ✅ fixed | an extraction PR moved `spentHours` inside the edit/read-only branch instead of rendering it unconditionally |
+
+Verification at session end: `npx tsc --noEmit` clean, `npm run lint` clean, full suite green throughout (grew from ~870 to 900+ tests across these changes).
+
+---
+
 ## 1. Functional Improvements
 
 ### 1.1 Re-enable Kanban Board and Gantt views — High ✅ removed (2026-07-16)
