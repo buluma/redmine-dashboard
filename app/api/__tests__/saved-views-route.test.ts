@@ -4,13 +4,14 @@ const mockRequireCurrentUser = vi.fn();
 const mockPrisma: Record<string, Record<string, ReturnType<typeof vi.fn>>> = {
   savedView: { count: vi.fn(), create: vi.fn(), findMany: vi.fn() },
 };
+const mockTransaction = vi.fn();
 
 vi.mock("@/src/lib/auth", () => ({
   requireCurrentUser: mockRequireCurrentUser,
 }));
 
 vi.mock("@/src/lib/db", () => ({
-  prisma: mockPrisma,
+  prisma: { ...mockPrisma, $transaction: mockTransaction },
 }));
 
 vi.mock("@/src/lib/http", () => ({
@@ -32,6 +33,7 @@ describe("POST /api/saved-views", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequireCurrentUser.mockResolvedValue({ id: "user-1" });
+    mockTransaction.mockImplementation((callback: (tx: typeof mockPrisma) => unknown) => callback(mockPrisma));
   });
 
   it("creates a view when under the cap", async () => {
@@ -54,6 +56,7 @@ describe("POST /api/saved-views", () => {
 
     expect(response.status).toBe(201);
     expect(mockPrisma.savedView.create).toHaveBeenCalled();
+    expect(mockTransaction).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({ isolationLevel: "Serializable" }));
   });
 
   it("rejects creation at the saved-view cap without ever calling create", async () => {

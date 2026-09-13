@@ -10,11 +10,12 @@ fi
 
 case "$DATABASE_URL_VALUE" in
   postgres://*|postgresql://*)
-    echo "PostgreSQL DATABASE_URL detected, attempting Prisma migrations..."
-    if ! bunx prisma migrate deploy; then
-      echo "Prisma migrate deploy failed; continuing startup with existing schema." >&2
-      echo "Set RUN_DB_MIGRATIONS_ON_START=true and resolve migration history if you need strict migration gating." >&2
-    fi
+    echo "PostgreSQL DATABASE_URL detected, applying Prisma migrations..."
+    # Do not start against an older schema. In particular, continuing after a
+    # failed deploy turns a missing migration column into a runtime 500 that
+    # looks unrelated to startup. Follow docs/POSTGRES_MIGRATION.md to
+    # baseline a database that was originally created with prisma db push.
+    bunx prisma migrate deploy
     ;;
   file:*|sqlite:*)
     if [ "${DATABASE_URL_VALUE#file:}" != "$DATABASE_URL_VALUE" ]; then
