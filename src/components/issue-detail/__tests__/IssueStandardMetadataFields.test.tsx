@@ -41,4 +41,18 @@ describe("IssueStandardMetadataFields", () => {
     expect(onDraftChange).toHaveBeenCalledWith("estimatedHours", "3");
     expect(screen.getByRole("option", { name: "High (default)" })).toBeInTheDocument();
   });
+
+  it("keeps spent hours visible (read-only) while editing, since Redmine computes it", () => {
+    render(
+      <IssueStandardMetadataFields
+        {...baseProps}
+        isEditing
+        draft={{ startDate: "2026-09-01", dueDate: "2026-09-13", categoryId: "32", priorityId: "4", estimatedHours: "2.5" }}
+      />,
+    );
+    expect(screen.getByText("1.25h")).toBeInTheDocument();
+    // The estimated-hours read-only span is replaced by an editable input,
+    // unlike spent hours which is never editable.
+    expect(screen.queryByText("2.50h")).not.toBeInTheDocument();
+  });
 });
