@@ -19,28 +19,11 @@ These items from the original audit are done and merged — kept here as a recor
 ## Descoped
 
 - **Offline mutation conflict handling** (`expectedUpdatedAt`/version-on-mutation, 409 + merge/keep/discard UI, shared PWA/Android contract) — not required. Nothing changes here from what the app has today; do not build this without a new, explicit product decision to revisit it.
+- **Android CI/delivery path** (a dedicated Gradle CI job, a test floor for `ConvergeRepository`/`SecureTokenStore`, release hardening) — not required. `mobile/android-native/` stays as-is, unrepresented in CI; do not build this without a new, explicit product decision to revisit it.
 
 ## Ordered work
 
-### 1. Put the Android client on the delivery path
-
-Priority: high
-
-The Compose client is a supported application surface but is not represented in the current CI pipeline.
-
-- Add a separate Android CI job using the Gradle wrapper: `assembleDebug`, `lintDebug`, and JVM unit tests.
-- Cache Gradle safely and keep Android SDK/JDK versions pinned.
-- Establish a first test floor for `ConvergeRepository` and `SecureTokenStore`; add one Compose UI test per primary screen. (`OfflineSyncWorker` conflict-handling coverage is out of scope — see Descoped above.)
-- Harden release builds after CI is green: minification/resource shrinking, ProGuard rules, release signing, no cleartext release networking, safe Sentry privacy defaults, adaptive/round icons, and versioning policy.
-
-Validation:
-
-```sh
-cd mobile/android-native
-./gradlew assembleDebug lintDebug test
-```
-
-### 2. Finish reducing high-risk module complexity
+### 1. Finish reducing high-risk module complexity
 
 Priority: high
 
@@ -54,7 +37,7 @@ Completion criteria:
 - Existing tests pass; new tests cover changed mutation/error paths.
 - Lint, typecheck, build, and the relevant browser specs are clean.
 
-### 3. Reconcile and maintain planning documentation
+### 2. Reconcile and maintain planning documentation
 
 Priority: follow-up
 
@@ -66,4 +49,4 @@ Priority: follow-up
 
 ## Resuming from a terminal
 
-Start with section 1 (Android CI) or section 2 (module complexity) — they're independent. Commit each numbered section separately so Android and behavior changes remain easy to review and revert.
+Start with section 1 (module complexity). Commit each numbered section separately so unrelated behavior changes remain easy to review and revert.
