@@ -17,6 +17,8 @@ These items from the original audit are done and merged — kept here as a recor
 7. **`app/issues/[id]/page.tsx` split** — description, subtickets, markdown rendering, activity tabs (history/notes/internal-notes/properties/time-entries), comment form, overview cards, standard metadata fields, GitHub links, and relations are extracted into `src/components/issue-detail/*`. The data-fetching/mutation logic itself is out too, into three focused hooks: `useIssueDetail` (issue load/reload/refresh, live statuses, activity/user/priority/custom-field lookups, favorite, related-issue prefetch, attachment-refresh), `useIssueEditDraft` (the metadata edit-mode flow, including the local-vs-Redmine save split), and `useGithubLinkActions`. The page went from 1420 to 943 lines. Remaining: the quick-actions local-only status/assign/time-log branches and the assignee-custom-field-click-to-assign button are still small inline fetches — left as-is since extracting them didn't reduce complexity meaningfully on their own.
 8. **`src/lib/sync.ts` split** — the 1399-line file is now a 12-line barrel re-exporting the same public surface from `src/lib/sync/parsers.ts` (raw Redmine-JSON parsing), `issue-cache.ts` (per-issue upserts: issue row, attachments, relations, journals, time entries), `catalog.ts` (status/enumeration catalogs), `breadcrumbs.ts` (parent-chain walk), `single-issue.ts` (`syncSingleIssue` orchestrator plus push/Slack/webhook notification fan-out), and `jobs.ts` (SyncJob claim/create/execute lifecycle). No call site changed — every existing `from "@/src/lib/sync"` import still resolves the same names. Purely mechanical: no logic changed, verified by the existing `sync.test.ts`/`sync-watermark.test.ts`/`sync-hybrid-local-mirror.test.ts`/`sync-orphan.test.ts` suite passing unmodified.
 9. **`src/lib/ai-tools.ts` split** — the 975-line file is now a 13-line barrel re-exporting the same public surface from `src/lib/ai-tools/types.ts`, `permissions.ts` (role/confirmation requirements), `definitions.ts` (the static OpenAI-format tool schemas), `issue-ref.ts` (shared Redmine-#ID-vs-local-L-N resolution), `read-handlers.ts`/`write-handlers.ts` (one handler per tool, split by whether it mutates), `execute.ts` (the `executeTool`/`runTool` dispatcher), and `presentation.ts` (cross-provider formatting). No call site changed. Purely mechanical, verified by the existing `ai-tools.test.ts` suite passing unmodified.
+10. **`src/lib/llm-provider.ts` fixed, then split** — writing per-provider regression tests first (thin coverage before this: 208 lines of tests for 768 of implementation, and every test secretly ran through ollama only, since the env mock hardcoded `llmProvider: 'ollama'`) surfaced a real bug: `chat()`/`checkHealth()` did `return this.xChat(...)`/`return this.checkXHealth()` with no `await` inside their try/catch, so the documented "fall back to Ollama when a provider fails" safety net silently never fired for openai/anthropic/openrouter/aperture. Fixed, with 21 new tests actually exercising each provider (health/chat/streaming/tool-calls/fallback). Then split the 768-line single-class file into `src/lib/llm-provider/types.ts` and one free-function module per provider (`ollama.ts`, `openai.ts`, `anthropic.ts`, `openrouter.ts`, `aperture.ts`, `embeddings.ts`), with `manager.ts` keeping the thin `LLMProviderManager` class that just dispatches to them. `src/lib/llm-provider.ts` is now a 17-line barrel; no call site changed.
+11. **Slack modules reviewed, no split needed** — `slack.ts` (299 lines, `SlackClient`), `slack-notifier.ts` (449 lines, `SlackNotifier`), and `slack-notification-service.ts` (400 lines, `SlackNotificationService`) are each already one focused, single-responsibility class in its own file — unlike sync.ts/ai-tools.ts/llm-provider.ts, there's no monolith here mixing unrelated concerns to untangle. Splitting further would mean carving up cohesive classes' own methods for size alone, not a real complexity win. Left as-is.
 
 ## Descoped
 
@@ -25,30 +27,6 @@ These items from the original audit are done and merged — kept here as a recor
 
 ## Ordered work
 
-### 1. Finish reducing high-risk module complexity
+Everything from the original audit is done. `IMPROVEMENTS.md`'s stale entries were caught up in the same pass: `1.5` (issue-detail split) and `1.18` (saved-view sync) were marked partial/blocked but had both since shipped (see Shipped #7 and #6 above); `1.22` (accessibility CI gate) was marked as an open gap in its own section heading despite the doc's own `0. Status` table already recording it done — all three now say `✅ done` with a current verification reference, and the Suggested Sequencing table's markers were updated to match.
 
-Priority: high
-
-- `app/issues/[id]/page.tsx`, `src/lib/sync.ts`, and `src/lib/ai-tools.ts` are done (see Shipped #7-9).
-- Apply the same incremental approach to the large Slack modules (`slack-notifier.ts`, `slack-notification-service.ts`, `slack.ts`) and `src/lib/llm-provider.ts`. Avoid broad mechanical refactors.
-- Add regression tests before each extraction and keep API behavior unchanged.
-
-Completion criteria:
-
-- Each module has a clear owner/responsibility boundary.
-- Existing tests pass; new tests cover changed mutation/error paths.
-- Lint, typecheck, build, and the relevant browser specs are clean.
-
-### 2. Reconcile and maintain planning documentation
-
-Priority: follow-up
-
-`IMPROVEMENTS.md` has its own `## 0. Status` section tracking shipped items, but line-count/path references elsewhere in the backlog can still drift from the current repository state as extractions land.
-
-- Mark shipped items with their verification reference or move them to the completed-history section.
-- Keep only actionable items in the active backlog, with owner, priority, dependency, and acceptance criteria.
-- Update stale line-count and path references while touching each item.
-
-## Resuming from a terminal
-
-Start with section 1 (module complexity). Commit each numbered section separately so unrelated behavior changes remain easy to review and revert.
+There is no more open, actionable work on this plan. Reopen it (a new `## Ordered work` entry) if a future audit or product decision surfaces something new.
