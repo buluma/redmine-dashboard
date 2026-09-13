@@ -1,12 +1,14 @@
 name: Release drafter
 
 # Maintains an always-updated draft of the next release in the GitHub
-# Releases tab. Each merged PR is appended to the draft under the right
-# Conventional-Commits category. Pushing a `v*` tag promotes the draft.
+# Releases tab. Pull-request events apply Conventional-Commit labels; the
+# post-merge push to master updates the draft. Pushing its matching `v*` tag
+# publishes that draft.
 
 on:
   push:
-    branches: [main]
+    branches: [master]
+    tags: ["v*"]
   pull_request:
     types: [opened, reopened, synchronize, edited]
   workflow_dispatch:
@@ -17,12 +19,19 @@ permissions:
 
 jobs:
   draft:
+    if: github.event_name != 'push' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
-      # Pinned at v6 — v7 currently fails on `pull_request` trigger with
-      # `Validation Failed: target_commitish` because it tries to set
-      # the release target to `refs/pull/<n>/merge`, which the GitHub
-      # Releases REST API rejects. Revisit once upstream cuts a v7 patch.
       - uses: release-drafter/release-drafter@v7
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish the matching release draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release edit "$TAG" --draft=false
