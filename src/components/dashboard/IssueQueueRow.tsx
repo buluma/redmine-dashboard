@@ -141,6 +141,7 @@ export function IssueQueueRow({
           <button
             type="button"
             className="issue-subject-button"
+            title={issue.subject}
             onClick={() => issueNumericId !== null && onSelect(issueNumericId)}
             disabled={issueNumericId === null}
             aria-label={`Open ${issueDisplayId(issue)} ${issue.subject}`}

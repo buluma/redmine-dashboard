@@ -44,6 +44,7 @@ import { useFilterPresets } from "@/src/hooks/useFilterPresets";
 import { IssueQueueCard } from "@/src/components/dashboard/IssueQueueCard";
 
 const SHOW_ALL_METRICS_KEY = "nrcc.showAllMetrics.v1";
+const VISIBLE_COLUMNS_KEY = "nrcc.visibleColumns.v1";
 const DEFAULT_ADVANCED_FILTERS: FilterState = {
   search: "",
   statusIds: [],
@@ -68,6 +69,7 @@ export default function Home() {
   const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(
     new Set<ColumnKey>(["priority", "due", "progress", "updated"])
   );
+  const [visibleColumnsHydrated, setVisibleColumnsHydrated] = useState(false);
   const [manualRefreshBusy, setManualRefreshBusy] = useState(false);
   const [allowedStatusIdsByIssue, setAllowedStatusIdsByIssue] = useState<Record<number, number[]>>({});
   const [statusUpdatingIssueIds, setStatusUpdatingIssueIds] = useState<Set<number>>(new Set());
@@ -223,6 +225,34 @@ export default function Home() {
       // Ignore storage errors.
     }
   }, []);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(VISIBLE_COLUMNS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as unknown;
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter((value): value is ColumnKey =>
+            value === "priority" || value === "due" || value === "progress" || value === "updated",
+          );
+          setVisibleColumns(new Set(valid));
+        }
+      }
+    } catch {
+      // Ignore malformed or unavailable storage.
+    } finally {
+      setVisibleColumnsHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!visibleColumnsHydrated) return;
+    try {
+      window.localStorage.setItem(VISIBLE_COLUMNS_KEY, JSON.stringify(Array.from(visibleColumns)));
+    } catch {
+      // Ignore storage errors; the picker still works for the current session.
+    }
+  }, [visibleColumns, visibleColumnsHydrated]);
 
   useEffect(() => {
     try {

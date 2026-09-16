@@ -435,10 +435,10 @@ export function IssueQueueCard({
           {(
             <>
             <div className="issues-table-scroll" role="region" aria-label={t('queue.title')} tabIndex={0}>
-            <table className="issues-table">
+            <table className="issues-table" aria-label={t('queue.title')}>
               <thead>
               <tr>
-                <th>
+                <th scope="col">
                   <input
                     type="checkbox"
                     checked={selectedAllVisible}
@@ -446,12 +446,13 @@ export function IssueQueueCard({
                     aria-label="Select all visible issues"
                   />
                 </th>
-                <th className="drag-col"></th>
-                <th>{t('queue.colId')}</th>
-                <th>{t('queue.colSubject')}</th>
-                <th>{t('queue.colStatus')}</th>
+                <th scope="col" className="drag-col" aria-label={t('queue.reorder', 'Reorder')}></th>
+                <th scope="col">{t('queue.colId')}</th>
+                <th scope="col">{t('queue.colSubject')}</th>
+                <th scope="col">{t('queue.colStatus')}</th>
                 {visibleColumns.has("priority") && (
                   <th
+                    scope="col"
                     className="sortable-header"
                     aria-sort={getSortIndicator("priority").includes("▲") ? "ascending" : getSortIndicator("priority").includes("▼") ? "descending" : "none"}
                   >
@@ -462,6 +463,7 @@ export function IssueQueueCard({
                 )}
                 {visibleColumns.has("due") && (
                   <th
+                    scope="col"
                     className="sortable-header"
                     aria-sort={getSortIndicator("due").includes("▲") ? "ascending" : getSortIndicator("due").includes("▼") ? "descending" : "none"}
                   >
@@ -470,9 +472,10 @@ export function IssueQueueCard({
                     </button>
                   </th>
                 )}
-                {visibleColumns.has("progress") && <th>{t('queue.colProgress')}</th>}
+                {visibleColumns.has("progress") && <th scope="col">{t('queue.colProgress')}</th>}
                 {visibleColumns.has("updated") && (
                   <th
+                    scope="col"
                     className="sortable-header"
                     aria-sort={getSortIndicator("updated").includes("▲") ? "ascending" : getSortIndicator("updated").includes("▼") ? "descending" : "none"}
                   >
