@@ -145,7 +145,7 @@ jobs:
           DATABASE_URL: file:./test.db
           APP_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           SESSION_SECRET: ci-axe-secret
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-a11y-results
@@ -191,7 +191,7 @@ jobs:
           DATABASE_URL: file:./test.db
           APP_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           SESSION_SECRET: ${{ matrix.suite.session_secret }}
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-${{ matrix.suite.name }}-results
