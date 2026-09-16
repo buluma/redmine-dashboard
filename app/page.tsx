@@ -70,6 +70,7 @@ export default function Home() {
   );
   const [manualRefreshBusy, setManualRefreshBusy] = useState(false);
   const [allowedStatusIdsByIssue, setAllowedStatusIdsByIssue] = useState<Record<number, number[]>>({});
+  const [statusUpdatingIssueIds, setStatusUpdatingIssueIds] = useState<Set<number>>(new Set());
   const [bootstrapBusy, setBootstrapBusy] = useState(false);
   const [aiSearchOpen, setAiSearchOpen] = useState(false);
   const [ftsSearchOpen, setFtsSearchOpen] = useState(false);
@@ -346,10 +347,18 @@ export default function Home() {
   }
 
   async function updateStatus(issue: Issue, nextStatusId: number) {
+    const issueId = issue.redmineIssueId;
+    if (issueId === null || statusUpdatingIssueIds.has(issueId)) return;
+    setStatusUpdatingIssueIds((current) => new Set(current).add(issueId));
     const allowed =
-      issue.redmineIssueId !== null ? allowedStatusIdsByIssue[issue.redmineIssueId] : undefined;
+      allowedStatusIdsByIssue[issueId];
     if (allowed && allowed.length > 0 && !allowed.includes(nextStatusId)) {
       toast.error(t('toasts.statusNotAllowed'));
+      setStatusUpdatingIssueIds((current) => {
+        const next = new Set(current);
+        next.delete(issueId);
+        return next;
+      });
       return;
     }
 
@@ -357,7 +366,7 @@ export default function Home() {
     const nextStatus = statuses.find((s) => s.id === nextStatusId);
     setIssues((current) =>
       current.map((item) =>
-        item.redmineIssueId === issue.redmineIssueId
+        item.redmineIssueId === issueId
           ? {
               ...item,
               statusId: nextStatusId,
@@ -368,7 +377,7 @@ export default function Home() {
     );
 
     try {
-      const res = await fetch(`/api/issues/${issue.redmineIssueId}/status`, {
+      const res = await fetch(`/api/issues/${issueId}/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ statusId: nextStatusId }),
@@ -382,6 +391,12 @@ export default function Home() {
     } catch (e) {
       setIssues(previous);
       toast.error(e instanceof Error ? e.message : t('toasts.statusFailed'));
+    } finally {
+      setStatusUpdatingIssueIds((current) => {
+        const next = new Set(current);
+        next.delete(issueId);
+        return next;
+      });
     }
   }
 
@@ -629,6 +644,10 @@ export default function Home() {
         aiAvailable={Boolean(aiStatus?.available)}
         onToggleAiSearch={() => setAiSearchOpen(!aiSearchOpen)}
         onOpenFtsSearch={() => setFtsSearchOpen(true)}
+        advancedFilters={advancedFilters}
+        onAdvancedFiltersChange={setAdvancedFilters}
+        onClearAdvancedFilters={() => setAdvancedFilters(DEFAULT_ADVANCED_FILTERS)}
+        advancedPriorities={computedPriorityOptions}
       />
 
       <InsightsGrid
@@ -748,6 +767,7 @@ export default function Home() {
           onSort={handleSort}
           getSortIndicator={getSortIndicator}
           allowedStatusIdsByIssue={allowedStatusIdsByIssue}
+          statusUpdatingIssueIds={statusUpdatingIssueIds}
           selectedIssueId={selectedIssueId}
           page={page}
           onPageChange={setPage}

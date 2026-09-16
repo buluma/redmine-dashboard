@@ -33,6 +33,7 @@ interface IssueQueueRowProps extends IssueQueueRowCallbacks {
   inBulkSelection: boolean;
   statuses: StatusCatalog[];
   allowedStatusIds?: number[];
+  statusUpdating?: boolean;
   visibleColumns: Set<ColumnKey>;
 }
 
@@ -42,6 +43,7 @@ export function IssueQueueRow({
   inBulkSelection,
   statuses,
   allowedStatusIds,
+  statusUpdating = false,
   visibleColumns,
   onSelect,
   onOpenInNewTab,
@@ -63,48 +65,17 @@ export function IssueQueueRow({
     <tr
       className={`issue-row ${selected ? "selected" : ""}`}
       tabIndex={0}
-      role="button"
-      aria-label={`Open ${issueDisplayId(issue)} ${issue.subject}`}
       onMouseEnter={() => onPrefetch(issueRouteId(issue))}
-      onClick={() => {
-        // Local tickets have no numeric id for the QuickPeek to fetch;
-        // stay guarded like the Enter path below instead of deselecting.
-        if (issueNumericId !== null) onSelect(issueNumericId);
-      }}
-      onKeyDown={(e) => {
-        const target = e.target as HTMLElement;
-        const tag = target?.tagName;
-        if (
-          tag === "INPUT" ||
-          tag === "SELECT" ||
-          tag === "TEXTAREA" ||
-          tag === "BUTTON" ||
-          tag === "A"
-        ) {
-          return;
-        }
-        if (e.key === "Enter") {
-          e.preventDefault();
-          if (e.shiftKey) {
-            onOpenInNewTab(issue);
-          } else if (issueNumericId) {
-            onSelect(issueNumericId);
-          }
-          return;
-        }
-        if (e.key === "ArrowDown") {
-          e.preventDefault();
-          (e.currentTarget.nextElementSibling as HTMLTableRowElement | null)?.focus();
-          return;
-        }
-        if (e.key === "ArrowUp") {
-          e.preventDefault();
-          (e.currentTarget.previousElementSibling as HTMLTableRowElement | null)?.focus();
-          return;
-        }
-        if (e.key === " " && issueNumericId) {
-          e.preventDefault();
-          onToggleSelection(issueNumericId);
+      onKeyDown={(event) => {
+        const target = event.target as HTMLElement;
+        if (["INPUT", "SELECT", "TEXTAREA", "BUTTON", "A"].includes(target.tagName)) return;
+        if (event.key === "Enter") {
+          event.preventDefault();
+          if (event.shiftKey) onOpenInNewTab(issue);
+          else if (issueNumericId !== null) onSelect(issueNumericId);
+        } else if (event.key === " ") {
+          event.preventDefault();
+          if (issueNumericId !== null) onToggleSelection(issueNumericId);
         }
       }}
     >
@@ -143,7 +114,27 @@ export function IssueQueueRow({
         onBlur={onHoverLeave}
       >
         <div className="subject-cell">
-          <p>{issue.subject}</p>
+          <button
+            type="button"
+            className="issue-subject-button"
+            onClick={() => issueNumericId !== null && onSelect(issueNumericId)}
+            disabled={issueNumericId === null}
+            aria-label={`Open ${issueDisplayId(issue)} ${issue.subject}`}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && event.shiftKey) {
+                event.preventDefault();
+                onOpenInNewTab(issue);
+              } else if (event.key === "Enter") {
+                event.preventDefault();
+                if (issueNumericId !== null) onSelect(issueNumericId);
+              } else if (event.key === " ") {
+                event.preventDefault();
+                if (issueNumericId !== null) onToggleSelection(issueNumericId);
+              }
+            }}
+          >
+            {issue.subject}
+          </button>
           {issue.githubLinks.length > 0 && (
             <span className="subject-meta">GH: {issue.githubLinks.length} link(s)</span>
           )}
@@ -167,7 +158,9 @@ export function IssueQueueRow({
             onFocus={() => {
               if (issueNumericId) onLoadAllowedStatuses(issueNumericId);
             }}
-            disabled={!issueNumericId}
+            disabled={!issueNumericId || statusUpdating}
+            aria-busy={statusUpdating}
+            aria-label={statusUpdating ? `Saving status for ${issueDisplayId(issue)}` : `Status for ${issueDisplayId(issue)}`}
           >
             {selectableStatuses.map((status) => (
               <option key={status.id} value={status.id}>
@@ -175,6 +168,7 @@ export function IssueQueueRow({
               </option>
             ))}
           </select>
+          {statusUpdating && <span className="status-saving" role="status">Saving…</span>}
           <span
             className={`status-dot ${isOpenStatus(issue.statusName) ? "dot-open" : ""} ${isDoneStatus(issue.statusName) ? "dot-done" : ""} ${isBlockedStatus(issue.statusName) ? "dot-blocked" : ""} ${isInProgressStatus(issue.statusName) ? "dot-progress" : ""}`}
             role="img"

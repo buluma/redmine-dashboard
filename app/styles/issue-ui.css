@@ -934,6 +934,97 @@
   cursor: grabbing;
 }
 
+.issue-subject-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 650;
+  line-height: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.issue-subject-button:hover {
+  color: var(--accent-strong);
+  transform: none;
+  filter: none;
+  text-decoration: underline;
+}
+
+.issue-subject-button:disabled {
+  color: inherit;
+  opacity: 1;
+  cursor: default;
+  text-decoration: none;
+}
+
+.status-saving {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--accent-strong);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.issues-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+.issues-table-scroll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.active-filter-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.active-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2rem;
+  padding: 0.28rem 0.55rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.active-filter-chip:hover {
+  transform: none;
+  filter: brightness(0.98);
+}
+
+.active-filter-clear {
+  margin-left: 0.2rem;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 680px) {
+  .issues-table-scroll {
+    margin-inline: -0.5rem;
+    padding-inline: 0.5rem;
+  }
+
+  .issues-table {
+    min-width: 720px;
+  }
+}
+
 .issues-table tr.drag-over {
   background: #f3f4f6;
 }

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 import { useI18n } from "./I18nProvider";
+import { ModalDialog } from "./ModalDialog";
 
 type NavItem = { href: string; labelKey: string; icon: string; group?: string; mobilePrimary?: boolean };
 
@@ -124,16 +125,16 @@ export function AppNav() {
       </nav>
 
       {mobileMoreOpen && (
-        <div className="nav-mobile-sheet-backdrop" onClick={() => setMobileMoreOpen(false)}>
-          <div
-            className="nav-mobile-sheet"
-            role="dialog"
-            aria-label={t("nav.tooltips.more", "More")}
-            onClick={(e) => e.stopPropagation()}
-          >
+        <ModalDialog
+          open={mobileMoreOpen}
+          onClose={() => setMobileMoreOpen(false)}
+          labelledBy="mobile-more-title"
+          backdropClassName="nav-mobile-sheet-backdrop"
+          dialogClassName="nav-mobile-sheet"
+        >
             <div className="nav-mobile-sheet-head">
-              <strong>{t("nav.tooltips.more", "More")}</strong>
-              <button type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Close">✕</button>
+              <strong id="mobile-more-title">{t("nav.tooltips.more", "More")}</strong>
+              <button type="button" onClick={() => setMobileMoreOpen(false)} aria-label={t("common.close", "Close")}>✕</button>
             </div>
             <div className="nav-mobile-sheet-list">
               {navItems.filter((item) => !item.mobilePrimary).map((item) => (
@@ -148,8 +149,7 @@ export function AppNav() {
                 </Link>
               ))}
             </div>
-          </div>
-        </div>
+        </ModalDialog>
       )}
 
       <style>{`

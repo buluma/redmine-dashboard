@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "./ToastProvider";
 import { useI18n } from "./I18nProvider";
+import { ModalDialog } from "./ModalDialog";
 import type { Issue } from "@/src/types/dashboard";
 
 interface Project {
@@ -123,11 +124,11 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
   if (!isOpen) return null;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+    <>
+    <ModalDialog open={isOpen} onClose={onClose} labelledBy="create-issue-title" backdropClassName="modal-backdrop" dialogClassName="modal-content">
         <div className="modal-header">
-          <h2>{t("createIssue.title")}</h2>
-          <button type="button" className="close-btn" onClick={onClose}>✕</button>
+          <h2 id="create-issue-title">{t("createIssue.title")}</h2>
+          <button type="button" className="close-btn" onClick={onClose} aria-label={t("common.close", "Close")}>✕</button>
         </div>
 
         <form onSubmit={handleSubmit} className="issue-form">
@@ -205,7 +206,7 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
             </button>
           </div>
         </form>
-      </div>
+    </ModalDialog>
 
       <style jsx>{`
         .modal-backdrop {
@@ -284,6 +285,6 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
           to { transform: scale(1); opacity: 1; }
         }
       `}</style>
-    </div>
+    </>
   );
 }

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MarkdownBlock } from "@/src/components/MarkdownBlock";
+import { ModalDialog } from "@/src/components/ModalDialog";
+import { useI18n } from "@/src/components/I18nProvider";
 import { redmineIssueUrl, issueDisplayId, dueInDays } from "@/src/lib/issue-utils";
 import type { Issue } from "@/src/types/dashboard";
 
@@ -16,10 +18,10 @@ type Props = {
 };
 
 export function IssueQuickPeek({ issueId, onClose, onOpenFullPage, onPrev, onNext, hasPrev, hasNext }: Props) {
+  const { t } = useI18n();
   const [issue, setIssue] = useState<Issue | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const panelRef = useRef<HTMLElement>(null);
   const prevIssueId = useRef<number | null>(null);
 
   useEffect(() => {
@@ -60,12 +62,6 @@ export function IssueQuickPeek({ issueId, onClose, onOpenFullPage, onPrev, onNex
     return () => window.removeEventListener("keydown", onKey);
   }, [issueId, onClose, onNext, onPrev, hasNext, hasPrev]);
 
-  useEffect(() => {
-    if (issueId) {
-      panelRef.current?.focus();
-    }
-  }, [issueId]);
-
   if (!issueId) return null;
 
   const due = issue ? dueInDays(issue.dueDate) : null;
@@ -82,15 +78,15 @@ export function IssueQuickPeek({ issueId, onClose, onOpenFullPage, onPrev, onNex
 
   return (
     <>
-      <div className="peek-backdrop" onClick={onClose} aria-hidden="true" />
-      <aside
-        ref={panelRef}
-        className="peek-panel"
-        tabIndex={-1}
-        role="complementary"
-        aria-label="Issue quick peek"
+      <ModalDialog
+        open
+        onClose={onClose}
+        labelledBy="issue-quick-peek-title"
+        backdropClassName="peek-backdrop"
+        dialogClassName="peek-panel"
       >
         <div className="peek-header">
+          <span id="issue-quick-peek-title" className="sr-only">Issue quick peek</span>
           <div className="peek-header-meta">
             {issue && (
               <span className="peek-issue-id">{issueDisplayId(issue)}</span>
@@ -107,8 +103,8 @@ export function IssueQuickPeek({ issueId, onClose, onOpenFullPage, onPrev, onNex
                   className="peek-nav-btn"
                   onClick={onPrev}
                   disabled={!hasPrev}
-                  aria-label="Previous issue (k)"
-                  title="Previous (k / ↑)"
+                  aria-label={t("peek.previous", "Previous issue")}
+                  title={t("peek.previousHint", "Previous (k / ↑)")}
                 >
                   ↑
                 </button>
@@ -117,8 +113,8 @@ export function IssueQuickPeek({ issueId, onClose, onOpenFullPage, onPrev, onNex
                   className="peek-nav-btn"
                   onClick={onNext}
                   disabled={!hasNext}
-                  aria-label="Next issue (j)"
-                  title="Next (j / ↓)"
+                  aria-label={t("peek.next", "Next issue")}
+                  title={t("peek.nextHint", "Next (j / ↓)")}
                 >
                   ↓
                 </button>
@@ -129,16 +125,16 @@ export function IssueQuickPeek({ issueId, onClose, onOpenFullPage, onPrev, onNex
                 type="button"
                 className="secondary-button peek-fullpage-btn"
                 onClick={() => onOpenFullPage(issue)}
-                title="Open full page"
+                title={t("peek.fullPage", "Open full page")}
               >
-                ↗ Full page
+                ↗ {t("peek.fullPage", "Full page")}
               </button>
             )}
             <button
               type="button"
               className="peek-close"
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t("common.close", "Close")}
             >
               ✕
             </button>
@@ -149,12 +145,12 @@ export function IssueQuickPeek({ issueId, onClose, onOpenFullPage, onPrev, onNex
           {loading && (
             <div className="peek-loading">
               <span className="peek-spinner" />
-              <span>Loading…</span>
+              <span>{t("common.loading", "Loading…")}</span>
             </div>
           )}
 
           {error && !loading && (
-            <p className="peek-error">{error}</p>
+            <p className="peek-error">{error === "Issue not found" ? t("peek.notFound", "Issue not found") : t("peek.loadFailed", "Failed to load issue")}</p>
           )}
 
           {issue && !loading && (
@@ -175,25 +171,25 @@ export function IssueQuickPeek({ issueId, onClose, onOpenFullPage, onPrev, onNex
               <dl className="peek-meta-grid">
                 {issue.assignedToName && (
                   <>
-                    <dt>Assigned</dt>
+                    <dt>{t("issues.assignee", "Assigned")}</dt>
                     <dd>{issue.assignedToName}</dd>
                   </>
                 )}
                 {issue.dueDate && (
                   <>
-                    <dt>Due</dt>
+                    <dt>{t("issues.dueDate", "Due")}</dt>
                     <dd>{new Date(issue.dueDate).toLocaleDateString()}</dd>
                   </>
                 )}
                 {issue.estimatedHours != null && (
                   <>
-                    <dt>Estimate</dt>
+                    <dt>{t("issues.estimatedHours", "Estimate")}</dt>
                     <dd>{issue.estimatedHours}h</dd>
                   </>
                 )}
                 {issue.doneRatio != null && (
                   <>
-                    <dt>Progress</dt>
+                    <dt>{t("issues.progress", "Progress")}</dt>
                     <dd>
                       <div className="peek-progress-track">
                         <span className="peek-progress-fill" style={{ width: `${issue.doneRatio}%` }} />
@@ -206,7 +202,7 @@ export function IssueQuickPeek({ issueId, onClose, onOpenFullPage, onPrev, onNex
 
               {issue.description && (
                 <section className="peek-section">
-                  <h3 className="peek-section-title">Description</h3>
+                  <h3 className="peek-section-title">{t("issues.description", "Description")}</h3>
                   <div className="peek-description">
                     <MarkdownBlock
                       content={issue.description}
@@ -220,7 +216,7 @@ export function IssueQuickPeek({ issueId, onClose, onOpenFullPage, onPrev, onNex
               {recentJournals.length > 0 && (
                 <section className="peek-section">
                   <h3 className="peek-section-title">
-                    Recent comments
+                    {t("peek.recentComments", "Recent comments")}
                     {issue.journals.filter((j) => j.notes?.trim()).length > 3 && (
                       <span className="peek-section-more">
                         {issue.journals.filter((j) => j.notes?.trim()).length - 3} more on full page
@@ -247,7 +243,7 @@ export function IssueQuickPeek({ issueId, onClose, onOpenFullPage, onPrev, onNex
 
               {issue.githubLinks.length > 0 && (
                 <section className="peek-section">
-                  <h3 className="peek-section-title">GitHub links</h3>
+                  <h3 className="peek-section-title">{t("peek.githubLinks", "GitHub links")}</h3>
                   <ul className="peek-gh-list">
                     {issue.githubLinks.map((link) => (
                       <li key={link.id}>
@@ -270,14 +266,14 @@ export function IssueQuickPeek({ issueId, onClose, onOpenFullPage, onPrev, onNex
                     rel="noopener noreferrer"
                     className="peek-redmine-link"
                   >
-                    View in Redmine ↗
+                    {t("peek.viewInRedmine", "View in Redmine")} ↗
                   </a>
                 </div>
               )}
             </>
           )}
         </div>
-      </aside>
+      </ModalDialog>
     </>
   );
 }
