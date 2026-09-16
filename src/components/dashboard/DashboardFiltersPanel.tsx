@@ -4,6 +4,7 @@ import type { RefObject } from "react";
 
 import { useI18n } from "@/src/components/I18nProvider";
 import { SavedViewsPanel } from "@/src/components/SavedViewsPanel";
+import { AdvancedFilters, type FilterState } from "@/src/components/AdvancedFilters";
 import type { SavedView, StatusCatalog } from "@/src/types/dashboard";
 
 export type SearchMode = "local" | "hybrid" | "fts";
@@ -35,6 +36,10 @@ interface DashboardFiltersPanelProps {
   aiAvailable: boolean;
   onToggleAiSearch: () => void;
   onOpenFtsSearch: () => void;
+  advancedFilters?: FilterState;
+  onAdvancedFiltersChange?: (filters: FilterState) => void;
+  onClearAdvancedFilters?: () => void;
+  advancedPriorities?: { id: number; name: string }[];
 }
 
 export function DashboardFiltersPanel({
@@ -64,8 +69,22 @@ export function DashboardFiltersPanel({
   aiAvailable,
   onToggleAiSearch,
   onOpenFtsSearch,
+  advancedFilters = { search: "", statusIds: [], priorityIds: [], assignedToMe: false, hasGithubLinks: false, hasAttachments: false },
+  onAdvancedFiltersChange = () => undefined,
+  onClearAdvancedFilters = () => undefined,
+  advancedPriorities = [],
 }: DashboardFiltersPanelProps) {
   const { t } = useI18n();
+  const activeFilters: { key: string; label: string; remove: () => void }[] = [];
+  if (statusFilter) activeFilters.push({ key: "status", label: `${t("filters.status")}: ${statusFilter}`, remove: () => onStatusFilterChange("") });
+  if (priorityFilter) activeFilters.push({ key: "priority", label: `${t("filters.priority")}: ${priorityFilter}`, remove: () => onPriorityFilterChange("") });
+  if (search) activeFilters.push({ key: "search", label: `${t("filters.search")}: ${search}`, remove: () => onSearchChange("") });
+  if (advancedFilters.statusIds.length > 0) activeFilters.push({ key: "advanced-status", label: `${t("filters.status")}: ${advancedFilters.statusIds.length}`, remove: () => onAdvancedFiltersChange({ ...advancedFilters, statusIds: [] }) });
+  if (advancedFilters.priorityIds.length > 0) activeFilters.push({ key: "advanced-priority", label: `${t("filters.priority")}: ${advancedFilters.priorityIds.length}`, remove: () => onAdvancedFiltersChange({ ...advancedFilters, priorityIds: [] }) });
+  if (advancedFilters.hasGithubLinks) activeFilters.push({ key: "github", label: t("filters.githubLinks", "GitHub links"), remove: () => onAdvancedFiltersChange({ ...advancedFilters, hasGithubLinks: false }) });
+  if (advancedFilters.hasAttachments) activeFilters.push({ key: "attachments", label: t("issues.attachments", "Attachments"), remove: () => onAdvancedFiltersChange({ ...advancedFilters, hasAttachments: false }) });
+  if (advancedFilters.dueInDays !== undefined) activeFilters.push({ key: "due", label: t("issues.dueDate", "Due date"), remove: () => onAdvancedFiltersChange({ ...advancedFilters, dueInDays: undefined }) });
+  if (advancedFilters.updatedAfter) activeFilters.push({ key: "updated", label: `${t("filters.updatedAfter", "Updated after")}: ${advancedFilters.updatedAfter}`, remove: () => onAdvancedFiltersChange({ ...advancedFilters, updatedAfter: undefined }) });
 
   return (
     <section className="card filters-panel">
@@ -124,6 +143,28 @@ export function DashboardFiltersPanel({
           <span className="muted">{t('filters.mode' + (searchMode === "local" ? "Local" : searchMode === "fts" ? "Fts" : "Hybrid"))}</span>
         </label>
       </div>
+
+      <AdvancedFilters
+        filters={advancedFilters}
+        onChange={(next) => { onAdvancedFiltersChange(next); onResetPage(); }}
+        statuses={statuses}
+        priorities={advancedPriorities}
+        onClear={onClearAdvancedFilters}
+      />
+
+      {activeFilters.length > 0 && (
+        <div className="active-filter-summary" aria-label={t("filters.active", "Active filters")}>
+          <span className="muted">{t("filters.active", "Active filters")}:</span>
+          {activeFilters.map((filter) => (
+            <button key={filter.key} type="button" className="active-filter-chip" onClick={() => { filter.remove(); onResetPage(); }}>
+              {filter.label} <span aria-hidden="true">×</span>
+            </button>
+          ))}
+          <button type="button" className="link-button active-filter-clear" onClick={() => { onStatusFilterChange(""); onPriorityFilterChange(""); onSearchChange(""); onClearAdvancedFilters(); onResetPage(); }}>
+            {t("common.clearFilters", "Clear all")}
+          </button>
+        </div>
+      )}
 
       <SavedViewsPanel
         savedViews={savedViews}

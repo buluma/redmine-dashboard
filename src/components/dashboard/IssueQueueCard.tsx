@@ -79,6 +79,7 @@ interface IssueQueueCardProps {
   onSort: (column: string) => void;
   getSortIndicator: (column: string) => string;
   allowedStatusIdsByIssue: Record<number, number[]>;
+  statusUpdatingIssueIds?: Set<number>;
   selectedIssueId: number | null;
 
   page: number;
@@ -143,6 +144,7 @@ export function IssueQueueCard({
   onSort,
   getSortIndicator,
   allowedStatusIdsByIssue,
+  statusUpdatingIssueIds = new Set(),
   selectedIssueId,
   page,
   onPageChange,
@@ -221,7 +223,7 @@ export function IssueQueueCard({
               </p>
               <div className="bulk-controls">
                 <label className="inline-field">
-                  Bulk Status
+                  {t("queue.bulkStatus")}
                   <select value={bulkStatusId} onChange={(e) => onBulkStatusIdChange(Number(e.target.value))}>
                     <option value={0}>—</option>
                     {statuses.map((status) => (
@@ -239,7 +241,7 @@ export function IssueQueueCard({
                   {bulkUpdating ? "Applying..." : "Apply status"}
                 </button>
                 <label className="inline-field">
-                  Bulk Priority
+                  {t("issues.priority")}
                   <select value={bulkPriorityId} onChange={(e) => onBulkPriorityIdChange(Number(e.target.value))}>
                     <option value={0}>—</option>
                     {computedPriorityOptions.map((p) => (
@@ -261,7 +263,7 @@ export function IssueQueueCard({
                   disabled={bulkUpdating}
                   title="Set progress to 100% on all selected"
                 >
-                  Mark 100%
+                  {t("queue.markDone", "Mark 100%")}
                 </button>
                 <button type="button" className="secondary-button" onClick={onClearBulkSelection}>
                   Clear Selection
@@ -337,7 +339,7 @@ export function IssueQueueCard({
                   className="primary-button new-issue-btn"
                   onClick={onOpenIssueCreateModal}
                 >
-                  + New Issue
+                  {t("queue.newIssue")}
                 </button>
                 <ColumnPicker visibleColumns={visibleColumns} onChange={onVisibleColumnsChange} />
                 {savingPreset ? (
@@ -424,6 +426,7 @@ export function IssueQueueCard({
 
           {(
             <>
+            <div className="issues-table-scroll" role="region" aria-label={t('queue.title')} tabIndex={0}>
             <table className="issues-table">
               <thead>
               <tr>
@@ -492,6 +495,7 @@ export function IssueQueueCard({
                       allowedStatusIds={
                         issueNumericId ? allowedStatusIdsByIssue[issueNumericId] : undefined
                       }
+                      statusUpdating={issueNumericId !== null && statusUpdatingIssueIds.has(issueNumericId)}
                       visibleColumns={visibleColumns}
                       onSelect={(id) => onSelectIssueId(id)}
                       onOpenInNewTab={(it) => onOpenInNewTab(it)}
@@ -507,6 +511,7 @@ export function IssueQueueCard({
               })()}
               </tbody>
             </table>
+            </div>
 
           {/* Pagination Controls */}
           {(() => {

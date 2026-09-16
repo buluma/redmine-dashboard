@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "./I18nProvider";
+import { ModalDialog } from "./ModalDialog";
 
 interface Shortcut {
   key: string;
@@ -53,11 +54,10 @@ export function ShortcutHelp({ isOpen, onClose }: ShortcutHelpProps) {
   const categories = [...new Set(shortcuts.map((s) => s.category))];
 
   return (
-    <div className="shortcut-overlay" onClick={onClose}>
-      <div className="shortcut-modal" onClick={(e) => e.stopPropagation()}>
+    <ModalDialog open={isOpen} onClose={onClose} labelledBy="shortcut-help-title" backdropClassName="shortcut-overlay" dialogClassName="shortcut-modal">
         <div className="shortcut-header">
-          <h2>{t("shortcuts.title")}</h2>
-          <button type="button" onClick={onClose} className="shortcut-close">
+          <h2 id="shortcut-help-title">{t("shortcuts.title")}</h2>
+          <button type="button" onClick={onClose} className="shortcut-close" aria-label={t("common.close", "Close")}>
             ✕
           </button>
         </div>
@@ -82,11 +82,10 @@ export function ShortcutHelp({ isOpen, onClose }: ShortcutHelpProps) {
 
         <div className="shortcut-footer">
           <p>
-            Press <kbd>?</kbd> or <kbd>Escape</kbd> to close
+            {t("shortcuts.closeHint", "Press ? or Escape to close")}
           </p>
         </div>
-      </div>
-    </div>
+    </ModalDialog>
   );
 }
 
