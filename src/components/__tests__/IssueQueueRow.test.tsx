@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { IssueQueueRow, type IssueQueueRowCallbacks } from "@/src/components/dashboard/IssueQueueRow";
 import type { Issue } from "@/src/types/dashboard";
 import type { ColumnKey } from "@/src/components/ColumnPicker";
@@ -55,7 +55,7 @@ function makeCallbacks(): IssueQueueRowCallbacks {
   };
 }
 
-function renderRow(issue: Issue, callbacks: IssueQueueRowCallbacks) {
+function renderRow(issue: Issue, callbacks: IssueQueueRowCallbacks, visibleColumns: Set<ColumnKey> = new Set<ColumnKey>()) {
   return render(
     <table>
       <tbody>
@@ -64,7 +64,7 @@ function renderRow(issue: Issue, callbacks: IssueQueueRowCallbacks) {
           selected={false}
           inBulkSelection={false}
           statuses={[{ id: 1, name: "New", isClosed: false }]}
-          visibleColumns={new Set<ColumnKey>()}
+          visibleColumns={visibleColumns}
           {...callbacks}
         />
       </tbody>
@@ -73,6 +73,17 @@ function renderRow(issue: Issue, callbacks: IssueQueueRowCallbacks) {
 }
 
 describe("IssueQueueRow selection", () => {
+  it("shows an exact activity timestamp with a relative label after hydration", async () => {
+    const issue = makeIssue({ lastActivityAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() });
+    renderRow(issue, makeCallbacks(), new Set<ColumnKey>(["updated"]));
+
+    const timestamp = document.querySelector("time");
+    expect(timestamp).not.toBeNull();
+    expect(timestamp).toHaveAttribute("dateTime", issue.lastActivityAt!);
+    expect(timestamp).toHaveAttribute("title");
+    await waitFor(() => expect(timestamp?.textContent).toMatch(/2h ago|personalTickets\.timeAgo\.h/));
+  });
+
   it("clicking a Redmine-backed row selects it by numeric id", () => {
     const callbacks = makeCallbacks();
     renderRow(makeIssue({ redmineIssueId: 42 }), callbacks);

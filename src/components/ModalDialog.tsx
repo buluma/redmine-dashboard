@@ -27,7 +27,9 @@ export function ModalDialog({ open, onClose, labelledBy, children, backdropClass
     if (!open) return;
     openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const frame = window.requestAnimationFrame(() => {
-      const initial = initialFocusRef?.current ?? dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE);
+      const initial = initialFocusRef?.current
+        ?? dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)
+        ?? dialogRef.current;
       initial?.focus({ preventScroll: true });
     });
 

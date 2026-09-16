@@ -66,4 +66,60 @@ describe("ModalDialog", () => {
     expect(opener).toHaveFocus();
     opener.remove();
   });
+
+  it("restores focus when the open state closes", async () => {
+    const onClose = vi.fn();
+    const opener = document.createElement("button");
+    opener.type = "button";
+    opener.textContent = "State opener";
+    document.body.append(opener);
+    opener.focus();
+
+    const { rerender } = render(
+      <ModalDialog
+        open
+        onClose={onClose}
+        labelledBy="dialog-title"
+        backdropClassName="test-backdrop"
+        dialogClassName="test-dialog"
+      >
+        <h2 id="dialog-title">Test dialog</h2>
+        <button type="button">Action</button>
+      </ModalDialog>,
+    );
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Action" })).toHaveFocus());
+    rerender(
+      <ModalDialog
+        open={false}
+        onClose={onClose}
+        labelledBy="dialog-title"
+        backdropClassName="test-backdrop"
+        dialogClassName="test-dialog"
+      >
+        <h2 id="dialog-title">Test dialog</h2>
+        <button type="button">Action</button>
+      </ModalDialog>,
+    );
+
+    expect(opener).toHaveFocus();
+    opener.remove();
+  });
+
+  it("moves focus to the dialog itself when it has no controls", async () => {
+    render(
+      <ModalDialog
+        open
+        onClose={vi.fn()}
+        labelledBy="dialog-title"
+        backdropClassName="test-backdrop"
+        dialogClassName="test-dialog"
+      >
+        <h2 id="dialog-title">Informational dialog</h2>
+        <p>No actions are available.</p>
+      </ModalDialog>,
+    );
+
+    await waitFor(() => expect(screen.getByRole("dialog", { name: "Informational dialog" })).toHaveFocus());
+  });
 });
