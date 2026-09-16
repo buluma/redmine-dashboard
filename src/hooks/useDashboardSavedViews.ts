@@ -18,19 +18,21 @@ export interface ViewSnapshot {
 export interface UseDashboardSavedViewsResult {
   savedViews: SavedView[];
   activeViewId: string | null;
+  activeViewDirty: boolean;
   setActiveViewId: (id: string | null) => void;
   viewDraftName: string;
   setViewDraftName: (name: string) => void;
   saveView: (
     snapshot: ViewSnapshot,
     fallbackName: string,
+    nameOverride?: string,
   ) => Promise<{ view: SavedView; replaced: boolean }>;
   deleteView: (viewId: string) => Promise<SavedView | undefined>;
   reorderViews: (viewIds: string[]) => Promise<void>;
   clearActiveIfDiverged: (
     snapshot: Pick<
       ViewSnapshot,
-      "statusFilter" | "priorityFilter" | "search" | "sort"
+      "statusFilter" | "priorityFilter" | "search" | "sort" | "assignedToMe"
     >,
   ) => void;
 }
@@ -75,6 +77,7 @@ async function responseJson<T>(response: Response): Promise<T> {
 export function useDashboardSavedViews(): UseDashboardSavedViewsResult {
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
+  const [activeViewDirty, setActiveViewDirty] = useState(false);
   const [viewDraftName, setViewDraftName] = useState("");
 
   useEffect(() => {
@@ -156,19 +159,30 @@ export function useDashboardSavedViews(): UseDashboardSavedViewsResult {
     (
       snapshot: Pick<
         ViewSnapshot,
-        "statusFilter" | "priorityFilter" | "search" | "sort"
+        "statusFilter" | "priorityFilter" | "search" | "sort" | "assignedToMe"
       >,
     ) => {
-      if (!activeViewId) return;
+      if (!activeViewId) {
+        setActiveViewDirty(false);
+        return;
+      }
       const active = savedViews.find((view) => view.id === activeViewId);
-      if (!active || !matchesView(active, snapshot)) setActiveViewId(null);
+      if (!active) {
+        setActiveViewId(null);
+        setActiveViewDirty(false);
+        return;
+      }
+      setActiveViewDirty(
+        !matchesView(active, snapshot)
+        || (snapshot.assignedToMe !== undefined && active.assignedToMe !== snapshot.assignedToMe),
+      );
     },
     [activeViewId, savedViews],
   );
 
   const saveView = useCallback(
-    async (snapshot: ViewSnapshot, fallbackName: string) => {
-      const name = viewDraftName.trim() || fallbackName;
+    async (snapshot: ViewSnapshot, fallbackName: string, nameOverride?: string) => {
+      const name = nameOverride?.trim() || viewDraftName.trim() || fallbackName;
       const existing = savedViews.find(
         (view) => view.name.toLowerCase() === name.toLowerCase(),
       );
@@ -189,6 +203,7 @@ export function useDashboardSavedViews(): UseDashboardSavedViewsResult {
           : [...current, optimisticView],
       );
       setActiveViewId(optimisticView.id);
+      setActiveViewDirty(false);
       setViewDraftName("");
 
       try {
@@ -228,7 +243,10 @@ export function useDashboardSavedViews(): UseDashboardSavedViewsResult {
       const previousViews = savedViews;
       const previousActiveViewId = activeViewId;
       setSavedViews((current) => current.filter((view) => view.id !== viewId));
-      if (activeViewId === viewId) setActiveViewId(null);
+      if (activeViewId === viewId) {
+        setActiveViewId(null);
+        setActiveViewDirty(false);
+      }
 
       try {
         await responseJson<{ ok: true }>(
@@ -286,6 +304,7 @@ export function useDashboardSavedViews(): UseDashboardSavedViewsResult {
   return {
     savedViews,
     activeViewId,
+    activeViewDirty,
     setActiveViewId,
     viewDraftName,
     setViewDraftName,

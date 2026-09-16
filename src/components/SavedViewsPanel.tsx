@@ -23,10 +23,13 @@ import { useI18n } from "./I18nProvider";
 interface SavedViewsPanelProps {
   savedViews: unknown[];
   activeViewId: string | null;
+  activeViewDirty: boolean;
   onApply: (view: unknown) => void;
   onDelete: (viewId: string) => void;
   onReorder: (viewIds: string[]) => void;
   onSave: (name: string) => void;
+  onSaveChanges: () => void;
+  onRevert: () => void;
   viewDraftName: string;
   setViewDraftName: (name: string) => void;
 }
@@ -101,10 +104,13 @@ function SortableViewPill({
 export function SavedViewsPanel({
   savedViews,
   activeViewId,
+  activeViewDirty,
   onApply,
   onDelete,
   onReorder,
   onSave,
+  onSaveChanges,
+  onRevert,
   viewDraftName,
   setViewDraftName,
 }: SavedViewsPanelProps) {
@@ -175,6 +181,21 @@ export function SavedViewsPanel({
     <div className="saved-view-panel">
       <div className="saved-view-header">
         <span className="saved-view-title">{t('savedViews.title')}</span>
+        {activeViewDirty && (
+          <span className="saved-view-dirty" role="status">
+            {t('savedViews.modified', 'Modified')}
+          </span>
+        )}
+        {activeViewDirty && (
+          <div className="saved-view-dirty-actions">
+            <button type="button" className="link-button" onClick={onRevert}>
+              {t('savedViews.revert', 'Revert')}
+            </button>
+            <button type="button" className="secondary-button" onClick={onSaveChanges}>
+              {t('savedViews.saveChanges', 'Save changes')}
+            </button>
+          </div>
+        )}
         {savedViews.length > 1 && (
           <button
             type="button"

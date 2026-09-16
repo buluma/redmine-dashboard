@@ -223,6 +223,33 @@ textarea {
   background: #f2f6fa;
 }
 
+.saved-view-header {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.saved-view-dirty {
+  color: var(--warning, #9a5b13);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.saved-view-dirty-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-left: auto;
+}
+
+.saved-view-dirty-actions .secondary-button,
+.saved-view-dirty-actions .link-button {
+  min-height: 2rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.78rem;
+}
+
 /* .status-chip {
   background: #eef3f8;
 } */
