@@ -42,11 +42,15 @@ function SortableViewPill({
   isActive,
   onClick,
   onDelete,
+  isDeletePending,
+  onDeleteRequest,
 }: {
   view: SavedViewItem;
   isActive: boolean;
   onClick: () => void;
   onDelete: () => void;
+  isDeletePending: boolean;
+  onDeleteRequest: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: view.id,
@@ -67,19 +71,28 @@ function SortableViewPill({
       {...attributes}
       {...listeners}
     >
-      <button type="button" className="saved-view-apply" onClick={onClick}>
+      <button
+        type="button"
+        className="saved-view-apply"
+        onClick={onClick}
+        aria-pressed={isActive}
+      >
         {view.name}
       </button>
       <button
         type="button"
-        className="saved-view-delete"
+        className={`saved-view-delete ${isDeletePending ? "confirm" : ""}`}
         onClick={(e) => {
           e.stopPropagation();
-          onDelete();
+          if (isDeletePending) {
+            onDelete();
+          } else {
+            onDeleteRequest();
+          }
         }}
-        aria-label={`Delete ${view.name}`}
+        aria-label={isDeletePending ? `Confirm delete ${view.name}` : `Delete ${view.name}`}
       >
-        ×
+        {isDeletePending ? "Confirm" : "×"}
       </button>
     </div>
   );
@@ -98,6 +111,7 @@ export function SavedViewsPanel({
   const { t } = useI18n();
   const [localViews, setLocalViews] = useState<SavedViewItem[]>([]);
   const [isReorderMode, setIsReorderMode] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   // Sync local state with props. localViews is independently mutated during
   // drag-reorder (see setLocalViews below), so it can't be pure derived
@@ -106,6 +120,7 @@ export function SavedViewsPanel({
     const views = (savedViews as SavedViewItem[]).slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalViews(views);
+    setPendingDeleteId(null);
   }, [savedViews]);
 
   const sensors = useSensors(
@@ -198,8 +213,16 @@ export function SavedViewsPanel({
                     key={view.id}
                     view={view}
                     isActive={activeViewId === view.id}
-                    onClick={() => onApply(view)}
-                    onDelete={() => onDelete(view.id)}
+                    onClick={() => {
+                      setPendingDeleteId(null);
+                      onApply(view);
+                    }}
+                    onDelete={() => {
+                      setPendingDeleteId(null);
+                      onDelete(view.id);
+                    }}
+                    isDeletePending={pendingDeleteId === view.id}
+                    onDeleteRequest={() => setPendingDeleteId(view.id)}
                   />
                 ))}
               </div>

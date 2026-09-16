@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useI18n } from "./I18nProvider";
 
 export type ColumnKey = "priority" | "due" | "progress" | "updated";
+
+const ALL_COLUMN_KEYS: ColumnKey[] = ["priority", "due", "progress", "updated"];
 
 interface ColumnPickerProps {
   visibleColumns: Set<ColumnKey>;
@@ -13,6 +15,8 @@ interface ColumnPickerProps {
 export function ColumnPicker({ visibleColumns, onChange }: ColumnPickerProps) {
   const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const columns: { key: ColumnKey; label: string }[] = [
     { key: "priority", label: t('columnPicker.columns.priority') },
@@ -20,6 +24,31 @@ export function ColumnPicker({ visibleColumns, onChange }: ColumnPickerProps) {
     { key: "progress", label: t('columnPicker.columns.progress') },
     { key: "updated", label: t('columnPicker.columns.updated') },
   ];
+
+  const closePicker = () => {
+    setIsOpen(false);
+    requestAnimationFrame(() => triggerRef.current?.focus());
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const frame = requestAnimationFrame(() => {
+      dropdownRef.current?.querySelector<HTMLInputElement>("input")?.focus();
+    });
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closePicker();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
 
   const toggleColumn = (key: ColumnKey) => {
     const next = new Set(visibleColumns);
@@ -33,12 +62,14 @@ export function ColumnPicker({ visibleColumns, onChange }: ColumnPickerProps) {
 
   return (
     <div className="column-picker-container">
-      <button 
+      <button
+        ref={triggerRef}
         type="button" 
         className="secondary-button column-picker-trigger" 
         onClick={() => setIsOpen(!isOpen)}
         aria-haspopup="true"
         aria-expanded={isOpen}
+        aria-controls="column-picker-dropdown"
         aria-label={t('columnPicker.buttonLabel')}
       >
         <span>📊</span>
@@ -48,8 +79,14 @@ export function ColumnPicker({ visibleColumns, onChange }: ColumnPickerProps) {
 
       {isOpen && (
         <>
-          <div className="picker-overlay" onClick={() => setIsOpen(false)} />
-          <div className="picker-dropdown">
+          <div className="picker-overlay" onClick={closePicker} />
+          <div
+            ref={dropdownRef}
+            id="column-picker-dropdown"
+            className="picker-dropdown"
+            role="group"
+            aria-label={t('columnPicker.header')}
+          >
             <div className="picker-header">
               <strong>{t('columnPicker.header')}</strong>
             </div>
@@ -65,6 +102,14 @@ export function ColumnPicker({ visibleColumns, onChange }: ColumnPickerProps) {
                 </label>
               ))}
             </div>
+            <button
+              type="button"
+              className="picker-reset"
+              onClick={() => onChange(new Set(ALL_COLUMN_KEYS))}
+              disabled={visibleColumns.size === ALL_COLUMN_KEYS.length}
+            >
+              {t('columnPicker.reset', 'Reset columns')}
+            </button>
           </div>
         </>
       )}
@@ -142,6 +187,29 @@ export function ColumnPicker({ visibleColumns, onChange }: ColumnPickerProps) {
         .picker-item input {
           width: auto;
           margin: 0;
+        }
+
+        .picker-reset {
+          width: calc(100% - 1rem);
+          margin: 0 0.5rem 0.5rem;
+          padding: 0.45rem 0.75rem;
+          border: 1px solid var(--line);
+          border-radius: 8px;
+          background: transparent;
+          color: var(--ink-soft);
+          cursor: pointer;
+          font: inherit;
+          font-size: 0.8rem;
+        }
+
+        .picker-reset:hover:not(:disabled) {
+          background: var(--bg-soft);
+          color: var(--ink);
+        }
+
+        .picker-reset:disabled {
+          cursor: not-allowed;
+          opacity: 0.55;
         }
 
         @keyframes fade-in {

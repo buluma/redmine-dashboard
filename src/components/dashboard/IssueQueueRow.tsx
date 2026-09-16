@@ -13,6 +13,8 @@ import {
   redmineIssueUrl,
 } from "@/src/lib/issue-utils";
 import type { Issue, StatusCatalog } from "@/src/types/dashboard";
+import { useEffect, useState } from "react";
+import { useI18n } from "@/src/components/I18nProvider";
 
 import type { ColumnKey } from "@/src/components/ColumnPicker";
 
@@ -54,12 +56,34 @@ export function IssueQueueRow({
   onHoverEnter,
   onHoverLeave,
 }: IssueQueueRowProps) {
+  const { t, formatDate } = useI18n();
+  const [hasMounted, setHasMounted] = useState(false);
+  const [now, setNow] = useState<number | null>(null);
   const urgency = issueUrgency(issue);
+  const activityTimestamp = latestIssueActivityTimestamp(issue);
   const issueNumericId = toIssueNumericId(issue.redmineIssueId);
   const selectableStatuses =
     allowedStatusIds && allowedStatusIds.length > 0
       ? statuses.filter((s) => allowedStatusIds.includes(s.id))
       : statuses;
+
+  useEffect(() => {
+    // Relative time depends on the client clock, so defer it until after
+    // hydration to keep the server and first client render deterministic.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHasMounted(true);
+    setNow(Date.now());
+  }, []);
+
+  const activityDate = new Date(activityTimestamp);
+  const activityLabel = formatDate(activityDate, { dateStyle: "medium", timeStyle: "short" });
+  const diffMinutes = now === null ? 0 : Math.max(0, Math.floor((now - activityDate.getTime()) / 60000));
+  const activityRelativeLabel =
+    diffMinutes < 60
+      ? t("personalTickets.timeAgo.m", { count: Math.max(diffMinutes, 1) })
+      : diffMinutes < 1440
+        ? t("personalTickets.timeAgo.h", { count: Math.floor(diffMinutes / 60) })
+        : t("personalTickets.timeAgo.d", { count: Math.floor(diffMinutes / 1440) });
 
   return (
     <tr
@@ -208,7 +232,11 @@ export function IssueQueueRow({
       )}
       {visibleColumns.has("progress") && <td>{issue.doneRatio ?? 0}%</td>}
       {visibleColumns.has("updated") && (
-        <td>{new Date(latestIssueActivityTimestamp(issue)).toLocaleString()}</td>
+        <td>
+          <time dateTime={activityTimestamp} title={activityLabel}>
+            {hasMounted ? activityRelativeLabel : activityLabel}
+          </time>
+        </td>
       )}
     </tr>
   );
