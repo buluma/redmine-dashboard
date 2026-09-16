@@ -26,10 +26,13 @@ interface DashboardFiltersPanelProps {
   onResetPage: () => void;
   savedViews: SavedView[];
   activeViewId: string | null;
+  activeViewDirty: boolean;
   onApplySavedView: (view: SavedView) => void;
   onDeleteSavedView: (viewId: string) => void;
   onReorderSavedViews: (viewIds: string[]) => void;
   onSaveCurrentView: () => void;
+  onSaveViewChanges: () => void;
+  onRevertSavedView: () => void;
   viewDraftName: string;
   setViewDraftName: (name: string) => void;
   aiSearchOpen: boolean;
@@ -59,10 +62,13 @@ export function DashboardFiltersPanel({
   onResetPage,
   savedViews,
   activeViewId,
+  activeViewDirty,
   onApplySavedView,
   onDeleteSavedView,
   onReorderSavedViews,
   onSaveCurrentView,
+  onSaveViewChanges,
+  onRevertSavedView,
   viewDraftName,
   setViewDraftName,
   aiSearchOpen,
@@ -169,6 +175,7 @@ export function DashboardFiltersPanel({
       <SavedViewsPanel
         savedViews={savedViews}
         activeViewId={activeViewId}
+        activeViewDirty={activeViewDirty}
         onApply={(view) => onApplySavedView(view as SavedView)}
         onDelete={onDeleteSavedView}
         onReorder={onReorderSavedViews}
@@ -176,6 +183,8 @@ export function DashboardFiltersPanel({
           setViewDraftName(name);
           onSaveCurrentView();
         }}
+        onSaveChanges={onSaveViewChanges}
+        onRevert={onRevertSavedView}
         viewDraftName={viewDraftName}
         setViewDraftName={setViewDraftName}
       />

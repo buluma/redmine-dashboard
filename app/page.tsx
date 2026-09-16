@@ -87,6 +87,7 @@ export default function Home() {
   const {
     savedViews,
     activeViewId,
+    activeViewDirty,
     setActiveViewId,
     viewDraftName,
     setViewDraftName,
@@ -237,8 +238,8 @@ export default function Home() {
   }, [allVisibleIssueIds]);
 
   useEffect(() => {
-    clearActiveIfDiverged({ statusFilter, priorityFilter, search, sort });
-  }, [clearActiveIfDiverged, priorityFilter, search, sort, statusFilter]);
+    clearActiveIfDiverged({ statusFilter, priorityFilter, search, sort, assignedToMe: advancedFilters.assignedToMe });
+  }, [advancedFilters.assignedToMe, clearActiveIfDiverged, priorityFilter, search, sort, statusFilter]);
 
   function resetPage() {
     setPage(1);
@@ -479,7 +480,7 @@ export default function Home() {
     setActiveViewId(view.id);
   }
 
-  async function saveCurrentView() {
+  async function saveCurrentView(nameOverride?: string) {
     const fallbackName = t('views.defaultName', { count: savedViews.length + 1 });
     try {
       const { view, replaced } = await saveView(
@@ -491,6 +492,7 @@ export default function Home() {
           assignedToMe: advancedFilters.assignedToMe,
         },
         fallbackName,
+        nameOverride,
       );
       toast.info(
         replaced
@@ -500,6 +502,11 @@ export default function Home() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('common.error'));
     }
+  }
+
+  function revertSavedView() {
+    const active = savedViews.find((view) => view.id === activeViewId);
+    if (active) applySavedView(active);
   }
 
   async function deleteSavedView(viewId: string) {
@@ -634,10 +641,16 @@ export default function Home() {
         onResetPage={resetPage}
         savedViews={savedViews}
         activeViewId={activeViewId}
+        activeViewDirty={activeViewDirty}
         onApplySavedView={applySavedView}
         onDeleteSavedView={deleteSavedView}
         onReorderSavedViews={reorderSavedViews}
         onSaveCurrentView={saveCurrentView}
+        onSaveViewChanges={() => {
+          const active = savedViews.find((view) => view.id === activeViewId);
+          if (active) void saveCurrentView(active.name);
+        }}
+        onRevertSavedView={revertSavedView}
         viewDraftName={viewDraftName}
         setViewDraftName={setViewDraftName}
         aiSearchOpen={aiSearchOpen}
