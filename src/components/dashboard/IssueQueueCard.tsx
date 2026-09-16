@@ -216,12 +216,13 @@ export function IssueQueueCard({
               {summary.dueToday > 0 ? ` • Due today: ${summary.dueToday}` : ""}
             </p>
           ) : (
-            <div className="bulk-toolbar" role="region" aria-label="Bulk actions">
-              <p className="muted">
+            <div className="bulk-toolbar" role="region" aria-label="Bulk actions" aria-busy={bulkUpdating}>
+              <p className="muted bulk-selection-summary" aria-live="polite">
                 Selected: <strong>{selectedIssueIds.length}</strong>
                 {summary.dueToday > 0 ? ` • Due today: ${summary.dueToday}` : ""}
               </p>
               <div className="bulk-controls">
+                <div className="bulk-action-group">
                 <label className="inline-field">
                   {t("queue.bulkStatus")}
                   <select value={bulkStatusId} onChange={(e) => onBulkStatusIdChange(Number(e.target.value))}>
@@ -240,6 +241,8 @@ export function IssueQueueCard({
                 >
                   {bulkUpdating ? "Applying..." : "Apply status"}
                 </button>
+                </div>
+                <div className="bulk-action-group">
                 <label className="inline-field">
                   {t("issues.priority")}
                   <select value={bulkPriorityId} onChange={(e) => onBulkPriorityIdChange(Number(e.target.value))}>
@@ -256,6 +259,7 @@ export function IssueQueueCard({
                 >
                   {bulkUpdating ? "Applying..." : "Apply priority"}
                 </button>
+                </div>
                 <button
                   type="button"
                   className="secondary-button"
@@ -316,6 +320,7 @@ export function IssueQueueCard({
 
             <div className="filters-right">
               {/* Filter Presets */}
+              <div className="queue-view-controls">
               <div className="filter-presets">
                 <select
                   className="preset-select"
@@ -391,6 +396,8 @@ export function IssueQueueCard({
                   </button>
                 )}
               </div>
+              </div>
+              <div className="queue-filter-controls">
               <ProjectFilter
                 issues={issues}
                 selectedProject={selectedProject}
@@ -421,6 +428,7 @@ export function IssueQueueCard({
               </button>
               <ExportButton issues={visibleIssues} format="csv" />
               <ExportButton issues={visibleIssues} format="print" />
+              </div>
             </div>
           </div>
 
@@ -445,32 +453,32 @@ export function IssueQueueCard({
                 {visibleColumns.has("priority") && (
                   <th
                     className="sortable-header"
-                    onClick={() => onSort("priority")}
-                    style={{ cursor: "pointer" }}
-                    title="Sort by priority"
+                    aria-sort={getSortIndicator("priority").includes("▲") ? "ascending" : getSortIndicator("priority").includes("▼") ? "descending" : "none"}
                   >
-                    Priority{getSortIndicator("priority")}
+                    <button type="button" className="table-sort-button" onClick={() => onSort("priority")}>
+                      Priority{getSortIndicator("priority")}
+                    </button>
                   </th>
                 )}
                 {visibleColumns.has("due") && (
                   <th
                     className="sortable-header"
-                    onClick={() => onSort("due")}
-                    style={{ cursor: "pointer" }}
-                    title="Sort by due date"
+                    aria-sort={getSortIndicator("due").includes("▲") ? "ascending" : getSortIndicator("due").includes("▼") ? "descending" : "none"}
                   >
-                    Due{getSortIndicator("due")}
+                    <button type="button" className="table-sort-button" onClick={() => onSort("due")}>
+                      Due{getSortIndicator("due")}
+                    </button>
                   </th>
                 )}
                 {visibleColumns.has("progress") && <th>{t('queue.colProgress')}</th>}
                 {visibleColumns.has("updated") && (
                   <th
                     className="sortable-header"
-                    onClick={() => onSort("updated")}
-                    style={{ cursor: "pointer" }}
-                    title="Sort by update time"
+                    aria-sort={getSortIndicator("updated").includes("▲") ? "ascending" : getSortIndicator("updated").includes("▼") ? "descending" : "none"}
                   >
-                    {t('drawer.activity')}{getSortIndicator("updated")}
+                    <button type="button" className="table-sort-button" onClick={() => onSort("updated")}>
+                      {t('drawer.activity')}{getSortIndicator("updated")}
+                    </button>
                   </th>
                 )}
               </tr>
