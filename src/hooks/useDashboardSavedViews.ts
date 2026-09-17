@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { matchesView } from "@/src/lib/issue-utils";
-import type { SavedView } from "@/src/types/dashboard";
+import type { SavedView, SavedViewColumnKey } from "@/src/types/dashboard";
 
 const SAVED_VIEWS_KEY = "nrcc.savedViews.v1";
 
@@ -13,6 +13,7 @@ export interface ViewSnapshot {
   search: string;
   sort: string;
   assignedToMe: boolean;
+  visibleColumns: SavedViewColumnKey[];
 }
 
 export interface UseDashboardSavedViewsResult {
@@ -32,7 +33,7 @@ export interface UseDashboardSavedViewsResult {
   clearActiveIfDiverged: (
     snapshot: Pick<
       ViewSnapshot,
-      "statusFilter" | "priorityFilter" | "search" | "sort" | "assignedToMe"
+      "statusFilter" | "priorityFilter" | "search" | "sort" | "assignedToMe" | "visibleColumns"
     >,
   ) => void;
 }
@@ -172,10 +173,7 @@ export function useDashboardSavedViews(): UseDashboardSavedViewsResult {
         setActiveViewDirty(false);
         return;
       }
-      setActiveViewDirty(
-        !matchesView(active, snapshot)
-        || (snapshot.assignedToMe !== undefined && active.assignedToMe !== snapshot.assignedToMe),
-      );
+      setActiveViewDirty(!matchesView(active, snapshot));
     },
     [activeViewId, savedViews],
   );
