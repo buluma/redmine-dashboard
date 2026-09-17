@@ -226,6 +226,12 @@ describe("IssueQueueCard", () => {
   it("hides the whole pagination bar when there are no visible issues", () => {
     renderCard({ visibleIssues: [] });
     expect(screen.queryByText(/pagination.showing/)).toBeNull();
+    expect(screen.getByText(/queue\.empty:/)).toBeInTheDocument();
+  });
+
+  it("explains when filters produce no visible issues", () => {
+    renderCard({ visibleIssues: [], search: "missing" });
+    expect(screen.getByText(/queue\.emptyFiltered:/)).toBeInTheDocument();
   });
 
   it("highlights the In Progress quick filter as active when selected", () => {

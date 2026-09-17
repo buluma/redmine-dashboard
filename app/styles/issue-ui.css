@@ -1124,6 +1124,19 @@
   font-size: 0.8rem;
 }
 
+.issue-queue-empty {
+  margin: 1rem 0;
+  padding: 2rem 1rem;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.issue-queue-empty .empty-state-hint {
+  margin: 0.4rem auto 0;
+  max-width: 34rem;
+}
+
 @media (max-width: 680px) {
   .issues-table-scroll {
     margin-inline: -0.5rem;
