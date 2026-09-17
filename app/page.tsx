@@ -163,6 +163,7 @@ export default function Home() {
     setSyncState,
     loading,
     setLoading,
+    refreshError,
     favoriteIssueIds,
     bootstrapInfo,
     aiStatus,
@@ -769,6 +770,8 @@ export default function Home() {
 
         <IssueQueueCard
           loading={loading}
+          refreshError={refreshError}
+          onRetryRefresh={() => void refreshAll()}
           visibleIssues={visibleIssues}
           issues={issues}
           summary={summary}

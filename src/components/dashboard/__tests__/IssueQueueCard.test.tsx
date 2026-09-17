@@ -204,6 +204,13 @@ describe("IssueQueueCard", () => {
     expect(screen.queryByTestId("row-1")).toBeNull();
   });
 
+  it("keeps the queue actionable when refresh fails", () => {
+    const props = renderCard({ refreshError: "Network unavailable", onRetryRefresh: vi.fn() });
+    expect(screen.getByRole("alert")).toHaveTextContent("Network unavailable");
+    fireEvent.click(screen.getByRole("button", { name: /common\.retry/ }));
+    expect(props.onRetryRefresh).toHaveBeenCalledTimes(1);
+  });
+
   it("wires the select-all checkbox", () => {
     const props = renderCard();
     fireEvent.click(screen.getByLabelText("Select all visible issues"));
