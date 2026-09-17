@@ -95,6 +95,7 @@ export function useIssueFiltering({
 
   const baseFilteredIssues = useMemo(() => {
     let filtered = issues;
+    const favoriteIds = new Set(favoriteIssueIds);
 
     if (selectedProject) {
       filtered = filtered.filter((issue) => issue.projectName === selectedProject);
@@ -104,7 +105,7 @@ export function useIssueFiltering({
 
     if (showFavoritesOnly) {
       filtered = filtered.filter(
-        (issue) => issue.redmineIssueId !== null && favoriteIssueIds.includes(issue.redmineIssueId),
+        (issue) => issue.redmineIssueId !== null && favoriteIds.has(issue.redmineIssueId),
       );
     }
 
@@ -135,7 +136,10 @@ export function useIssueFiltering({
   );
 
   const selectedAllVisible = useMemo(
-    () => allVisibleIssueIds.length > 0 && allVisibleIssueIds.every((id) => selectedIssueIds.includes(id)),
+    () => {
+      const selectedIds = new Set(selectedIssueIds);
+      return allVisibleIssueIds.length > 0 && allVisibleIssueIds.every((id) => selectedIds.has(id));
+    },
     [allVisibleIssueIds, selectedIssueIds],
   );
 
