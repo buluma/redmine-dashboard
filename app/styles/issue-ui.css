@@ -1137,6 +1137,25 @@
   max-width: 34rem;
 }
 
+.queue-refresh-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #d8a5a5;
+  border-radius: 8px;
+  background: #fff5f5;
+  color: #7f2525;
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.queue-refresh-error-detail {
+  font-weight: 500;
+}
+
 @media (max-width: 680px) {
   .issues-table-scroll {
     margin-inline: -0.5rem;

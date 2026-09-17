@@ -49,6 +49,7 @@ export interface UseDashboardDataResult {
   setSyncState: Dispatch<SetStateAction<SyncState>>;
   loading: boolean;
   setLoading: Dispatch<SetStateAction<boolean>>;
+  refreshError: string | null;
   favoriteIssueIds: number[];
   bootstrapInfo: BootstrapInfo;
   aiStatus: AiStatusInfo | null;
@@ -72,6 +73,7 @@ export function useDashboardData({
   const [priorities, setPriorities] = useState<string[]>([]);
   const [syncState, setSyncState] = useState<SyncState>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const [favoriteIssueIds, setFavoriteIssueIds] = useState<number[]>([]);
   const [bootstrapInfo, setBootstrapInfo] = useState<BootstrapInfo>(null);
   const [aiStatus, setAiStatus] = useState<AiStatusInfo | null>(null);
@@ -185,8 +187,11 @@ export function useDashboardData({
     try {
       await loadIssues();
       await loadSyncStatus();
+      setRefreshError(null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to refresh dashboard");
+      const message = e instanceof Error ? e.message : "Failed to refresh dashboard";
+      setRefreshError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -264,6 +269,7 @@ export function useDashboardData({
     setSyncState,
     loading,
     setLoading,
+    refreshError,
     favoriteIssueIds,
     bootstrapInfo,
     aiStatus,

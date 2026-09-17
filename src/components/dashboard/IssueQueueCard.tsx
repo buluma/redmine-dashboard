@@ -27,6 +27,8 @@ export interface PriorityOption {
 
 interface IssueQueueCardProps {
   loading: boolean;
+  refreshError?: string | null;
+  onRetryRefresh?: () => void;
   visibleIssues: Issue[];
   issues: Issue[];
   summary: IssueQueueSummary;
@@ -99,6 +101,8 @@ interface IssueQueueCardProps {
 
 export function IssueQueueCard({
   loading,
+  refreshError = null,
+  onRetryRefresh,
   visibleIssues,
   issues,
   summary,
@@ -208,6 +212,21 @@ export function IssueQueueCard({
           </button>
         </div>
       </div>
+      {refreshError && !loading && (
+        <div className="queue-refresh-error" role="alert" aria-live="assertive">
+          <span>
+            {visibleIssues.length > 0
+              ? t('queue.staleResults', 'Showing the last successful results. Refresh failed.')
+              : t('queue.refreshFailed', 'Unable to load issues.')}
+            <span className="queue-refresh-error-detail"> {refreshError}</span>
+          </span>
+          {onRetryRefresh && (
+            <button type="button" className="secondary-button" onClick={onRetryRefresh}>
+              {t('common.retry', 'Retry')}
+            </button>
+          )}
+        </div>
+      )}
 
       {issueQueueOpen ? (
         <div id="issue-queue-content" className="issue-queue-content">
