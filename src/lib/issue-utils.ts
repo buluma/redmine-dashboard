@@ -183,6 +183,7 @@ export function matchesView(view: SavedView, state: {
   priorityFilter: string;
   search: string;
   sort: string;
+  assignedToMe: boolean;
   visibleColumns?: readonly SavedViewColumnKey[];
 }): boolean {
   const columnsMatch = state.visibleColumns === undefined ||
@@ -192,6 +193,7 @@ export function matchesView(view: SavedView, state: {
     && view.priorityFilter === state.priorityFilter
     && view.search === state.search
     && view.sort === state.sort
+    && view.assignedToMe === state.assignedToMe
     && columnsMatch
   );
 }

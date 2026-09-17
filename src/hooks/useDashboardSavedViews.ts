@@ -186,6 +186,7 @@ export function useDashboardSavedViews(): UseDashboardSavedViewsResult {
       );
       const previousViews = savedViews;
       const previousActiveViewId = activeViewId;
+      const previousActiveViewDirty = activeViewDirty;
       const optimisticView: SavedView = {
         id: existing?.id ?? `local-${Date.now()}`,
         name,
@@ -228,10 +229,11 @@ export function useDashboardSavedViews(): UseDashboardSavedViewsResult {
       } catch (error) {
         setSavedViews(previousViews);
         setActiveViewId(previousActiveViewId);
+        setActiveViewDirty(previousActiveViewDirty);
         throw error;
       }
     },
-    [activeViewId, savedViews, viewDraftName],
+    [activeViewDirty, activeViewId, savedViews, viewDraftName],
   );
 
   const deleteView = useCallback(

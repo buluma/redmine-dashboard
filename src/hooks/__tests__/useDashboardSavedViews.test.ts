@@ -240,6 +240,42 @@ describe("useDashboardSavedViews", () => {
     expect(result.current.activeViewDirty).toBe(true);
   });
 
+  it("marks a view dirty when only its assigned-to-me filter changes", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      json({
+        views: [{ id: "server", name: "Mine", ...snapshot({ assignedToMe: true }), position: 0 }],
+      }),
+    );
+    const { result } = renderHook(() => useDashboardSavedViews());
+    await waitFor(() => expect(result.current.savedViews).toHaveLength(1));
+
+    act(() => result.current.setActiveViewId("server"));
+    act(() => result.current.clearActiveIfDiverged(snapshot({ assignedToMe: false })));
+
+    expect(result.current.activeViewDirty).toBe(true);
+  });
+
+  it("keeps a dirty view recoverable when saving its changes fails", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      json({
+        views: [{ id: "server", name: "Mine", ...snapshot({ assignedToMe: true }), position: 0 }],
+      }),
+    );
+    const { result } = renderHook(() => useDashboardSavedViews());
+    await waitFor(() => expect(result.current.savedViews).toHaveLength(1));
+
+    act(() => result.current.setActiveViewId("server"));
+    act(() => result.current.clearActiveIfDiverged(snapshot({ assignedToMe: false })));
+    expect(result.current.activeViewDirty).toBe(true);
+
+    vi.mocked(fetch).mockResolvedValueOnce(json({ error: "Failed to save saved view" }, 500));
+    await expect(
+      act(async () => result.current.saveView(snapshot({ assignedToMe: false }), "fallback", "Mine")),
+    ).rejects.toThrow("Failed to save saved view");
+
+    expect(result.current.activeViewDirty).toBe(true);
+  });
+
   it("rolls back an optimistic delete when the API rejects it", async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(
