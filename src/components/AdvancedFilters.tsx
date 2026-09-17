@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useI18n } from "./I18nProvider";
+import { dueInDays } from "@/src/lib/issue-utils";
 
 export interface FilterState {
   search: string;
@@ -198,13 +199,6 @@ export function applyFilters<T extends {
   const search = filters.search.trim().toLowerCase();
   const statusIds = new Set(filters.statusIds);
   const priorityIds = new Set(filters.priorityIds);
-  const now = new Date();
-  const dueCutoff = filters.dueInDays !== undefined && filters.dueInDays !== "overdue"
-    ? new Date(now)
-    : null;
-  if (dueCutoff && typeof filters.dueInDays === "number") {
-    dueCutoff.setDate(dueCutoff.getDate() + filters.dueInDays);
-  }
   const updatedAfter = filters.updatedAfter ? new Date(filters.updatedAfter) : null;
 
   return issues.filter((issue) => {
@@ -240,12 +234,13 @@ export function applyFilters<T extends {
       if (!issue.dueDate) {
         return false;
       }
-      const due = new Date(issue.dueDate);
-      
+      const days = dueInDays(issue.dueDate);
+      if (days === null) return false;
+
       if (filters.dueInDays === "overdue") {
-        if (due >= now) return false;
+        if (days >= 0) return false;
       } else {
-        if (dueCutoff && due > dueCutoff) return false;
+        if (days > filters.dueInDays) return false;
       }
     }
 

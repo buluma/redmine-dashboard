@@ -277,8 +277,16 @@ export default function Home() {
       sort,
       assignedToMe: advancedFilters.assignedToMe,
       visibleColumns: Array.from(visibleColumns),
+      statusIds: advancedFilters.statusIds,
+      priorityIds: advancedFilters.priorityIds,
+      hasGithubLinks: advancedFilters.hasGithubLinks,
+      hasAttachments: advancedFilters.hasAttachments,
+      dueInDays: advancedFilters.dueInDays,
+      updatedAfter: advancedFilters.updatedAfter,
+      selectedProject,
+      showFavoritesOnly,
     });
-  }, [advancedFilters.assignedToMe, clearActiveIfDiverged, priorityFilter, search, sort, statusFilter, visibleColumns]);
+  }, [advancedFilters, clearActiveIfDiverged, priorityFilter, search, selectedProject, showFavoritesOnly, sort, statusFilter, visibleColumns]);
 
   function resetPage() {
     setPage(1);
@@ -516,7 +524,18 @@ export default function Home() {
     setSearch(view.search);
     setSort(view.sort);
     setVisibleColumns(new Set(view.visibleColumns ?? SAVED_VIEW_DEFAULT_COLUMNS));
-    setAdvancedFilters((current) => ({ ...current, assignedToMe: view.assignedToMe ?? false }));
+    setAdvancedFilters({
+      search: "",
+      statusIds: view.statusIds ?? [],
+      priorityIds: view.priorityIds ?? [],
+      assignedToMe: view.assignedToMe,
+      hasGithubLinks: view.hasGithubLinks ?? false,
+      hasAttachments: view.hasAttachments ?? false,
+      dueInDays: view.dueInDays,
+      updatedAfter: view.updatedAfter,
+    });
+    setSelectedProject(view.selectedProject ?? null);
+    setShowFavoritesOnly(view.showFavoritesOnly ?? false);
     setActiveViewId(view.id);
   }
 
@@ -531,6 +550,14 @@ export default function Home() {
         sort,
         assignedToMe: advancedFilters.assignedToMe,
         visibleColumns: Array.from(visibleColumns),
+        statusIds: advancedFilters.statusIds,
+        priorityIds: advancedFilters.priorityIds,
+        hasGithubLinks: advancedFilters.hasGithubLinks,
+        hasAttachments: advancedFilters.hasAttachments,
+        dueInDays: advancedFilters.dueInDays,
+        updatedAfter: advancedFilters.updatedAfter,
+        selectedProject,
+        showFavoritesOnly,
         },
         fallbackName,
         nameOverride,

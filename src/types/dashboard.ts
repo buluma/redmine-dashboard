@@ -138,6 +138,14 @@ export type SavedView = {
   position?: number;
   assignedToMe: boolean;
   visibleColumns?: SavedViewColumnKey[];
+  statusIds?: number[];
+  priorityIds?: number[];
+  hasGithubLinks?: boolean;
+  hasAttachments?: boolean;
+  dueInDays?: number | "overdue";
+  updatedAfter?: string;
+  selectedProject?: string | null;
+  showFavoritesOnly?: boolean;
   updatedAt?: string;
 };
 

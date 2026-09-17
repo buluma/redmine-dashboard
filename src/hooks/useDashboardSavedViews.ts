@@ -14,6 +14,14 @@ export interface ViewSnapshot {
   sort: string;
   assignedToMe: boolean;
   visibleColumns: SavedViewColumnKey[];
+  statusIds: number[];
+  priorityIds: number[];
+  hasGithubLinks: boolean;
+  hasAttachments: boolean;
+  dueInDays?: number | "overdue";
+  updatedAfter?: string;
+  selectedProject: string | null;
+  showFavoritesOnly: boolean;
 }
 
 export interface UseDashboardSavedViewsResult {
@@ -30,12 +38,7 @@ export interface UseDashboardSavedViewsResult {
   ) => Promise<{ view: SavedView; replaced: boolean }>;
   deleteView: (viewId: string) => Promise<SavedView | undefined>;
   reorderViews: (viewIds: string[]) => Promise<void>;
-  clearActiveIfDiverged: (
-    snapshot: Pick<
-      ViewSnapshot,
-      "statusFilter" | "priorityFilter" | "search" | "sort" | "assignedToMe" | "visibleColumns"
-    >,
-  ) => void;
+  clearActiveIfDiverged: (snapshot: ViewSnapshot) => void;
 }
 
 function isSavedView(value: unknown): value is SavedView {
@@ -110,6 +113,15 @@ export function useDashboardSavedViews(): UseDashboardSavedViewsResult {
                   search: view.search,
                   sort: view.sort,
                   assignedToMe: view.assignedToMe,
+                  visibleColumns: view.visibleColumns,
+                  statusIds: view.statusIds ?? [],
+                  priorityIds: view.priorityIds ?? [],
+                  hasGithubLinks: view.hasGithubLinks ?? false,
+                  hasAttachments: view.hasAttachments ?? false,
+                  dueInDays: view.dueInDays,
+                  updatedAfter: view.updatedAfter,
+                  selectedProject: view.selectedProject ?? null,
+                  showFavoritesOnly: view.showFavoritesOnly ?? false,
                 },
               })),
             }),
@@ -157,12 +169,7 @@ export function useDashboardSavedViews(): UseDashboardSavedViewsResult {
   }, []);
 
   const clearActiveIfDiverged = useCallback(
-    (
-      snapshot: Pick<
-        ViewSnapshot,
-        "statusFilter" | "priorityFilter" | "search" | "sort" | "assignedToMe"
-      >,
-    ) => {
+    (snapshot: ViewSnapshot) => {
       if (!activeViewId) {
         setActiveViewDirty(false);
         return;
@@ -242,6 +249,7 @@ export function useDashboardSavedViews(): UseDashboardSavedViewsResult {
       if (!target) return undefined;
       const previousViews = savedViews;
       const previousActiveViewId = activeViewId;
+      const previousActiveViewDirty = activeViewDirty;
       setSavedViews((current) => current.filter((view) => view.id !== viewId));
       if (activeViewId === viewId) {
         setActiveViewId(null);
@@ -256,10 +264,11 @@ export function useDashboardSavedViews(): UseDashboardSavedViewsResult {
       } catch (error) {
         setSavedViews(previousViews);
         setActiveViewId(previousActiveViewId);
+        setActiveViewDirty(previousActiveViewDirty);
         throw error;
       }
     },
-    [activeViewId, savedViews],
+    [activeViewDirty, activeViewId, savedViews],
   );
 
   const reorderViews = useCallback(

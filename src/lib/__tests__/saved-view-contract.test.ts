@@ -14,6 +14,15 @@ describe("saved view contract", () => {
       search: "release",
       sort: "updated_asc",
       assignedToMe: true,
+      visibleColumns: ["priority", "updated"] as ("priority" | "due" | "progress" | "updated")[],
+      statusIds: [1, 2],
+      priorityIds: [3],
+      hasGithubLinks: true,
+      hasAttachments: true,
+      dueInDays: 7,
+      updatedAfter: "2026-09-01",
+      selectedProject: "Core",
+      showFavoritesOnly: true,
     };
 
     const view = toDashboardSavedView({
