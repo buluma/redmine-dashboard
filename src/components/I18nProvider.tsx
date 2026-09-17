@@ -133,6 +133,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     if (!date) return "";
     const d = typeof date === "string" ? new Date(date) : date;
     if (Number.isNaN(d.getTime())) return typeof date === "string" ? date : "";
+    if (options?.timeStyle) return d.toLocaleString(locale, options);
     return d.toLocaleDateString(locale, options);
   };
 
