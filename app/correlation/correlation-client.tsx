@@ -6,7 +6,7 @@ import { useToast } from "@/src/components/ToastProvider";
 import {
   WAKATIME_RANGE_OPTIONS,
   type WakaTimeRange,
-} from "@/src/lib/wakatime";
+} from "@/src/lib/wakatime-constants";
 import type { CorrelationResult, ApplyResult, CorrelationRow } from "@/src/lib/correlation";
 import { MIN_HOURS_GROWTH } from "@/src/lib/correlation-constants";
 

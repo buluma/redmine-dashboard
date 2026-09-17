@@ -20,8 +20,8 @@ import {
   CHART_COLORS,
   WAKATIME_RANGE_OPTIONS,
   type WakaTimeRange,
-  type WakaTimeReportPayload,
-} from "@/src/lib/wakatime";
+} from "@/src/lib/wakatime-constants";
+import type { WakaTimeReportPayload } from "@/src/lib/wakatime";
 
 type Props = {
   stats: WakaTimeStatsResponse;

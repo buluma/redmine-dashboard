@@ -8,19 +8,10 @@
 import https from 'https';
 import http from 'http';
 import { trackInfo, trackFailure } from '@/src/lib/telemetry';
+import { WAKATIME_RANGE_OPTIONS, DEFAULT_WAKATIME_RANGE, CHART_COLORS, type WakaTimeRange } from '@/src/lib/wakatime-constants';
 
-export const WAKATIME_RANGE_OPTIONS = [
-  { label: "Today", value: "today", days: 1 },
-  { label: "Yesterday", value: "yesterday", days: 1 },
-  { label: "Last 7 Days", value: "last_7_days", days: 7 },
-  { label: "Last 30 Days", value: "last_30_days", days: 30 },
-  { label: "Last 6 Months", value: "last_6_months", days: 180 },
-  { label: "Last Year", value: "last_year", days: 365 },
-] as const;
-
-export type WakaTimeRange = (typeof WAKATIME_RANGE_OPTIONS)[number]["value"];
-
-export const DEFAULT_WAKATIME_RANGE: WakaTimeRange = "last_7_days";
+export { WAKATIME_RANGE_OPTIONS, DEFAULT_WAKATIME_RANGE, CHART_COLORS };
+export type { WakaTimeRange };
 
 const WAKATIME_RANGE_DAYS: Record<WakaTimeRange, number> = WAKATIME_RANGE_OPTIONS.reduce(
   (acc, item) => {
@@ -481,10 +472,3 @@ export function formatSeconds(totalSeconds: number): string {
   if (hours === 0) return `${minutes}m`;
   return `${hours}h ${minutes}m`;
 }
-
-/** Chart color palette */
-export const CHART_COLORS = [
-  "#006d77", "#00515a", "#34d399", "#fbbf24", "#f87171",
-  "#38bdf8", "#fb923c", "#a3e635", "#e879f9", "#06b6d4",
-  "#84cc16", "#f43f5e", "#14b8a6", "#eab308", "#10b981",
-];
