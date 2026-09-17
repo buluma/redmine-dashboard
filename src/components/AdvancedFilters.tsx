@@ -195,22 +195,33 @@ export function applyFilters<T extends {
   dueDate?: string | null;
   updatedAt?: string;
 }>(issues: T[], filters: FilterState): T[] {
+  const search = filters.search.trim().toLowerCase();
+  const statusIds = new Set(filters.statusIds);
+  const priorityIds = new Set(filters.priorityIds);
+  const now = new Date();
+  const dueCutoff = filters.dueInDays !== undefined && filters.dueInDays !== "overdue"
+    ? new Date(now)
+    : null;
+  if (dueCutoff && typeof filters.dueInDays === "number") {
+    dueCutoff.setDate(dueCutoff.getDate() + filters.dueInDays);
+  }
+  const updatedAfter = filters.updatedAfter ? new Date(filters.updatedAfter) : null;
+
   return issues.filter((issue) => {
     // Search
-    if (filters.search) {
-      const search = filters.search.toLowerCase();
+    if (search) {
       if (!issue.subject.toLowerCase().includes(search)) {
         return false;
       }
     }
 
     // Status filter
-    if (filters.statusIds.length > 0 && !filters.statusIds.includes(issue.statusId)) {
+    if (statusIds.size > 0 && !statusIds.has(issue.statusId)) {
       return false;
     }
 
     // Priority filter
-    if (filters.priorityIds.length > 0 && (issue.priorityId == null || !filters.priorityIds.includes(issue.priorityId))) {
+    if (priorityIds.size > 0 && (issue.priorityId == null || !priorityIds.has(issue.priorityId))) {
       return false;
     }
 
@@ -230,22 +241,18 @@ export function applyFilters<T extends {
         return false;
       }
       const due = new Date(issue.dueDate);
-      const now = new Date();
       
       if (filters.dueInDays === "overdue") {
         if (due >= now) return false;
       } else {
-        const max = new Date(now);
-        max.setDate(max.getDate() + filters.dueInDays);
-        if (due > max) return false;
+        if (dueCutoff && due > dueCutoff) return false;
       }
     }
 
     // Updated after filter
     if (filters.updatedAfter && issue.updatedAt) {
       const updated = new Date(issue.updatedAt);
-      const after = new Date(filters.updatedAfter);
-      if (updated < after) return false;
+      if (updatedAfter && updated < updatedAfter) return false;
     }
 
     return true;
