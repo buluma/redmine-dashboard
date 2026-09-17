@@ -1,4 +1,4 @@
-import type { Attachment, Issue, SyncState, SavedView } from "@/src/types/dashboard";
+import type { Attachment, Issue, SyncState, SavedView, SavedViewColumnKey } from "@/src/types/dashboard";
 
 export function normalizeAttachmentFilename(value: string): string {
   const decoded = decodeURIComponent(value).trim();
@@ -183,12 +183,16 @@ export function matchesView(view: SavedView, state: {
   priorityFilter: string;
   search: string;
   sort: string;
+  visibleColumns?: readonly SavedViewColumnKey[];
 }): boolean {
+  const columnsMatch = state.visibleColumns === undefined ||
+    (view.visibleColumns ?? ["priority", "due", "progress", "updated"]).slice().sort().join(",") === state.visibleColumns.slice().sort().join(",");
   return (
     view.statusFilter === state.statusFilter
     && view.priorityFilter === state.priorityFilter
     && view.search === state.search
     && view.sort === state.sort
+    && columnsMatch
   );
 }
 

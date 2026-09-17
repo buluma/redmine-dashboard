@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import type { SavedView } from "@/src/types/dashboard";
+import type { SavedView, SavedViewColumnKey } from "@/src/types/dashboard";
+
+export const SAVED_VIEW_DEFAULT_COLUMNS: SavedViewColumnKey[] = ["priority", "due", "progress", "updated"];
+const savedViewColumnKeySchema = z.enum(["priority", "due", "progress", "updated"]);
 
 export const savedViewFiltersSchema = z.object({
   statusFilter: z.string(),
@@ -8,6 +11,7 @@ export const savedViewFiltersSchema = z.object({
   search: z.string(),
   sort: z.string(),
   assignedToMe: z.boolean(),
+  visibleColumns: z.array(savedViewColumnKeySchema).max(4).optional(),
 });
 
 // Cap on saved views per user — was previously enforced only client-side
@@ -73,6 +77,7 @@ export function toDashboardSavedView(view: StoredSavedView): SavedView {
     id: view.id,
     name: view.name,
     ...filters,
+    visibleColumns: filters.visibleColumns ?? SAVED_VIEW_DEFAULT_COLUMNS,
     position: view.position,
     updatedAt: view.updatedAt.toISOString(),
   };

@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useDashboardSavedViews } from "@/src/hooks/useDashboardSavedViews";
+import { useDashboardSavedViews, type ViewSnapshot } from "@/src/hooks/useDashboardSavedViews";
 
 const STORAGE_KEY = "nrcc.savedViews.v1";
 
@@ -12,14 +12,16 @@ function snapshot(
     search: string;
     sort: string;
     assignedToMe: boolean;
+    visibleColumns: ("priority" | "due" | "progress" | "updated")[];
   }> = {},
-) {
+): ViewSnapshot {
   return {
     statusFilter: "",
     priorityFilter: "",
     search: "",
     sort: "updated_desc",
     assignedToMe: false,
+    visibleColumns: ["priority", "due", "progress", "updated"],
     ...overrides,
   };
 }
@@ -201,6 +203,41 @@ describe("useDashboardSavedViews", () => {
       "/api/saved-views",
       expect.objectContaining({ method: "POST" }),
     );
+  });
+
+  it("persists the selected column layout in a saved view", async () => {
+    const { result } = renderHook(() => useDashboardSavedViews());
+    await waitFor(() => expect(result.current.savedViews).toEqual([]));
+
+    await act(async () => {
+      await result.current.saveView(
+        snapshot({ visibleColumns: ["priority", "updated"] }),
+        "fallback",
+      );
+    });
+
+    const request = vi.mocked(fetch).mock.calls.at(-1);
+    expect(request?.[1]).toEqual(expect.objectContaining({
+      body: expect.stringContaining('"visibleColumns":["priority","updated"]'),
+    }));
+  });
+
+  it("marks a view dirty when only its column layout changes", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      json({
+        views: [{ id: "server", name: "Desktop", ...snapshot(), position: 0 }],
+      }),
+    );
+    const { result } = renderHook(() => useDashboardSavedViews());
+    await waitFor(() => expect(result.current.savedViews).toHaveLength(1));
+
+    act(() => result.current.setActiveViewId("server"));
+    act(() => result.current.clearActiveIfDiverged({
+      ...snapshot(),
+      visibleColumns: ["priority", "updated"],
+    }));
+
+    expect(result.current.activeViewDirty).toBe(true);
   });
 
   it("rolls back an optimistic delete when the API rejects it", async () => {

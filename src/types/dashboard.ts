@@ -137,8 +137,11 @@ export type SavedView = {
   sort: string;
   position?: number;
   assignedToMe: boolean;
+  visibleColumns?: SavedViewColumnKey[];
   updatedAt?: string;
 };
+
+export type SavedViewColumnKey = "priority" | "due" | "progress" | "updated";
 
 export type ActivityEvent = {
   issueId: string;

@@ -27,6 +27,7 @@ import {
   openIssueInNewTab,
 } from "@/src/lib/issue-utils";
 import { useDashboardSavedViews } from "@/src/hooks/useDashboardSavedViews";
+import { SAVED_VIEW_DEFAULT_COLUMNS } from "@/src/lib/saved-view-contract";
 import { usePageSize } from "@/src/hooks/usePageSize";
 import { DashboardHero } from "@/src/components/dashboard/DashboardHero";
 import { DashboardLoginScreen } from "@/src/components/dashboard/DashboardLoginScreen";
@@ -67,7 +68,7 @@ export default function Home() {
   const toast = useToast();
   const [showIssueCreateModal, setShowIssueCreateModal] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(
-    new Set<ColumnKey>(["priority", "due", "progress", "updated"])
+    new Set<ColumnKey>(SAVED_VIEW_DEFAULT_COLUMNS)
   );
   const [visibleColumnsHydrated, setVisibleColumnsHydrated] = useState(false);
   const [manualRefreshBusy, setManualRefreshBusy] = useState(false);
@@ -268,8 +269,15 @@ export default function Home() {
   }, [allVisibleIssueIds]);
 
   useEffect(() => {
-    clearActiveIfDiverged({ statusFilter, priorityFilter, search, sort, assignedToMe: advancedFilters.assignedToMe });
-  }, [advancedFilters.assignedToMe, clearActiveIfDiverged, priorityFilter, search, sort, statusFilter]);
+    clearActiveIfDiverged({
+      statusFilter,
+      priorityFilter,
+      search,
+      sort,
+      assignedToMe: advancedFilters.assignedToMe,
+      visibleColumns: Array.from(visibleColumns),
+    });
+  }, [advancedFilters.assignedToMe, clearActiveIfDiverged, priorityFilter, search, sort, statusFilter, visibleColumns]);
 
   function resetPage() {
     setPage(1);
@@ -506,6 +514,7 @@ export default function Home() {
     setPriorityFilter(view.priorityFilter);
     setSearch(view.search);
     setSort(view.sort);
+    setVisibleColumns(new Set(view.visibleColumns ?? SAVED_VIEW_DEFAULT_COLUMNS));
     setAdvancedFilters((current) => ({ ...current, assignedToMe: view.assignedToMe ?? false }));
     setActiveViewId(view.id);
   }
@@ -518,8 +527,9 @@ export default function Home() {
           statusFilter,
           priorityFilter,
           search,
-          sort,
-          assignedToMe: advancedFilters.assignedToMe,
+        sort,
+        assignedToMe: advancedFilters.assignedToMe,
+        visibleColumns: Array.from(visibleColumns),
         },
         fallbackName,
         nameOverride,
