@@ -138,6 +138,18 @@ describe("useIssueFiltering", () => {
       expect(result.current.visibleIssues.map((i) => i.id)).toEqual(["1"]);
     });
 
+    it("does not treat an issue due today as overdue in advanced filters", () => {
+      const today = new Date();
+      const dueToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      const filters = { ...NO_ADVANCED_FILTERS, dueInDays: "overdue" as const };
+      const { result } = renderFiltering({
+        issues: [makeIssue({ id: "today", dueDate: dueToday })],
+        advancedFilters: filters,
+      });
+
+      expect(result.current.baseFilteredIssues).toEqual([]);
+    });
+
     it("applies an exact statusName filter for any other value", () => {
       const issues = [
         makeIssue({ id: "1", statusName: "In Progress" }),

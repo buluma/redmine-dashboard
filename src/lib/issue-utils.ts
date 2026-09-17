@@ -185,9 +185,19 @@ export function matchesView(view: SavedView, state: {
   sort: string;
   assignedToMe: boolean;
   visibleColumns?: readonly SavedViewColumnKey[];
+  statusIds: readonly number[];
+  priorityIds: readonly number[];
+  hasGithubLinks: boolean;
+  hasAttachments: boolean;
+  dueInDays?: number | "overdue";
+  updatedAfter?: string;
+  selectedProject: string | null;
+  showFavoritesOnly: boolean;
 }): boolean {
+  const sameValues = <T,>(left: readonly T[], right: readonly T[]) =>
+    left.length === right.length && left.every((value) => right.includes(value));
   const columnsMatch = state.visibleColumns === undefined ||
-    (view.visibleColumns ?? ["priority", "due", "progress", "updated"]).slice().sort().join(",") === state.visibleColumns.slice().sort().join(",");
+    sameValues(view.visibleColumns ?? ["priority", "due", "progress", "updated"], state.visibleColumns);
   return (
     view.statusFilter === state.statusFilter
     && view.priorityFilter === state.priorityFilter
@@ -195,6 +205,14 @@ export function matchesView(view: SavedView, state: {
     && view.sort === state.sort
     && view.assignedToMe === state.assignedToMe
     && columnsMatch
+    && sameValues(view.statusIds ?? [], state.statusIds)
+    && sameValues(view.priorityIds ?? [], state.priorityIds)
+    && (view.hasGithubLinks ?? false) === state.hasGithubLinks
+    && (view.hasAttachments ?? false) === state.hasAttachments
+    && view.dueInDays === state.dueInDays
+    && view.updatedAfter === state.updatedAfter
+    && (view.selectedProject ?? null) === state.selectedProject
+    && (view.showFavoritesOnly ?? false) === state.showFavoritesOnly
   );
 }
 

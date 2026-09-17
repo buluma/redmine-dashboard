@@ -13,6 +13,14 @@ function snapshot(
     sort: string;
     assignedToMe: boolean;
     visibleColumns: ("priority" | "due" | "progress" | "updated")[];
+    statusIds: number[];
+    priorityIds: number[];
+    hasGithubLinks: boolean;
+    hasAttachments: boolean;
+    dueInDays: number | "overdue" | undefined;
+    updatedAfter: string | undefined;
+    selectedProject: string | null;
+    showFavoritesOnly: boolean;
   }> = {},
 ): ViewSnapshot {
   return {
@@ -22,6 +30,14 @@ function snapshot(
     sort: "updated_desc",
     assignedToMe: false,
     visibleColumns: ["priority", "due", "progress", "updated"],
+    statusIds: [],
+    priorityIds: [],
+    hasGithubLinks: false,
+    hasAttachments: false,
+    dueInDays: undefined,
+    updatedAfter: undefined,
+    selectedProject: null,
+    showFavoritesOnly: false,
     ...overrides,
   };
 }
@@ -255,6 +271,20 @@ describe("useDashboardSavedViews", () => {
     expect(result.current.activeViewDirty).toBe(true);
   });
 
+  it("marks a view dirty when an advanced filter, project, or favorites changes", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      json({
+        views: [{ id: "server", name: "Focused", ...snapshot({ statusIds: [4], selectedProject: "Core", showFavoritesOnly: true }), position: 0 }],
+      }),
+    );
+    const { result } = renderHook(() => useDashboardSavedViews());
+    await waitFor(() => expect(result.current.savedViews).toHaveLength(1));
+
+    act(() => result.current.setActiveViewId("server"));
+    act(() => result.current.clearActiveIfDiverged(snapshot({ statusIds: [5], selectedProject: "Core", showFavoritesOnly: true })));
+    expect(result.current.activeViewDirty).toBe(true);
+  });
+
   it("keeps a dirty view recoverable when saving its changes fails", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       json({
@@ -291,6 +321,21 @@ describe("useDashboardSavedViews", () => {
       act(async () => result.current.deleteView("server")),
     ).rejects.toThrow("Saved view not found");
     expect(result.current.savedViews).toHaveLength(1);
+  });
+
+  it("keeps a dirty active view recoverable when deleting it fails", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(json({ views: [{ id: "server", name: "Shared", ...snapshot(), position: 0 }] }))
+      .mockResolvedValueOnce(json({ error: "Saved view not found" }, 404));
+    const { result } = renderHook(() => useDashboardSavedViews());
+    await waitFor(() => expect(result.current.savedViews).toHaveLength(1));
+
+    act(() => result.current.setActiveViewId("server"));
+    act(() => result.current.clearActiveIfDiverged(snapshot({ showFavoritesOnly: true })));
+    expect(result.current.activeViewDirty).toBe(true);
+
+    await expect(act(async () => result.current.deleteView("server"))).rejects.toThrow("Saved view not found");
+    expect(result.current.activeViewDirty).toBe(true);
   });
 
   it("posts the complete reordered server view id list", async () => {

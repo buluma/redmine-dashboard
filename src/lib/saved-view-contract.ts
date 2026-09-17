@@ -12,6 +12,14 @@ export const savedViewFiltersSchema = z.object({
   sort: z.string(),
   assignedToMe: z.boolean(),
   visibleColumns: z.array(savedViewColumnKeySchema).max(4).optional(),
+  statusIds: z.array(z.number().int().positive()).max(100).optional(),
+  priorityIds: z.array(z.number().int().positive()).max(100).optional(),
+  hasGithubLinks: z.boolean().optional(),
+  hasAttachments: z.boolean().optional(),
+  dueInDays: z.union([z.number().int().nonnegative(), z.literal("overdue")]).optional(),
+  updatedAfter: z.string().date().optional(),
+  selectedProject: z.string().min(1).max(255).nullable().optional(),
+  showFavoritesOnly: z.boolean().optional(),
 });
 
 // Cap on saved views per user — was previously enforced only client-side
@@ -78,6 +86,14 @@ export function toDashboardSavedView(view: StoredSavedView): SavedView {
     name: view.name,
     ...filters,
     visibleColumns: filters.visibleColumns ?? SAVED_VIEW_DEFAULT_COLUMNS,
+    statusIds: filters.statusIds ?? [],
+    priorityIds: filters.priorityIds ?? [],
+    hasGithubLinks: filters.hasGithubLinks ?? false,
+    hasAttachments: filters.hasAttachments ?? false,
+    dueInDays: filters.dueInDays,
+    updatedAfter: filters.updatedAfter,
+    selectedProject: filters.selectedProject ?? null,
+    showFavoritesOnly: filters.showFavoritesOnly ?? false,
     position: view.position,
     updatedAt: view.updatedAt.toISOString(),
   };
