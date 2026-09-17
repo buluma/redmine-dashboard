@@ -160,13 +160,14 @@ export function IssueQueueCard({
   onHoverLeave,
 }: IssueQueueCardProps) {
   const { t } = useI18n();
+  const hasQueueFilters = Boolean(statusFilter || priorityFilter || search || showFavoritesOnly || assignedToMe);
 
   return (
     <article id="issue-queue" className="card issues-panel">
       <div className="collapsible-head">
         <div>
           <h2>{t('queue.title')}</h2>
-          <p className="muted">
+          <p className="muted" aria-live="polite" aria-atomic="true">
             {loading ? t('hero.refreshing') : t('queue.loaded', { count: visibleIssues.length })}
             {summary.open > 0 && <span>{t('queue.openStats', { count: summary.open })}</span>}
             {summary.inProgress > 0 && <span>{t('queue.inProgressStats', { count: summary.inProgress })}</span>}
@@ -523,6 +524,22 @@ export function IssueQueueCard({
               </tbody>
             </table>
             </div>
+
+            {!loading && visibleIssues.length === 0 && (
+              <div className="empty-state issue-queue-empty" role="status">
+                <span className="empty-state-icon" aria-hidden="true">{hasQueueFilters ? "🔎" : "📭"}</span>
+                <strong>
+                  {hasQueueFilters
+                    ? t('queue.emptyFiltered', 'No issues match the current filters')
+                    : t('queue.empty', 'No issues loaded yet')}
+                </strong>
+                <p className="empty-state-hint">
+                  {hasQueueFilters
+                    ? t('queue.emptyFilteredHint', 'Try clearing a filter or broadening your search.')
+                    : t('queue.emptyHint', 'Refresh or connect a Redmine account to load issues.')}
+                </p>
+              </div>
+            )}
 
           {/* Pagination Controls */}
           {(() => {
