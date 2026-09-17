@@ -1,6 +1,7 @@
 import { prisma } from "@/src/lib/db";
 import { recordIssueActivityEvent, recomputeIssueActivityIndex } from "@/src/lib/activity-index";
 import type { RedmineClient } from "@/src/lib/redmine";
+import { MIN_HOURS_GROWTH } from "@/src/lib/correlation-constants";
 
 type WakaBreakdown = { name: string; total_seconds: number; percent: number; text: string };
 
@@ -450,10 +451,6 @@ export async function autoCreateTicketsForUnmatched(
 
   return created;
 }
-
-// Below this, a day's growth since it was last logged is treated as float
-// noise from the two-decimal rounding on both sides, not real new work.
-export const MIN_HOURS_GROWTH = 0.005;
 
 /**
  * Apply WakaTime hours as TimeEntry rows on matched tickets.

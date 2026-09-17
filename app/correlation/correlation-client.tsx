@@ -8,7 +8,7 @@ import {
   type WakaTimeRange,
 } from "@/src/lib/wakatime";
 import type { CorrelationResult, ApplyResult, CorrelationRow } from "@/src/lib/correlation";
-import { MIN_HOURS_GROWTH } from "@/src/lib/correlation";
+import { MIN_HOURS_GROWTH } from "@/src/lib/correlation-constants";
 
 type Props = {
   initialData: CorrelationResult;
