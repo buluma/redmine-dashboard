@@ -3,7 +3,7 @@
 Date: 2026-05-16
 Scope: full repo walk (`app/`, `src/`, `prisma/`, `mobile/`, `messages/`).
 
-This list complements `TODO.md`. `TODO.md` tracks shipped + immediate next work; this doc captures opportunities surfaced by code review — broken/dormant features, debt, and UX rough edges. Each item lists evidence (file:line) and a suggested next step.
+This is a historical review inventory from 2026-05-16. Recheck an item against the current code before acting on it; some status notes and line references may have gone stale. The repository has no `TODO.md`.
 
 ---
 

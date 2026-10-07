@@ -16,9 +16,22 @@ import type { Prisma, WebhookSubscription as PrismaWebhookSubscription } from '@
 import { prisma } from './db';
 import { getAuditService } from './audit';
 import { trackInfo, trackSuccess, trackFailure } from './telemetry';
+import { validateWebhookUrl } from './webhook-url';
 
 // Auto-disable a subscription after this many consecutive delivery failures.
 const FAILURE_THRESHOLD = 5;
+const DELIVERY_ATTEMPTS = 3;
+const RETRY_DELAYS_MS = [250, 1000] as const;
+const QUEUE_POLL_INTERVAL_MS = 5000;
+const CLAIM_STALE_AFTER_MS = 60_000;
+const QUEUE_BATCH_SIZE = 10;
+
+// A batch can outlast the poll interval when receivers are slow, so overlapping polls are skipped.
+let deliveryPollInFlight = false;
+
+declare global {
+  var __webhook_delivery_worker_started__: boolean | undefined;
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────
 
@@ -234,13 +247,19 @@ function generateSignature(payload: string, secret: string): string {
 async function deliverWebhook(
   subscription: WebhookSubscription,
   payload: WebhookPayload
-): Promise<{ success: boolean; status?: number; responseBody?: string; error?: string }> {
+): Promise<{ success: boolean; status?: number; responseBody?: string; error?: string; retryable: boolean }> {
   const body = JSON.stringify(payload);
   const signature = generateSignature(body, subscription.secret);
+
+  const destination = await validateWebhookUrl(subscription.url);
+  if (!destination.valid) {
+    return { success: false, error: destination.error, retryable: false };
+  }
 
   try {
     const response = await fetch(subscription.url, {
       method: 'POST',
+      redirect: 'manual',
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'Converge-Webhook/1.0',
@@ -259,9 +278,10 @@ async function deliverWebhook(
       status: response.status,
       responseBody,
       error: success ? undefined : `HTTP ${response.status}: ${responseBody.substring(0, 100)}`,
+      retryable: response.status === 429 || response.status >= 500,
     };
   } catch (e: unknown) {
-    return { success: false, error: e instanceof Error ? e.message : String(e) };
+    return { success: false, error: e instanceof Error ? e.message : String(e), retryable: true };
   }
 }
 
@@ -293,72 +313,154 @@ export async function dispatchWebhook(
 
   trackInfo("webhook.dispatch.started", { event, subscriberCount: interested.length });
 
-  // Deliver to all interested subscribers in parallel
+  // Persist each delivery before returning so issue sync is independent of webhook availability.
   await Promise.all(
-    interested.map(async (sub) => {
-      const startTime = Date.now();
-      try {
-        const result = await deliverWebhook(sub, payload);
-        const durationMs = Date.now() - startTime;
-        
-        await updateSubscriptionFailure(sub.id, result.status ?? null, result.success);
+    interested.map((sub) => prisma.webhookDelivery.create({
+      data: {
+        subscriptionId: sub.id,
+        event,
+        payload: payload as unknown as Prisma.InputJsonValue,
+        attempt: 0,
+        status: 'pending',
+        nextAttemptAt: new Date(),
+        deliveredAt: new Date(),
+      },
+    }))
+  );
 
-        if (!result.success && sub.failureCount + 1 >= FAILURE_THRESHOLD) {
-          await prisma.webhookSubscription.update({
-            where: { id: sub.id },
-            data: { active: false },
-          });
-          trackFailure({ event: "webhook.subscription.auto_disabled", error: `${sub.failureCount + 1} consecutive failures`, metricName: "webhook_subscription_auto_disabled" });
-        }
+  trackSuccess({ event: "webhook.delivery.queued", metricName: "webhook_delivery_queued", data: { count: interested.length } });
+}
 
-        // Log delivery to database
-        await prisma.webhookDelivery.create({
+/** Process due queue items with optimistic DB claims so only one instance sends each attempt. */
+export async function processWebhookDeliveries(): Promise<number> {
+  if (deliveryPollInFlight) return 0;
+  deliveryPollInFlight = true;
+  try {
+    return await processDueWebhookDeliveries();
+  } finally {
+    deliveryPollInFlight = false;
+  }
+}
+
+function dueDeliveryCondition(now: Date) {
+  return {
+    OR: [
+      { status: 'pending', nextAttemptAt: { lte: now } },
+      { status: 'processing', claimedAt: { lt: new Date(now.getTime() - CLAIM_STALE_AFTER_MS) } },
+    ],
+  };
+}
+
+async function processDueWebhookDeliveries(): Promise<number> {
+  const due = await prisma.webhookDelivery.findMany({
+    where: dueDeliveryCondition(new Date()),
+    orderBy: { nextAttemptAt: 'asc' },
+    take: QUEUE_BATCH_SIZE,
+  });
+  let processed = 0;
+
+  for (const delivery of due) {
+    // Stamp each claim when it is taken; a batch-start timestamp would make later items look stale to other workers.
+    // Counting the claim as an attempt bounds reclaims after crashes or worker errors.
+    const claimedAt = new Date();
+    const claim = await prisma.webhookDelivery.updateMany({
+      where: { id: delivery.id, ...dueDeliveryCondition(claimedAt) },
+      data: { status: 'processing', claimedAt, attempt: { increment: 1 } },
+    });
+    if (claim.count !== 1) continue;
+    processed++;
+
+    try {
+      if (delivery.attempt >= DELIVERY_ATTEMPTS) {
+        await prisma.webhookDelivery.update({
+          where: { id: delivery.id },
+          data: { status: 'failed', attempt: delivery.attempt, error: 'Delivery abandoned after repeated worker failures', claimedAt: null },
+        });
+        trackFailure({ event: "webhook.delivery.abandoned", error: 'Attempts exhausted by stale claims', metricName: "webhook_delivery_abandoned" });
+        continue;
+      }
+
+      const subscription = await getSubscription(delivery.subscriptionId);
+      if (!subscription?.active) {
+        await prisma.webhookDelivery.update({
+          where: { id: delivery.id },
+          data: { status: 'cancelled', error: 'Subscription is no longer active', claimedAt: null },
+        });
+        continue;
+      }
+
+      const startedAt = Date.now();
+      const result = await deliverWebhook(subscription, delivery.payload as unknown as WebhookPayload);
+      const durationMs = Date.now() - startedAt;
+      const attempt = delivery.attempt + 1;
+      const shouldRetry = !result.success && result.retryable && attempt < DELIVERY_ATTEMPTS;
+
+      if (shouldRetry) {
+        await prisma.webhookDelivery.update({
+          where: { id: delivery.id },
           data: {
-            subscriptionId: sub.id,
-            event,
-            payload: payload as unknown as Prisma.InputJsonValue,
+            status: 'pending',
+            attempt,
+            nextAttemptAt: new Date(Date.now() + RETRY_DELAYS_MS[Math.min(attempt - 1, RETRY_DELAYS_MS.length - 1)]),
+            claimedAt: null,
             responseStatus: result.status,
             responseBody: result.responseBody?.slice(0, 1000),
             error: result.error,
             durationMs,
-            attempt: 1,
-            deliveredAt: new Date(),
           },
-        }).catch(err => {
-          trackFailure({ event: "webhook.delivery.log.failed", error: err });
         });
-
-        if (result.success) {
-          trackSuccess({ event: "webhook.delivery.succeeded", metricName: "webhook_delivery_succeeded", data: { status: result.status, durationMs } });
-        } else {
-          trackFailure({ event: "webhook.delivery.failed", error: result.error ?? "unknown", metricName: "webhook_delivery_failed" });
-        }
-      } catch (err) {
-        trackFailure({ event: "webhook.delivery.error", error: err, metricName: "webhook_delivery_error" });
-        await updateSubscriptionFailure(sub.id, null, false);
-
-        if (sub.failureCount + 1 >= FAILURE_THRESHOLD) {
-          await prisma.webhookSubscription.update({
-            where: { id: sub.id },
-            data: { active: false },
-          });
-          trackFailure({ event: "webhook.subscription.auto_disabled", error: `${sub.failureCount + 1} consecutive failures`, metricName: "webhook_subscription_auto_disabled" });
-        }
-
-        // Log failed delivery
-        await prisma.webhookDelivery.create({
-          data: {
-            subscriptionId: sub.id,
-            event,
-            payload: payload as unknown as Prisma.InputJsonValue,
-            error: err instanceof Error ? err.message : "Unknown error",
-            attempt: 1,
-            deliveredAt: new Date(),
-          },
-        }).catch(() => {});
+        trackFailure({ event: "webhook.delivery.retry_scheduled", error: result.error ?? 'transient response', metricName: "webhook_delivery_retry_scheduled" });
+        continue;
       }
-    })
-  );
+
+      await prisma.webhookDelivery.update({
+        where: { id: delivery.id },
+        data: {
+          status: result.success ? 'complete' : 'failed',
+          attempt,
+          claimedAt: null,
+          responseStatus: result.status,
+          responseBody: result.responseBody?.slice(0, 1000),
+          error: result.error,
+          durationMs,
+          deliveredAt: new Date(),
+        },
+      });
+      await updateSubscriptionFailure(subscription.id, result.status ?? null, result.success);
+
+      if (!result.success && subscription.failureCount + 1 >= FAILURE_THRESHOLD) {
+        await prisma.webhookSubscription.update({ where: { id: subscription.id }, data: { active: false } });
+        trackFailure({ event: "webhook.subscription.auto_disabled", error: `${subscription.failureCount + 1} consecutive failures`, metricName: "webhook_subscription_auto_disabled" });
+      }
+
+      if (result.success) {
+        trackSuccess({ event: "webhook.delivery.succeeded", metricName: "webhook_delivery_succeeded", data: { status: result.status, durationMs } });
+      } else {
+        trackFailure({ event: "webhook.delivery.failed", error: result.error ?? "unknown", metricName: "webhook_delivery_failed" });
+      }
+    } catch (error) {
+      // Leave the claim in place; another tick safely reclaims it after the lease expires.
+      trackFailure({ event: "webhook.delivery.worker.failed", error, metricName: "webhook_delivery_worker_failed" });
+    }
+  }
+
+  return processed;
+}
+
+export function ensureWebhookDeliveryWorkerStarted(): void {
+  if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.npm_lifecycle_event === 'build') return;
+  if (global.__webhook_delivery_worker_started__) return;
+
+  global.__webhook_delivery_worker_started__ = true;
+  const timer = setInterval(() => {
+    void processWebhookDeliveries().catch((error) => {
+      trackFailure({ event: "webhook.delivery.queue.poll_failed", error, metricName: "webhook_delivery_queue_poll_failed" });
+    });
+  }, QUEUE_POLL_INTERVAL_MS);
+  timer.unref?.();
+  void processWebhookDeliveries().catch((error) => {
+    trackFailure({ event: "webhook.delivery.queue.poll_failed", error, metricName: "webhook_delivery_queue_poll_failed" });
+  });
 }
 
 // ─── Schema Migration ──────────────────────────────────────────────────

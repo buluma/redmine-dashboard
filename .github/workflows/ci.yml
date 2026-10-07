@@ -88,6 +88,39 @@ jobs:
       - run: bunx prisma generate --schema=prisma/schema.dev.sqlite.prisma
       - run: bun run test
 
+  postgres-schema:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: converge
+          POSTGRES_PASSWORD: converge
+          POSTGRES_DB: converge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U converge -d converge"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://converge:converge@localhost:5432/converge
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bunx prisma validate --schema=prisma/schema.prisma
+      - run: bunx prisma db push --schema=prisma/schema.prisma
+
   build:
     needs: test
     runs-on: ubuntu-latest

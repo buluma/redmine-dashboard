@@ -613,10 +613,14 @@ model WebhookDelivery {
   error          String?
   durationMs     Int?
   attempt        Int                 @default(1)
+  status         String              @default("complete")
+  nextAttemptAt  DateTime            @default(now())
+  claimedAt      DateTime?
   deliveredAt    DateTime            @default(now())
 
   @@index([subscriptionId])
   @@index([deliveredAt])
+  @@index([status, nextAttemptAt])
 }
 
 model CustomReport {
