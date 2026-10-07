@@ -11,16 +11,19 @@ declare global {
 
 function buildPrismaUrl(rawUrl: string): string {
   if (rawUrl.startsWith("file:") || rawUrl.startsWith("sqlite:")) {
+    // PrismaBetterSqlite3 only strips a leading `file:` and passes the rest to
+    // better-sqlite3 as a literal filename, so `sqlite:` must become `file:` and
+    // Prisma 6-era query params (connection_limit, socket_timeout, ...) must be
+    // dropped or they end up in the filename.
     const scheme = rawUrl.startsWith("file:") ? "file:" : "sqlite:";
     const remainder = rawUrl.slice(scheme.length);
     const queryIndex = remainder.indexOf("?");
     const databasePath = queryIndex === -1 ? remainder : remainder.slice(0, queryIndex);
     if (!databasePath || databasePath === ":memory:" || path.isAbsolute(databasePath)) {
-      return rawUrl;
+      return `file:${databasePath}`;
     }
 
-    const query = queryIndex === -1 ? "" : remainder.slice(queryIndex);
-    return `${scheme}${path.resolve(process.cwd(), databasePath)}${query}`;
+    return `file:${path.resolve(process.cwd(), databasePath)}`;
   }
 
   // Keep pool timeout explicit; connection_limit can be overridden via env in deployments when needed.
