@@ -29,7 +29,7 @@ Open the `.env` file and set the following variables:
 
 **Required:**
 
-- `DATABASE_URL`: The connection string for the database. For local development, the default is `file:./dev.db`.
+- `DATABASE_URL`: The connection string for the database. For local development, the default is `file:./prisma/dev.db`.
 - `APP_ENCRYPTION_KEY`: A secret key used for encrypting stored Redmine API keys. Generate a secure random string for this.
 - `SESSION_SECRET`: A secret key used for signing session cookies. Generate a secure random string for this.
 - `SECURE_COOKIES`: Set to `false` for plain-HTTP Docker/Pi/homelab access so browsers keep the login cookie. Only do this on a trusted local network — over plain HTTP the `rd_session` cookie is sent in cleartext and can be intercepted by anything on the same network path. Omit or set to `true` (and require HTTPS) for any deployment reachable over an untrusted or public network.
@@ -135,7 +135,7 @@ A full list of helper targets is available in the [Makefile](../Makefile).
 
 ## Environment Variables Reference
 
-- `DATABASE_URL`: SQLite file path for local development (default: `file:./dev.db`). If regenerating Prisma for this mode, run `bun run prisma:generate:sqlite`; `bun run prisma:generate` generates the PostgreSQL client.
+- `DATABASE_URL`: SQLite file path for local development (default: `file:./prisma/dev.db`). If regenerating Prisma for this mode, run `bun run prisma:generate:sqlite`; `bun run prisma:generate` generates the PostgreSQL client.
 - `DOCKER_DATABASE_URL`: not referenced by the current `docker-compose.yml` — the dashboard service reads `DOCKER_POSTGRES_DATABASE_URL` instead. Left here only in case a future SQLite-mode Compose file reintroduces it.
 - `DOCKER_POSTGRES_DB`: Local Docker Postgres DB name.
 - `DOCKER_POSTGRES_USER`: Local Docker Postgres username.

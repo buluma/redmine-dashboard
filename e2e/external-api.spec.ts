@@ -34,7 +34,7 @@ const FIXTURE_DATES = ["2001-01-01", "2001-01-02"];
 // Resolve the relative SQLite URL from the repository root, matching the
 // Prisma config and the dev server's adapter connection.
 function resolveDbUrl(): string {
-  const raw = process.env.DATABASE_URL || "file:./dev.db";
+  const raw = process.env.DATABASE_URL || "file:./prisma/dev.db";
   if (!raw.startsWith("file:")) return raw;
   const p = raw.slice("file:".length);
   if (path.isAbsolute(p)) return raw;

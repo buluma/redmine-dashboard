@@ -4,7 +4,7 @@
  * Uses PrismaClient (always available) instead of the full Prisma CLI.
  * Safe to run on every container start — errors for already-existing columns are swallowed.
  */
-const { PrismaClient } = require('@prisma/client');
+const { createPrismaClient } = require('./lib/prisma-client');
 
 const MIGRATIONS = [
   `ALTER TABLE "Issue" ADD COLUMN "redmineBaseUrl" TEXT NOT NULL DEFAULT ''`,
@@ -33,7 +33,7 @@ const MIGRATIONS = [
 ];
 
 async function run() {
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   let failed = 0;
 
   for (const sql of MIGRATIONS) {

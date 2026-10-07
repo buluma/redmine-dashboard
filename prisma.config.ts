@@ -9,6 +9,6 @@ export default defineConfig({
   datasource: {
     // Client generation does not connect to a database. The fallback keeps
     // postinstall generation working in environments without local secrets.
-    url: process.env.DATABASE_URL ?? "file:./dev.db",
+    url: process.env.DATABASE_URL ?? "file:./prisma/dev.db",
   },
 });

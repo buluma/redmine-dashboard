@@ -4,6 +4,10 @@ generator client {
   moduleFormat = "esm"
 }
 
+generator clientCompat {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
 }

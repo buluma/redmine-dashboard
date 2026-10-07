@@ -1,6 +1,6 @@
 require("dotenv").config({ path: ".env" });
-const { PrismaClient } = require("@prisma/client");
-const p = new PrismaClient();
+const { createPrismaClient } = require("./lib/prisma-client");
+const p = createPrismaClient();
 
 (async () => {
   const c = await p.issue.count();
