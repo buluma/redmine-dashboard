@@ -418,6 +418,25 @@
   color: var(--ink);
 }
 
+[data-theme="dark"] .reports-v2 {
+  --reports-chart-grid: #514a40;
+  --reports-chart-ring: #332f29;
+}
+
+[data-theme="dark"] .reports-v2 .bar-label-enhanced,
+[data-theme="dark"] .reports-v2 .donut-center-label {
+  color: var(--ink-soft);
+  fill: var(--ink-soft);
+}
+
+[data-theme="dark"] .reports-v2 .bar-track-enhanced {
+  background: #39342d;
+}
+
+[data-theme="dark"] .reports-v2 .bar-row-enhanced:hover {
+  background: var(--bg-soft);
+}
+
 [data-theme="dark"] .redmine-issue-link {
   background: var(--accent-soft);
   border-color: var(--accent);

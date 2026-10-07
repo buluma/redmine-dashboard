@@ -69,7 +69,7 @@ export function AreaChart({
             y1={pad + chartH * (1 - f)}
             x2={width - pad}
             y2={pad + chartH * (1 - f)}
-            stroke="#e5e7eb"
+            stroke="var(--reports-chart-grid, #e5e7eb)"
             strokeWidth="0.5"
             strokeDasharray="3,3"
           />
@@ -179,7 +179,7 @@ export function DonutChart({
           cy={cy}
           r={radius}
           fill="none"
-          stroke="#f3f4f6"
+          stroke="var(--reports-chart-ring, #f3f4f6)"
           strokeWidth={strokeWidth}
         />
 

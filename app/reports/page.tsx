@@ -148,6 +148,7 @@ export default function ReportsPage() {
   const [appliedFilters, setAppliedFilters] = useState<ReportsFilters>(DEFAULT_FILTERS);
   const [drilldown, setDrilldown] = useState<Drilldown>(null);
   const [data, setData] = useState<ReportData | null>(null);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [activityExpanded, setActivityExpanded] = useState(false);
   const prefetchedIssueIdsRef = useRef<Set<number>>(new Set());
 
@@ -208,6 +209,14 @@ export default function ReportsPage() {
   const overspentRate = stats.estimatedOpenIssues > 0 ? Math.round((stats.overspentOpenIssues / stats.estimatedOpenIssues) * 100) : 0;
 
   const knownAssignees = aggregates.byAssignee.map((i) => i.name).filter((n) => n && n !== "Unassigned");
+  const filterSummary = [
+    `Last ${appliedFilters.days} days`,
+    appliedFilters.issueId.trim() ? `Issue #${appliedFilters.issueId.trim()}` : "",
+    appliedFilters.from || appliedFilters.to
+      ? `${appliedFilters.from || "Start"} – ${appliedFilters.to || "Today"}`
+      : "",
+    appliedFilters.assignees.trim() ? `Assignees: ${appliedFilters.assignees.trim()}` : "",
+  ].filter(Boolean);
 
   function applyFilters(event?: FormEvent) {
     event?.preventDefault();
@@ -301,14 +310,21 @@ export default function ReportsPage() {
       {error && <p className="error-banner">{error}</p>}
 
       {/* Filters */}
-      <section className="card filters-panel reports-filters-panel">
-        <div className="report-panel-head">
-          <div>
-            <h2>Filters</h2>
-            <p className="muted">Adjust reporting scope</p>
-          </div>
-        </div>
-        <form className="filters-form" onSubmit={applyFilters}>
+      <section className={`card filters-panel reports-filters-panel${filtersExpanded ? " is-expanded" : ""}`}>
+        <button
+          type="button"
+          className="report-panel-head reports-filters-toggle"
+          onClick={() => setFiltersExpanded((expanded) => !expanded)}
+          aria-expanded={filtersExpanded}
+          aria-controls="reports-filter-controls"
+        >
+          <span className="reports-filters-heading">
+            <span className="reports-filters-title">Filters</span>
+            <span className="muted reports-filters-summary">{filterSummary.join(" · ")}</span>
+          </span>
+          <span className="reports-filters-chevron" aria-hidden="true">{filtersExpanded ? "▾" : "▸"}</span>
+        </button>
+        <form id="reports-filter-controls" className="filters-form" hidden={!filtersExpanded} onSubmit={applyFilters}>
           <div className="filters-grid">
             <label className="filter-field">
               <span className="filter-label">Time Window</span>
