@@ -1,6 +1,12 @@
 import { Prisma } from "@/src/generated/prisma/client";
 import { prisma } from "@/src/lib/db";
 import { requireRedmineClient } from "@/src/lib/auth";
+import {
+  endOfReportDay,
+  getEffectiveReportDateWindow,
+  parseReportDateOnly,
+  startOfReportDay,
+} from "@/src/lib/report-date-window";
 
 function normalizeStatus(status: string): string {
   return status.trim().toLowerCase();
@@ -21,41 +27,12 @@ function isInProgressStatus(status: string): boolean {
   return s.includes("progress") || s.includes("review") || s.includes("testing") || s.includes("redev");
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 function parseDays(value: string | null): number {
   const parsed = Number.parseInt(value ?? "30", 10);
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return 30;
   }
   return Math.min(parsed, 365);
-}
-
-function parseDateOnly(value: string | null): Date | null {
-  if (!value || value.trim().length === 0) {
-    return null;
-  }
-  const trimmed = value.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    return null;
-  }
-  const parsed = new Date(`${trimmed}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
-  return parsed;
-}
-
-function startOfDay(date: Date): Date {
-  const out = new Date(date);
-  out.setHours(0, 0, 0, 0);
-  return out;
-}
-
-function endOfDay(date: Date): Date {
-  const out = new Date(date);
-  out.setHours(23, 59, 59, 999);
-  return out;
 }
 
 function dayKey(date: Date): string {
@@ -68,8 +45,8 @@ function buildDaySeries(rawEntries: { day: string; value: number }[], windowStar
     map.set(e.day, (map.get(e.day) ?? 0) + e.value);
   }
   const out: { key: string; value: number }[] = [];
-  const cursor = startOfDay(windowStart);
-  const end = startOfDay(windowEnd);
+  const cursor = startOfReportDay(windowStart);
+  const end = startOfReportDay(windowEnd);
   while (cursor.getTime() <= end.getTime()) {
     const key = dayKey(cursor);
     out.push({ key, value: map.get(key) ?? 0 });
@@ -111,27 +88,13 @@ export async function GET(request: Request) {
       issueId = parsed;
     }
 
-    const fromDate = parseDateOnly(fromRaw);
-    const toDate = parseDateOnly(toRaw);
+    const fromDate = parseReportDateOnly(fromRaw);
+    const toDate = parseReportDateOnly(toRaw);
     if ((fromRaw && !fromDate) || (toRaw && !toDate)) {
       return Response.json({ error: "Invalid date filter. Expected YYYY-MM-DD." }, { status: 400 });
     }
 
-    let windowStart: Date;
-    let windowEnd: Date;
-    if (fromDate && toDate) {
-      windowStart = startOfDay(fromDate);
-      windowEnd = endOfDay(toDate);
-    } else if (fromDate) {
-      windowStart = startOfDay(fromDate);
-      windowEnd = endOfDay(new Date());
-    } else if (toDate) {
-      windowEnd = endOfDay(toDate);
-      windowStart = startOfDay(new Date(windowEnd.getTime() - (days - 1) * DAY_MS));
-    } else {
-      windowEnd = endOfDay(new Date());
-      windowStart = startOfDay(new Date(windowEnd.getTime() - (days - 1) * DAY_MS));
-    }
+    const { start: windowStart, end: windowEnd } = getEffectiveReportDateWindow(days, fromDate, toDate);
 
     if (windowStart.getTime() > windowEnd.getTime()) {
       return Response.json({ error: "Invalid date range. 'from' must be before or equal to 'to'." }, { status: 400 });
@@ -143,8 +106,8 @@ export async function GET(request: Request) {
       ...(fromDate || toDate
         ? {
             updatedOnRemote: {
-              ...(fromDate ? { gte: startOfDay(fromDate) } : {}),
-              ...(toDate ? { lte: endOfDay(toDate) } : {}),
+              ...(fromDate ? { gte: startOfReportDay(fromDate) } : {}),
+              ...(toDate ? { lte: endOfReportDay(toDate) } : {}),
             },
           }
         : {}),

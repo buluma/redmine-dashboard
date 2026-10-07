@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AreaChart, DonutChart, BarChartEnhanced, StatCard, ProgressRing } from "@/src/components/reports/charts";
+import {
+  formatReportDateOnly,
+  getEffectiveReportDateWindow,
+  parseReportDateOnly,
+} from "@/src/lib/report-date-window";
 
 type TrendPoint = { key: string; value: number };
 type NamedCount = { name: string; count: number };
@@ -209,14 +214,18 @@ export default function ReportsPage() {
   const overspentRate = stats.estimatedOpenIssues > 0 ? Math.round((stats.overspentOpenIssues / stats.estimatedOpenIssues) * 100) : 0;
 
   const knownAssignees = aggregates.byAssignee.map((i) => i.name).filter((n) => n && n !== "Unassigned");
+  const explicitFrom = parseReportDateOnly(appliedFilters.from);
+  const explicitTo = parseReportDateOnly(appliedFilters.to);
+  const effectiveDateWindow = getEffectiveReportDateWindow(appliedFilters.days, explicitFrom, explicitTo);
+  const dateWindowSummary = explicitFrom || explicitTo
+    ? `${formatReportDateOnly(effectiveDateWindow.start)} – ${formatReportDateOnly(effectiveDateWindow.end)}`
+    : `Last ${appliedFilters.days} days`;
   const filterSummary = [
-    `Last ${appliedFilters.days} days`,
+    dateWindowSummary,
     appliedFilters.issueId.trim() ? `Issue #${appliedFilters.issueId.trim()}` : "",
-    appliedFilters.from || appliedFilters.to
-      ? `${appliedFilters.from || "Start"} – ${appliedFilters.to || "Today"}`
-      : "",
     appliedFilters.assignees.trim() ? `Assignees: ${appliedFilters.assignees.trim()}` : "",
   ].filter(Boolean);
+  const showDateWindowInHero = appliedFilters.days !== 30 || explicitFrom || explicitTo;
 
   function applyFilters(event?: FormEvent) {
     event?.preventDefault();
@@ -299,7 +308,7 @@ export default function ReportsPage() {
             <h1>Redmine Reports</h1>
             <p className="muted">
               Insights across <strong>{stats.totalIssues.toLocaleString()}</strong> issues
-              {appliedFilters.days !== 30 && <span> · Last {appliedFilters.days} days</span>}
+              {showDateWindowInHero && <span> · {dateWindowSummary}</span>}
             </p>
           </div>
           <div className="hero-actions">
