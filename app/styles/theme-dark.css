@@ -859,6 +859,38 @@
   border-color: var(--line);
 }
 
+[data-theme="dark"] .reports-v2 .wakatime-top-day-row {
+  background: var(--bg-soft);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .reports-v2 .wakatime-top-day-date,
+[data-theme="dark"] .reports-v2 .wakatime-goal-title,
+[data-theme="dark"] .reports-v2 .wakatime-gauge-today {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .reports-v2 .wakatime-top-day-total {
+  color: var(--accent-strong);
+}
+
+[data-theme="dark"] .reports-v2 .wakatime-gauge-delta.up {
+  color: #69d69a;
+}
+
+[data-theme="dark"] .reports-v2 .wakatime-gauge-delta.down {
+  color: #f08a8a;
+}
+
+[data-theme="dark"] .reports-v2 .wakatime-goal-track,
+[data-theme="dark"] .reports-v2 .wakatime-weekday-track {
+  background: #39342d;
+}
+
+[data-theme="dark"] .reports-v2 .wakatime-weekday-label {
+  color: var(--ink-soft);
+}
+
 [data-theme="dark"] .reports-v2 .wakatime-weekday-tooltip {
   background: var(--bg-soft);
   border-color: var(--line);

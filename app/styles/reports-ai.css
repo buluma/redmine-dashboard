@@ -827,7 +827,7 @@
 }
 
 .reports-v2 .wakatime-bottom-grid {
-  align-items: stretch;
+  align-items: start;
 }
 
 .reports-v2 .wakatime-empty-state {
