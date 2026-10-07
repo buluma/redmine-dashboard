@@ -60,6 +60,13 @@ function emitLog(level: TelemetryLevel, event: string, data: TelemetryData = {})
 
   logEvent(event, payload, level);
 
+  const setting = typeof window === "undefined"
+    ? process.env.SENTRY_ENABLE_LOGS
+    : process.env.NEXT_PUBLIC_SENTRY_ENABLE_LOGS;
+  if (!setting || !["1", "true", "yes", "on"].includes(setting.trim().toLowerCase())) {
+    return;
+  }
+
   if (level === "error") {
     Sentry.logger.error(event, payload);
     return;

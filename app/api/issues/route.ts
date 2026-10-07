@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/src/generated/prisma/client";
 import { requireCurrentUser, requireRedmineClientForUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { toIssueView } from "@/src/lib/issue-shape";

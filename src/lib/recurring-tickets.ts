@@ -1,4 +1,4 @@
-import type { RecurringTicketSeries, RecurringTicketInstance } from "@prisma/client";
+import type { RecurringTicketSeries, RecurringTicketInstance } from "@/src/generated/prisma/client";
 import { prisma } from "@/src/lib/db";
 import { logEvent } from "@/src/lib/log";
 import { RedmineClient } from "@/src/lib/redmine";

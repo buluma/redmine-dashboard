@@ -6,8 +6,8 @@
  * only manages the series configuration those functions read.
  */
 
-import { Prisma } from "@prisma/client";
-import type { RecurringTicketSeries } from "@prisma/client";
+import { Prisma } from "@/src/generated/prisma/client";
+import type { RecurringTicketSeries } from "@/src/generated/prisma/client";
 import { prisma } from "@/src/lib/db";
 import { getAuditService } from "@/src/lib/audit";
 

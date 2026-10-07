@@ -44,4 +44,4 @@ The `tsconfig.json` is configured with `strict: true` enabled. This enforces a h
 - **Client:** The Prisma client is initialized in `src/lib/db.ts`.
 - **Schema:** The database schema is defined in `prisma/schema.prisma`.
 - **Migrations:** After changing the schema, generate a new migration: `npx prisma migrate dev`.
-- **Client Generation:** If the client is out of date, regenerate it with `bun run prisma:generate`.
+- **Client Generation:** Use `bun run prisma:generate:sqlite` for local SQLite development; `bun run prisma:generate` generates the client for the PostgreSQL schema.

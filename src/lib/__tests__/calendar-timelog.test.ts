@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { RecurringTicketSeries } from "@prisma/client";
+import type { RecurringTicketSeries } from "@/src/generated/prisma/client";
 
 const {
   mockSeriesFindMany,

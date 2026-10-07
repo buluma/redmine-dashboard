@@ -8,8 +8,8 @@
  */
 
 require("dotenv").config({ path: ".env" });
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const { createPrismaClient } = require("./lib/prisma-client");
+const prisma = createPrismaClient();
 
 const REDMINE_BASE_URL = process.env.REDMINE_BASE_URL;
 const REDMINE_API_KEY = process.env.REDMINE_API_KEY;

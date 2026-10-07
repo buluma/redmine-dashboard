@@ -12,7 +12,7 @@
  */
 
 import crypto from 'crypto';
-import type { Prisma, WebhookSubscription as PrismaWebhookSubscription } from '@prisma/client';
+import type { Prisma, WebhookSubscription as PrismaWebhookSubscription } from '@/src/generated/prisma/client';
 import { prisma } from './db';
 import { getAuditService } from './audit';
 import { trackInfo, trackSuccess, trackFailure } from './telemetry';

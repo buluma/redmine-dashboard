@@ -7,8 +7,8 @@
  *   node scripts/cleanup-old-issues.js --apply   # Actually delete
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { createPrismaClient } = require('./lib/prisma-client');
+const prisma = createPrismaClient();
 
 const DRY_RUN = !process.argv.includes('--apply');
 const CUTOFF = new Date();

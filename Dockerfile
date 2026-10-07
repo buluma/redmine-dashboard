@@ -4,12 +4,14 @@ WORKDIR /app
 ARG PRISMA_SCHEMA=prisma/schema.dev.sqlite.prisma
 
 # Install dependencies for native modules
-RUN apk add --no-cache sqlite openssl ca-certificates
+RUN apk add --no-cache sqlite openssl ca-certificates python3 make g++ libstdc++
 
 # Copy package files first for better caching
 COPY package.json bun.lock ./
 COPY prisma ./prisma
 RUN bun install --frozen-lockfile --ignore-scripts
+COPY prisma.config.ts ./prisma.config.ts
+RUN bun pm trust better-sqlite3
 
 # Copy Prisma schema
 COPY prisma ./prisma

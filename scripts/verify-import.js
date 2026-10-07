@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { createPrismaClient } = require('./lib/prisma-client');
+const prisma = createPrismaClient();
 
 async function main() {
   const [mbu, ssl, traces] = await Promise.all([

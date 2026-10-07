@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
-import type { Prisma, Issue } from "@prisma/client";
+import type { Prisma, Issue } from "@/src/generated/prisma/client";
 import {
   getExternalApiKey,
   requireExternalApiKey,

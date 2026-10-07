@@ -1,4 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import path from "node:path";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@/src/generated/prisma/client";
 import { env } from "@/src/lib/env";
 import { trackFailure } from "@/src/lib/telemetry";
 
@@ -7,6 +10,22 @@ declare global {
 }
 
 function buildPrismaUrl(rawUrl: string): string {
+  if (rawUrl.startsWith("file:") || rawUrl.startsWith("sqlite:")) {
+    // PrismaBetterSqlite3 only strips a leading `file:` and passes the rest to
+    // better-sqlite3 as a literal filename, so `sqlite:` must become `file:` and
+    // Prisma 6-era query params (connection_limit, socket_timeout, ...) must be
+    // dropped or they end up in the filename.
+    const scheme = rawUrl.startsWith("file:") ? "file:" : "sqlite:";
+    const remainder = rawUrl.slice(scheme.length);
+    const queryIndex = remainder.indexOf("?");
+    const databasePath = queryIndex === -1 ? remainder : remainder.slice(0, queryIndex);
+    if (!databasePath || databasePath === ":memory:" || path.isAbsolute(databasePath)) {
+      return `file:${databasePath}`;
+    }
+
+    return `file:${path.resolve(process.cwd(), databasePath)}`;
+  }
+
   // Keep pool timeout explicit; connection_limit can be overridden via env in deployments when needed.
   if (!rawUrl.startsWith("postgres://") && !rawUrl.startsWith("postgresql://")) {
     return rawUrl;
@@ -29,14 +48,14 @@ function buildPrismaUrl(rawUrl: string): string {
 }
 
 const prismaUrl = buildPrismaUrl(env.databaseUrl);
-const prismaClient =
-  prismaUrl === env.databaseUrl
-    ? new PrismaClient()
-    : new PrismaClient({
-        datasources: {
-          db: { url: prismaUrl },
-        },
-      });
+const adapter = isSqliteMode()
+  ? new PrismaBetterSqlite3({ url: prismaUrl })
+  : new PrismaPg({
+      connectionString: prismaUrl,
+      max: Number(new URL(prismaUrl).searchParams.get("connection_limit") ?? 10),
+      connectionTimeoutMillis: 30_000,
+    });
+const prismaClient = new PrismaClient({ adapter });
 
 export const prisma = global.prisma ?? prismaClient;
 

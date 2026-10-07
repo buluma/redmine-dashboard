@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient } from "@prisma/client";
 import path from "path";
 
@@ -30,18 +31,17 @@ const API_KEY = process.env.E2E_EXTERNAL_API_KEY as string;
 const FIXTURE_REPO = "e2e/zzq-e2e-corr-fixture";
 const FIXTURE_DATES = ["2001-01-01", "2001-01-02"];
 
-// Mirror Prisma's resolution of relative sqlite paths (relative to the
-// schema directory, i.e. prisma/), so the test process opens the same file
-// as the dev server regardless of CWD quirks.
+// Resolve the relative SQLite URL from the repository root, matching the
+// Prisma config and the dev server's adapter connection.
 function resolveDbUrl(): string {
-  const raw = process.env.DATABASE_URL || "file:./dev.db";
+  const raw = process.env.DATABASE_URL || "file:./prisma/dev.db";
   if (!raw.startsWith("file:")) return raw;
   const p = raw.slice("file:".length);
   if (path.isAbsolute(p)) return raw;
-  return "file:" + path.resolve(process.cwd(), "prisma", p);
+  return "file:" + path.resolve(process.cwd(), p);
 }
 
-const prisma = new PrismaClient({ datasources: { db: { url: resolveDbUrl() } } });
+const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url: resolveDbUrl() }) });
 
 let userId: string;
 let createdUser = false;

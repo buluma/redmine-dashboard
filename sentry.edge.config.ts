@@ -4,6 +4,7 @@
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
 import * as Sentry from "@sentry/nextjs";
+import { getSentryDataCollection } from "@/src/lib/sentry-data-collection";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -28,7 +29,6 @@ function numberFromEnv(key: string, fallback: number): number {
 }
 
 const tracesSampleRate = numberFromEnv("SENTRY_TRACES_SAMPLE_RATE", isProduction ? 0.1 : 0);
-const enableLogs = boolFromEnv("SENTRY_ENABLE_LOGS", false);
 const enableConsoleLogging = boolFromEnv("SENTRY_ENABLE_CONSOLE_LOGGING", false);
 const sendDefaultPii = boolFromEnv("SENTRY_SEND_DEFAULT_PII", false);
 
@@ -41,9 +41,5 @@ Sentry.init({
   dsn: process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN,
   integrations,
   tracesSampleRate,
-
-  // Enable logs to be sent to Sentry
-  enableLogs,
-
-  sendDefaultPii,
+  dataCollection: getSentryDataCollection(sendDefaultPii),
 });

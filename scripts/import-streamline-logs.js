@@ -21,12 +21,12 @@
  *   node scripts/import-streamline-logs.js --file debugging/logs/mbu_logs_xxx.json
  */
 
-const { PrismaClient } = require('@prisma/client');
+const { createPrismaClient } = require('./lib/prisma-client');
 const fs = require('fs');
 const path = require('path');
-const { Decimal } = require('@prisma/client/runtime/library');
+const { Decimal } = require('@prisma/client').Prisma;
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 // Parse CLI args
 const args = process.argv.slice(2);

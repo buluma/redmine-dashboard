@@ -15,7 +15,7 @@
  * TimeEntry.calendarEventUid).
  */
 
-import type { RecurringTicketSeries } from "@prisma/client";
+import type { RecurringTicketSeries } from "@/src/generated/prisma/client";
 import { prisma } from "@/src/lib/db";
 import { trackInfo } from "@/src/lib/telemetry";
 import type { OdysseusCalendarClient, OdysseusCalendarEvent } from "@/src/lib/odysseus-calendar";

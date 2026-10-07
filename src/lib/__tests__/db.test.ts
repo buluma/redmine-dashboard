@@ -2,8 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockExecuteRawUnsafe = vi.fn();
 const mockQueryRawUnsafe = vi.fn();
+const mockSqliteAdapter = vi.fn();
 
-vi.mock("@prisma/client", () => {
+vi.mock("@prisma/adapter-better-sqlite3", () => ({
+  PrismaBetterSqlite3: class {
+    constructor(options: { url: string }) {
+      mockSqliteAdapter(options);
+    }
+  },
+}));
+
+vi.mock("@/src/generated/prisma/client", () => {
   const PrismaClient = class {
     $executeRawUnsafe = mockExecuteRawUnsafe;
     $queryRawUnsafe = mockQueryRawUnsafe;
@@ -15,6 +24,37 @@ describe("database utilities", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.resetModules();
+    vi.unstubAllEnvs();
+  });
+
+  describe("SQLite adapter URL", () => {
+    async function adapterUrlFor(databaseUrl: string): Promise<string> {
+      vi.stubEnv("DATABASE_URL", databaseUrl);
+      await import("@/src/lib/db");
+      return mockSqliteAdapter.mock.calls[0][0].url;
+    }
+
+    it("resolves relative file: paths from the working directory", async () => {
+      expect(await adapterUrlFor("file:./prisma/dev.db")).toBe(`file:${process.cwd()}/prisma/dev.db`);
+    });
+
+    it("normalizes sqlite: URLs to file: because the adapter only strips file:", async () => {
+      expect(await adapterUrlFor("sqlite:./prisma/dev.db")).toBe(`file:${process.cwd()}/prisma/dev.db`);
+      vi.resetModules();
+      mockSqliteAdapter.mockClear();
+      expect(await adapterUrlFor("sqlite:/var/data/dev.db")).toBe("file:/var/data/dev.db");
+    });
+
+    it("drops query params so they don't become part of the filename", async () => {
+      expect(await adapterUrlFor("file:./prisma/dev.db?connection_limit=1")).toBe(`file:${process.cwd()}/prisma/dev.db`);
+      vi.resetModules();
+      mockSqliteAdapter.mockClear();
+      expect(await adapterUrlFor("file:/var/data/dev.db?socket_timeout=10")).toBe("file:/var/data/dev.db");
+    });
+
+    it("keeps in-memory databases in memory", async () => {
+      expect(await adapterUrlFor("sqlite::memory:")).toBe("file::memory:");
+    });
   });
 
   describe("prisma singleton", () => {
