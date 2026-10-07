@@ -6,6 +6,8 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 COPY package.json bun.lock* ./
+# patchedDependencies in package.json must exist before bun install.
+COPY patches ./patches
 # --ignore-scripts: postinstall (prisma generate) needs prisma/schema.dev.sqlite.prisma,
 # which isn't copied into this stage; it's regenerated explicitly in the builder stage.
 RUN bun install --ignore-scripts

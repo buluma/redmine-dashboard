@@ -9,6 +9,8 @@ RUN apk add --no-cache sqlite openssl ca-certificates python3 make g++ libstdc++
 # Copy package files first for better caching
 COPY package.json bun.lock ./
 COPY prisma ./prisma
+# patchedDependencies in package.json must exist before bun install.
+COPY patches ./patches
 RUN bun install --frozen-lockfile --ignore-scripts
 COPY prisma.config.ts ./prisma.config.ts
 RUN bun pm trust better-sqlite3
