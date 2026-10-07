@@ -345,7 +345,15 @@ export function WebhooksClient({ subscriptions }: Props) {
         )}
 
         <div className="drill-table-wrap">
-          <table className="issues-table">
+          <table className="issues-table webhook-subscriptions-table">
+            <colgroup>
+              <col className="webhook-name-column" />
+              <col className="webhook-url-column" />
+              <col className="webhook-events-column" />
+              <col className="webhook-status-column" />
+              <col className="webhook-delivery-column" />
+              <col className="webhook-actions-column" />
+            </colgroup>
             <thead>
               <tr>
                 <th>{t("webhooks.tableName")}</th>
@@ -488,6 +496,41 @@ export function WebhooksClient({ subscriptions }: Props) {
           display: flex;
           gap: 0.5rem;
         }
+
+        .webhook-subscriptions-table {
+          width: 100%;
+          min-width: 1080px;
+          table-layout: fixed;
+        }
+
+        .webhook-subscriptions-table .webhook-name-column { width: 12%; }
+        .webhook-subscriptions-table .webhook-url-column { width: 23%; }
+        .webhook-subscriptions-table .webhook-events-column { width: 40%; }
+        .webhook-subscriptions-table .webhook-status-column { width: 6%; }
+        .webhook-subscriptions-table .webhook-delivery-column { width: 9%; }
+        .webhook-subscriptions-table .webhook-actions-column { width: 10%; }
+
+        .webhook-subscriptions-table th:first-child,
+        .webhook-subscriptions-table td:first-child,
+        .webhook-subscriptions-table th:nth-child(2),
+        .webhook-subscriptions-table td:nth-child(2) {
+          position: static;
+          left: auto;
+          z-index: auto;
+          min-width: 0;
+        }
+
+        .webhook-subscriptions-table th:nth-child(4),
+        .webhook-subscriptions-table td:nth-child(4) {
+          text-align: center;
+        }
+
+        .webhook-subscriptions-table td:nth-child(2) .external-link {
+          display: block;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
         
         .btn-sm {
           padding: 0.375rem 0.75rem;
@@ -497,6 +540,7 @@ export function WebhooksClient({ subscriptions }: Props) {
         .event-badges {
           display: flex;
           flex-wrap: wrap;
+          align-content: flex-start;
           gap: 0.25rem;
         }
         
@@ -506,6 +550,7 @@ export function WebhooksClient({ subscriptions }: Props) {
           color: var(--accent);
           border-radius: 9999px;
           font-size: 0.75rem;
+          white-space: nowrap;
         }
         
         .toolbar-actions {
