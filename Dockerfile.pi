@@ -19,8 +19,9 @@ RUN apk add --no-cache libc6-compat python3 make g++ sqlite
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# The SQLite driver adapter needs its native module built after the ignored install.
-RUN bun pm trust better-sqlite3
+# No native better-sqlite3 build here: the image runs on Bun, which refuses to load
+# better-sqlite3 ("not yet supported in Bun"), so SQLite mode cannot work in this
+# image with the Prisma 7 better-sqlite3 adapter.
 
 # Generate Prisma client using SQLite schema
 RUN bunx prisma generate --schema=prisma/schema.dev.sqlite.prisma
