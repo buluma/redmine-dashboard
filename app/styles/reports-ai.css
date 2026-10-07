@@ -1,3 +1,11 @@
+.reports-v2 {
+  --reports-track: #e7edf3;
+  --reports-comment-bg: #d8eaf2;
+  --reports-comment-ink: #0a556a;
+  --reports-time-bg: #e1f2ea;
+  --reports-time-ink: #2c7b58;
+}
+
 .reports-v2 .reports-filters-panel {
   padding: 0.9rem 1rem 1rem;
 }
@@ -302,6 +310,9 @@
 .reports-v2 .reports-charts-grid {
   display: grid;
   gap: 0.72rem;
+  align-content: start;
+  align-items: start;
+  grid-auto-rows: max-content;
 }
 
 .reports-v2 .reports-charts-row-2 {
@@ -314,8 +325,10 @@
 }
 
 .reports-v2 .report-panel {
+  box-sizing: border-box;
+  height: fit-content;
   padding: 0.82rem;
-  border: 1px solid #cfdbe5;
+  border: 1px solid var(--line, #cfdbe5);
   border-radius: 8px;
 }
 
@@ -350,14 +363,14 @@
   margin: 0;
   font-size: 0.88rem;
   font-weight: 700;
-  color: #214157;
+  color: var(--ink, #214157);
 }
 
 .reports-v2 .report-panel-badge {
   font-size: 0.72rem;
-  color: #0a556a;
-  background: #d7eaf3;
-  border: 1px solid rgba(10, 85, 106, 0.22);
+  color: var(--accent-strong, #0a556a);
+  background: var(--accent-soft, #d7eaf3);
+  border: 1px solid var(--line, rgba(10, 85, 106, 0.22));
   padding: 0.16rem 0.5rem;
   border-radius: 999px;
   font-weight: 700;
@@ -417,29 +430,30 @@
 }
 
 .reports-v2 .donut-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem 0.62rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.22rem 0.5rem;
   width: 100%;
-  justify-content: center;
 }
 
 .reports-v2 .donut-legend-item {
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.16rem 0.36rem;
+  gap: 0.38rem;
+  padding: 0.24rem 0.32rem;
   border-radius: 6px;
   border: none;
   background: transparent;
   cursor: pointer;
   font-size: 0.74rem;
+  text-align: left;
   transition: background-color 0.15s ease;
 }
 
 .reports-v2 .donut-legend-item:hover,
 .reports-v2 .donut-legend-item.active {
-  background: #edf4f9;
+  background: var(--bg-soft, #edf4f9);
 }
 
 .reports-v2 .donut-legend-dot {
@@ -450,8 +464,9 @@
 }
 
 .reports-v2 .donut-legend-name {
-  color: #2a4b62;
-  max-width: 86px;
+  color: var(--ink, #2a4b62);
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -484,24 +499,25 @@
 }
 
 .reports-v2 .bar-row-enhanced:hover {
-  background: #f0f6fb;
+  background: var(--bg-soft, #f0f6fb);
 }
 
 .reports-v2 .bar-label-enhanced {
   font-size: 0.8rem;
-  color: #2a4b62;
-  min-width: 80px;
-  max-width: 120px;
+  color: var(--ink, #2a4b62);
+  flex: 0 1 36%;
+  min-width: 0;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .reports-v2 .bar-track-enhanced {
   flex: 1;
+  min-width: 2rem;
   height: 8px;
-  background: #e7edf3;
+  background: var(--reports-track);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -536,7 +552,7 @@
 
 .reports-v2 .stacked-bar-label {
   font-size: 0.84rem;
-  color: #2a4b62;
+  color: var(--ink, #2a4b62);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -547,7 +563,7 @@
   height: 24px;
   border-radius: 9px;
   overflow: hidden;
-  background: #e7edf3;
+  background: var(--reports-track);
 }
 
 .reports-v2 .stacked-bar-segment {
@@ -587,10 +603,10 @@
 }
 
 .reports-v2 .wakatime-top-day-row {
-  border: 1px solid #d7e4ef;
+  border: 1px solid var(--line, #d7e4ef);
   border-radius: 8px;
   padding: 0.5rem 0.62rem;
-  background: #f8fbfd;
+  background: var(--bg-soft, #f8fbfd);
 }
 
 .reports-v2 .wakatime-top-day-main {
@@ -603,18 +619,21 @@
 .reports-v2 .wakatime-top-day-date {
   font-size: 0.82rem;
   font-weight: 700;
-  color: #214157;
+  color: var(--ink, #214157);
 }
 
 .reports-v2 .wakatime-top-day-total {
   font-size: 0.8rem;
   font-weight: 800;
-  color: #0f6f87;
+  color: var(--accent-strong, #0f6f87);
 }
 
 .reports-v2 .wakatime-top-day-sub {
   margin-top: 0.2rem;
   font-size: 0.76rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .reports-v2 .wakatime-goals-list {
@@ -624,7 +643,7 @@
 }
 
 .reports-v2 .wakatime-goal-row {
-  border: 1px solid #d7e4ef;
+  border: 1px solid var(--line, #d7e4ef);
   border-radius: 8px;
   padding: 0.5rem 0.62rem;
 }
@@ -639,7 +658,7 @@
 .reports-v2 .wakatime-goal-title {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #214157;
+  color: var(--ink, #214157);
 }
 
 .reports-v2 .wakatime-goal-status {
@@ -678,7 +697,7 @@
   width: 100%;
   height: 8px;
   border-radius: 999px;
-  background: #e6edf3;
+  background: var(--reports-track);
   overflow: hidden;
 }
 
@@ -713,7 +732,7 @@
 
 .reports-v2 .wakatime-gauge-today {
   font-size: 1.06rem;
-  color: #214157;
+  color: var(--ink, #214157);
 }
 
 .reports-v2 .wakatime-gauge-delta {
@@ -767,7 +786,7 @@
 .reports-v2 .wakatime-weekday-label {
   font-size: 0.83rem;
   font-weight: 700;
-  color: #29465f;
+  color: var(--ink, #29465f);
 }
 
 .reports-v2 .wakatime-weekday-track {
@@ -775,7 +794,7 @@
   height: 11px;
   border-radius: 999px;
   overflow: hidden;
-  background: #e7eef4;
+  background: var(--reports-track);
 }
 
 .reports-v2 .wakatime-weekday-segment {
@@ -866,6 +885,21 @@
   .reports-v2 .wakatime-weekday-tooltip {
     order: -1;
   }
+
+  .reports-v2 .bar-label-enhanced {
+    flex-basis: 42%;
+  }
+}
+
+@media (max-width: 400px) {
+  .reports-v2 .donut-legend {
+    grid-template-columns: 1fr;
+  }
+
+  .reports-v2 .activity-feed-controls {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 .reports-v2 .progress-ring {
@@ -903,7 +937,7 @@
   padding: 0.56rem 0.2rem;
   text-decoration: none;
   color: inherit;
-  border-bottom: 1px solid #dde7ef;
+  border-bottom: 1px solid var(--line, #dde7ef);
   transition: background-color 0.15s ease;
 }
 
@@ -912,7 +946,7 @@
 }
 
 .reports-v2 .activity-item:hover {
-  background: #edf5fb;
+  background: var(--bg-soft, #edf5fb);
 }
 
 .reports-v2 .activity-dot {
@@ -942,12 +976,15 @@
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.2rem;
+  min-width: 0;
 }
 
 .reports-v2 .activity-issue {
   font-size: 0.84rem;
   font-weight: 700;
-  color: #214157;
+  color: var(--ink, #214157);
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -964,7 +1001,8 @@
   align-items: center;
   gap: 0.46rem;
   font-size: 0.78rem;
-  color: #4f6479;
+  color: var(--ink-soft, #4f6479);
+  min-width: 0;
 }
 
 .reports-v2 .activity-type {
@@ -974,19 +1012,97 @@
   padding: 0.14rem 0.38rem;
   border-radius: 6px;
   font-weight: 700;
+  flex-shrink: 0;
 }
 
 .reports-v2 .type-comment {
-  background: #d8eaf2;
-  color: #0a556a;
+  background: var(--reports-comment-bg);
+  color: var(--reports-comment-ink);
 }
 
 .reports-v2 .type-time {
-  background: #e1f2ea;
-  color: #2c7b58;
+  background: var(--reports-time-bg);
+  color: var(--reports-time-ink);
+}
+
+.reports-v2 .activity-author {
+  color: var(--ink-soft, #5a6d83);
+  max-width: 10rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reports-v2 .activity-feed-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0.15rem 0 0.42rem;
+}
+
+.reports-v2 .activity-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.32rem;
+}
+
+.reports-v2 .activity-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 30px;
+  padding: 0.24rem 0.58rem;
+  border: 1px solid var(--line, #ccd7e2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft, #5a6d83);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.reports-v2 .activity-filter-btn[aria-pressed="true"] {
+  border-color: var(--accent-strong, #0a556a);
+  background: var(--accent-soft, #d6eaf2);
+  color: var(--accent-strong, #0a556a);
+}
+
+.reports-v2 .activity-filter-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+.reports-v2 .activity-show-more {
+  display: block;
+  margin: 0.45rem auto 0;
+  padding: 0.34rem 0.72rem;
+  border: 1px solid var(--line, #ccd7e2);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--accent-strong, #0a556a);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reports-v2 .activity-filter-btn:focus-visible,
+.reports-v2 .activity-show-more:focus-visible {
+  outline: 2px solid var(--accent-strong, #0a556a);
+  outline-offset: 2px;
+}
+
+.reports-v2 .activity-empty {
+  padding: 0.8rem 0.2rem;
+  color: var(--ink-soft, #5a6d83);
 }
 
 .reports-v2 .activity-note {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

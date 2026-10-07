@@ -235,6 +235,8 @@ export function DonutChart({
             key={seg.name}
             type="button"
             className={`donut-legend-item ${hovered === seg.name ? "active" : ""}`}
+            title={`${seg.name}: ${seg.value}`}
+            aria-label={`${seg.name}: ${seg.value}`}
             onMouseEnter={() => setHovered(seg.name)}
             onClick={() => onClick?.(seg.name)}
           >
@@ -287,9 +289,11 @@ export function BarChartEnhanced({
           key={item.name}
           type="button"
           className={`bar-row-enhanced ${active === item.name ? "active" : ""}`}
+          title={`${item.name}${showValue ? `: ${item.value}` : ""}`}
+          aria-label={`${item.name}${showValue ? `: ${item.value}` : ""}`}
           onClick={() => onClick?.(item.name)}
         >
-          <span className="bar-label-enhanced">{item.name}</span>
+          <span className="bar-label-enhanced" title={item.name}>{item.name}</span>
           <div className="bar-track-enhanced">
             <div
               className="bar-fill-enhanced"

@@ -150,6 +150,8 @@ export default function ReportsPage() {
   const [data, setData] = useState<ReportData | null>(null);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [activityExpanded, setActivityExpanded] = useState(false);
+  const [activityFilter, setActivityFilter] = useState<"all" | "comment" | "time">("all");
+  const [activityShowAll, setActivityShowAll] = useState(false);
   const prefetchedIssueIdsRef = useRef<Set<number>>(new Set());
 
   const prefetchIssueDetail = useCallback((targetIssueId: number) => {
@@ -260,6 +262,15 @@ export default function ReportsPage() {
   ]
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     .slice(0, 20);
+  const activityCounts = {
+    all: recentActivity.length,
+    comment: recentActivity.filter((event) => event.type === "comment").length,
+    time: recentActivity.filter((event) => event.type === "time").length,
+  };
+  const filteredActivity = activityFilter === "all"
+    ? recentActivity
+    : recentActivity.filter((event) => event.type === activityFilter);
+  const visibleActivity = filteredActivity.slice(0, activityShowAll ? filteredActivity.length : 8);
 
   const statusSegments = aggregates.byStatus.slice(0, 6).map((s, i) => ({
     name: s.name,
@@ -593,33 +604,77 @@ export default function ReportsPage() {
           </span>
         </button>
         {activityExpanded && (
-        <div className="activity-timeline">
-          {recentActivity.map((event, idx) => (
-            <Link
-              key={`${event.issueId}-${event.timestamp}-${idx}`}
-              href={`/issues/${event.issueId}`}
-              className="activity-item"
-              target="_blank"
-              rel="noopener noreferrer"
-              onMouseEnter={() => prefetchIssueDetail(event.issueId)}
-              onFocus={() => prefetchIssueDetail(event.issueId)}
-            >
-              <div className={`activity-dot ${event.type === "comment" ? "dot-comment" : "dot-time"}`} />
-              <div className="activity-body">
-                <div className="activity-head">
-                  <span className="activity-issue">#{event.issueId} {event.issueSubject}</span>
-                  <span className="activity-time">{formatTimeAgo(event.timestamp)}</span>
-                </div>
-                <div className="activity-detail">
-                  <span className={`activity-type type-${event.type}`}>
-                    {event.type === "comment" ? "💬" : "⏱"} {event.author}
-                  </span>
-                  {event.detail && <span className="activity-note">{event.detail}</span>}
-                </div>
+          <>
+            <div className="activity-feed-controls">
+              <div className="activity-filters" role="group" aria-label="Filter recent activity">
+                {([
+                  ["all", "All", activityCounts.all],
+                  ["comment", "Comments", activityCounts.comment],
+                  ["time", "Time entries", activityCounts.time],
+                ] as const).map(([value, label, count]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className="activity-filter-btn"
+                    aria-pressed={activityFilter === value}
+                    onClick={() => {
+                      setActivityFilter(value);
+                      setActivityShowAll(false);
+                    }}
+                  >
+                    {label} <span className="activity-filter-count">{count}</span>
+                  </button>
+                ))}
               </div>
-            </Link>
-          ))}
-        </div>
+            </div>
+            {visibleActivity.length > 0 ? (
+              <div className="activity-timeline">
+                {visibleActivity.map((event, idx) => (
+                  <Link
+                    key={`${event.issueId}-${event.timestamp}-${idx}`}
+                    href={`/issues/${event.issueId}`}
+                    className="activity-item"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onMouseEnter={() => prefetchIssueDetail(event.issueId)}
+                    onFocus={() => prefetchIssueDetail(event.issueId)}
+                  >
+                    <div className={`activity-dot ${event.type === "comment" ? "dot-comment" : "dot-time"}`} />
+                    <div className="activity-body">
+                      <div className="activity-head">
+                        <span className="activity-issue" title={event.issueSubject}>#{event.issueId} {event.issueSubject}</span>
+                        <span className="activity-time">{formatTimeAgo(event.timestamp)}</span>
+                      </div>
+                      <div className="activity-detail">
+                        <span className={`activity-type type-${event.type}`}>
+                          {event.type === "comment" ? "💬 Comment" : "⏱ Time"}
+                        </span>
+                        <span className="activity-author">{event.author}</span>
+                        {event.detail && <span className="activity-note" title={event.detail}>{event.detail}</span>}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="muted activity-empty">
+                {activityFilter === "all"
+                  ? "No recent activity."
+                  : activityFilter === "comment"
+                    ? "No recent comments."
+                    : "No recent time entries."}
+              </p>
+            )}
+            {filteredActivity.length > 8 && (
+              <button
+                type="button"
+                className="activity-show-more"
+                onClick={() => setActivityShowAll((expanded) => !expanded)}
+              >
+                {activityShowAll ? "Show fewer" : `Show all ${filteredActivity.length}`}
+              </button>
+            )}
+          </>
         )}
       </section>
     </main>
