@@ -1,3 +1,4 @@
+import path from "node:path";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/src/generated/prisma/client";
@@ -9,6 +10,19 @@ declare global {
 }
 
 function buildPrismaUrl(rawUrl: string): string {
+  if (rawUrl.startsWith("file:") || rawUrl.startsWith("sqlite:")) {
+    const scheme = rawUrl.startsWith("file:") ? "file:" : "sqlite:";
+    const remainder = rawUrl.slice(scheme.length);
+    const queryIndex = remainder.indexOf("?");
+    const databasePath = queryIndex === -1 ? remainder : remainder.slice(0, queryIndex);
+    if (!databasePath || databasePath === ":memory:" || path.isAbsolute(databasePath)) {
+      return rawUrl;
+    }
+
+    const query = queryIndex === -1 ? "" : remainder.slice(queryIndex);
+    return `${scheme}${path.resolve(process.cwd(), databasePath)}${query}`;
+  }
+
   // Keep pool timeout explicit; connection_limit can be overridden via env in deployments when needed.
   if (!rawUrl.startsWith("postgres://") && !rawUrl.startsWith("postgresql://")) {
     return rawUrl;

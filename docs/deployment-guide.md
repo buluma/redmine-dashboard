@@ -135,7 +135,7 @@ A full list of helper targets is available in the [Makefile](../Makefile).
 
 ## Environment Variables Reference
 
-- `DATABASE_URL`: SQLite file path for local development (default: `file:./dev.db`).
+- `DATABASE_URL`: SQLite file path for local development (default: `file:./dev.db`). If regenerating Prisma for this mode, run `bun run prisma:generate:sqlite`; `bun run prisma:generate` generates the PostgreSQL client.
 - `DOCKER_DATABASE_URL`: not referenced by the current `docker-compose.yml` — the dashboard service reads `DOCKER_POSTGRES_DATABASE_URL` instead. Left here only in case a future SQLite-mode Compose file reintroduces it.
 - `DOCKER_POSTGRES_DB`: Local Docker Postgres DB name.
 - `DOCKER_POSTGRES_USER`: Local Docker Postgres username.
