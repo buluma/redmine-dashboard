@@ -740,8 +740,15 @@ export function WakatimeChartsClient({
                     <span className="wakatime-top-day-total">{day.grand_total.text}</span>
                   </div>
                   <div className="wakatime-top-day-sub muted">
-                    {topRealTech(day.languages, day.editors)}
-                    {day.projects[0]?.name ? ` • ${day.projects[0].name}` : ""}
+                    <span
+                      title={[
+                        topRealTech(day.languages, day.editors),
+                        day.projects[0]?.name,
+                      ].filter(Boolean).join(" • ")}
+                    >
+                      {topRealTech(day.languages, day.editors)}
+                      {day.projects[0]?.name ? ` • ${day.projects[0].name}` : ""}
+                    </span>
                   </div>
                 </div>
               ))}
