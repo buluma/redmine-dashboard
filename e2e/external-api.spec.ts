@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { PrismaClient } from "@prisma/client";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaClient } from "@/src/generated/prisma/client";
 import path from "path";
 
 /**
@@ -41,7 +42,7 @@ function resolveDbUrl(): string {
   return "file:" + path.resolve(process.cwd(), "prisma", p);
 }
 
-const prisma = new PrismaClient({ datasources: { db: { url: resolveDbUrl() } } });
+const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url: resolveDbUrl() }) });
 
 let userId: string;
 let createdUser = false;
