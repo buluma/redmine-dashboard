@@ -157,6 +157,19 @@ export function trackFailure(options: FailureOptions): void {
 
   emitLog(level, event, { ...data, ...errorData, error });
 
+  // Failures routed here were caught by the caller, so Sentry's automatic
+  // capture never sees them. Report error-level ones explicitly; warn-level
+  // ones (rate limits, expected rejections) stay as logs and metrics only.
+  // Non-Error values carry no useful stack, so group them by event name
+  // rather than letting every one collapse into this function's frame.
+  if (level === "error") {
+    Sentry.captureException(error, {
+      tags: { telemetry_event: event },
+      extra: data,
+      fingerprint: error instanceof Error ? undefined : [event],
+    });
+  }
+
   if (metricName) {
     Sentry.metrics.count(metricName, metricValue, { attributes: toMetricTags(metricTags) });
   }
