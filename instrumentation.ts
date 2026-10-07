@@ -10,15 +10,17 @@ export async function register() {
     process.stdout.on("error", suppressEpipe);
     process.stderr.on("error", suppressEpipe);
 
-    const [memoryMod, pollerMod, logPollerMod] = await Promise.all([
+    const [memoryMod, pollerMod, logPollerMod, webhookMod] = await Promise.all([
       import("./src/lib/memory"),
       import("./src/lib/poller"),
       import("./src/lib/streamline-log-poller"),
+      import("./src/lib/webhook-subscription"),
     ]);
     await import("./sentry.server.config");
     memoryMod.ensureMemoryLoggerStarted();
     pollerMod.ensurePollerStarted();
     logPollerMod.ensureStreamlineLogPollerStarted();
+    webhookMod.ensureWebhookDeliveryWorkerStarted();
   }
 
   if (process.env.NEXT_RUNTIME === "edge") {

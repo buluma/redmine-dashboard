@@ -6,6 +6,7 @@ import {
   WebhookEvent,
 } from "@/src/lib/webhook-subscription";
 import { trackFailure } from "@/src/lib/telemetry";
+import { validateWebhookUrl } from "@/src/lib/webhook-url";
 
 export const runtime = "nodejs";
 
@@ -62,14 +63,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate URL format
-    try {
-      new URL(url);
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid URL format" },
-        { status: 400 }
-      );
+    const destination = await validateWebhookUrl(url);
+    if (!destination.valid) {
+      return NextResponse.json({ error: destination.error }, { status: 400 });
     }
 
     // Validate events

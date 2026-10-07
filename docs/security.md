@@ -57,22 +57,14 @@ See [rbac.md](rbac.md) for detailed implementation.
 
 Rate limiting is implemented to prevent abuse:
 
-- **In-Memory**: For single-instance deployments
-- **Database-Backed**: For distributed deployments using `ApiRateLimit` table
-- **Redis-Backed**: For distributed deployments using Upstash Redis (`rate-limit-redis.ts`)
+- Most routes currently use an in-process limiter; internal notes use the `ApiRateLimit` table.
+- The database limiter is shared across instances. The in-process limiter is per instance and resets on restart.
 - **Per-User Limits**:
   - Manual sync: 3 requests/minute
   - Issue mutations: 20 requests/minute
   - Read requests: 100 requests/minute
 
-```typescript
-// src/lib/rate-limit.ts
-const limiter = isRateLimited({
-  key: `${user.id}:manual-pull`,
-  max: 3,
-  windowMs: 60_000,
-});
-```
+Rate limiting is not yet uniform across API routes. A follow-up should move the remaining in-process route limits to the shared database limiter before scaling to multiple dashboard instances.
 
 ### Redmine Credentials
 

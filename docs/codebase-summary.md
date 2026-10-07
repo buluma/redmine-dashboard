@@ -123,7 +123,7 @@ Operational scripts for syncing and maintaining data. See [sync-scripts.md](./sy
 - `import-streamline-logs.js` — Import Streamline log data.
 - `migrate-sqlite.js` — SQLite migration helper.
 - `verify-import.js` — Verify imported data integrity.
-- `generate-openapi.js` / `generate-openapi.ts` — Generate OpenAPI spec.
+- `src/lib/swagger.ts` — Source of truth for `/api/openapi` and the API docs UI.
 - `memory-profiler.js` — Memory usage profiling.
 - `recurring-tickets-sync.sh` — Sync recurring ticket series.
 - `trigger-sync.js` — Manually trigger a sync tick.

@@ -224,6 +224,9 @@ async function ensureRuntimeTables(): Promise<void> {
       "error" TEXT,
       "durationMs" INTEGER,
       "attempt" INTEGER NOT NULL DEFAULT 1,
+      "status" TEXT NOT NULL DEFAULT 'complete',
+      "nextAttemptAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "claimedAt" DATETIME,
       "deliveredAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT "WebhookDelivery_subscriptionId_fkey"
         FOREIGN KEY ("subscriptionId") REFERENCES "WebhookSubscription" ("id")
@@ -238,6 +241,10 @@ async function ensureRuntimeTables(): Promise<void> {
     CREATE INDEX IF NOT EXISTS "WebhookDelivery_deliveredAt_idx"
     ON "WebhookDelivery"("deliveredAt");
   `);
+  await executeRawIgnoreDuplicate(`ALTER TABLE "WebhookDelivery" ADD COLUMN "status" TEXT NOT NULL DEFAULT 'complete';`);
+  await executeRawIgnoreDuplicate(`ALTER TABLE "WebhookDelivery" ADD COLUMN "nextAttemptAt" DATETIME NOT NULL DEFAULT '1970-01-01T00:00:00.000Z';`);
+  await executeRawIgnoreDuplicate(`ALTER TABLE "WebhookDelivery" ADD COLUMN "claimedAt" DATETIME;`);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "WebhookDelivery_status_nextAttemptAt_idx" ON "WebhookDelivery"("status", "nextAttemptAt");`);
 
   // TimeEntry correlation columns
   await executeRawIgnoreDuplicate(`

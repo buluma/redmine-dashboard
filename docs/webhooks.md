@@ -10,6 +10,14 @@ Unlike traditional webhooks where you configure a fixed URL, Converge uses a **s
 - Subscriptions can be enabled/disabled without deletion
 - HMAC signatures verify payload authenticity
 
+Deliveries are queued in the database so issue sync does not wait for remote webhook servers. A background worker retries network errors, HTTP 429 responses, and server errors for up to three attempts with short exponential backoff. Redirects are not followed. A delivery that still fails is logged and counts toward the existing five-failure auto-disable threshold. Delivery is at least once: a process crash after the receiver accepts a request can cause a retry, so use `X-Webhook-Delivery` to deduplicate.
+
+Webhook destinations must use HTTP or HTTPS and resolve to public IP addresses. Local and private network destinations are rejected unless their exact hostname or IP is listed in `WEBHOOK_ALLOWED_HOSTS`. Add comma-separated hosts to that environment variable to trust internal services; include the IP shown in an existing private URL. Non-standard ports also require an explicit host entry. Changes take effect after restarting Converge.
+
+```env
+WEBHOOK_ALLOWED_HOSTS="100.110.136.4,internal-hooks.example"
+```
+
 ## Event Types
 
 | Event | Description |
@@ -19,7 +27,7 @@ Unlike traditional webhooks where you configure a fixed URL, Converge uses a **s
 | `ticket.status_changed` | Ticket status changed |
 | `ticket.assigned` | Ticket assigned to user |
 | `ticket.completed` | Ticket marked as completed |
-| `ticket.deleted` | Ticket deleted (future) |
+| `ticket.deleted` | Ticket deleted |
 
 ## API Endpoints
 

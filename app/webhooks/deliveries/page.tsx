@@ -30,8 +30,9 @@ export default async function WebhookDeliveriesPage() {
 
   // Calculate stats
   const totalDeliveries = deliveries.length;
-  const successful = deliveries.filter(d => d.responseStatus && d.responseStatus >= 200 && d.responseStatus < 300).length;
-  const failed = deliveries.filter(d => !d.responseStatus || d.responseStatus >= 400).length;
+  const successful = deliveries.filter(d => d.status === "complete").length;
+  const failed = deliveries.filter(d => d.status === "failed").length;
+  const queued = deliveries.filter(d => d.status === "pending" || d.status === "processing").length;
   const avgDuration = deliveries.reduce((sum, d) => sum + (d.durationMs || 0), 0) / totalDeliveries;
 
   return (
@@ -66,6 +67,10 @@ export default async function WebhookDeliveriesPage() {
           <p className="metric-value">{failed}</p>
         </article>
         <article className="card metric-card">
+          <p className="metric-label">Queued</p>
+          <p className="metric-value">{queued}</p>
+        </article>
+        <article className="card metric-card">
           <p className="metric-label">Avg Duration</p>
           <p className="metric-value">{Math.round(avgDuration)}ms</p>
         </article>
@@ -92,7 +97,7 @@ export default async function WebhookDeliveriesPage() {
               </tr>
             ) : (
               deliveries.map((d) => {
-                const statusOk = d.responseStatus && d.responseStatus >= 200 && d.responseStatus < 300;
+                const statusOk = d.status === "complete";
                 return (
                   <tr key={d.id}>
                     <td className="issue-updated">
@@ -109,12 +114,16 @@ export default async function WebhookDeliveriesPage() {
                       <span className="status-chip">{d.event}</span>
                     </td>
                     <td>
-                      {d.responseStatus ? (
+                      {d.status === "pending" || d.status === "processing" ? (
+                        <span className="status-chip">{d.status === "processing" ? "Sending" : "Queued"} · {d.attempt}/{3}</span>
+                      ) : d.status === "cancelled" ? (
+                        <span className="status-chip">Cancelled</span>
+                      ) : d.responseStatus ? (
                         <span className={`status-chip ${statusOk ? "open" : "closed"}`}>
-                          {d.responseStatus}
+                          {d.status === "failed" ? `Failed (${d.responseStatus})` : d.responseStatus}
                         </span>
                       ) : (
-                        <span className="status-chip closed">Pending</span>
+                        <span className="status-chip closed">{d.status === "failed" ? "Failed" : d.status}</span>
                       )}
                     </td>
                     <td>{d.durationMs ? `${d.durationMs}ms` : "—"}</td>

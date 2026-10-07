@@ -7,6 +7,7 @@ import {
   getSubscription,
 } from "@/src/lib/webhook-subscription";
 import { trackFailure } from "@/src/lib/telemetry";
+import { validateWebhookUrl } from "@/src/lib/webhook-url";
 
 export const runtime = "nodejs";
 
@@ -90,10 +91,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
     if (url !== undefined) {
-      try {
-        new URL(url);
-      } catch {
+      if (typeof url !== "string") {
         return NextResponse.json({ error: "Invalid URL format" }, { status: 400 });
+      }
+      const destination = await validateWebhookUrl(url);
+      if (!destination.valid) {
+        return NextResponse.json({ error: destination.error }, { status: 400 });
       }
     }
     if (events !== undefined) {

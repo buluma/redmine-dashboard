@@ -82,6 +82,8 @@ export const env = {
   redmineApiKey: process.env.REDMINE_API_KEY,
   redmineAllowedBaseUrls: csvFromEnv("REDMINE_ALLOWED_BASE_URLS"),
   redmineInsecureTlsHosts: csvFromEnv("REDMINE_INSECURE_TLS_HOSTS"),
+  // Private webhook destinations are permitted only when their exact hostname or IP is trusted here.
+  webhookAllowedHosts: csvFromEnv("WEBHOOK_ALLOWED_HOSTS"),
   redmineSyncIssueScope: syncIssueScopeFromEnv(),
   mobileApiEnabled: boolFromEnv("MOBILE_API_ENABLED", true),
   // Ollama AI Configuration
