@@ -5,7 +5,7 @@
  * and the Heimdall refresh API route.
  */
 
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma } from '@/src/generated/prisma/client';
 import fs from 'fs';
 import path from 'path';
 

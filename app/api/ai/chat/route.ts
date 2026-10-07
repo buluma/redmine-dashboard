@@ -6,7 +6,7 @@ import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { extractAttachmentSnippetsForAi } from "@/src/lib/attachment-ai";
 import { trackFailure } from "@/src/lib/telemetry";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/src/generated/prisma/client";
 
 export const runtime = "nodejs";
 

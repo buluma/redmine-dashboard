@@ -2,7 +2,7 @@ import { env } from "@/src/lib/env";
 import { logEvent } from "@/src/lib/log";
 import { prisma } from "@/src/lib/db";
 import { SlackNotifier, IssueUpdate, IssueChange, SlackNotifierConfig } from "@/src/lib/slack-notifier";
-import type { Issue } from "@prisma/client";
+import type { Issue } from "@/src/generated/prisma/client";
 
 export interface IssueState {
   id: string;

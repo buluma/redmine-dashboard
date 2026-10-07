@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/db";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/src/generated/prisma/client";
 import { requireRedmineClientForUser } from "@/src/lib/auth";
 import {
   getExternalApiKey,

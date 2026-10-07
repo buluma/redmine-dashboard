@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/src/generated/prisma/client";
 import { trackFailure } from "@/src/lib/telemetry";
 
 const updateLocalIssueSchema = z.object({

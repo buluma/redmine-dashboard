@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockExecuteRawUnsafe = vi.fn();
 const mockQueryRawUnsafe = vi.fn();
 
-vi.mock("@prisma/client", () => {
+vi.mock("@/src/generated/prisma/client", () => {
   const PrismaClient = class {
     $executeRawUnsafe = mockExecuteRawUnsafe;
     $queryRawUnsafe = mockQueryRawUnsafe;

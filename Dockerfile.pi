@@ -13,8 +13,12 @@ RUN bun install --ignore-scripts
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+RUN apk add --no-cache libc6-compat python3 make g++ sqlite
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# The SQLite driver adapter needs its native module built after the ignored install.
+RUN bun pm trust better-sqlite3
 
 # Generate Prisma client using SQLite schema
 RUN bunx prisma generate --schema=prisma/schema.dev.sqlite.prisma
@@ -29,6 +33,7 @@ RUN bun run build
 # Production image
 FROM base AS runner
 WORKDIR /app
+RUN apk add --no-cache libc6-compat libstdc++ sqlite
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1

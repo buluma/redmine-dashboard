@@ -1,4 +1,4 @@
-import type { User } from "@prisma/client";
+import type { User } from "@/src/generated/prisma/client";
 
 import { requireCurrentUser } from "@/src/lib/auth";
 import { subscribe, type ConvergeEvent } from "@/src/lib/event-bus";

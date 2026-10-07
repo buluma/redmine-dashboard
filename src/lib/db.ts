@@ -1,4 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@/src/generated/prisma/client";
 import { env } from "@/src/lib/env";
 import { trackFailure } from "@/src/lib/telemetry";
 
@@ -29,14 +31,14 @@ function buildPrismaUrl(rawUrl: string): string {
 }
 
 const prismaUrl = buildPrismaUrl(env.databaseUrl);
-const prismaClient =
-  prismaUrl === env.databaseUrl
-    ? new PrismaClient()
-    : new PrismaClient({
-        datasources: {
-          db: { url: prismaUrl },
-        },
-      });
+const adapter = isSqliteMode()
+  ? new PrismaBetterSqlite3({ url: prismaUrl })
+  : new PrismaPg({
+      connectionString: prismaUrl,
+      max: Number(new URL(prismaUrl).searchParams.get("connection_limit") ?? 10),
+      connectionTimeoutMillis: 30_000,
+    });
+const prismaClient = new PrismaClient({ adapter });
 
 export const prisma = global.prisma ?? prismaClient;
 

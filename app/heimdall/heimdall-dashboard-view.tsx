@@ -6,7 +6,7 @@ import { StatCard, StackedBarChart } from "@/src/components/reports/charts";
 import { HeimdallLogsClient } from "./heimdall-logs-client";
 import { HeimdallErrorsList, type HeimdallErrorEntry } from "./heimdall-errors-list";
 import { useI18n } from "@/src/components/I18nProvider";
-import type { MbuLog, ServerSideRulesLog, Trace } from "@prisma/client";
+import type { MbuLog, ServerSideRulesLog, Trace } from "@/src/generated/prisma/client";
 
 // page.tsx serializes Prisma rows for the client boundary (bigint -> string,
 // Date -> ISO string, Decimal -> number) before passing them down.

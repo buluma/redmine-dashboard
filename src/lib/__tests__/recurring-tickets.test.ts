@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { RedmineClient } from "@/src/lib/redmine";
-import type { RecurringTicketInstance, RecurringTicketSeries } from "@prisma/client";
+import type { RecurringTicketInstance, RecurringTicketSeries } from "@/src/generated/prisma/client";
 
 const {
   mockSeriesFindMany,

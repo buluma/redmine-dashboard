@@ -4,7 +4,7 @@
 // these together; upsertAttachmentsForIssue is also called directly by the
 // attachment-refresh route.
 
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/src/generated/prisma/client";
 import { prisma } from "@/src/lib/db";
 import { RedmineClient } from "@/src/lib/redmine";
 import { recordIssueActivityEvent } from "@/src/lib/activity-index";

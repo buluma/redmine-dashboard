@@ -1,4 +1,4 @@
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import withSerwistInit from "@serwist/next";
 import type { NextConfig } from "next";
 import path from "node:path";
@@ -14,6 +14,7 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  serverExternalPackages: ["swagger-jsdoc"],
   turbopack: {
     root: path.join(__dirname),
   },

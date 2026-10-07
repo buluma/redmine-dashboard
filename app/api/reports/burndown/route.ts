@@ -2,7 +2,7 @@ import { requireCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { trackFailure } from "@/src/lib/telemetry";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/src/generated/prisma/client";
 
 /**
  * GET /api/reports/burndown
