@@ -169,4 +169,63 @@ describe('Webhook delivery queue', () => {
       data: { active: false },
     }));
   });
+
+  it('counts each claim as an attempt and stamps it with the claim time', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      const start = new Date('2026-10-07T10:00:00.000Z');
+      const later = new Date(start.getTime() + 90_000);
+      vi.setSystemTime(start);
+      mockPrisma.webhookDelivery.findMany.mockResolvedValue([
+        { id: 'delivery-1', subscriptionId: subscription.id, event: 'ticket.created', payload: mockPayload, attempt: 0 },
+        { id: 'delivery-2', subscriptionId: subscription.id, event: 'ticket.created', payload: mockPayload, attempt: 0 },
+      ]);
+      mockPrisma.webhookSubscription.findUnique.mockResolvedValue(subscription);
+      vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => {
+        // A slow receiver must not make later claims in the batch look stale.
+        vi.setSystemTime(later);
+        return { status: 200, text: async () => 'ok' };
+      }));
+
+      await processWebhookDeliveries();
+
+      const claims = mockPrisma.webhookDelivery.updateMany.mock.calls.map(([args]) => args);
+      expect(claims[0].data).toEqual({ status: 'processing', claimedAt: start, attempt: { increment: 1 } });
+      expect(claims[1].data).toEqual({ status: 'processing', claimedAt: later, attempt: { increment: 1 } });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('fails a reclaimed delivery whose attempts are exhausted without sending it again', async () => {
+    mockPrisma.webhookDelivery.findMany.mockResolvedValue([{
+      id: 'delivery-1',
+      subscriptionId: subscription.id,
+      event: 'ticket.created',
+      payload: mockPayload,
+      attempt: 3,
+    }]);
+    const mockFetch = vi.fn();
+    vi.stubGlobal('fetch', mockFetch);
+
+    await processWebhookDeliveries();
+
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockPrisma.webhookDelivery.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'delivery-1' },
+      data: expect.objectContaining({ status: 'failed', claimedAt: null }),
+    }));
+  });
+
+  it('skips a poll while the previous one in this process is still running', async () => {
+    let releaseFirstPoll: (value: unknown[]) => void = () => {};
+    mockPrisma.webhookDelivery.findMany.mockReturnValueOnce(new Promise((resolve) => { releaseFirstPoll = resolve; }));
+
+    const first = processWebhookDeliveries();
+    await expect(processWebhookDeliveries()).resolves.toBe(0);
+    releaseFirstPoll([]);
+    await first;
+
+    expect(mockPrisma.webhookDelivery.findMany).toHaveBeenCalledTimes(1);
+  });
 });

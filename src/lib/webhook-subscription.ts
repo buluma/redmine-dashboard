@@ -26,6 +26,9 @@ const QUEUE_POLL_INTERVAL_MS = 5000;
 const CLAIM_STALE_AFTER_MS = 60_000;
 const QUEUE_BATCH_SIZE = 10;
 
+// A batch can outlast the poll interval when receivers are slow, so overlapping polls are skipped.
+let deliveryPollInFlight = false;
+
 declare global {
   var __webhook_delivery_worker_started__: boolean | undefined;
 }
@@ -330,30 +333,53 @@ export async function dispatchWebhook(
 
 /** Process due queue items with optimistic DB claims so only one instance sends each attempt. */
 export async function processWebhookDeliveries(): Promise<number> {
-  const now = new Date();
-  const staleClaim = new Date(now.getTime() - CLAIM_STALE_AFTER_MS);
-  const dueCondition = {
+  if (deliveryPollInFlight) return 0;
+  deliveryPollInFlight = true;
+  try {
+    return await processDueWebhookDeliveries();
+  } finally {
+    deliveryPollInFlight = false;
+  }
+}
+
+function dueDeliveryCondition(now: Date) {
+  return {
     OR: [
       { status: 'pending', nextAttemptAt: { lte: now } },
-      { status: 'processing', claimedAt: { lt: staleClaim } },
+      { status: 'processing', claimedAt: { lt: new Date(now.getTime() - CLAIM_STALE_AFTER_MS) } },
     ],
   };
+}
+
+async function processDueWebhookDeliveries(): Promise<number> {
   const due = await prisma.webhookDelivery.findMany({
-    where: dueCondition,
+    where: dueDeliveryCondition(new Date()),
     orderBy: { nextAttemptAt: 'asc' },
     take: QUEUE_BATCH_SIZE,
   });
   let processed = 0;
 
   for (const delivery of due) {
+    // Stamp each claim when it is taken; a batch-start timestamp would make later items look stale to other workers.
+    // Counting the claim as an attempt bounds reclaims after crashes or worker errors.
+    const claimedAt = new Date();
     const claim = await prisma.webhookDelivery.updateMany({
-      where: { id: delivery.id, ...dueCondition },
-      data: { status: 'processing', claimedAt: now },
+      where: { id: delivery.id, ...dueDeliveryCondition(claimedAt) },
+      data: { status: 'processing', claimedAt, attempt: { increment: 1 } },
     });
     if (claim.count !== 1) continue;
     processed++;
 
     try {
+      if (delivery.attempt >= DELIVERY_ATTEMPTS) {
+        await prisma.webhookDelivery.update({
+          where: { id: delivery.id },
+          data: { status: 'failed', attempt: delivery.attempt, error: 'Delivery abandoned after repeated worker failures', claimedAt: null },
+        });
+        trackFailure({ event: "webhook.delivery.abandoned", error: 'Attempts exhausted by stale claims', metricName: "webhook_delivery_abandoned" });
+        continue;
+      }
+
       const subscription = await getSubscription(delivery.subscriptionId);
       if (!subscription?.active) {
         await prisma.webhookDelivery.update({
