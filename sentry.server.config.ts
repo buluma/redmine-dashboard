@@ -48,7 +48,4 @@ Sentry.init({
   profileSessionSampleRate: profileSampleRate,
   profileLifecycle: profileSampleRate > 0 ? "trace" : undefined,
   dataCollection: getSentryDataCollection(sendDefaultPii),
-
-  // Enable logs to be sent to Sentry
-
 });

@@ -42,7 +42,4 @@ Sentry.init({
   integrations,
   tracesSampleRate,
   dataCollection: getSentryDataCollection(sendDefaultPii),
-
-  // Enable logs to be sent to Sentry
-
 });
