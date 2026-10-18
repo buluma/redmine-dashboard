@@ -342,6 +342,7 @@ model TimeEntry {
   spentOn            DateTime
   source             String?
   wakaTimeDate       String?
+  wakaTimeProject    String?
   calendarEventUid   String?
   createdAt          DateTime @default(now())
 

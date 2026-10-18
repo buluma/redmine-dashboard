@@ -845,3 +845,148 @@ describe("getAutoCreateOptionsFromEnv", () => {
     expect(getAutoCreateOptionsFromEnv()).toEqual({ thresholdSeconds: 3600, defaultOwner: "buluma" });
   });
 });
+
+describe("project-day ownership across tickets", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockTransaction.mockImplementation((arg: Promise<unknown>[] | ((tx: typeof prismaMock) => unknown)) =>
+      typeof arg === "function" ? arg(prismaMock) : Promise.all(arg),
+    );
+    mockTimeEntryUpdateMany.mockResolvedValue({ count: 1 });
+    mockTimeEntryCreate.mockResolvedValue({ id: "te-new" });
+    mockIssueUpdate.mockResolvedValue({});
+  });
+
+  // Last week's recurring instance: its link has already moved to this
+  // week's instance, so it's no longer in the ticket index at all.
+  const lastWeek = { id: "w1", localIssueNumber: 93, subject: "Week 37 Vodacom SA Support", projectName: "Week 37", spentHours: 3 };
+
+  function loggedOn(
+    issue: typeof lastWeek,
+    overrides: { id?: string; date?: string; hours?: number; project?: string | null; createdAt?: string; redmineTimeEntryId?: number | null } = {},
+  ) {
+    return {
+      id: overrides.id ?? `te-${issue.id}`,
+      issueId: issue.id,
+      wakaTimeDate: overrides.date ?? "2026-09-12",
+      hours: overrides.hours ?? 3,
+      redmineTimeEntryId: overrides.redmineTimeEntryId ?? null,
+      wakaTimeProject: overrides.project === undefined ? "Streamline-Vodacom-SA-Prod-Optimization" : overrides.project,
+      createdAt: new Date(overrides.createdAt ?? "2026-09-12T18:00:00Z"),
+      issue,
+    };
+  }
+
+  function thisWeekHoldsTheLink() {
+    mockIssueFindMany.mockResolvedValue([
+      localIssue("w2", 99, "Week 38 Vodacom SA Support", ["Streamline-Vodacom-SA-Prod-Optimization"]),
+    ]);
+  }
+
+  it("keeps a project-day on the ticket it was first logged on after the link moves", async () => {
+    thisWeekHoldsTheLink();
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-09-12", [{ name: "Streamline-Vodacom-SA-Prod-Optimization", total_seconds: 3 * 3600 }]),
+      wakaRow("2026-09-14", [{ name: "Streamline-Vodacom-SA-Prod-Optimization", total_seconds: 3600 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([loggedOn(lastWeek)]);
+
+    const result = await correlateWakaTime(USER_ID, { start: "2026-09-12", end: "2026-09-14" });
+
+    const byTicket = Object.fromEntries(result.matched.map((m) => [m.ticketId, m]));
+    expect(byTicket.w1.perDay).toEqual([{ date: "2026-09-12", seconds: 3 * 3600 }]);
+    expect(byTicket.w1.alreadyLoggedDates).toEqual(["2026-09-12"]);
+    // Only the day nobody has logged yet goes to the ticket holding the link.
+    expect(byTicket.w2.perDay).toEqual([{ date: "2026-09-14", seconds: 3600 }]);
+  });
+
+  it("does not create a second entry for a project-day already logged on another ticket", async () => {
+    thisWeekHoldsTheLink();
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-09-12", [{ name: "Streamline-Vodacom-SA-Prod-Optimization", total_seconds: 3 * 3600 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([loggedOn(lastWeek)]);
+
+    const result = await applyTimeEntries(USER_ID, { start: "2026-09-12", end: "2026-09-12" });
+
+    expect(result.created).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(mockTimeEntryCreate).not.toHaveBeenCalled();
+  });
+
+  it("corrects the owning ticket, not the one holding the link, when that day's total grows", async () => {
+    thisWeekHoldsTheLink();
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-09-12", [{ name: "Streamline-Vodacom-SA-Prod-Optimization", total_seconds: 4 * 3600 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([loggedOn(lastWeek, { id: "te-w1", hours: 3 })]);
+
+    const result = await applyTimeEntries(USER_ID, { start: "2026-09-12", end: "2026-09-12" });
+
+    expect(result.updated).toBe(1);
+    expect(mockTimeEntryUpdateMany).toHaveBeenCalledWith({ where: { id: "te-w1", hours: 3 }, data: { hours: 4 } });
+    expect(mockTimeEntryCreate).not.toHaveBeenCalled();
+  });
+
+  it("picks the earliest-logged ticket when a project-day is already duplicated", async () => {
+    thisWeekHoldsTheLink();
+    const later = { ...lastWeek, id: "w0", localIssueNumber: 2, subject: "Other ticket" };
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-09-12", [{ name: "Streamline-Vodacom-SA-Prod-Optimization", total_seconds: 3 * 3600 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([
+      loggedOn(later, { createdAt: "2026-09-13T06:00:00Z" }),
+      loggedOn(lastWeek, { createdAt: "2026-09-12T18:00:00Z" }),
+    ]);
+
+    const result = await correlateWakaTime(USER_ID, { start: "2026-09-12", end: "2026-09-12" });
+
+    expect(result.matched.map((m) => m.ticketId)).toEqual(["w1"]);
+  });
+
+  it("matches ownership on any project in a merged entry, normalized", async () => {
+    mockIssueFindMany.mockResolvedValue([localIssue("t2", 2, "SL2", ["buluma/SL2"])]);
+    mockWakaFindMany.mockResolvedValue([wakaRow("2026-09-12", [{ name: "SL2", total_seconds: 3600 }])]);
+    mockTimeEntryFindMany.mockResolvedValue([loggedOn(lastWeek, { project: ".pi, buluma/SL2" })]);
+
+    const result = await correlateWakaTime(USER_ID, { start: "2026-09-12", end: "2026-09-12" });
+
+    expect(result.matched.map((m) => m.ticketId)).toEqual(["w1"]);
+  });
+
+  it("ignores legacy entries with no wakaTimeProject for ownership", async () => {
+    thisWeekHoldsTheLink();
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-09-12", [{ name: "Streamline-Vodacom-SA-Prod-Optimization", total_seconds: 3600 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([loggedOn(lastWeek, { project: null })]);
+
+    const result = await correlateWakaTime(USER_ID, { start: "2026-09-12", end: "2026-09-12" });
+
+    expect(result.matched.map((m) => m.ticketId)).toEqual(["w2"]);
+  });
+
+  it("records the WakaTime project(s) for the day on new entries", async () => {
+    mockIssueFindMany.mockResolvedValue([
+      localIssue("t1", 1, "Dashboard", ["buluma/redmine-dashboard", "buluma/odysseus"]),
+    ]);
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-09-12", [
+        { name: "redmine-dashboard", total_seconds: 1800 },
+        { name: "odysseus", total_seconds: 1800 },
+      ]),
+      wakaRow("2026-09-13", [{ name: "odysseus", total_seconds: 3600 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([]);
+
+    await applyTimeEntries(USER_ID, { start: "2026-09-12", end: "2026-09-13" });
+
+    expect(mockTimeEntryCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ wakaTimeDate: "2026-09-12", wakaTimeProject: "odysseus, redmine-dashboard" }),
+    });
+    // Per day, not every project the ticket saw across the whole window.
+    expect(mockTimeEntryCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ wakaTimeDate: "2026-09-13", wakaTimeProject: "odysseus" }),
+    });
+  });
+});

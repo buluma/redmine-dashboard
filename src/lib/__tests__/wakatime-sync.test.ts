@@ -124,3 +124,74 @@ describe("syncWakaTimeSummaries 429 handling", () => {
     expect(mockUpsert).not.toHaveBeenCalled();
   });
 });
+
+describe("syncWakaTimeSummaries force refresh", () => {
+  // 2026-06-10 is well outside the today/yesterday window, so the default
+  // guard treats an existing cached row as final.
+  const olderDay = (totalSeconds: number) => ({
+    data: {
+      summaries: [
+        {
+          range: { start: "2026-06-10T00:00:00Z", end: "2026-06-10T23:59:59Z", date_index: 0 },
+          grand_total: { total_seconds: totalSeconds, text: "", digital: "" },
+          projects: [], languages: [], editors: [], categories: [],
+        },
+      ],
+    },
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-20T12:00:00Z"));
+    mockUpsert.mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("skips an older date that already has a cached row by default", async () => {
+    mockFindMany.mockResolvedValue([{ date: "2026-06-10", totalSeconds: 1000 }]);
+    mockGetSummaries.mockResolvedValue(olderDay(5000));
+
+    const result = await syncWakaTimeSummaries("user-1", "fake-key", { days: 14 });
+
+    expect(result).toEqual({ synced: 0, skipped: 1 });
+    expect(mockUpsert).not.toHaveBeenCalled();
+  });
+
+  it("re-syncs an older cached date when force is set, so a Wakapi backfill becomes visible", async () => {
+    mockFindMany.mockResolvedValue([{ date: "2026-06-10", totalSeconds: 1000 }]);
+    mockGetSummaries.mockResolvedValue(olderDay(5000));
+
+    const result = await syncWakaTimeSummaries("user-1", "fake-key", { days: 14, force: true });
+
+    expect(result).toEqual({ synced: 1, skipped: 0 });
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: expect.objectContaining({ date: "2026-06-10", totalSeconds: 5000 }) })
+    );
+  });
+
+  it("lets force overwrite with a lower total, since a correction can remove time", async () => {
+    mockFindMany.mockResolvedValue([{ date: "2026-06-20", totalSeconds: 5000 }]);
+    mockGetSummaries.mockResolvedValue({
+      data: {
+        summaries: [
+          {
+            range: { start: "2026-06-20T00:00:00Z", end: "2026-06-20T23:59:59Z", date_index: 0 },
+            grand_total: { total_seconds: 1000, text: "", digital: "" },
+            projects: [], languages: [], editors: [], categories: [],
+          },
+        ],
+      },
+    });
+
+    const result = await syncWakaTimeSummaries("user-1", "fake-key", { days: 14, force: true });
+
+    expect(result.synced).toBe(1);
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: expect.objectContaining({ totalSeconds: 1000 }) })
+    );
+  });
+});
