@@ -177,20 +177,53 @@ describe("correlateWakaTime", () => {
     expect(result.unmatched).toHaveLength(0);
   });
 
-  it("matches via bidirectional substring", async () => {
-    // repo = "Streamline-Vodacom-SA-Prod-Optimization", waka = "Vodacom-SA"
+  it("matches a WakaTime project whose name contains the repo name (worktree/branch variants)", async () => {
     mockIssueFindMany.mockResolvedValue([
-      localIssue("t2", 2, "Vodacom", ["buluma/Streamline-Vodacom-SA-Prod-Optimization"]),
+      localIssue("t1", 1, "Converge", ["buluma/redmine-dashboard"]),
     ]);
     mockWakaFindMany.mockResolvedValue([
-      wakaRow("2026-06-20", [{ name: "Vodacom-SA", total_seconds: 7200 }]),
+      wakaRow("2026-06-20", [{ name: "redmine-dashboard-ui-polish", total_seconds: 7200 }]),
     ]);
     mockTimeEntryFindMany.mockResolvedValue([]);
 
     const result = await correlateWakaTime(USER_ID, { start: "2026-06-20", end: "2026-06-20" });
 
     expect(result.matched).toHaveLength(1);
-    expect(result.matched[0].ticketId).toBe("t2");
+    expect(result.matched[0].ticketId).toBe("t1");
+  });
+
+  it("does not match a generic WakaTime name that only appears inside a more specific repo name", async () => {
+    // "ansible-roles" (a whole collection) used to land on the one role
+    // ticket whose repo name happened to contain it.
+    mockIssueFindMany.mockResolvedValue([
+      localIssue("t1", 1, "ansible-role-sonarqube", ["buluma/ansible-role-sonarqube"]),
+    ]);
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-20", [{ name: "ansible-roles", total_seconds: 7200 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([]);
+
+    const result = await correlateWakaTime(USER_ID, { start: "2026-06-20", end: "2026-06-20" });
+
+    expect(result.matched).toHaveLength(0);
+    expect(result.unmatched.map((u) => u.project)).toEqual(["ansible-roles"]);
+  });
+
+  it("leaves a project unmatched when two repos tie as the most specific match", async () => {
+    // Used to break the tie alphabetically, i.e. pick one arbitrarily.
+    mockIssueFindMany.mockResolvedValue([
+      localIssue("t1", 1, "Alpha", ["buluma/alpha-tools"]),
+      localIssue("t2", 2, "Bravo", ["buluma/bravo-tools"]),
+    ]);
+    mockWakaFindMany.mockResolvedValue([
+      wakaRow("2026-06-20", [{ name: "alpha-tools-bravo-tools", total_seconds: 3600 }]),
+    ]);
+    mockTimeEntryFindMany.mockResolvedValue([]);
+
+    const result = await correlateWakaTime(USER_ID, { start: "2026-06-20", end: "2026-06-20" });
+
+    expect(result.matched).toHaveLength(0);
+    expect(result.unmatched.map((u) => u.project)).toEqual(["alpha-tools-bravo-tools"]);
   });
 
   it("does not false-positive match a short substring collision", async () => {
@@ -396,7 +429,9 @@ describe("correlateWakaTime", () => {
 
   it("merges same-day activity when a ticket has multiple linked repos", async () => {
     mockIssueFindMany.mockResolvedValue([
-      localIssue("t1", 1, "Dashboard", ["buluma/redmine-dashboard", "buluma/openclaw-config", "buluma/odysseus"]),
+      // ".openclaw" needs its own link: it only appears inside "openclaw-config",
+      // which is the direction findMatch doesn't substring-match.
+      localIssue("t1", 1, "Dashboard", ["buluma/redmine-dashboard", "buluma/.openclaw", "buluma/odysseus"]),
     ]);
     mockWakaFindMany.mockResolvedValue([
       wakaRow("2026-06-30", [
