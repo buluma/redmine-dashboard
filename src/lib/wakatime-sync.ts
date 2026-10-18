@@ -21,9 +21,13 @@ const formatDate = asDateOnlyLocal;
 export async function syncWakaTimeSummaries(
   userId: string,
   apiKey: string,
-  options?: { days?: number }
+  options?: { days?: number; force?: boolean }
 ): Promise<{ synced: number; skipped: number }> {
   const days = options?.days ?? 14;
+  // Older cached dates are normally treated as final. force re-fetches and
+  // overwrites them, for retroactive Wakapi changes (backfills, corrections)
+  // that would otherwise need a manual DB delete to become visible.
+  const force = options?.force ?? false;
   const client = new WakaTimeClient(apiKey);
   const end = new Date();
   const start = new Date();
@@ -94,7 +98,7 @@ export async function syncWakaTimeSummaries(
     for (const day of summaries) {
       const date = day.range.end.split("T")[0];
       const isRecent = recentDates.has(date);
-      if (!isRecent && existingDates.has(date)) {
+      if (!force && !isRecent && existingDates.has(date)) {
         skipped++;
         continue;
       }
@@ -104,7 +108,7 @@ export async function syncWakaTimeSummaries(
       }
       // Don't overwrite higher-quality data from a previous source
       const priorSeconds = existingSeconds.get(date) ?? 0;
-      if (isRecent && day.grand_total.total_seconds < priorSeconds) {
+      if (!force && isRecent && day.grand_total.total_seconds < priorSeconds) {
         skipped++;
         continue;
       }

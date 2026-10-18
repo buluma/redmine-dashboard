@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const days = typeof body.days === "number" ? Math.min(body.days, 365) : 14;
-    const result = await syncWakaTimeSummaries(user.id, apiKey, { days });
+    const result = await syncWakaTimeSummaries(user.id, apiKey, { days, force: body.force === true });
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     trackFailure({ event: "external.wakatime.sync.failed", error, metricName: "external_wakatime_sync_failed" });
