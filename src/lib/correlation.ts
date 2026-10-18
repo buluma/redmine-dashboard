@@ -140,18 +140,21 @@ export async function buildProjectTicketIndex(
   return index;
 }
 
-// Below this length, a bidirectional substring match is too likely to be a
-// coincidence ("api" inside "rapidapi", "sl2" inside "sl2platformx") rather
-// than a real relationship — those short names must match exactly instead.
+// Below this length, a substring match is too likely to be a coincidence
+// ("api" inside "rapidapi") rather than a real relationship — those short
+// repo names must match exactly instead.
 const MIN_SUBSTRING_MATCH_LENGTH = 4;
 
 /**
  * Find a ticket match for a WakaTime project name.
- * Strategy: exact normalized match first, then bidirectional substring —
- * restricted to names long enough (see MIN_SUBSTRING_MATCH_LENGTH) that a
- * false-positive collision is unlikely, and picking the most specific
- * (longest) shared substring when more than one repo could match, so the
- * result is deterministic regardless of index iteration order.
+ * Strategy: exact normalized match first, then a substring match where the
+ * repo name appears inside the WakaTime project name — worktree and branch
+ * variants like "redmine-dashboard-ui-polish". The reverse direction is not
+ * matched: a generic WakaTime name ("ansible-roles", "dashboard", "GitHub")
+ * found inside a more specific repo name sent its hours to the wrong ticket.
+ * Repo names shorter than MIN_SUBSTRING_MATCH_LENGTH only match exactly.
+ * The most specific (longest) repo name wins; if two different tickets tie
+ * for it, the project is left unmatched rather than picking one arbitrarily.
  */
 function findMatch(
   wakaProjectName: string,
@@ -164,24 +167,20 @@ function findMatch(
   const exact = index.get(normalizedWaka);
   if (exact) return exact;
 
-  // Bidirectional substring match, most-specific (longest) match wins
-  let best: { match: TicketMatch; repoNorm: string; specificity: number } | null = null;
+  // Repo name inside the WakaTime name, most-specific (longest) repo wins
+  let best: { match: TicketMatch; specificity: number; tied: boolean } | null = null;
   for (const [repoNorm, match] of index.entries()) {
-    const shorter = normalizedWaka.length <= repoNorm.length ? normalizedWaka : repoNorm;
-    const longer = normalizedWaka.length <= repoNorm.length ? repoNorm : normalizedWaka;
-    if (shorter.length < MIN_SUBSTRING_MATCH_LENGTH) continue;
-    if (!longer.includes(shorter)) continue;
+    if (repoNorm.length < MIN_SUBSTRING_MATCH_LENGTH) continue;
+    if (!normalizedWaka.includes(repoNorm)) continue;
 
-    if (
-      !best ||
-      shorter.length > best.specificity ||
-      (shorter.length === best.specificity && repoNorm < best.repoNorm)
-    ) {
-      best = { match, repoNorm, specificity: shorter.length };
+    if (!best || repoNorm.length > best.specificity) {
+      best = { match, specificity: repoNorm.length, tied: false };
+    } else if (repoNorm.length === best.specificity && match.ticket.id !== best.match.ticket.id) {
+      best.tied = true;
     }
   }
 
-  return best?.match ?? null;
+  return best && !best.tied ? best.match : null;
 }
 
 /**
