@@ -34,6 +34,9 @@ export type CorrelationRow = {
   perDay: Array<{ date: string; seconds: number }>;
   alreadyLoggedDates: string[];
   existingEntriesByDate: Record<string, ExistingWakaEntry>;
+  // WakaTime project names that rolled into each day, sorted — stored on the
+  // TimeEntry as wakaTimeProject so later runs know who owns that project-day.
+  projectsByDate: Record<string, string[]>;
 };
 
 type UnmatchedProject = {
@@ -227,22 +230,63 @@ export async function correlateWakaTime(
   // (includes the catch-all ticket so its already-logged dates are detected
   // too — otherwise a re-run would try to re-create an existing TimeEntry
   // and hit the issueId+wakaTimeDate unique constraint).
+  //
+  // Also every project-day in the range already logged on *any* ticket. The
+  // index only knows which ticket holds a repo's link right now, so when a
+  // link moves (a recurring series rolling to next week's instance, a second
+  // ticket linked to the same repo) every day still inside the rolling
+  // window used to be logged again on the new ticket: same hours, two
+  // tickets. A project-day now stays with the ticket it was first logged on.
   const ticketIds = Array.from(new Set([
     ...Array.from(index.values()).map((m) => m.ticket.id),
     ...(catchAllTicket ? [catchAllTicket.id] : []),
   ]));
-  const existingEntries = ticketIds.length > 0
-    ? await prisma.timeEntry.findMany({
-        where: {
-          issueId: { in: ticketIds },
-          wakaTimeDate: { not: null },
+  const existingEntries = await prisma.timeEntry.findMany({
+    where: {
+      wakaTimeDate: { not: null },
+      OR: [
+        ...(ticketIds.length > 0 ? [{ issueId: { in: ticketIds } }] : []),
+        {
+          userId,
+          source: "wakatime",
+          wakaTimeDate: { gte: options.start, lte: options.end },
+          wakaTimeProject: { not: null },
         },
-        select: { id: true, issueId: true, wakaTimeDate: true, hours: true, redmineTimeEntryId: true },
-      })
-    : [];
+      ],
+    },
+    select: {
+      id: true,
+      issueId: true,
+      wakaTimeDate: true,
+      hours: true,
+      redmineTimeEntryId: true,
+      wakaTimeProject: true,
+      createdAt: true,
+      issue: {
+        select: { id: true, localIssueNumber: true, subject: true, projectName: true, spentHours: true },
+      },
+    },
+  });
   const existingByKey = new Map(
     existingEntries.map((e) => [`${e.issueId}:${e.wakaTimeDate}`, e]),
   );
+  // Earliest entry wins where a project-day is already duplicated, so the
+  // owner is stable across runs (and matches the cleanup's keep rule).
+  const ownerByProjectDay = new Map<string, TicketMatch>();
+  const byCreation = existingEntries
+    .filter((e) => e.wakaTimeProject)
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id));
+  for (const e of byCreation) {
+    if (!e.wakaTimeProject) continue;
+    for (const name of e.wakaTimeProject.split(", ")) {
+      const key = `${normalizeProjectName(name)}:${e.wakaTimeDate}`;
+      if (ownerByProjectDay.has(key)) continue;
+      ownerByProjectDay.set(key, {
+        ticket: e.issue,
+        link: { id: "logged", repositoryFullName: name, url: "" },
+      });
+    }
+  }
 
   // Accumulate per-ticket, per-day data. Keyed by date so a ticket with
   // multiple matched repos active on the same day gets one summed entry
@@ -258,6 +302,7 @@ export async function correlateWakaTime(
     // several unrelated projects onto the same ticket+day. Kept so `repo`
     // stays traceable to all of them instead of only whichever hit first.
     sourceProjects: Set<string>;
+    projectsByDate: Map<string, Set<string>>;
   }>();
 
   const unmatchedMap = new Map<string, {
@@ -272,6 +317,7 @@ export async function correlateWakaTime(
       if (proj.total_seconds <= 0) continue;
 
       const match: TicketMatch | null =
+        ownerByProjectDay.get(`${normalizeProjectName(proj.name)}:${row.date}`) ??
         findMatch(proj.name, index) ??
         (catchAllTicket
           ? { ticket: catchAllTicket, link: { id: "catchall", repositoryFullName: proj.name, url: "" } }
@@ -288,10 +334,14 @@ export async function correlateWakaTime(
           alreadyLoggedDates: new Set<string>(),
           existingByDate: new Map<string, ExistingWakaEntry>(),
           sourceProjects: new Set<string>(),
+          projectsByDate: new Map<string, Set<string>>(),
         };
         entry.perDayMap.set(row.date, (entry.perDayMap.get(row.date) ?? 0) + proj.total_seconds);
         entry.totalSeconds += proj.total_seconds;
         entry.sourceProjects.add(proj.name);
+        const dayProjects = entry.projectsByDate.get(row.date) ?? new Set<string>();
+        dayProjects.add(proj.name);
+        entry.projectsByDate.set(row.date, dayProjects);
         const existingRow = existingByKey.get(loggedKey);
         if (existingRow) {
           entry.alreadyLoggedDates.add(row.date);
@@ -337,6 +387,9 @@ export async function correlateWakaTime(
       .sort((a, b) => a.date.localeCompare(b.date)),
     alreadyLoggedDates: Array.from(m.alreadyLoggedDates),
     existingEntriesByDate: Object.fromEntries(m.existingByDate),
+    projectsByDate: Object.fromEntries(
+      Array.from(m.projectsByDate.entries()).map(([date, names]) => [date, Array.from(names).sort()]),
+    ),
   }));
 
   const unmatched: UnmatchedProject[] = Array.from(unmatchedMap.values());
@@ -610,6 +663,7 @@ export async function applyTimeEntries(
               comments: `WakaTime: ${row.repo.split("/").pop() ?? row.repo} ${day.date}`,
               source: "wakatime",
               wakaTimeDate: day.date,
+              wakaTimeProject: row.projectsByDate[day.date]?.join(", ") ?? null,
             },
           }),
           prisma.issue.update({
