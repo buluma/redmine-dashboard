@@ -100,6 +100,11 @@ type HealthPayload = {
   };
 };
 
+// A running job that hasn't finished in 10 minutes is treated as stuck.
+function isStaleJob(job: SyncJob, now: number): boolean {
+  return job.status === "running" && Boolean(job.startedAt) && now - new Date(job.startedAt as string).getTime() > 600000;
+}
+
 function formatDateTime(value: string | null, locale: string): string {
   if (!value) return "-";
   return new Date(value).toLocaleString(locale);
@@ -135,6 +140,9 @@ export default function OpsPage() {
   const [restarting, setRestarting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  // Wall-clock snapshot for stale-job detection, refreshed on every data load
+  // so render stays pure.
+  const [now, setNow] = useState(() => Date.now());
 
   async function loadData() {
     setError(null);
@@ -174,6 +182,7 @@ export default function OpsPage() {
     }
     const jobsData = await jobsRes.json();
     setJobs(jobsData.items ?? []);
+    setNow(Date.now());
 
     const healthData = await healthRes.json();
     setHealth(healthData);
@@ -517,13 +526,13 @@ export default function OpsPage() {
                 </thead>
                 <tbody>
                   {jobs.map((job) => (
-                    <tr key={job.id} className={job.status === 'running' && job.startedAt && Date.now() - new Date(job.startedAt).getTime() > 600000 ? 'stale-job' : ''}>
+                    <tr key={job.id} className={isStaleJob(job, now) ? 'stale-job' : ''}>
                       <td>{job.id}</td>
                       <td>{job.jobType}</td>
                       <td>
-                        <span className={`status-chip ${job.status === 'running' && job.startedAt && Date.now() - new Date(job.startedAt).getTime() > 600000 ? 'sync-failed' : job.status === 'completed' ? 'sync-success' : ''}`}>
+                        <span className={`status-chip ${isStaleJob(job, now) ? 'sync-failed' : job.status === 'completed' ? 'sync-success' : ''}`}>
                           {job.status}
-                          {job.status === 'running' && job.startedAt && Date.now() - new Date(job.startedAt).getTime() > 600000 ? ' (STALE)' : ''}
+                          {isStaleJob(job, now) ? ' (STALE)' : ''}
                         </span>
                       </td>
                       <td>{formatDateTime(job.startedAt, locale)}</td>
@@ -531,7 +540,7 @@ export default function OpsPage() {
                       <td>{formatDuration(job.durationMs, t)}</td>
                       <td>{job.error ? job.error.slice(0, 140) : "-"}</td>
                       <td>
-                        {job.status === 'running' && job.startedAt && Date.now() - new Date(job.startedAt).getTime() > 600000 ? (
+                        {isStaleJob(job, now) ? (
                           <button
                             className="secondary-button"
                             onClick={() => cancelJob(job.id)}

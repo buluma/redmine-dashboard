@@ -453,6 +453,7 @@ export function SlackMessagesClient({
 
   // Set client-side state after hydration
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only state (clock, localStorage) hydrated after mount to avoid an SSR mismatch
     setLastUpdated(new Date());
     setIsClient(true);
     try {

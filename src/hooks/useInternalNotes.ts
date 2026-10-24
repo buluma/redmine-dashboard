@@ -58,6 +58,7 @@ export function useInternalNotes({
 
   useEffect(() => {
     if (!enabled) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch notes when enabled
     void load();
   }, [enabled, load]);
 

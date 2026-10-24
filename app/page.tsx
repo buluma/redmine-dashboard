@@ -221,6 +221,7 @@ export default function Home() {
   useEffect(() => {
     try {
       if (window.localStorage.getItem(SHOW_ALL_METRICS_KEY) === "true") {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate preference from localStorage after mount to avoid an SSR mismatch
         setShowAllMetrics(true);
       }
     } catch {
@@ -237,6 +238,7 @@ export default function Home() {
           const valid = parsed.filter((value): value is ColumnKey =>
             value === "priority" || value === "due" || value === "progress" || value === "updated",
           );
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate preference from localStorage after mount to avoid an SSR mismatch
           setVisibleColumns(new Set(valid));
         }
       }
@@ -265,9 +267,13 @@ export default function Home() {
   }, [showAllMetrics]);
 
 
-  useEffect(() => {
+  // Drop selections that are no longer visible. Adjusting state during render
+  // (instead of in an effect) avoids an extra render pass with stale ids.
+  const [prevVisibleIssueIds, setPrevVisibleIssueIds] = useState(allVisibleIssueIds);
+  if (prevVisibleIssueIds !== allVisibleIssueIds) {
+    setPrevVisibleIssueIds(allVisibleIssueIds);
     setSelectedIssueIds((current) => current.filter((id) => allVisibleIssueIds.includes(id)));
-  }, [allVisibleIssueIds]);
+  }
 
   useEffect(() => {
     clearActiveIfDiverged({
@@ -305,11 +311,8 @@ export default function Home() {
     setAiSearchOpen,
   });
 
-  useEffect(() => {
-    if (statuses.length === 0) return;
-    if (bulkStatusId > 0) return;
-    setBulkStatusId(statuses[0].id);
-  }, [bulkStatusId, statuses]);
+  // Default to the first status until the user picks one.
+  const effectiveBulkStatusId = bulkStatusId > 0 ? bulkStatusId : (statuses[0]?.id ?? 0);
 
   async function connectRedmine(event: React.FormEvent) {
     event.preventDefault();
@@ -483,7 +486,7 @@ export default function Home() {
     updateBulkMarkDone,
   } = useBulkIssueActions({
     selectedIssueIds,
-    bulkStatusId,
+    bulkStatusId: effectiveBulkStatusId,
     bulkPriorityId,
     refreshAll,
     onClearSelection: () => setSelectedIssueIds([]),
@@ -807,7 +810,7 @@ export default function Home() {
           selectedIssueIds={selectedIssueIds}
           onClearBulkSelection={() => setSelectedIssueIds([])}
           statuses={statuses}
-          bulkStatusId={bulkStatusId}
+          bulkStatusId={effectiveBulkStatusId}
           onBulkStatusIdChange={setBulkStatusId}
           bulkPriorityId={bulkPriorityId}
           onBulkPriorityIdChange={setBulkPriorityId}

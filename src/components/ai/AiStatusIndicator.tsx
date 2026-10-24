@@ -52,6 +52,7 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
   }, [onStatusChange, t]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount plus polling of AI status
     void fetchStatus();
     // Refresh status every 60 seconds
     const interval = setInterval(() => {
