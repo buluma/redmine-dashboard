@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useToast } from "./ToastProvider";
 import { useI18n } from "./I18nProvider";
 import { ModalDialog } from "./ModalDialog";
@@ -32,8 +32,9 @@ interface IssueCreateModalProps {
 export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorities }: IssueCreateModalProps) {
   const toast = useToast();
   const { t } = useI18n();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [projectSnapshot, setProjectSnapshot] = useState<Project[] | null>(null);
+  const projects = projectSnapshot ?? [];
+  const loadingProjects = isOpen && projectSnapshot === null;
   const [submitting, setSubmitting] = useState(false);
 
   const [subject, setSubject] = useState("");
@@ -43,31 +44,27 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
   const [priorityId, setPriorityId] = useState<number>(0);
   const [dueDate, setDueDate] = useState("");
 
-  const loadProjects = useCallback(async () => {
-    setLoadingProjects(true);
-    try {
-      const res = await fetch("/api/projects");
-      if (res.ok) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const res = await fetch("/api/projects", { signal: controller.signal });
+        if (!res.ok) throw new Error("Failed to load projects");
         const data = await res.json();
-        const fetchedProjects = data.projects || [];
-        setProjects(fetchedProjects);
-        if (fetchedProjects.length > 0 && projectId === 0) {
-          setProjectId(fetchedProjects[0].id);
+        if (!controller.signal.aborted) setProjectSnapshot(data.projects ?? []);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Failed to load projects", error);
+          setProjectSnapshot([]);
         }
       }
-    } catch (error) {
-      console.error("Failed to load projects", error);
-    } finally {
-      setLoadingProjects(false);
-    }
-  }, [projectId]);
+    })();
+    return () => controller.abort();
+  }, [isOpen]);
 
-  useEffect(() => {
-    if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch projects when the modal opens
-      loadProjects();
-    }
-  }, [isOpen, loadProjects]);
+  const effectiveProjectId = projects.some(project => project.id === projectId)
+    ? projectId : projects[0]?.id ?? 0;
 
   // Fall back to the first status / "Normal" priority until the user picks one.
   const effectiveStatusId = statusId !== 0 ? statusId : (statuses[0]?.id ?? 0);
@@ -76,7 +73,7 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!subject || !projectId) {
+    if (!subject || !effectiveProjectId) {
       toast.error(t("createIssue.errorRequired"));
       return;
     }
@@ -89,7 +86,7 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
         body: JSON.stringify({
           subject,
           description,
-          projectId,
+          projectId: effectiveProjectId,
           statusId: effectiveStatusId,
           priorityId: effectivePriorityId,
           dueDate: dueDate || undefined,
@@ -128,7 +125,7 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
           <div className="form-group">
             <label>{t("createIssue.projectLabel")}</label>
             <select 
-              value={projectId} 
+              value={effectiveProjectId} 
               onChange={(e) => setProjectId(Number(e.target.value))}
               disabled={loadingProjects}
               required

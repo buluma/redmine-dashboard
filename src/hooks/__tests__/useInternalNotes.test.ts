@@ -147,3 +147,15 @@ describe("useInternalNotes", () => {
     expect(onError).toHaveBeenCalledWith("bad");
   });
 });
+
+it('ignores a previous issue response and clears notes when disabled', async () => {
+  const pending: Array<(value: Response) => void> = [];
+  vi.spyOn(global, 'fetch').mockImplementation(() => new Promise(resolve => pending.push(resolve)));
+  const { result, rerender } = renderHook(({ issueId, enabled }) => useInternalNotes({ issueId, enabled, onError: vi.fn(), t }), { initialProps: { issueId: 'first', enabled: true } });
+  rerender({ issueId: 'second', enabled: true });
+  await act(async () => pending[1](new Response(JSON.stringify({ notes: [makeNote({ issueId: 'second' })] }))));
+  await act(async () => pending[0](new Response(JSON.stringify({ notes: [makeNote({ issueId: 'first' })] }))));
+  expect(result.current.notes[0].issueId).toBe('second');
+  rerender({ issueId: 'second', enabled: false });
+  expect(result.current.notes).toEqual([]);
+});

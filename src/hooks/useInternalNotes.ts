@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 
 export interface InternalNote {
   id: string;
@@ -40,16 +40,21 @@ export function useInternalNotes({
   onInfo,
   t,
 }: Options): UseInternalNotesResult {
-  const [notes, setNotes] = useState<InternalNote[]>([]);
+  const [snapshot, setSnapshot] = useState<{ issueId: string; notes: InternalNote[] } | null>(null);
+  const notes = enabled && snapshot?.issueId === issueId ? snapshot.notes : [];
+  const requestRef = useRef<AbortController | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!issueId) return;
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     try {
-      const res = await fetch(`/api/internal/notes?issueId=${issueId}`, { cache: "no-store" });
+      const res = await fetch(`/api/internal/notes?issueId=${encodeURIComponent(issueId)}`, { cache: "no-store", signal: controller.signal });
       if (res.ok) {
         const data = await res.json();
-        setNotes(data.notes ?? []);
+        if (!controller.signal.aborted) setSnapshot({ issueId, notes: data.notes ?? [] });
       }
     } catch {
       // Ignore transient errors.
@@ -58,8 +63,8 @@ export function useInternalNotes({
 
   useEffect(() => {
     if (!enabled) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch notes when enabled
     void load();
+    return () => requestRef.current?.abort();
   }, [enabled, load]);
 
   const create = useCallback(
