@@ -457,6 +457,7 @@ export function SlackMessagesClient({
 
   // Set client-side state after hydration
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only clock; removed with the browser-state follow-up (CON-5 subtask 7)
     setLastUpdated(new Date());
     setIsClient(true);
   }, []);
