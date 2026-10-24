@@ -44,6 +44,10 @@ import { useDashboardData } from "@/src/hooks/useDashboardData";
 import { useFilterPresets } from "@/src/hooks/useFilterPresets";
 import { IssueQueueCard } from "@/src/components/dashboard/IssueQueueCard";
 
+import { useStoredString, useStoredStringSet } from "@/src/hooks/useStoredPreference";
+
+const isColumn = (value: string): value is ColumnKey => ["priority", "due", "progress", "updated"].includes(value);
+
 const SHOW_ALL_METRICS_KEY = "nrcc.showAllMetrics.v1";
 const VISIBLE_COLUMNS_KEY = "nrcc.visibleColumns.v1";
 const DEFAULT_ADVANCED_FILTERS: FilterState = {
@@ -67,10 +71,7 @@ export default function Home() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const toast = useToast();
   const [showIssueCreateModal, setShowIssueCreateModal] = useState(false);
-  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(
-    new Set<ColumnKey>(SAVED_VIEW_DEFAULT_COLUMNS)
-  );
-  const [visibleColumnsHydrated, setVisibleColumnsHydrated] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useStoredStringSet(VISIBLE_COLUMNS_KEY, SAVED_VIEW_DEFAULT_COLUMNS, isColumn);
   const [manualRefreshBusy, setManualRefreshBusy] = useState(false);
   const [allowedStatusIdsByIssue, setAllowedStatusIdsByIssue] = useState<Record<number, number[]>>({});
   const [statusUpdatingIssueIds, setStatusUpdatingIssueIds] = useState<Set<number>>(new Set());
@@ -114,7 +115,8 @@ export default function Home() {
   const [issueQueueOpen, setIssueQueueOpen] = useState(true);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [showCharts, setShowCharts] = useState(false);
-  const [showAllMetrics, setShowAllMetrics] = useState(false);
+  const [storedMetrics, setStoredMetrics] = useStoredString(SHOW_ALL_METRICS_KEY, "false");
+  const showAllMetrics = storedMetrics === "true";
   const [error, setError] = useState<string | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -217,55 +219,6 @@ export default function Home() {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem(SHOW_ALL_METRICS_KEY) === "true") {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate preference from localStorage after mount to avoid an SSR mismatch
-        setShowAllMetrics(true);
-      }
-    } catch {
-      // Ignore storage errors.
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(VISIBLE_COLUMNS_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as unknown;
-        if (Array.isArray(parsed)) {
-          const valid = parsed.filter((value): value is ColumnKey =>
-            value === "priority" || value === "due" || value === "progress" || value === "updated",
-          );
-          // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate preference from localStorage after mount to avoid an SSR mismatch
-          setVisibleColumns(new Set(valid));
-        }
-      }
-    } catch {
-      // Ignore malformed or unavailable storage.
-    } finally {
-      setVisibleColumnsHydrated(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!visibleColumnsHydrated) return;
-    try {
-      window.localStorage.setItem(VISIBLE_COLUMNS_KEY, JSON.stringify(Array.from(visibleColumns)));
-    } catch {
-      // Ignore storage errors; the picker still works for the current session.
-    }
-  }, [visibleColumns, visibleColumnsHydrated]);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(SHOW_ALL_METRICS_KEY, showAllMetrics ? "true" : "false");
-    } catch {
-      // Ignore storage errors.
-    }
-  }, [showAllMetrics]);
-
 
   // Drop selections that are no longer visible. Adjusting state during render
   // (instead of in an effect) avoids an extra render pass with stale ids.
@@ -691,7 +644,7 @@ export default function Home() {
         onManualPull={handleManualPull}
         onResetFilters={resetFilters}
         onOpenShortcuts={() => setShowShortcutHelp(true)}
-        onToggleAllMetrics={() => setShowAllMetrics((v) => !v)}
+        onToggleAllMetrics={() => setStoredMetrics(value => value === "true" ? "false" : "true")}
         aiStatusIndicator={<AiStatusIndicator />}
       />
 
