@@ -72,20 +72,22 @@ export function useIssues(options: UseIssuesOptions = {}): UseIssuesResult {
   const requestRef = useRef<AbortController | null>(null);
   const current = snapshot.url === key;
 
-  const load = useCallback(async () => {
+  const load = useCallback(() => {
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
-      try {
-        const res = await fetch(url, { signal: controller.signal });
+    return fetch(url, { signal: controller.signal })
+      .then(async res => {
         if (!res.ok) throw new Error("Failed to load issues");
-        const data = await res.json();
+        return res.json();
+      })
+      .then(data => {
         if (!controller.signal.aborted) setSnapshot({ url: key, issues: data.issues ?? data.results ?? [], total: data.total ?? 0, error: null });
-      } catch (err) {
+      })
+      .catch(err => {
         if (!controller.signal.aborted) setSnapshot({ url: key, issues: [], total: 0, error: err instanceof Error ? err.message : "Failed to load issues" });
-      } finally {
-        if (!controller.signal.aborted) setRefreshing(false);
-      }
+      })
+      .finally(() => { if (!controller.signal.aborted) setRefreshing(false); });
   }, [url, key]);
 
   useEffect(() => {
