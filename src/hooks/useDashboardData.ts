@@ -151,27 +151,24 @@ export function useDashboardData({
 
   async function loadActivities(signal?: AbortSignal) {
     if (!user) return;
-    const res = await fetch("/api/internal/activities", { cache: "no-store", signal });
-    if (res.ok) {
-      const data = await res.json();
-      if (signal?.aborted) return;
-      const fetched = data.activities ?? [];
-      if (fetched.length > 0 && activityId === 0) {
-        setActivityId(fetched[0].id);
-      }
-    }
+    return fetch("/api/internal/activities", { cache: "no-store", signal })
+      .then(async res => {
+        if (!res.ok) return;
+        const data = await res.json();
+        if (signal?.aborted) return;
+        const fetched = data.activities ?? [];
+        if (fetched.length > 0 && activityId === 0) setActivityId(fetched[0].id);
+      });
   }
 
   async function loadFavorites(signal?: AbortSignal) {
-    try {
-      const res = await fetch("/api/issues/favorites", { cache: "no-store", signal });
-      if (res.ok) {
+    return fetch("/api/issues/favorites", { cache: "no-store", signal })
+      .then(async res => {
+        if (!res.ok) return;
         const data = await res.json();
         if (!signal?.aborted) setFavoriteIssueIds(data.favorites ?? []);
-      }
-    } catch {
-      // Ignore errors
-    }
+      })
+      .catch(() => { /* Keep cached favorites on transient errors. */ });
   }
 
   function refreshData(signal?: AbortSignal) {
