@@ -92,6 +92,7 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
   // Check push subscription status
   useEffect(() => {
     if ("serviceWorker" in navigator && "PushManager" in window) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- feature-detect push support in the browser after mount
       setIsPushSupported(true);
       navigator.serviceWorker.ready.then((registration) => {
         registration.pushManager.getSubscription().then((subscription) => {

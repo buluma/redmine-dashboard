@@ -211,6 +211,7 @@ export function useDashboardData({
   useEffect(() => {
     if (!user) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount plus polling when the user or query changes
     void refreshAll();
     void loadActivities();
     void loadFavorites();

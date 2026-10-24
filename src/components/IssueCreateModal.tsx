@@ -64,22 +64,15 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
 
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch projects when the modal opens
       loadProjects();
     }
   }, [isOpen, loadProjects]);
 
-  useEffect(() => {
-    if (statuses.length > 0 && statusId === 0) {
-      setStatusId(statuses[0].id);
-    }
-  }, [statusId, statuses]);
-
-  useEffect(() => {
-    if (priorities.length > 0 && priorityId === 0) {
-      const defaultPriority = priorities.find((p) => p.name.toLowerCase().includes("normal")) || priorities[0];
-      setPriorityId(defaultPriority.id);
-    }
-  }, [priorities, priorityId]);
+  // Fall back to the first status / "Normal" priority until the user picks one.
+  const effectiveStatusId = statusId !== 0 ? statusId : (statuses[0]?.id ?? 0);
+  const defaultPriority = priorities.find((p) => p.name.toLowerCase().includes("normal")) || priorities[0];
+  const effectivePriorityId = priorityId !== 0 ? priorityId : (defaultPriority?.id ?? 0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -97,8 +90,8 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
           subject,
           description,
           projectId,
-          statusId,
-          priorityId,
+          statusId: effectiveStatusId,
+          priorityId: effectivePriorityId,
           dueDate: dueDate || undefined,
         }),
       });
@@ -171,7 +164,7 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
           <div className="form-row">
             <div className="form-group">
               <label>{t("createIssue.statusLabel")}</label>
-              <select value={statusId} onChange={(e) => setStatusId(Number(e.target.value))}>
+              <select value={effectiveStatusId} onChange={(e) => setStatusId(Number(e.target.value))}>
                 {statuses.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
@@ -180,7 +173,7 @@ export function IssueCreateModal({ isOpen, onClose, onCreated, statuses, priorit
 
             <div className="form-group">
               <label>{t("createIssue.priorityLabel")}</label>
-              <select value={priorityId} onChange={(e) => setPriorityId(Number(e.target.value))}>
+              <select value={effectivePriorityId} onChange={(e) => setPriorityId(Number(e.target.value))}>
                 {priorities.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
