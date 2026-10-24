@@ -159,3 +159,13 @@ it('ignores a previous issue response and clears notes when disabled', async () 
   rerender({ issueId: 'second', enabled: false });
   expect(result.current.notes).toEqual([]);
 });
+
+it('does not let a saved loader from another issue cancel the current load', async () => {
+  const fetcher = vi.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({ notes: [] })));
+  const { result, rerender } = renderHook(({ issueId }) => useInternalNotes({ issueId, enabled: true, onError: vi.fn(), t }), { initialProps: { issueId: 'first' } });
+  const oldLoad = result.current.load;
+  rerender({ issueId: 'second' });
+  const count = fetcher.mock.calls.length;
+  await act(() => oldLoad());
+  expect(fetcher.mock.calls).toHaveLength(count);
+});

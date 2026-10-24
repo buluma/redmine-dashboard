@@ -43,10 +43,11 @@ export function useInternalNotes({
   const [snapshot, setSnapshot] = useState<{ issueId: string; notes: InternalNote[] } | null>(null);
   const notes = enabled && snapshot && snapshot.issueId === issueId ? snapshot.notes : [];
   const requestRef = useRef<AbortController | null>(null);
+  const scopeRef = useRef<string | null | undefined>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    if (!issueId) return;
+    if (!issueId || scopeRef.current !== issueId) return;
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
@@ -60,10 +61,11 @@ export function useInternalNotes({
   }, [issueId]);
 
   useEffect(() => {
+    scopeRef.current = enabled ? issueId : null;
     if (!enabled) return;
     void load();
-    return () => requestRef.current?.abort();
-  }, [enabled, load]);
+    return () => { scopeRef.current = null; requestRef.current?.abort(); };
+  }, [enabled, issueId, load]);
 
   const create = useCallback(
     async (content: string) => {
