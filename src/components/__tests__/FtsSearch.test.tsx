@@ -1,0 +1,36 @@
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
+import { FtsSearch } from '../FtsSearch';
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
+it('ignores an older response and hides results immediately when cleared', async () => {
+  vi.useFakeTimers();
+  const requests: Array<(value: unknown) => void> = [];
+  vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => requests.push(resolve))));
+  render(<FtsSearch />);
+  const input = screen.getByRole('textbox');
+  fireEvent.change(input, { target: { value: 'old' } });
+  await act(() => vi.advanceTimersByTimeAsync(300));
+  fireEvent.change(input, { target: { value: 'new' } });
+  await act(() => vi.advanceTimersByTimeAsync(300));
+  const response = (subject: string) => ({ ok: true, json: async () => ({ results: [{ id: subject, subject, statusName: 'open' }], total: 1 }) });
+  await act(async () => requests[1](response('latest result')));
+  await act(async () => requests[0](response('stale result')));
+  expect(screen.getByText('latest result')).toBeInTheDocument();
+  expect(screen.queryByText('stale result')).not.toBeInTheDocument();
+  fireEvent.change(input, { target: { value: '' } });
+  expect(screen.queryByText('latest result')).not.toBeInTheDocument();
+});
+it('cancels debounce on unmount and reports empty results', async () => {
+  vi.useFakeTimers();
+  const fetcher = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: [], total: 0 }) });
+  vi.stubGlobal('fetch', fetcher);
+  const view = render(<FtsSearch />);
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'none' } });
+  await act(() => vi.advanceTimersByTimeAsync(300));
+  expect(screen.getByText(/No results found/)).toBeInTheDocument();
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'pending' } });
+  view.unmount();
+  await act(() => vi.advanceTimersByTimeAsync(300));
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});
