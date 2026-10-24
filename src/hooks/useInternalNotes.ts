@@ -50,15 +50,13 @@ export function useInternalNotes({
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
-    try {
-      const res = await fetch(`/api/internal/notes?issueId=${encodeURIComponent(issueId)}`, { cache: "no-store", signal: controller.signal });
-      if (res.ok) {
+    return fetch(`/api/internal/notes?issueId=${encodeURIComponent(issueId)}`, { cache: "no-store", signal: controller.signal })
+      .then(async res => {
+        if (!res.ok) return;
         const data = await res.json();
         if (!controller.signal.aborted) setSnapshot({ issueId, notes: data.notes ?? [] });
-      }
-    } catch {
-      // Ignore transient errors.
-    }
+      })
+      .catch(() => { /* Keep current notes on transient errors. */ });
   }, [issueId]);
 
   useEffect(() => {
