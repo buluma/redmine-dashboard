@@ -22,7 +22,7 @@ Validated on 2026-10-25 with the frozen Bun lockfile, Node 24.18.0, generated SQ
 - Full ESLint passed with three existing Next.js navigation warnings outside this task's changes.
 - All 16 original reason-tagged `react-hooks/set-state-in-effect` suppressions were removed. Other pre-existing suppressions, including those in the i18n provider and page-size hook, remain outside CON-5's scope.
 
-The production build result is recorded below after completion.
+The production build passed, including webpack compilation, TypeScript, generation of all 102 static pages, and trace collection. A first attempt found stale generated dev types for the removed temporary fixture; clearing only `.next/dev/types` resolved that local cache issue.
 
 ## Browser acceptance
 
