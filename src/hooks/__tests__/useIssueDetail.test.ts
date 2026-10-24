@@ -113,7 +113,7 @@ describe("useIssueDetail", () => {
     });
 
     expect(result.current.issue?.subject).toBe("Updated");
-    expect(fetchSpy).toHaveBeenCalledWith("/api/issues/issue-1?fresh=1", { cache: "no-store" });
+    expect(fetchSpy).toHaveBeenCalledWith("/api/issues/issue-1?fresh=1", expect.objectContaining({ cache: "no-store" }));
   });
 
   it("refreshIssueFromRedmine posts to /refresh then reloads, tracking refreshBusy", async () => {
@@ -187,4 +187,20 @@ describe("useIssueDetail", () => {
     await waitFor(() => expect(result.current.issue?.attachments).toHaveLength(1));
     expect(result.current.issue?.attachments[0].filename).toBe("shot.png");
   });
+});
+
+it('clears the previous issue immediately and rejects late responses on navigation', async () => {
+  const pending = new Map<string, (value: Response) => void>();
+  vi.spyOn(global, 'fetch').mockImplementation(async input => {
+    const url = String(input);
+    if (url === '/api/issues/first' || url === '/api/issues/second') return new Promise(resolve => pending.set(url, resolve));
+    return json({});
+  });
+  const { result, rerender } = renderHook(({ id }) => useIssueDetail(id, t), { initialProps: { id: 'first' } });
+  rerender({ id: 'second' });
+  expect(result.current.issue).toBeNull();
+  expect(result.current.loading).toBe(true);
+  await act(async () => pending.get('/api/issues/second')!(json({ issue: baseIssue({ id: 'second' }) })));
+  await act(async () => pending.get('/api/issues/first')!(json({ issue: baseIssue({ id: 'first' }) })));
+  expect(result.current.issue?.id).toBe('second');
 });

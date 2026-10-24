@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 export interface SyncState {
   lastSyncAt: string | null;
@@ -26,21 +26,26 @@ export function useSyncState(): UseSyncStateResult {
   const [error, setError] = useState<string | null>(null);
   const [manualRefreshBusy, setManualRefreshBusy] = useState(false);
 
+  const requestRef = useRef<AbortController | null>(null);
   const fetchSyncState = useCallback(async () => {
-    try {
-      const res = await fetch("/api/sync/status");
-      if (!res.ok) throw new Error("Failed to fetch sync status");
-      const data = await res.json();
-      setSyncState({
-        lastSyncAt: data.lastSyncAt,
-        lastSyncStatus: data.lastSyncStatus,
-        lastError: data.lastError,
-        isRunning: data.syncActive ?? false,
-        syncProgress: data.progress ?? 0,
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load sync state");
-    }
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    return fetch("/api/sync/status", { signal: controller.signal })
+      .then(async res => {
+        if (!res.ok) throw new Error("Failed to fetch sync status");
+        return res.json();
+      })
+      .then(data => {
+        if (controller.signal.aborted) return;
+        setError(null);
+        setSyncState({
+          lastSyncAt: data.lastSyncAt, lastSyncStatus: data.lastSyncStatus,
+          lastError: data.lastError, isRunning: data.syncActive ?? false, syncProgress: data.progress ?? 0,
+        });
+      })
+      .catch(err => { if (!controller.signal.aborted) setError(err instanceof Error ? err.message : "Failed to load sync state"); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
   }, []);
 
   const triggerManualSync = useCallback(async () => {
@@ -63,11 +68,10 @@ export function useSyncState(): UseSyncStateResult {
   }, [manualRefreshBusy]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount plus polling of sync state
-    fetchSyncState().finally(() => setLoading(false));
+    void fetchSyncState();
 
     const interval = setInterval(fetchSyncState, POLL_INTERVAL);
-    return () => clearInterval(interval);
+    return () => { clearInterval(interval); requestRef.current?.abort(); };
   }, [fetchSyncState]);
 
   return {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 interface SearchResult {
@@ -36,48 +36,34 @@ interface FtsSearchProps {
 export function FtsSearch({ onSelect }: FtsSearchProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [response, setResponse] = useState<{ query: string; results: SearchResult[]; total: number } | null>(null);
+  const [pendingQuery, setPendingQuery] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [total, setTotal] = useState(0);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const current = query.length >= 2 && response?.query === query ? response : null;
+  const results = current?.results ?? [];
+  const total = current?.total ?? 0;
+  const loading = query.length >= 2 && pendingQuery === query;
 
   useEffect(() => {
-    if (query.length < 2) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear results when the query drops below the search threshold; the effect also owns the debounced fetch
-      setResults([]);
-      setTotal(0);
-      setIsOpen(false);
-      return;
-    }
-
-    // Debounce search
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    debounceRef.current = setTimeout(async () => {
-      setLoading(true);
+    if (query.length < 2) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setPendingQuery(query);
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=10`);
-        if (res.ok) {
-          const data: SearchResponse = await res.json();
-          setResults(data.results);
-          setTotal(data.total);
-          setIsOpen(data.results.length > 0);
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=10`, { signal: controller.signal });
+        if (!res.ok) throw new Error("Search failed");
+        const data: SearchResponse = await res.json();
+        if (!controller.signal.aborted) {
+          setResponse({ query, results: data.results, total: data.total });
+          setIsOpen(true);
         }
       } catch (error) {
-        console.error("Search error:", error);
+        if (!controller.signal.aborted) console.error("Search error:", error);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setPendingQuery(null);
       }
     }, 300);
-
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
+    return () => { clearTimeout(timer); controller.abort(); };
   }, [query]);
 
   const handleSelect = (result: SearchResult) => {
@@ -150,7 +136,7 @@ export function FtsSearch({ onSelect }: FtsSearchProps) {
         </div>
       )}
 
-      {isOpen && query.length >= 2 && results.length === 0 && !loading && (
+      {isOpen && current && results.length === 0 && !loading && (
         <div className="fts-search-dropdown">
           <div className="fts-search-empty">No results found for &ldquo;{query}&rdquo;</div>
         </div>
