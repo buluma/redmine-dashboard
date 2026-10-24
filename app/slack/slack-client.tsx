@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useStoredStringSet } from "@/src/hooks/useStoredPreference";
 import { useI18n } from "@/src/components/I18nProvider";
 import { renderSlackMarkdown } from "@/src/lib/slack-format";
 import type { SlackMessage } from "@/src/lib/slack";
@@ -13,6 +14,9 @@ interface SlackMessagesClientProps {
   refreshIntervalMs?: number;
   channelCount: number;
 }
+
+const NO_MUTED_CHANNELS: readonly string[] = [];
+const isChannelId = (value: string): value is string => typeof value === "string";
 
 const AUTO_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -444,7 +448,7 @@ export function SlackMessagesClient({
   const [currentChannelId, setCurrentChannelId] = useState(initialChannelId);
   const [isLoadingChannel, setIsLoadingChannel] = useState(false);
   const [keywordFilter, setKeywordFilter] = useState("");
-  const [mutedChannels, setMutedChannels] = useState<Set<string>>(new Set());
+  const [mutedChannels, setMutedChannels] = useStoredStringSet("nrcc.slack.mutedChannels.v1", NO_MUTED_CHANNELS, isChannelId);
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -453,32 +457,10 @@ export function SlackMessagesClient({
 
   // Set client-side state after hydration
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only state (clock, localStorage) hydrated after mount to avoid an SSR mismatch
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only clock; removed with the browser-state follow-up (CON-5 subtask 7)
     setLastUpdated(new Date());
     setIsClient(true);
-    try {
-      const raw = window.localStorage.getItem("nrcc.slack.mutedChannels.v1");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          setMutedChannels(new Set(parsed.filter((v): v is string => typeof v === "string")));
-        }
-      }
-    } catch {
-      // Ignore storage errors.
-    }
   }, []);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(
-        "nrcc.slack.mutedChannels.v1",
-        JSON.stringify(Array.from(mutedChannels)),
-      );
-    } catch {
-      // Ignore storage errors.
-    }
-  }, [mutedChannels]);
 
   const toggleMute = (channelId: string) => {
     setMutedChannels((prev) => {
