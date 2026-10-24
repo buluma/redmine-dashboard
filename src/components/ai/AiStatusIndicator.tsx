@@ -36,27 +36,24 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
-    try {
-      const res = await fetch("/api/ai/status", { cache: "no-store", signal: controller.signal });
-      if (res.ok) {
-        const data = await res.json();
+    return fetch("/api/ai/status", { cache: "no-store", signal: controller.signal })
+      .then(async res => {
+        if (!res.ok) throw new Error(t('ai.fetchStatusFailed'));
+        return res.json();
+      })
+      .then(data => {
         if (controller.signal.aborted) return;
         setStatus(data);
         setError(null);
         onStatusChange?.(data.available);
-      } else if (!controller.signal.aborted) {
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
         setStatus(null);
-        setError(t('ai.fetchStatusFailed'));
+        setError(t('ai.serviceUnavailable'));
         onStatusChange?.(false);
-      }
-    } catch {
-      if (controller.signal.aborted) return;
-      setStatus(null);
-      setError(t('ai.serviceUnavailable'));
-      onStatusChange?.(false);
-    } finally {
-      if (!controller.signal.aborted) setLoading(false);
-    }
+      })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
   }, [onStatusChange, t]);
 
   useEffect(() => {

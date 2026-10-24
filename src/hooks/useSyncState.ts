@@ -31,24 +31,21 @@ export function useSyncState(): UseSyncStateResult {
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
-    try {
-      const res = await fetch("/api/sync/status", { signal: controller.signal });
-      if (!res.ok) throw new Error("Failed to fetch sync status");
-      const data = await res.json();
-      if (controller.signal.aborted) return;
-      setError(null);
-      setSyncState({
-        lastSyncAt: data.lastSyncAt,
-        lastSyncStatus: data.lastSyncStatus,
-        lastError: data.lastError,
-        isRunning: data.syncActive ?? false,
-        syncProgress: data.progress ?? 0,
-      });
-    } catch (err) {
-      if (!controller.signal.aborted) setError(err instanceof Error ? err.message : "Failed to load sync state");
-    } finally {
-      if (!controller.signal.aborted) setLoading(false);
-    }
+    return fetch("/api/sync/status", { signal: controller.signal })
+      .then(async res => {
+        if (!res.ok) throw new Error("Failed to fetch sync status");
+        return res.json();
+      })
+      .then(data => {
+        if (controller.signal.aborted) return;
+        setError(null);
+        setSyncState({
+          lastSyncAt: data.lastSyncAt, lastSyncStatus: data.lastSyncStatus,
+          lastError: data.lastError, isRunning: data.syncActive ?? false, syncProgress: data.progress ?? 0,
+        });
+      })
+      .catch(err => { if (!controller.signal.aborted) setError(err instanceof Error ? err.message : "Failed to load sync state"); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
   }, []);
 
   const triggerManualSync = useCallback(async () => {

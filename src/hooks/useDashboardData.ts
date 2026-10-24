@@ -174,11 +174,10 @@ export function useDashboardData({
     }
   }
 
-  async function refreshData(signal?: AbortSignal) {
+  function refreshData(signal?: AbortSignal) {
     if (!user) return;
     const sequence = ++refreshSequence.current;
-    try {
-      const [data, state] = await Promise.all([loadIssues(signal), loadSyncStatus(signal)]);
+    return Promise.all([loadIssues(signal), loadSyncStatus(signal)]).then(([data, state]) => {
       if (signal?.aborted || sequence !== refreshSequence.current) return;
       setIssues(data.items ?? []);
       setTotal(data.total ?? 0);
@@ -187,17 +186,17 @@ export function useDashboardData({
       setSyncState(state);
       onIssuesPageReset();
       setRefreshError(null);
-    } catch (e) {
+    }).catch((e) => {
       if (signal?.aborted || sequence !== refreshSequence.current) return;
       const message = e instanceof Error ? e.message : "Failed to refresh dashboard";
       setRefreshError(message);
       toast.error(message);
-    } finally {
+    }).finally(() => {
       if (!signal?.aborted && sequence === refreshSequence.current) {
         setLoading(false);
         setResolvedKey(dataKey);
       }
-    }
+    });
   }
 
   async function refreshAll() {
