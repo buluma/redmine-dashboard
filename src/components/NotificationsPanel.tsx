@@ -3,7 +3,7 @@
 // Removed custom process declaration to avoid duplicate identifier error.
 // process.env is handled by Next.js at build time.
 
-import { useState, useEffect, useCallback } from "react";
+import { useSyncExternalStore, useState, useEffect, useCallback } from "react";
 import { useI18n } from "@/src/components/I18nProvider";
 import { urlBase64ToUint8Array } from "@/src/lib/push-utils";
 
@@ -20,6 +20,10 @@ interface Notification {
 interface NotificationsPanelProps {
   pollingInterval?: number; // ms, default 30000 (30s)
 }
+
+const subscribeToCapabilities = () => () => {};
+const pushSnapshot = () => "serviceWorker" in navigator && "PushManager" in window;
+const serverPushSnapshot = () => false;
 
 const READ_IDS_KEY = "converge:notifications:read";
 
@@ -47,7 +51,7 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isPushSupported, setIsPushSupported] = useState(false);
+  const isPushSupported = useSyncExternalStore(subscribeToCapabilities, pushSnapshot, serverPushSnapshot);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isPushLoading, setIsPushLoading] = useState(false);
   const fetchNotifications = useCallback(async () => {
@@ -89,18 +93,16 @@ export function NotificationsPanel({ pollingInterval = 30000 }: NotificationsPan
     };
   }, [fetchNotifications, pollingInterval]);
 
-  // Check push subscription status
+  // Feature support is derived; only the asynchronous subscription is state.
   useEffect(() => {
-    if ("serviceWorker" in navigator && "PushManager" in window) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- feature-detect push support in the browser after mount
-      setIsPushSupported(true);
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.pushManager.getSubscription().then((subscription) => {
-          setIsSubscribed(!!subscription);
-        });
-      });
-    }
-  }, []);
+    if (!isPushSupported) return;
+    let active = true;
+    void navigator.serviceWorker.ready
+      .then(registration => registration.pushManager.getSubscription())
+      .then(subscription => { if (active) setIsSubscribed(Boolean(subscription)); })
+      .catch(() => { if (active) setIsSubscribed(false); });
+    return () => { active = false; };
+  }, [isPushSupported]);
 
   const subscribeToPush = async () => {
     setIsPushLoading(true);

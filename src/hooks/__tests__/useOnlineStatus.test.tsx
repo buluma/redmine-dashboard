@@ -1,0 +1,20 @@
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
+import { useOnlineStatus } from '../../../hooks/useOnlineStatus';
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+it('does not let a late ping override an offline event and recovers online', async () => {
+  let online = false;
+  vi.spyOn(navigator, 'onLine', 'get').mockImplementation(() => online);
+  let resolve!: (value: unknown) => void;
+  const fetcher = vi.fn().mockImplementationOnce(() => new Promise(r => { resolve = r; })).mockResolvedValue({ ok: true });
+  vi.stubGlobal('fetch', fetcher);
+  const { result, unmount } = renderHook(() => useOnlineStatus());
+  act(() => window.dispatchEvent(new Event('offline')));
+  expect(result.current).toBe(false);
+  await act(async () => resolve({ ok: true }));
+  expect(result.current).toBe(false);
+  act(() => { online = true; window.dispatchEvent(new Event('online')); });
+  await waitFor(() => expect(result.current).toBe(true));
+  const signal = fetcher.mock.calls.at(-1)![1].signal;
+  unmount(); expect(signal.aborted).toBe(true);
+});

@@ -442,9 +442,8 @@ export function SlackMessagesClient({
   const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(true);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date(0));
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [nextRefreshIn, setNextRefreshIn] = useState<number>(AUTO_REFRESH_INTERVAL_MS / 1000);
-  const [isClient, setIsClient] = useState(false);
   const [currentChannelId, setCurrentChannelId] = useState(initialChannelId);
   const [isLoadingChannel, setIsLoadingChannel] = useState(false);
   const [keywordFilter, setKeywordFilter] = useState("");
@@ -454,12 +453,6 @@ export function SlackMessagesClient({
 
   // Get current channel name
   const currentChannel = channels.find(c => c.id === currentChannelId);
-
-  // Set client-side state after hydration
-  useEffect(() => {
-    setLastUpdated(new Date());
-    setIsClient(true);
-  }, []);
 
   const toggleMute = (channelId: string) => {
     setMutedChannels((prev) => {
@@ -697,7 +690,7 @@ export function SlackMessagesClient({
             </button>
 
             {isAutoRefreshEnabled && (
-              <span className="refresh-timer" title={`Last: ${isClient ? lastUpdated.toLocaleTimeString() : '--'}`}>
+              <span className="refresh-timer" title={`Last: ${lastUpdated?.toLocaleTimeString() ?? '--'}`}>
                 ↻ {nextRefreshIn}s
               </span>
             )}
@@ -1156,7 +1149,7 @@ export function SlackMessagesClient({
 
           <div className="refresh-info">
             <span suppressHydrationWarning>
-              {isClient ? `Last: ${lastUpdated.toLocaleTimeString("en-US", { hour12: false })}` : "Last: --:--:--"}
+              {lastUpdated ? `Last: ${lastUpdated.toLocaleTimeString("en-US", { hour12: false })}` : "Last: --:--:--"}
             </span>
           </div>
         </div>
