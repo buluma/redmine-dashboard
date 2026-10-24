@@ -34,7 +34,8 @@
     "deepmerge-ts": ">=8.0.0",
     "browserslist": "4.28.7",
     "js-yaml": "4.3.2",
-    "mysql2": "^3.22.0"
+    "mysql2": "^3.22.0",
+    "zod": ">=4.6.6"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.10.0",
@@ -54,7 +55,7 @@
     "chart.js": "^4.5.1",
     "dotenv": "^18.0.7",
     "idb": "^8.0.4",
-    "next": "16.3.8",
+    "next": "16.4.1",
     "prisma": "^7.10.0",
     "react": "19.2.3",
     "react-chartjs-2": "^5.3.1",
