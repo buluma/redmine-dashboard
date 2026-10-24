@@ -82,6 +82,7 @@ export function useDashboardData({
   const [resolvedKey, setResolvedKey] = useState<string | null>(null);
   const dataKey = JSON.stringify([user, queryString]);
   const scopeRef = useRef<AbortController | null>(null);
+  const scopeKeyRef = useRef<string | null>(null);
   const refreshSequence = useRef(0);
 
   async function loadSession() {
@@ -172,7 +173,7 @@ export function useDashboardData({
   }
 
   function refreshData(signal?: AbortSignal) {
-    if (!user) return;
+    if (!user || scopeKeyRef.current !== dataKey) return;
     const sequence = ++refreshSequence.current;
     return Promise.all([loadIssues(signal), loadSyncStatus(signal)]).then(([data, state]) => {
       if (signal?.aborted || sequence !== refreshSequence.current) return;
@@ -197,6 +198,7 @@ export function useDashboardData({
   }
 
   async function refreshAll() {
+    if (!user || scopeKeyRef.current !== dataKey) return;
     setLoading(true);
     await refreshData(scopeRef.current?.signal);
   }
@@ -217,6 +219,7 @@ export function useDashboardData({
 
     const scope = new AbortController();
     scopeRef.current = scope;
+    scopeKeyRef.current = dataKey;
     void refreshData(scope.signal);
     void loadActivities(scope.signal).catch(() => {});
     void loadFavorites(scope.signal);
@@ -225,7 +228,7 @@ export function useDashboardData({
       void refreshData(scope.signal);
     }, POLL_INTERVAL_MS);
 
-    return () => { clearInterval(id); scope.abort(); };
+    return () => { clearInterval(id); scopeKeyRef.current = null; scope.abort(); };
     // refreshAll/loadActivities intentionally depend on current query + user snapshot.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryString, user]);

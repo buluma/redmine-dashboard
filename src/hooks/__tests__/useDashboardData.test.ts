@@ -280,3 +280,16 @@ it('ignores a previous query response and aborts the active scope on unmount', a
   expect(result.current.loading).toBe(false);
   unmount(); expect(signals[1].aborted).toBe(true);
 });
+
+it('ignores a saved refresh callback from a previous query scope', async () => {
+  vi.stubGlobal('fetch', vi.fn(async input => String(input).includes('/api/session/me') ? jsonResponse({ user: { id: 'fixture' } }) : jsonResponse({ items: [], filters: {} })));
+  const { result, rerender } = renderHook(({ queryString }) => useDashboardData({ queryString, onIssuesPageReset: () => {} }), { initialProps: { queryString: 'q=old' } });
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  const oldRefresh = result.current.refreshAll;
+  rerender({ queryString: 'q=new' });
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  const count = vi.mocked(fetch).mock.calls.length;
+  await act(() => oldRefresh());
+  expect(vi.mocked(fetch).mock.calls).toHaveLength(count);
+  expect(result.current.loading).toBe(false);
+});
