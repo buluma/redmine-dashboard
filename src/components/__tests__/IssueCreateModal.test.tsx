@@ -1,0 +1,24 @@
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
+import { IssueCreateModal } from '../IssueCreateModal';
+vi.mock('../ToastProvider', () => ({ useToast: () => ({ error: vi.fn(), success: vi.fn() }) }));
+vi.mock('../I18nProvider', () => ({ useI18n: () => ({ t: (key: string) => key }) }));
+vi.mock('../ModalDialog', () => ({ ModalDialog: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+it('fetches on open, ignores closed requests and does not refetch when selecting a project', async () => {
+  const pending: Array<(value: Response) => void> = [];
+  const fetcher = vi.spyOn(global, 'fetch').mockImplementation(() => new Promise(resolve => pending.push(resolve)));
+  const props = { isOpen: false, onClose: vi.fn(), onCreated: vi.fn(), statuses: [], priorities: [] };
+  const view = render(<IssueCreateModal {...props} />);
+  expect(fetcher).not.toHaveBeenCalled();
+  view.rerender(<IssueCreateModal {...props} isOpen />);
+  view.rerender(<IssueCreateModal {...props} />);
+  view.rerender(<IssueCreateModal {...props} isOpen />);
+  await act(async () => pending[1](new Response(JSON.stringify({ projects: [{ id: 2, name: 'current' }, { id: 3, name: 'other' }] }))));
+  await act(async () => pending[0](new Response(JSON.stringify({ projects: [{ id: 1, name: 'obsolete' }] }))));
+  await waitFor(() => expect(screen.getByText('current')).toBeInTheDocument());
+  expect(screen.queryByText('obsolete')).not.toBeInTheDocument();
+  fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: '3' } });
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  expect(screen.getAllByRole('combobox')[0]).toHaveValue('3');
+});

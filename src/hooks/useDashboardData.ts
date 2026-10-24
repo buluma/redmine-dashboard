@@ -79,6 +79,11 @@ export function useDashboardData({
   const [aiStatus, setAiStatus] = useState<AiStatusInfo | null>(null);
   const [aiSummaryCount, setAiSummaryCount] = useState(0);
   const [activityId, setActivityId] = useState(0);
+  const [resolvedKey, setResolvedKey] = useState<string | null>(null);
+  const dataKey = JSON.stringify([user, queryString]);
+  const scopeRef = useRef<AbortController | null>(null);
+  const scopeKeyRef = useRef<string | null>(null);
+  const refreshSequence = useRef(0);
 
   async function loadSession() {
     try {
@@ -129,72 +134,73 @@ export function useDashboardData({
     }
   }
 
-  async function loadSyncStatus() {
-    if (!user) return;
-    const res = await fetch("/api/sync/status", { cache: "no-store" });
-    if (res.ok) {
-      const data = await res.json();
-      const state = (data.state ?? null) as SyncState;
-      if (state && !state.lastError && data.latestJob?.error) {
-        state.lastError = String(data.latestJob.error);
-      }
-      setSyncState(state);
-    }
-  }
-
-  async function loadIssues() {
-    if (!user) return;
-    const res = await fetch(`/api/issues?${queryString}&pageSize=${FETCH_PAGE_SIZE}`, { cache: "no-store" });
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error ?? "Failed to load issues");
-    }
-
+  async function loadSyncStatus(signal?: AbortSignal) {
+    const res = await fetch("/api/sync/status", { cache: "no-store", signal });
+    if (!res.ok) return null;
     const data = await res.json();
-    setIssues(data.items ?? []);
-    setTotal(data.total ?? 0);
-    setStatuses(data.filters?.statuses ?? []);
-    setPriorities(uniqueStrings(data.filters?.priorities ?? []));
-    onIssuesPageReset();
+    const state = (data.state ?? null) as SyncState;
+    if (state && !state.lastError && data.latestJob?.error) state.lastError = String(data.latestJob.error);
+    return state;
   }
 
-  async function loadActivities() {
+  async function loadIssues(signal?: AbortSignal) {
+    const res = await fetch(`/api/issues?${queryString}&pageSize=${FETCH_PAGE_SIZE}`, { cache: "no-store", signal });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Failed to load issues");
+    return data;
+  }
+
+  async function loadActivities(signal?: AbortSignal) {
     if (!user) return;
-    const res = await fetch("/api/internal/activities", { cache: "no-store" });
-    if (res.ok) {
-      const data = await res.json();
-      const fetched = data.activities ?? [];
-      if (fetched.length > 0 && activityId === 0) {
-        setActivityId(fetched[0].id);
-      }
-    }
-  }
-
-  async function loadFavorites() {
-    try {
-      const res = await fetch("/api/issues/favorites", { cache: "no-store" });
-      if (res.ok) {
+    return fetch("/api/internal/activities", { cache: "no-store", signal })
+      .then(async res => {
+        if (!res.ok) return;
         const data = await res.json();
-        setFavoriteIssueIds(data.favorites ?? []);
-      }
-    } catch {
-      // Ignore errors
-    }
+        if (signal?.aborted) return;
+        const fetched = data.activities ?? [];
+        if (fetched.length > 0 && activityId === 0) setActivityId(fetched[0].id);
+      });
   }
 
-  async function refreshAll() {
-    setLoading(true);
-    try {
-      await loadIssues();
-      await loadSyncStatus();
+  async function loadFavorites(signal?: AbortSignal) {
+    return fetch("/api/issues/favorites", { cache: "no-store", signal })
+      .then(async res => {
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!signal?.aborted) setFavoriteIssueIds(data.favorites ?? []);
+      })
+      .catch(() => { /* Keep cached favorites on transient errors. */ });
+  }
+
+  function refreshData(signal?: AbortSignal) {
+    if (!user || scopeKeyRef.current !== dataKey) return;
+    const sequence = ++refreshSequence.current;
+    return Promise.all([loadIssues(signal), loadSyncStatus(signal)]).then(([data, state]) => {
+      if (signal?.aborted || sequence !== refreshSequence.current) return;
+      setIssues(data.items ?? []);
+      setTotal(data.total ?? 0);
+      setStatuses(data.filters?.statuses ?? []);
+      setPriorities(uniqueStrings(data.filters?.priorities ?? []));
+      setSyncState(state);
+      onIssuesPageReset();
       setRefreshError(null);
-    } catch (e) {
+    }).catch((e) => {
+      if (signal?.aborted || sequence !== refreshSequence.current) return;
       const message = e instanceof Error ? e.message : "Failed to refresh dashboard";
       setRefreshError(message);
       toast.error(message);
-    } finally {
-      setLoading(false);
-    }
+    }).finally(() => {
+      if (!signal?.aborted && sequence === refreshSequence.current) {
+        setLoading(false);
+        setResolvedKey(dataKey);
+      }
+    });
+  }
+
+  async function refreshAll() {
+    if (!user || scopeKeyRef.current !== dataKey) return;
+    setLoading(true);
+    await refreshData(scopeRef.current?.signal);
   }
 
   useEffect(() => {
@@ -211,16 +217,18 @@ export function useDashboardData({
   useEffect(() => {
     if (!user) return;
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount plus polling when the user or query changes
-    void refreshAll();
-    void loadActivities();
-    void loadFavorites();
+    const scope = new AbortController();
+    scopeRef.current = scope;
+    scopeKeyRef.current = dataKey;
+    void refreshData(scope.signal);
+    void loadActivities(scope.signal).catch(() => {});
+    void loadFavorites(scope.signal);
 
     const id = setInterval(() => {
-      void refreshAll();
+      void refreshData(scope.signal);
     }, POLL_INTERVAL_MS);
 
-    return () => clearInterval(id);
+    return () => { clearInterval(id); scopeKeyRef.current = null; scope.abort(); };
     // refreshAll/loadActivities intentionally depend on current query + user snapshot.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryString, user]);
@@ -268,7 +276,7 @@ export function useDashboardData({
     priorities,
     syncState,
     setSyncState,
-    loading,
+    loading: loading || (Boolean(user) && resolvedKey !== dataKey),
     setLoading,
     refreshError,
     favoriteIssueIds,

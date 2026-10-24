@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useI18n } from "@/src/components/I18nProvider";
 
 interface AiStatus {
@@ -31,34 +31,38 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
   const [error, setError] = useState<string | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  const requestRef = useRef<AbortController | null>(null);
   const fetchStatus = useCallback(async () => {
-    try {
-      const res = await fetch("/api/ai/status", { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    return fetch("/api/ai/status", { cache: "no-store", signal: controller.signal })
+      .then(async res => {
+        if (!res.ok) throw new Error(t('ai.fetchStatusFailed'));
+        return res.json();
+      })
+      .then(data => {
+        if (controller.signal.aborted) return;
         setStatus(data);
         setError(null);
         onStatusChange?.(data.available);
-      } else {
-        setError(t('ai.fetchStatusFailed'));
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setStatus(null);
+        setError(t('ai.serviceUnavailable'));
         onStatusChange?.(false);
-      }
-    } catch {
-      setError(t('ai.serviceUnavailable'));
-      onStatusChange?.(false);
-    } finally {
-      setLoading(false);
-    }
+      })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
   }, [onStatusChange, t]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount plus polling of AI status
     void fetchStatus();
     // Refresh status every 60 seconds
     const interval = setInterval(() => {
       void fetchStatus();
     }, 60000);
-    return () => clearInterval(interval);
+    return () => { clearInterval(interval); requestRef.current?.abort(); };
   }, [fetchStatus]);
 
   if (loading) {

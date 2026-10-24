@@ -134,12 +134,18 @@ export function useIssueDetail(
   issueId: string,
   t: (key: string, variables?: Record<string, string | number> | string) => string,
 ): UseIssueDetailResult {
-  const [issue, setIssue] = useState<Issue | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [snapshot, setSnapshot] = useState<{ key: string; issue: Issue | null; error: string | null } | null>(null);
+  const validId = Boolean(issueId.trim());
+  const issue = snapshot?.key === issueId ? snapshot.issue : null;
+  const loading = validId && snapshot?.key !== issueId;
+  const error = !validId ? t("common.error") : snapshot?.key === issueId ? snapshot.error : null;
+  const setIssue: UseIssueDetailResult["setIssue"] = (updater) => {
+    setSnapshot(current => ({ key: issueId, error: null, issue: typeof updater === "function" ? updater(current?.key === issueId ? current.issue : null) : updater }));
+  };
   const [refreshBusy, setRefreshBusy] = useState(false);
   const [aiStatus, setAiStatus] = useState<{ available: boolean } | null>(null);
-  const [transitionStatuses, setTransitionStatuses] = useState<AllowedStatusView[]>([]);
+  const [liveStatuses, setLiveStatuses] = useState<{ issue: Issue; values: AllowedStatusView[] } | null>(null);
+  const transitionStatuses = liveStatuses?.issue === issue ? liveStatuses.values : issue?.allowedStatuses ?? [];
   const [activities, setActivities] = useState<Array<{ id: number; name: string }>>([]);
   const [users, setUsers] = useState<Array<{ id: number; name: string }>>([]);
   const [priorities, setPriorities] = useState<Array<{ id: number; name: string; isDefault: boolean }>>([]);
@@ -152,16 +158,18 @@ export function useIssueDetail(
   }>>([]);
   const [isFavorited, setIsFavorited] = useState(false);
   const [hydratedRelatedIds, setHydratedRelatedIds] = useState<Set<number>>(new Set());
+  const issueRequestRef = useRef<AbortController | null>(null);
   const prefetchedRelatedIdsRef = useRef<Set<number>>(new Set());
   const attachmentRefreshAttemptedRef = useRef<Set<number>>(new Set());
 
   async function reloadIssue() {
-    const res = await fetch(`/api/issues/${issueId}?fresh=1`, { cache: "no-store" });
+    const request = issueRequestRef.current;
+    const res = await fetch(`/api/issues/${issueId}?fresh=1`, { cache: "no-store", signal: request?.signal });
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.error ?? "Failed to load issue");
     }
-    setIssue(data.issue ?? null);
+    if (request === issueRequestRef.current && !request?.signal.aborted) setIssue(data.issue ?? null);
   }
 
   async function refreshIssueFromRedmine() {
@@ -193,39 +201,21 @@ export function useIssueDetail(
   }
 
   useEffect(() => {
-    if (!issueId || issueId.trim().length === 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch the issue whenever issueId changes
-      setError(t("common.error"));
-      setLoading(false);
-      return;
-    }
-    let mounted = true;
+    if (!issueId.trim()) return;
+    const controller = new AbortController();
+    issueRequestRef.current = controller;
     void (async () => {
-      setLoading(true);
-      setError(null);
       try {
-        const res = await fetch(`/api/issues/${issueId}`, { cache: "no-store" });
+        const res = await fetch(`/api/issues/${issueId}`, { cache: "no-store", signal: controller.signal });
         const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error ?? "Failed to load issue");
-        }
-        if (mounted) {
-          setIssue(data.issue ?? null);
-        }
+        if (!res.ok) throw new Error(data.error ?? "Failed to load issue");
+        if (!controller.signal.aborted) setSnapshot({ key: issueId, issue: data.issue ?? null, error: null });
       } catch (e) {
-        if (mounted) {
-          setError(e instanceof Error ? e.message : "Failed to load issue");
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        if (!controller.signal.aborted) setSnapshot({ key: issueId, issue: null, error: e instanceof Error ? e.message : "Failed to load issue" });
       }
     })();
-    return () => {
-      mounted = false;
-    };
-  }, [issueId, t]);
+    return () => controller.abort();
+  }, [issueId]);
 
   useEffect(() => {
     void (async () => {
@@ -245,9 +235,6 @@ export function useIssueDetail(
     if (!issue) {
       return;
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- seed transition statuses from the issue before the live fetch replaces them
-    setTransitionStatuses(issue.allowedStatuses ?? []);
-
     // Only fetch live statuses for Redmine issues, not local issues
     if (!issue.redmineIssueId) {
       return;
@@ -262,7 +249,7 @@ export function useIssueDetail(
         }
         const data = await res.json();
         if (mounted && Array.isArray(data.allowedStatuses)) {
-          setTransitionStatuses(data.allowedStatuses);
+          setLiveStatuses({ issue, values: data.allowedStatuses });
         }
       } catch {
         // Keep cached allowed statuses when the live lookup is unavailable.
@@ -418,14 +405,9 @@ export function useIssueDetail(
         }
         const data = await res.json();
         if (!cancelled && Array.isArray(data.items)) {
-          setIssue((current) => {
-            if (!current || current.redmineIssueId !== issue.redmineIssueId) {
-              return current;
-            }
-            return {
-              ...current,
-              attachments: data.items,
-            };
+          setSnapshot((current) => {
+            if (!current?.issue || current.issue.redmineIssueId !== issue.redmineIssueId) return current;
+            return { ...current, issue: { ...current.issue, attachments: data.items } };
           });
         }
       } catch {
