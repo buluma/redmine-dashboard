@@ -24,7 +24,7 @@ type ChatMessage = {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
-  createdAt: Date;
+  createdAt?: Date;
   /** Pending tool calls awaiting user confirmation. */
   pendingToolCalls?: PendingToolCall[];
   /** Conversation context carried from the chat API for the execute-tools call. */
@@ -80,36 +80,22 @@ export function ChatInterface() {
     );
   }, [t]);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-
-  // Initialize welcome message once
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- seed the welcome message after mount so its createdAt isn't baked into SSR output
-    setMessages([
-      {
-        id: 'welcome',
-        role: 'assistant',
-        content: welcomeContent,
-        createdAt: new Date(),
-      },
-    ]);
-  }, [welcomeContent]);
-
+  const [conversation, setMessages] = useState<ChatMessage[]>([]);
+  // The welcome is presentation, not conversation state. Locale changes can
+  // translate it without replacing messages or inventing a hydration timestamp.
+  const messages: ChatMessage[] = [
+    { id: 'welcome', role: 'assistant', content: welcomeContent },
+    ...conversation,
+  ];
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- post-hydration mounted flag gates client-only rendering
-    setMounted(true);
-  }, []);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  useEffect(scrollToBottom, [messages, scrollToBottom]);
+  useEffect(scrollToBottom, [conversation, scrollToBottom]);
 
   // -----------------------------------------------------------------------
   // Send a message
@@ -267,7 +253,7 @@ export function ChatInterface() {
                       : t("chat.roleSystem")}
                 </span>
                 <span className="message-time">
-                  {mounted ? msg.createdAt.toLocaleTimeString() : ''}
+                  {msg.createdAt?.toLocaleTimeString() ?? ''}
                 </span>
               </div>
               <div className="message-body">
