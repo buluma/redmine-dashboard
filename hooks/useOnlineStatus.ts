@@ -1,61 +1,55 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
-/**
- * Tracks online status using navigator.onLine with a connectivity ping
- * to confirm. Defaults to online — only shows banner when BOTH checks fail.
- *
- * navigator.onLine alone is unreliable (VPNs, virtual NICs, Chromium quirks).
- */
+function subscribe(notify: () => void) {
+  window.addEventListener("online", notify);
+  window.addEventListener("offline", notify);
+  return () => { window.removeEventListener("online", notify); window.removeEventListener("offline", notify); };
+}
+const browserSnapshot = () => navigator.onLine;
+const serverSnapshot = () => true;
+
+/** Either browser connectivity or a successful health probe avoids a false offline banner. */
 export function useOnlineStatus(): boolean {
-  const [browserOnline, setBrowserOnline] = useState(
-    typeof navigator !== "undefined" ? navigator.onLine : true,
-  );
+  const browserOnline = useSyncExternalStore(subscribe, browserSnapshot, serverSnapshot);
   const [pingOnline, setPingOnline] = useState(true);
-  const checkingRef = useRef(false);
-
-  const verifyPing = async () => {
-    if (checkingRef.current) return;
-    checkingRef.current = true;
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-      const res = await fetch("/api/health", {
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      setPingOnline(res.ok);
-    } catch {
-      setPingOnline(false);
-    } finally {
-      checkingRef.current = false;
-    }
-  };
 
   useEffect(() => {
-    // Initial ping
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial connectivity probe; state is set by the async ping
-    void verifyPing();
-
-    const onOnline = () => {
-      setBrowserOnline(true);
-      void verifyPing();
+    let controller: AbortController | null = null;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let disposed = false;
+    const verify = async () => {
+      controller?.abort();
+      clearTimeout(timeout);
+      const request = new AbortController();
+      controller = request;
+      timeout = setTimeout(() => request.abort(), 5000);
+      try {
+        const res = await fetch("/api/health", { signal: request.signal });
+        if (!disposed && controller === request && !request.signal.aborted) setPingOnline(res.ok);
+      } catch {
+        if (!disposed && controller === request) setPingOnline(false);
+      } finally {
+        if (controller === request) clearTimeout(timeout);
+      }
     };
-    const onOffline = () => {
-      setBrowserOnline(false);
+    const offline = () => {
+      controller?.abort();
+      controller = null;
+      clearTimeout(timeout);
       setPingOnline(false);
     };
-
-    window.addEventListener("online", onOnline);
-    window.addEventListener("offline", onOffline);
-
+    void verify();
+    window.addEventListener("online", verify);
+    window.addEventListener("offline", offline);
     return () => {
-      window.removeEventListener("online", onOnline);
-      window.removeEventListener("offline", onOffline);
+      disposed = true;
+      controller?.abort();
+      clearTimeout(timeout);
+      window.removeEventListener("online", verify);
+      window.removeEventListener("offline", offline);
     };
   }, []);
-
-  // Consider online if EITHER check passes — avoids false negatives
   return browserOnline || pingOnline;
 }
