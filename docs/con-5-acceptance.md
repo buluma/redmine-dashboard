@@ -8,12 +8,12 @@ CON-5 is split into independently reviewable implementation PRs, with one depend
 4. [#135: conditional requests](https://github.com/buluma/redmine-dashboard/pull/135): scope notes to the active issue and abort obsolete modal project loads.
 5. [#136: polling](https://github.com/buluma/redmine-dashboard/pull/136): cancel obsolete user/query scopes, ignore stale refresh callbacks, recover errors, and clean up intervals.
 6. [#137: preferences](https://github.com/buluma/redmine-dashboard/pull/137): subscribe to storage without writing hydration defaults over saved preferences.
-7. [#138: browser state](https://github.com/buluma/redmine-dashboard/pull/138): derive capabilities/connectivity and show Slack timestamps only after real refreshes. Depends on #137.
-8. This acceptance record and a real SSR-to-client preference hydration regression test. Based on #138; evaluate the combined behavior after the other implementation PRs are integrated.
+7. [#138: browser state](https://github.com/buluma/redmine-dashboard/pull/138): derive capabilities/connectivity and show Slack timestamps only after real refreshes. Followed #137.
+8. This acceptance record and a real SSR-to-client preference hydration regression test. Follows the seven implementation PRs and validates their combined behavior.
 
 ## Local validation
 
-Validated on 2026-10-25 with the frozen Bun lockfile, Node 24.18.0, generated SQLite Prisma client, and a native SQLite binding matching Node 24. Implementation branches were merged into a local integration branch without conflicts (implementation merge `52ed14b0c56b858328b2ee5e251101e8f9a3afb9`). No implementation PR was merged on GitHub.
+Validated on 2026-10-25 with the frozen Bun lockfile, Node 24.18.0, generated SQLite Prisma client, and a native SQLite binding matching Node 24. Implementation branches were merged into a local integration branch without conflicts (implementation merge `52ed14b0c56b858328b2ee5e251101e8f9a3afb9`). This initial validation preceded the GitHub merges; delivery is recorded below.
 
 - The full suite ran 977 tests: 973 passed and four exceeded the default five-second timeout on the loaded host.
 - All four timeout cases passed on a rerun with a 30-second timeout. That rerun also covered the affected components/hooks and the new hydration test: 55 tests passed across 17 files.
@@ -42,8 +42,10 @@ Deterministic tests additionally cover SSR output, actual preference hydration w
 
 Live-provider behavior and deployed production behavior were not tested. This record covers the local integration of the proposed changes.
 
-## Remote checks and merge order
+## Remote checks and delivery
 
-GitHub Actions jobs did not start. The check annotation states: "The job was not started because recent account payments have failed or your spending limit needs to be increased."
+Initial GitHub Actions attempts were blocked by the account billing/spending limit. Subsequent reruns executed successfully. PR #137 also needed its existing Slack clock suppression retained until #138 removed the effect; that intermediate-branch lint failure was fixed before merging.
 
-Restore Actions availability and run fresh checks before merging. Merge #137 before #138, then retarget #138 to master. The other implementation PRs target master independently. Integrate all implementation scopes before accepting CON-5; this acceptance PR alone does not deliver them.
+All seven implementation PRs (#132–#138) were merged into master after passing CI. #138 followed #137, was updated against master, and passed fresh CI before merging. Relevant successful runs include [#137 CI](https://github.com/buluma/redmine-dashboard/actions/runs/40139290001) and [#138 CI](https://github.com/buluma/redmine-dashboard/actions/runs/40141957044).
+
+This final acceptance PR (#139) targets master and is gated on its own fresh CI after integrating the implementation changes. Merging these PRs does not deploy the application or establish live-provider acceptance.
