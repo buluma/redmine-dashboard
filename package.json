@@ -43,7 +43,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@prisma/client": "^7.10.0",
-    "@sentry/nextjs": "^11.4.0",
+    "@sentry/nextjs": "^11.8.0",
     "@sentry/profiling-node": "11.4.0",
     "ajv": "^8.17.1",
     "@scalar/swagger-editor": "^1.0.2",
