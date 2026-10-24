@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { Journal, TimeEntry, Attachment } from "@/src/types/dashboard";
 
 export interface Issue {
@@ -56,75 +56,58 @@ export interface UseIssuesResult {
 export function useIssues(options: UseIssuesOptions = {}): UseIssuesResult {
   const { pageSize = 50, initialProject = null, initialStatus = "open" } = options;
   
-  const [issues, setIssues] = useState<Issue[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Record<string, string | number | boolean | null>>({
-    project: initialProject,
-    status: initialStatus,
+    project: initialProject, status: initialStatus,
   });
+  const [query, setQuery] = useState("");
+  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== null) params.set(key, String(value));
+  }
+  const url = query.trim() ? `/api/search?q=${encodeURIComponent(query)}` : `/api/issues?${params}`;
+  const [snapshot, setSnapshot] = useState<{ url: string; issues: Issue[]; total: number; error: string | null }>({ url: "", issues: [], total: 0, error: null });
+  const [refreshing, setRefreshing] = useState(false);
+  const key = url;
+  const requestRef = useRef<AbortController | null>(null);
+  const current = snapshot.url === key;
 
-  const fetchIssues = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({
-        page: String(page),
-        pageSize: String(pageSize),
-        ...filters,
-      });
-      
-      const res = await fetch(`/api/issues?${params}`);
-      if (!res.ok) throw new Error("Failed to fetch issues");
-      
-      const data = await res.json();
-      setIssues(data.issues || []);
-      setTotal(data.total || 0);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load issues");
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, filters]);
+  const load = useCallback(() => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    return fetch(url, { signal: controller.signal })
+      .then(async res => {
+        if (!res.ok) throw new Error("Failed to load issues");
+        return res.json();
+      })
+      .then(data => {
+        if (!controller.signal.aborted) setSnapshot({ url: key, issues: data.issues ?? data.results ?? [], total: data.total ?? 0, error: null });
+      })
+      .catch(err => {
+        if (!controller.signal.aborted) setSnapshot({ url: key, issues: [], total: 0, error: err instanceof Error ? err.message : "Failed to load issues" });
+      })
+      .finally(() => { if (!controller.signal.aborted) setRefreshing(false); });
+  }, [url, key]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount whenever page or filters change
-    fetchIssues();
-  }, [fetchIssues]);
+    void load();
+    return () => requestRef.current?.abort();
+  }, [load]);
 
-  const search = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      await fetchIssues();
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-      if (!res.ok) throw new Error("Search failed");
-      const data = await res.json();
-      setIssues(data.issues || []);
-      setTotal(data.total || 0);
-      setPage(1);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Search failed");
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchIssues]);
+  const refetch = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+  }, [load]);
+  const search = useCallback(async (value: string) => {
+    setQuery(value);
+    setPage(1);
+  }, []);
 
   return {
-    issues,
-    total,
-    page,
-    setPage,
-    loading,
-    error,
-    refetch: fetchIssues,
-    search,
-    filters,
-    setFilters,
+    issues: current ? snapshot.issues : [], total: current ? snapshot.total : 0,
+    page, setPage, loading: !current || refreshing, error: current ? snapshot.error : null,
+    refetch, search, filters,
+    setFilters: value => { setQuery(""); setFilters(value); },
   };
 }
