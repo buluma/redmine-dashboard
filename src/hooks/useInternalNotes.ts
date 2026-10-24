@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 
 export interface InternalNote {
   id: string;
@@ -40,27 +40,32 @@ export function useInternalNotes({
   onInfo,
   t,
 }: Options): UseInternalNotesResult {
-  const [notes, setNotes] = useState<InternalNote[]>([]);
+  const [snapshot, setSnapshot] = useState<{ issueId: string; notes: InternalNote[] } | null>(null);
+  const notes = enabled && snapshot && snapshot.issueId === issueId ? snapshot.notes : [];
+  const requestRef = useRef<AbortController | null>(null);
+  const scopeRef = useRef<string | null | undefined>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    if (!issueId) return;
-    try {
-      const res = await fetch(`/api/internal/notes?issueId=${issueId}`, { cache: "no-store" });
-      if (res.ok) {
+    if (!issueId || scopeRef.current !== issueId) return;
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    return fetch(`/api/internal/notes?issueId=${encodeURIComponent(issueId)}`, { cache: "no-store", signal: controller.signal })
+      .then(async res => {
+        if (!res.ok) return;
         const data = await res.json();
-        setNotes(data.notes ?? []);
-      }
-    } catch {
-      // Ignore transient errors.
-    }
+        if (!controller.signal.aborted) setSnapshot({ issueId, notes: data.notes ?? [] });
+      })
+      .catch(() => { /* Keep current notes on transient errors. */ });
   }, [issueId]);
 
   useEffect(() => {
+    scopeRef.current = enabled ? issueId : null;
     if (!enabled) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch notes when enabled
     void load();
-  }, [enabled, load]);
+    return () => { scopeRef.current = null; requestRef.current?.abort(); };
+  }, [enabled, issueId, load]);
 
   const create = useCallback(
     async (content: string) => {
