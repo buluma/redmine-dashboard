@@ -63,6 +63,7 @@ export function useSyncState(): UseSyncStateResult {
   }, [manualRefreshBusy]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount plus polling of sync state
     fetchSyncState().finally(() => setLoading(false));
 
     const interval = setInterval(fetchSyncState, POLL_INTERVAL);

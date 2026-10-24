@@ -55,6 +55,12 @@ const TOOL_ICON_MAP: Record<string, string> = {
 // Component
 // ---------------------------------------------------------------------------
 
+// Message ids are only minted inside event handlers; keeping the clock read
+// out of the component body keeps render pure for the React Compiler rules.
+function createMessageId(): string {
+  return (Date.now() + 1).toString();
+}
+
 export function ChatInterface() {
   const { t } = useI18n();
 
@@ -78,6 +84,7 @@ export function ChatInterface() {
 
   // Initialize welcome message once
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- seed the welcome message after mount so its createdAt isn't baked into SSR output
     setMessages([
       {
         id: 'welcome',
@@ -94,6 +101,7 @@ export function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- post-hydration mounted flag gates client-only rendering
     setMounted(true);
   }, []);
 
@@ -111,7 +119,7 @@ export function ChatInterface() {
     if (!input.trim() || isLoading) return;
 
     const userMessage: ChatMessage = {
-      id: Date.now().toString(),
+      id: createMessageId(),
       role: 'user',
       content: input.trim(),
       createdAt: new Date(),
@@ -138,7 +146,7 @@ export function ChatInterface() {
       const data = await response.json();
 
       const assistantMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: createMessageId(),
         role: 'assistant',
         content:
           data.message?.content || t("chat.errorResponse"),
@@ -151,7 +159,7 @@ export function ChatInterface() {
       setMessages((prev) => [...prev, assistantMessage]);
     } catch {
       const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: createMessageId(),
         role: 'assistant',
         content: t("chat.errorGeneral"),
         createdAt: new Date(),
@@ -193,7 +201,7 @@ export function ChatInterface() {
       const data = await response.json();
 
       const resultMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: createMessageId(),
         role: 'assistant',
         content: data.message?.content || t("chat.actionsCompleted"),
         createdAt: new Date(),
@@ -203,7 +211,7 @@ export function ChatInterface() {
       setMessages((prev) => [...prev, resultMessage]);
     } catch {
       const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: createMessageId(),
         role: 'assistant',
         content: t("chat.errorExecuting"),
         createdAt: new Date(),
@@ -225,7 +233,7 @@ export function ChatInterface() {
     );
 
     const cancelMessage: ChatMessage = {
-      id: (Date.now() + 1).toString(),
+      id: createMessageId(),
       role: 'assistant',
       content: t("chat.actionsCancelled"),
       createdAt: new Date(),

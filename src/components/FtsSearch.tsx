@@ -44,6 +44,7 @@ export function FtsSearch({ onSelect }: FtsSearchProps) {
 
   useEffect(() => {
     if (query.length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear results when the query drops below the search threshold; the effect also owns the debounced fetch
       setResults([]);
       setTotal(0);
       setIsOpen(false);

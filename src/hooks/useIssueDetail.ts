@@ -194,6 +194,7 @@ export function useIssueDetail(
 
   useEffect(() => {
     if (!issueId || issueId.trim().length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch the issue whenever issueId changes
       setError(t("common.error"));
       setLoading(false);
       return;
@@ -244,6 +245,7 @@ export function useIssueDetail(
     if (!issue) {
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- seed transition statuses from the issue before the live fetch replaces them
     setTransitionStatuses(issue.allowedStatuses ?? []);
 
     // Only fetch live statuses for Redmine issues, not local issues

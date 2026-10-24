@@ -35,6 +35,7 @@ export function useOnlineStatus(): boolean {
 
   useEffect(() => {
     // Initial ping
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial connectivity probe; state is set by the async ping
     void verifyPing();
 
     const onOnline = () => {

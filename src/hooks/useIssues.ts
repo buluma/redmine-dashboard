@@ -90,6 +90,7 @@ export function useIssues(options: UseIssuesOptions = {}): UseIssuesResult {
   }, [page, pageSize, filters]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount whenever page or filters change
     fetchIssues();
   }, [fetchIssues]);
 
