@@ -79,6 +79,10 @@ export function useDashboardData({
   const [aiStatus, setAiStatus] = useState<AiStatusInfo | null>(null);
   const [aiSummaryCount, setAiSummaryCount] = useState(0);
   const [activityId, setActivityId] = useState(0);
+  const [resolvedKey, setResolvedKey] = useState<string | null>(null);
+  const dataKey = JSON.stringify([user, queryString]);
+  const scopeRef = useRef<AbortController | null>(null);
+  const refreshSequence = useRef(0);
 
   async function loadSession() {
     try {
@@ -129,40 +133,28 @@ export function useDashboardData({
     }
   }
 
-  async function loadSyncStatus() {
-    if (!user) return;
-    const res = await fetch("/api/sync/status", { cache: "no-store" });
-    if (res.ok) {
-      const data = await res.json();
-      const state = (data.state ?? null) as SyncState;
-      if (state && !state.lastError && data.latestJob?.error) {
-        state.lastError = String(data.latestJob.error);
-      }
-      setSyncState(state);
-    }
-  }
-
-  async function loadIssues() {
-    if (!user) return;
-    const res = await fetch(`/api/issues?${queryString}&pageSize=${FETCH_PAGE_SIZE}`, { cache: "no-store" });
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error ?? "Failed to load issues");
-    }
-
+  async function loadSyncStatus(signal?: AbortSignal) {
+    const res = await fetch("/api/sync/status", { cache: "no-store", signal });
+    if (!res.ok) return null;
     const data = await res.json();
-    setIssues(data.items ?? []);
-    setTotal(data.total ?? 0);
-    setStatuses(data.filters?.statuses ?? []);
-    setPriorities(uniqueStrings(data.filters?.priorities ?? []));
-    onIssuesPageReset();
+    const state = (data.state ?? null) as SyncState;
+    if (state && !state.lastError && data.latestJob?.error) state.lastError = String(data.latestJob.error);
+    return state;
   }
 
-  async function loadActivities() {
+  async function loadIssues(signal?: AbortSignal) {
+    const res = await fetch(`/api/issues?${queryString}&pageSize=${FETCH_PAGE_SIZE}`, { cache: "no-store", signal });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Failed to load issues");
+    return data;
+  }
+
+  async function loadActivities(signal?: AbortSignal) {
     if (!user) return;
-    const res = await fetch("/api/internal/activities", { cache: "no-store" });
+    const res = await fetch("/api/internal/activities", { cache: "no-store", signal });
     if (res.ok) {
       const data = await res.json();
+      if (signal?.aborted) return;
       const fetched = data.activities ?? [];
       if (fetched.length > 0 && activityId === 0) {
         setActivityId(fetched[0].id);
@@ -170,31 +162,47 @@ export function useDashboardData({
     }
   }
 
-  async function loadFavorites() {
+  async function loadFavorites(signal?: AbortSignal) {
     try {
-      const res = await fetch("/api/issues/favorites", { cache: "no-store" });
+      const res = await fetch("/api/issues/favorites", { cache: "no-store", signal });
       if (res.ok) {
         const data = await res.json();
-        setFavoriteIssueIds(data.favorites ?? []);
+        if (!signal?.aborted) setFavoriteIssueIds(data.favorites ?? []);
       }
     } catch {
       // Ignore errors
     }
   }
 
-  async function refreshAll() {
-    setLoading(true);
+  async function refreshData(signal?: AbortSignal) {
+    if (!user) return;
+    const sequence = ++refreshSequence.current;
     try {
-      await loadIssues();
-      await loadSyncStatus();
+      const [data, state] = await Promise.all([loadIssues(signal), loadSyncStatus(signal)]);
+      if (signal?.aborted || sequence !== refreshSequence.current) return;
+      setIssues(data.items ?? []);
+      setTotal(data.total ?? 0);
+      setStatuses(data.filters?.statuses ?? []);
+      setPriorities(uniqueStrings(data.filters?.priorities ?? []));
+      setSyncState(state);
+      onIssuesPageReset();
       setRefreshError(null);
     } catch (e) {
+      if (signal?.aborted || sequence !== refreshSequence.current) return;
       const message = e instanceof Error ? e.message : "Failed to refresh dashboard";
       setRefreshError(message);
       toast.error(message);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted && sequence === refreshSequence.current) {
+        setLoading(false);
+        setResolvedKey(dataKey);
+      }
     }
+  }
+
+  async function refreshAll() {
+    setLoading(true);
+    await refreshData(scopeRef.current?.signal);
   }
 
   useEffect(() => {
@@ -211,16 +219,17 @@ export function useDashboardData({
   useEffect(() => {
     if (!user) return;
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount plus polling when the user or query changes
-    void refreshAll();
-    void loadActivities();
-    void loadFavorites();
+    const scope = new AbortController();
+    scopeRef.current = scope;
+    void refreshData(scope.signal);
+    void loadActivities(scope.signal).catch(() => {});
+    void loadFavorites(scope.signal);
 
     const id = setInterval(() => {
-      void refreshAll();
+      void refreshData(scope.signal);
     }, POLL_INTERVAL_MS);
 
-    return () => clearInterval(id);
+    return () => { clearInterval(id); scope.abort(); };
     // refreshAll/loadActivities intentionally depend on current query + user snapshot.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryString, user]);
@@ -268,7 +277,7 @@ export function useDashboardData({
     priorities,
     syncState,
     setSyncState,
-    loading,
+    loading: loading || (Boolean(user) && resolvedKey !== dataKey),
     setLoading,
     refreshError,
     favoriteIssueIds,

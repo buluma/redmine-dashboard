@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useI18n } from "@/src/components/I18nProvider";
 
 interface AiStatus {
@@ -31,34 +31,41 @@ export function AiStatusIndicator({ onStatusChange }: AiStatusIndicatorProps) {
   const [error, setError] = useState<string | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  const requestRef = useRef<AbortController | null>(null);
   const fetchStatus = useCallback(async () => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     try {
-      const res = await fetch("/api/ai/status", { cache: "no-store" });
+      const res = await fetch("/api/ai/status", { cache: "no-store", signal: controller.signal });
       if (res.ok) {
         const data = await res.json();
+        if (controller.signal.aborted) return;
         setStatus(data);
         setError(null);
         onStatusChange?.(data.available);
-      } else {
+      } else if (!controller.signal.aborted) {
+        setStatus(null);
         setError(t('ai.fetchStatusFailed'));
         onStatusChange?.(false);
       }
     } catch {
+      if (controller.signal.aborted) return;
+      setStatus(null);
       setError(t('ai.serviceUnavailable'));
       onStatusChange?.(false);
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   }, [onStatusChange, t]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount plus polling of AI status
     void fetchStatus();
     // Refresh status every 60 seconds
     const interval = setInterval(() => {
       void fetchStatus();
     }, 60000);
-    return () => clearInterval(interval);
+    return () => { clearInterval(interval); requestRef.current?.abort(); };
   }, [fetchStatus]);
 
   if (loading) {
