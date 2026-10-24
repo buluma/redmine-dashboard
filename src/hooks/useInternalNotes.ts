@@ -41,7 +41,7 @@ export function useInternalNotes({
   t,
 }: Options): UseInternalNotesResult {
   const [snapshot, setSnapshot] = useState<{ issueId: string; notes: InternalNote[] } | null>(null);
-  const notes = enabled && snapshot?.issueId === issueId ? snapshot.notes : [];
+  const notes = enabled && snapshot && snapshot.issueId === issueId ? snapshot.notes : [];
   const requestRef = useRef<AbortController | null>(null);
   const [busy, setBusy] = useState(false);
 
