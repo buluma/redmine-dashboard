@@ -22,6 +22,10 @@ jobs:
     if: github.event_name != 'push' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
+      # v7 split the autolabeler into its own action; the drafter ignores the
+      # `autolabeler:` config on its own.
+      - uses: release-drafter/release-drafter/autolabeler@v7
+        if: github.event_name == 'pull_request'
       - uses: release-drafter/release-drafter@v7
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
