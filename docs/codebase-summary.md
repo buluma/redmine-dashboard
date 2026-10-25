@@ -55,7 +55,7 @@ This directory contains reusable library code, components, and other source file
   - `push.ts`: Server-side PWA push notification delivery (Web Push).
 - **`src/hooks/`:** Custom hooks for shared logic. `app/page.tsx` was split 2026-07-11 (2039 → 787 lines) into most of these — each owns one slice of
   dashboard state/behavior and is unit-tested independently in `src/hooks/__tests__/`.
-  - `useAuth.ts` / `useSyncState.ts` / `useIssues.ts` / `useSavedViews.ts`: Pre-split shared data hooks.
+  - `useAuth.ts` / `useSyncState.ts` / `useSavedViews.ts`: Pre-split shared data hooks.
   - `useDashboardSavedViews.ts`: Saved-view CRUD + active-view tracking for the dashboard.
   - `useEventStream.ts`: SSE subscription to `/api/events/stream` with a ref-held handler map.
   - `usePageSize.ts`: LocalStorage-backed page-size preference.
