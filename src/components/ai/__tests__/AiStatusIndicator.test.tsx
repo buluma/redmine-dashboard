@@ -1,16 +1,17 @@
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { AiStatusIndicator } from '../AiStatusIndicator';
 const t = (key: string) => key;
 vi.mock('@/src/components/I18nProvider', () => ({ useI18n: () => ({ t }) }));
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 it('removes healthy status after a failed poll and stops on unmount', async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers();
   const fetcher = vi.fn().mockResolvedValueOnce({ ok: true, json: async () => ({ available: true }) }).mockRejectedValue(new Error('offline'));
   vi.stubGlobal('fetch', fetcher);
   const callback = vi.fn();
   const view = render(<AiStatusIndicator onStatusChange={callback} />);
-  await waitFor(() => expect(screen.getByRole('button')).toHaveClass('ai-status-healthy'));
+  await act(() => vi.advanceTimersByTimeAsync(0));
+  expect(screen.getByRole('button')).toHaveClass('ai-status-healthy');
   await act(() => vi.advanceTimersByTimeAsync(60000));
   expect(screen.getByRole('button')).toHaveClass('ai-status-unhealthy');
   expect(callback).toHaveBeenLastCalledWith(false);

@@ -136,7 +136,8 @@ export function useDashboardData({
 
   async function loadSyncStatus(signal?: AbortSignal) {
     const res = await fetch("/api/sync/status", { cache: "no-store", signal });
-    if (!res.ok) return null;
+    // undefined = no update, so a failed poll keeps the last known state.
+    if (!res.ok) return undefined;
     const data = await res.json();
     const state = (data.state ?? null) as SyncState;
     if (state && !state.lastError && data.latestJob?.error) state.lastError = String(data.latestJob.error);
@@ -181,7 +182,7 @@ export function useDashboardData({
       setTotal(data.total ?? 0);
       setStatuses(data.filters?.statuses ?? []);
       setPriorities(uniqueStrings(data.filters?.priorities ?? []));
-      setSyncState(state);
+      if (state !== undefined) setSyncState(state);
       onIssuesPageReset();
       setRefreshError(null);
     }).catch((e) => {
