@@ -1,8 +1,8 @@
 # Changelog
 
-All notable changes to this project are documented in this file.
+This file is frozen as of 2026-09-14 (through PR #88) and is no longer updated. Changes from release [v0.0.1](https://github.com/buluma/redmine-dashboard/releases/tag/v0.0.1) onward are published on the [GitHub Releases](https://github.com/buluma/redmine-dashboard/releases) page, drafted automatically by Release Drafter.
 
-## 2026-09-14 (Latest)
+## 2026-09-14
 
 ### Added
 

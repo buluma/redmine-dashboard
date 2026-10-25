@@ -33,5 +33,7 @@ jobs:
       - name: Publish the matching release draft
         env:
           GH_TOKEN: ${{ github.token }}
+          # No checkout in this job, so gh cannot infer the repo from .git.
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: gh release edit "$TAG" --draft=false
