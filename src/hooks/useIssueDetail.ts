@@ -164,8 +164,16 @@ export function useIssueDetail(
 
   async function reloadIssue() {
     const request = issueRequestRef.current;
-    const res = await fetch(`/api/issues/${issueId}?fresh=1`, { cache: "no-store", signal: request?.signal });
-    const data = await res.json();
+    let res: Response;
+    let data;
+    try {
+      res = await fetch(`/api/issues/${issueId}?fresh=1`, { cache: "no-store", signal: request?.signal });
+      data = await res.json();
+    } catch (e) {
+      // Navigation aborted the reload; the next issue owns the view now.
+      if (request?.signal.aborted) return;
+      throw e;
+    }
     if (!res.ok) {
       throw new Error(data.error ?? "Failed to load issue");
     }

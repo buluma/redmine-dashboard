@@ -293,3 +293,23 @@ it('ignores a saved refresh callback from a previous query scope', async () => {
   expect(vi.mocked(fetch).mock.calls).toHaveLength(count);
   expect(result.current.loading).toBe(false);
 });
+
+it('keeps the last sync state when a later sync status poll is not ok', async () => {
+  vi.useFakeTimers();
+  let syncOk = true;
+  vi.stubGlobal('fetch', vi.fn(async input => {
+    const url = String(input);
+    if (url.includes('/api/session/me')) return jsonResponse({ user: { id: 'u1' } });
+    if (url.includes('/api/issues?')) return jsonResponse({ items: [], total: 0, filters: {} });
+    if (url.includes('/api/sync/status')) return syncOk ? jsonResponse({ state: { lastSuccessAt: 'kept' } }) : jsonResponse({}, false);
+    return jsonResponse({});
+  }));
+  const { result } = renderHook(() => useDashboardData({ queryString: 'q=x', onIssuesPageReset: () => {} }));
+  await act(() => vi.advanceTimersByTimeAsync(0));
+  expect(result.current.syncState).toEqual({ lastSuccessAt: 'kept' });
+  syncOk = false;
+  await act(() => vi.advanceTimersByTimeAsync(90_000));
+  expect(vi.mocked(fetch).mock.calls.filter(([u]) => String(u).includes('/api/sync/status'))).toHaveLength(2);
+  expect(result.current.syncState).toEqual({ lastSuccessAt: 'kept' });
+  vi.useRealTimers();
+});

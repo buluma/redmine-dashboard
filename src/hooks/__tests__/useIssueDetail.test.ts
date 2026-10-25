@@ -204,3 +204,24 @@ it('clears the previous issue immediately and rejects late responses on navigati
   await act(async () => pending.get('/api/issues/first')!(json({ issue: baseIssue({ id: 'first' }) })));
   expect(result.current.issue?.id).toBe('second');
 });
+
+it('resolves a reload quietly when navigation aborts it', async () => {
+  let release!: () => void;
+  vi.spyOn(global, 'fetch').mockImplementation(async (input, init) => {
+    const url = String(input);
+    if (url === '/api/issues/first') return json({ issue: baseIssue({ id: 'first' }) });
+    if (url === '/api/issues/first?fresh=1') {
+      await new Promise<void>(resolve => { release = resolve; });
+      if (init?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+      return json({ issue: baseIssue({ id: 'first' }) });
+    }
+    return json({});
+  });
+  const { result, rerender } = renderHook(({ id }) => useIssueDetail(id, t), { initialProps: { id: 'first' } });
+  await waitFor(() => expect(result.current.issue?.id).toBe('first'));
+  const reload = result.current.reloadIssue();
+  await waitFor(() => expect(release).toBeTypeOf('function'));
+  rerender({ id: 'second' });
+  release();
+  await expect(reload).resolves.toBeUndefined();
+});
