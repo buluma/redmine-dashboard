@@ -44,7 +44,8 @@ const createExternalTicketSchema = z
 //   - assignee: filter by assignee name
 //   - limit: max results (default 20, max 100)
 //
-// For search, requires AI_SUMMARY_API_KEY or valid session
+// Reads require a valid external API key or an authenticated session. Search
+// also accepts AI_SUMMARY_API_KEY for integrations that use that credential.
 // For direct queries, requires API key in header: X-API-Key
 
 export async function GET(request: NextRequest) {
@@ -60,16 +61,15 @@ export async function GET(request: NextRequest) {
 
   const apiKey = getExternalApiKey(request);
 
-  // If searching, check for AI summary API key
-  if (search) {
-    const aiKey = process.env.AI_SUMMARY_API_KEY;
-    if (aiKey && aiKey !== "your-ai-summary-api-key" && apiKey !== aiKey) {
-      return NextResponse.json({ error: "Invalid API key for search" }, { status: 401 });
-    }
-  } else if (apiKey) {
-    // Fail closed like every other external route: an unrecognized key is
-    // rejected even when no EXTERNAL_API_KEYS are configured.
-    if (!validateExternalApiKey(apiKey)) {
+  const aiKey = process.env.AI_SUMMARY_API_KEY;
+  const isValidAiSearchKey = Boolean(
+    search && aiKey && aiKey !== "your-ai-summary-api-key" && apiKey === aiKey,
+  );
+
+  if (apiKey) {
+    // Fail closed even when AI_SUMMARY_API_KEY is unset or still a placeholder.
+    // Keep the documented external API key valid for search as well.
+    if (!isValidAiSearchKey && !validateExternalApiKey(apiKey)) {
       return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
     }
   } else {
