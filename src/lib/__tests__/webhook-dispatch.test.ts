@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { dispatchWebhook, processWebhookDeliveries } from '../webhook-subscription';
 import type { WebhookPayload } from '../webhook-subscription';
 
-const { mockPrisma } = vi.hoisted(() => ({
+const { mockPrisma, mockSendWebhookRequest } = vi.hoisted(() => ({
+  mockSendWebhookRequest: vi.fn(),
   mockPrisma: {
     webhookSubscription: {
       findMany: vi.fn(),
@@ -22,7 +23,7 @@ const { mockPrisma } = vi.hoisted(() => ({
 vi.mock('@/src/lib/db', () => ({ prisma: mockPrisma }));
 vi.mock('../webhook-url', () => ({
   validateWebhookUrl: vi.fn().mockResolvedValue({ valid: true }),
-  createWebhookDispatcher: vi.fn(() => ({ close: vi.fn().mockResolvedValue(undefined) })),
+  sendWebhookRequest: mockSendWebhookRequest,
 }));
 
 const mockPayload: WebhookPayload = {
@@ -62,6 +63,7 @@ const subscription = {
 describe('Webhook delivery queue', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSendWebhookRequest.mockResolvedValue({ status: 200, responseBody: 'ok' });
     mockPrisma.webhookDelivery.create.mockResolvedValue({});
     mockPrisma.webhookDelivery.updateMany.mockResolvedValue({ count: 1 });
     mockPrisma.webhookDelivery.update.mockResolvedValue({});
@@ -70,12 +72,9 @@ describe('Webhook delivery queue', () => {
 
   it('queues matching events without making a network request inline', async () => {
     mockPrisma.webhookSubscription.findMany.mockResolvedValue([subscription]);
-    const mockFetch = vi.fn();
-    vi.stubGlobal('fetch', mockFetch);
-
     await dispatchWebhook('ticket.created', mockPayload.ticket);
 
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockSendWebhookRequest).not.toHaveBeenCalled();
     expect(mockPrisma.webhookDelivery.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         event: 'ticket.created',
@@ -100,7 +99,7 @@ describe('Webhook delivery queue', () => {
       attempt: 0,
     }]);
     mockPrisma.webhookSubscription.findUnique.mockResolvedValue(subscription);
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 503, text: async () => 'unavailable' }));
+    mockSendWebhookRequest.mockResolvedValueOnce({ status: 503, responseBody: 'unavailable' });
 
     await processWebhookDeliveries();
 
@@ -120,12 +119,9 @@ describe('Webhook delivery queue', () => {
       attempt: 0,
     }]);
     mockPrisma.webhookDelivery.updateMany.mockResolvedValue({ count: 0 });
-    const mockFetch = vi.fn();
-    vi.stubGlobal('fetch', mockFetch);
-
     await processWebhookDeliveries();
 
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockSendWebhookRequest).not.toHaveBeenCalled();
     expect(mockPrisma.webhookDelivery.update).not.toHaveBeenCalled();
   });
 
@@ -138,8 +134,6 @@ describe('Webhook delivery queue', () => {
       attempt: 1,
     }]);
     mockPrisma.webhookSubscription.findUnique.mockResolvedValue({ ...subscription, failureCount: 2 });
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 200, text: async () => 'ok' }));
-
     await processWebhookDeliveries();
 
     expect(mockPrisma.webhookDelivery.update).toHaveBeenCalledWith(expect.objectContaining({
@@ -159,7 +153,7 @@ describe('Webhook delivery queue', () => {
       attempt: 2,
     }]);
     mockPrisma.webhookSubscription.findUnique.mockResolvedValue({ ...subscription, failureCount: 4 });
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 503, text: async () => 'unavailable' }));
+    mockSendWebhookRequest.mockResolvedValueOnce({ status: 503, responseBody: 'unavailable' });
 
     await processWebhookDeliveries();
 
@@ -182,11 +176,11 @@ describe('Webhook delivery queue', () => {
         { id: 'delivery-2', subscriptionId: subscription.id, event: 'ticket.created', payload: mockPayload, attempt: 0 },
       ]);
       mockPrisma.webhookSubscription.findUnique.mockResolvedValue(subscription);
-      vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => {
+      mockSendWebhookRequest.mockImplementation(async () => {
         // A slow receiver must not make later claims in the batch look stale.
         vi.setSystemTime(later);
-        return { status: 200, text: async () => 'ok' };
-      }));
+        return { status: 200, responseBody: 'ok' };
+      });
 
       await processWebhookDeliveries();
 
@@ -206,12 +200,9 @@ describe('Webhook delivery queue', () => {
       payload: mockPayload,
       attempt: 3,
     }]);
-    const mockFetch = vi.fn();
-    vi.stubGlobal('fetch', mockFetch);
-
     await processWebhookDeliveries();
 
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockSendWebhookRequest).not.toHaveBeenCalled();
     expect(mockPrisma.webhookDelivery.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: 'delivery-1' },
       data: expect.objectContaining({ status: 'failed', claimedAt: null }),

@@ -16,7 +16,7 @@ import type { Prisma, WebhookSubscription as PrismaWebhookSubscription } from '@
 import { prisma } from './db';
 import { getAuditService } from './audit';
 import { trackInfo, trackSuccess, trackFailure } from './telemetry';
-import { createWebhookDispatcher, validateWebhookUrl } from './webhook-url';
+import { sendWebhookRequest, validateWebhookUrl } from './webhook-url';
 
 // Auto-disable a subscription after this many consecutive delivery failures.
 const FAILURE_THRESHOLD = 5;
@@ -244,6 +244,7 @@ function generateSignature(payload: string, secret: string): string {
 
 // ─── Webhook Delivery ───────────────────────────────────────────────────
 
+/** Validate and deliver a webhook while retaining the response and retry semantics. */
 async function deliverWebhook(
   subscription: WebhookSubscription,
   payload: WebhookPayload
@@ -256,24 +257,16 @@ async function deliverWebhook(
     return { success: false, error: destination.error, retryable: false };
   }
 
-  const dispatcher = createWebhookDispatcher(subscription.url);
   try {
-    const response = await fetch(subscription.url, {
-      method: 'POST',
-      redirect: 'manual',
-      dispatcher,
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Converge-Webhook/1.0',
-        'X-Webhook-Event': payload.event,
-        'X-Webhook-Delivery': payload.id,
-        'X-Webhook-Timestamp': payload.timestamp,
-        'X-Webhook-Signature': `sha256=${signature}`,
-      },
-      body,
-      signal: AbortSignal.timeout(10000),
-    } as RequestInit & { dispatcher: typeof dispatcher });
-    const responseBody = await response.text().catch(() => '');
+    const response = await sendWebhookRequest(subscription.url, body, {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Converge-Webhook/1.0',
+      'X-Webhook-Event': payload.event,
+      'X-Webhook-Delivery': payload.id,
+      'X-Webhook-Timestamp': payload.timestamp,
+      'X-Webhook-Signature': `sha256=${signature}`,
+    });
+    const responseBody = response.responseBody;
     const success = response.status >= 200 && response.status < 300;
     return {
       success,
@@ -284,8 +277,6 @@ async function deliverWebhook(
     };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : String(e), retryable: true };
-  } finally {
-    await dispatcher.close();
   }
 }
 

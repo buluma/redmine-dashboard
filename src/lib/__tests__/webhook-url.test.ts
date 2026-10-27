@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 
 import { env } from '@/src/lib/env';
-import { createWebhookDispatcher, validateWebhookUrl } from '../webhook-url';
+import { sendWebhookRequest, validateWebhookUrl } from '../webhook-url';
 
 describe('validateWebhookUrl', () => {
   const mockLookup = vi.fn();
@@ -71,13 +73,33 @@ describe('validateWebhookUrl', () => {
     const destination = await validateWebhookUrl(url, mockLookup);
     expect(destination).toEqual({ valid: true });
 
-    const dispatcher = createWebhookDispatcher(url, mockLookup);
+    await expect(sendWebhookRequest(url, '{}', {}, mockLookup)).rejects.toThrow();
+    expect(mockLookup).toHaveBeenCalledTimes(2);
+    expect(mockLookup).toHaveBeenLastCalledWith('hooks.example.com', { all: true, verbatim: true });
+  });
+
+  it('connects to the resolved IP while keeping the original Host header for trusted private receivers', async () => {
+    env.webhookAllowedHosts.push('hooks.example.com');
+    mockLookup.mockResolvedValue([{ address: '127.0.0.1', family: 4 }]);
+    let receivedHost: string | undefined;
+    const server = createServer((request, response) => {
+      receivedHost = request.headers.host;
+      response.end('ok');
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', resolve);
+    });
+
     try {
-      await expect(fetch(url, { dispatcher } as RequestInit & { dispatcher: typeof dispatcher })).rejects.toThrow();
+      const address = server.address() as AddressInfo;
+      const url = `http://hooks.example.com:${address.port}/callback`;
+      await expect(validateWebhookUrl(url, mockLookup)).resolves.toEqual({ valid: true });
+      await expect(sendWebhookRequest(url, '{}', {}, mockLookup)).resolves.toEqual({ status: 200, responseBody: 'ok' });
+      expect(receivedHost).toBe(`hooks.example.com:${address.port}`);
       expect(mockLookup).toHaveBeenCalledTimes(2);
-      expect(mockLookup).toHaveBeenLastCalledWith('hooks.example.com', { all: true, verbatim: true });
     } finally {
-      await dispatcher.close();
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     }
   });
 });

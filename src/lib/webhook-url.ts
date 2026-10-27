@@ -1,6 +1,7 @@
 import { lookup } from 'node:dns/promises';
+import { Agent as HttpAgent, request as httpRequest, type Agent as BaseHttpAgent, type OutgoingHttpHeaders, type RequestOptions } from 'node:http';
 import { isIP, type LookupFunction } from 'node:net';
-import { Agent } from 'undici';
+import { Agent as HttpsAgent, request as httpsRequest } from 'node:https';
 import { env } from '@/src/lib/env';
 
 const PRIVATE_IPV4_RANGES = [
@@ -20,6 +21,7 @@ const PRIVATE_IPV4_RANGES = [
   [/^(22[4-9]|23\d|24\d|25[0-5])\./, 'multicast/reserved'],
 ] as const;
 
+/** Return whether an address is outside the public webhook destination ranges. */
 function isPrivateAddress(address: string): boolean {
   if (isIP(address) === 4) {
     return PRIVATE_IPV4_RANGES.some(([range]) => range.test(address));
@@ -57,6 +59,7 @@ function isPrivateAddress(address: string): boolean {
     normalized.startsWith('ff');
 }
 
+/** Check whether the administrator explicitly allowed this hostname to reach private addresses. */
 function trustedPrivateHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
   return env.webhookAllowedHosts.some((item) =>
@@ -64,9 +67,10 @@ function trustedPrivateHost(hostname: string): boolean {
   );
 }
 
-/** Validate destination before storage and again immediately before delivery. */
+/** DNS resolver used for one validation pass and the later socket connection pass. */
 type AddressResolver = (hostname: string, options: { all: true; verbatim: true }) => Promise<Array<{ address: string; family?: number }>>;
 
+/** Resolve a webhook hostname and reject unsafe answers unless its hostname is explicitly trusted. */
 async function resolveWebhookAddresses(
   hostname: string,
   resolveAddresses: AddressResolver
@@ -88,9 +92,9 @@ async function resolveWebhookAddresses(
   }
 }
 
-/** Resolve and vet addresses at the socket boundary, then give those exact addresses to Node. */
-export function createWebhookDispatcher(rawUrl: string, resolveAddresses: AddressResolver = lookup): Agent {
-  const expectedHostname = new URL(rawUrl).hostname.toLowerCase().replace(/^\[|\]$/g, '');
+/** Resolve and vet addresses at the socket boundary, then give those exact addresses to the HTTP client. */
+function createWebhookAgent(url: URL, resolveAddresses: AddressResolver): BaseHttpAgent {
+  const expectedHostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
   const lookupAtConnect: LookupFunction = (hostname, options, callback) => {
     if (hostname.toLowerCase().replace(/^\[|\]$/g, '') !== expectedHostname) {
       callback(Object.assign(new Error('Webhook connection host did not match the validated URL.'), { code: 'ENOTFOUND' }), '', 0);
@@ -119,9 +123,12 @@ export function createWebhookDispatcher(rawUrl: string, resolveAddresses: Addres
     });
   };
 
-  return new Agent({ connect: { lookup: lookupAtConnect }, pipelining: 0 });
+  return url.protocol === 'https:'
+    ? new HttpsAgent({ lookup: lookupAtConnect, keepAlive: false })
+    : new HttpAgent({ lookup: lookupAtConnect, keepAlive: false });
 }
 
+/** Validate a webhook URL before storage or delivery. */
 export async function validateWebhookUrl(
   rawUrl: string,
   resolveAddresses: AddressResolver = lookup
@@ -154,4 +161,43 @@ export async function validateWebhookUrl(
   if ('error' in resolution) return { valid: false, error: resolution.error };
 
   return { valid: true };
+}
+
+/** Send one webhook without following redirects, using the vetted address at socket connection time. */
+export async function sendWebhookRequest(
+  rawUrl: string,
+  body: string,
+  headers: OutgoingHttpHeaders,
+  resolveAddresses: AddressResolver = lookup
+): Promise<{ status: number; responseBody: string }> {
+  const url = new URL(rawUrl);
+  const agent = createWebhookAgent(url, resolveAddresses);
+  const request = (url.protocol === 'https:' ? httpsRequest : httpRequest) as typeof httpRequest;
+  const options: RequestOptions = {
+    method: 'POST',
+    headers,
+    agent,
+    signal: AbortSignal.timeout(10000),
+  };
+
+  try {
+    return await new Promise((resolve, reject) => {
+      const requestInstance = request(url, options, (response) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer | string) => {
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        });
+        response.on('error', () => resolve({ status: response.statusCode ?? 0, responseBody: '' }));
+        response.on('aborted', () => resolve({ status: response.statusCode ?? 0, responseBody: '' }));
+        response.on('end', () => resolve({
+          status: response.statusCode ?? 0,
+          responseBody: Buffer.concat(chunks).toString('utf8'),
+        }));
+      });
+      requestInstance.on('error', reject);
+      requestInstance.end(body);
+    });
+  } finally {
+    agent.destroy();
+  }
 }
