@@ -1,4 +1,5 @@
 import { requireRedmineClient } from "@/src/lib/auth";
+import { attachmentResponseHeaders } from "@/src/lib/attachment-response";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
@@ -32,7 +33,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     const { user, client } = await requireRedmineClient();
 
     const issue = await prisma.issue.findFirst({
-      where: { userId: user.id, redmineIssueId: issueId },
+      where: { userId: user.id, redmineIssueId: issueId, redmineBaseUrl: client.normalizedBaseUrl },
       select: { id: true },
     });
 
@@ -70,14 +71,8 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       return jsonError(`Redmine error: ${upstream.status}`, upstream.status);
     }
 
-    const headers = new Headers();
     const contentType = upstream.headers.get("content-type") ?? attachment.contentType ?? "application/octet-stream";
-    const contentLength = upstream.headers.get("content-length");
-    headers.set("content-type", contentType);
-    headers.set("content-disposition", `inline; filename="${attachment.filename}"`);
-    if (contentLength) {
-      headers.set("content-length", contentLength);
-    }
+    const headers = attachmentResponseHeaders(attachment.filename, contentType);
 
     trackInfo("attachment.download.succeeded", { 
       attachmentId: parsedAttachmentId, 
