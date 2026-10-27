@@ -16,7 +16,7 @@ import type { Prisma, WebhookSubscription as PrismaWebhookSubscription } from '@
 import { prisma } from './db';
 import { getAuditService } from './audit';
 import { trackInfo, trackSuccess, trackFailure } from './telemetry';
-import { validateWebhookUrl } from './webhook-url';
+import { createWebhookDispatcher, validateWebhookUrl } from './webhook-url';
 
 // Auto-disable a subscription after this many consecutive delivery failures.
 const FAILURE_THRESHOLD = 5;
@@ -256,10 +256,12 @@ async function deliverWebhook(
     return { success: false, error: destination.error, retryable: false };
   }
 
+  const dispatcher = createWebhookDispatcher(subscription.url);
   try {
     const response = await fetch(subscription.url, {
       method: 'POST',
       redirect: 'manual',
+      dispatcher,
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'Converge-Webhook/1.0',
@@ -270,7 +272,7 @@ async function deliverWebhook(
       },
       body,
       signal: AbortSignal.timeout(10000),
-    });
+    } as RequestInit & { dispatcher: typeof dispatcher });
     const responseBody = await response.text().catch(() => '');
     const success = response.status >= 200 && response.status < 300;
     return {
@@ -282,6 +284,8 @@ async function deliverWebhook(
     };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : String(e), retryable: true };
+  } finally {
+    await dispatcher.close();
   }
 }
 

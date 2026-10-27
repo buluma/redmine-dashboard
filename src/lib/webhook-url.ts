@@ -1,5 +1,6 @@
 import { lookup } from 'node:dns/promises';
-import { isIP } from 'node:net';
+import { isIP, type LookupFunction } from 'node:net';
+import { Agent } from 'undici';
 import { env } from '@/src/lib/env';
 
 const PRIVATE_IPV4_RANGES = [
@@ -24,10 +25,27 @@ function isPrivateAddress(address: string): boolean {
     return PRIVATE_IPV4_RANGES.some(([range]) => range.test(address));
   }
 
-  const normalized = address.toLowerCase().split('%')[0];
+  let normalized = address.toLowerCase().split('%')[0];
+  if (isIP(normalized) === 6) {
+    try {
+      normalized = new URL(`http://[${normalized}]/`).hostname.slice(1, -1);
+    } catch {
+      // Keep the original value; malformed addresses are rejected by the caller.
+    }
+  }
+
   if (normalized.startsWith('::ffff:')) {
     const mapped = normalized.slice(7);
     if (isIP(mapped) === 4) return isPrivateAddress(mapped);
+
+    // WHATWG URL canonicalization renders IPv4-mapped IPv6 literals as two hex groups.
+    const groups = mapped.split(':');
+    if (groups.length === 2 && groups.every((group) => /^[\da-f]{1,4}$/.test(group))) {
+      const high = Number.parseInt(groups[0], 16);
+      const low = Number.parseInt(groups[1], 16);
+      const ipv4 = [high >> 8, high & 0xff, low >> 8, low & 0xff].join('.');
+      return isPrivateAddress(ipv4);
+    }
   }
 
   // Conservatively reject non-global IPv6 unicast, loopback, and mapped private ranges.
@@ -48,6 +66,61 @@ function trustedPrivateHost(hostname: string): boolean {
 
 /** Validate destination before storage and again immediately before delivery. */
 type AddressResolver = (hostname: string, options: { all: true; verbatim: true }) => Promise<Array<{ address: string; family?: number }>>;
+
+async function resolveWebhookAddresses(
+  hostname: string,
+  resolveAddresses: AddressResolver
+): Promise<{ addresses: Array<{ address: string; family?: number }> } | { error: string }> {
+  try {
+    const addresses = isIP(hostname)
+      ? [{ address: hostname }]
+      : await resolveAddresses(hostname, { all: true, verbatim: true });
+    if (addresses.length === 0) return { error: 'The webhook host did not resolve.' };
+    if (addresses.some(({ address }) => isIP(address) === 0)) {
+      return { error: 'The webhook host returned an invalid address.' };
+    }
+    if (addresses.some(({ address }) => isPrivateAddress(address)) && !trustedPrivateHost(hostname)) {
+      return { error: 'Private network destinations require adding the host to WEBHOOK_ALLOWED_HOSTS.' };
+    }
+    return { addresses };
+  } catch {
+    return { error: 'The webhook host could not be resolved.' };
+  }
+}
+
+/** Resolve and vet addresses at the socket boundary, then give those exact addresses to Node. */
+export function createWebhookDispatcher(rawUrl: string, resolveAddresses: AddressResolver = lookup): Agent {
+  const expectedHostname = new URL(rawUrl).hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  const lookupAtConnect: LookupFunction = (hostname, options, callback) => {
+    if (hostname.toLowerCase().replace(/^\[|\]$/g, '') !== expectedHostname) {
+      callback(Object.assign(new Error('Webhook connection host did not match the validated URL.'), { code: 'ENOTFOUND' }), '', 0);
+      return;
+    }
+
+    void resolveWebhookAddresses(hostname, resolveAddresses).then((result) => {
+      if ('error' in result) {
+        const error = Object.assign(new Error(result.error), { code: 'ENOTFOUND' });
+        callback(error, '', 0);
+        return;
+      }
+
+      const addresses = result.addresses.map(({ address, family }) => ({
+        address,
+        family: family ?? isIP(address),
+      })).filter(({ family }) => !options.family || family === options.family);
+      if (addresses.length === 0) {
+        callback(Object.assign(new Error('The webhook host did not resolve to the requested address family.'), { code: 'ENOTFOUND' }), '', 0);
+        return;
+      }
+      if (options.all) callback(null, addresses);
+      else callback(null, addresses[0].address, addresses[0].family);
+    }).catch((error: unknown) => {
+      callback(error instanceof Error ? error : new Error(String(error)), '', 0);
+    });
+  };
+
+  return new Agent({ connect: { lookup: lookupAtConnect }, pipelining: 0 });
+}
 
 export async function validateWebhookUrl(
   rawUrl: string,
@@ -77,17 +150,8 @@ export async function validateWebhookUrl(
     return { valid: false, error: 'Non-standard ports require adding the host to WEBHOOK_ALLOWED_HOSTS.' };
   }
 
-  try {
-    const addresses = isIP(host)
-      ? [{ address: host }]
-      : await resolveAddresses(host, { all: true, verbatim: true });
-    if (addresses.length === 0) return { valid: false, error: 'The webhook host did not resolve.' };
-    if (addresses.some(({ address }) => isPrivateAddress(address)) && !explicitlyTrusted) {
-      return { valid: false, error: 'Private network destinations require adding the host to WEBHOOK_ALLOWED_HOSTS.' };
-    }
-  } catch {
-    return { valid: false, error: 'The webhook host could not be resolved.' };
-  }
+  const resolution = await resolveWebhookAddresses(host, resolveAddresses);
+  if ('error' in resolution) return { valid: false, error: resolution.error };
 
   return { valid: true };
 }

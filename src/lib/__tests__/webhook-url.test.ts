@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { env } from '@/src/lib/env';
-import { validateWebhookUrl } from '../webhook-url';
+import { createWebhookDispatcher, validateWebhookUrl } from '../webhook-url';
 
 describe('validateWebhookUrl', () => {
   const mockLookup = vi.fn();
@@ -21,9 +21,31 @@ describe('validateWebhookUrl', () => {
     await expect(validateWebhookUrl(url)).resolves.toMatchObject({ valid: false });
   });
 
+  it.each([
+    'http://[::ffff:127.0.0.1]/hook',
+    'http://[::ffff:7f00:1]/hook',
+    'http://[0:0:0:0:0:ffff:7f00:1]/hook',
+  ])('rejects IPv4-mapped IPv6 loopback URL %s', async (url) => {
+    await expect(validateWebhookUrl(url)).resolves.toMatchObject({ valid: false });
+  });
+
   it('rejects a public hostname that resolves to a private address', async () => {
     mockLookup.mockResolvedValue([{ address: '10.0.0.12', family: 4 }]);
     await expect(validateWebhookUrl('https://hooks.example.com/callback', mockLookup)).resolves.toMatchObject({ valid: false });
+  });
+
+  it('rejects a hostname when any DNS answer is private', async () => {
+    mockLookup.mockResolvedValue([
+      { address: '93.184.216.34', family: 4 },
+      { address: 'fd00::12', family: 6 },
+    ]);
+    await expect(validateWebhookUrl('https://hooks.example.com/callback', mockLookup)).resolves.toMatchObject({ valid: false });
+  });
+
+  it('preserves explicitly trusted private DNS destinations', async () => {
+    env.webhookAllowedHosts.push('hooks.example.com');
+    mockLookup.mockResolvedValue([{ address: '10.0.0.12', family: 4 }]);
+    await expect(validateWebhookUrl('https://hooks.example.com/callback', mockLookup)).resolves.toEqual({ valid: true });
   });
 
   it('permits a hostname resolving only to a public address', async () => {
@@ -39,5 +61,23 @@ describe('validateWebhookUrl', () => {
 
   it('requires trusted hosts for non-standard ports', async () => {
     await expect(validateWebhookUrl('https://hooks.example.com:8443/callback', mockLookup)).resolves.toMatchObject({ valid: false });
+  });
+
+  it('rejects a private DNS answer at the actual connection boundary after public validation', async () => {
+    mockLookup
+      .mockResolvedValueOnce([{ address: '93.184.216.34', family: 4 }])
+      .mockResolvedValueOnce([{ address: '127.0.0.1', family: 4 }]);
+    const url = 'http://hooks.example.com/callback';
+    const destination = await validateWebhookUrl(url, mockLookup);
+    expect(destination).toEqual({ valid: true });
+
+    const dispatcher = createWebhookDispatcher(url, mockLookup);
+    try {
+      await expect(fetch(url, { dispatcher } as RequestInit & { dispatcher: typeof dispatcher })).rejects.toThrow();
+      expect(mockLookup).toHaveBeenCalledTimes(2);
+      expect(mockLookup).toHaveBeenLastCalledWith('hooks.example.com', { all: true, verbatim: true });
+    } finally {
+      await dispatcher.close();
+    }
   });
 });

@@ -22,6 +22,7 @@ const { mockPrisma } = vi.hoisted(() => ({
 vi.mock('@/src/lib/db', () => ({ prisma: mockPrisma }));
 vi.mock('../webhook-url', () => ({
   validateWebhookUrl: vi.fn().mockResolvedValue({ valid: true }),
+  createWebhookDispatcher: vi.fn(() => ({ close: vi.fn().mockResolvedValue(undefined) })),
 }));
 
 const mockPayload: WebhookPayload = {
