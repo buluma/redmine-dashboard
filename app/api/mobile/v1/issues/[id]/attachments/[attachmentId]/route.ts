@@ -1,4 +1,5 @@
 import { requireMobileUser, requireRedmineClientForUser } from "@/src/lib/auth";
+import { attachmentResponseHeaders } from "@/src/lib/attachment-response";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
@@ -30,7 +31,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const { client } = await requireRedmineClientForUser(user.id);
 
     const issue = await prisma.issue.findFirst({
-      where: { userId: user.id, redmineIssueId: issueId },
+      where: { userId: user.id, redmineIssueId: issueId, redmineBaseUrl: client.normalizedBaseUrl },
       select: { id: true },
     });
 
@@ -47,10 +48,8 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     }
 
     const upstream = await client.downloadAttachment(attachment.downloadUrl);
-    const headers = new Headers();
     const contentType = upstream.headers.get("content-type") ?? attachment.contentType ?? "application/octet-stream";
-    headers.set("content-type", contentType);
-    headers.set("content-disposition", `inline; filename="${attachment.filename}"`);
+    const headers = attachmentResponseHeaders(attachment.filename, contentType);
 
     return new Response(upstream.body, { status: 200, headers });
   } catch (error) {

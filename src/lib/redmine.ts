@@ -676,16 +676,28 @@ export class RedmineClient {
 
   async downloadAttachment(pathOrUrl: string): Promise<Response> {
     const base = trimBaseUrl(this.baseUrl);
-    const url = pathOrUrl.startsWith("http") ? pathOrUrl : `${base}${pathOrUrl}`;
+    const baseUrl = new URL(base);
+    const url = new URL(/^[a-z][a-z\d+.-]*:/i.test(pathOrUrl) ? pathOrUrl : `${base}${pathOrUrl}`);
+    const basePath = baseUrl.pathname.replace(/\/+$/, "");
+    if (
+      !["http:", "https:"].includes(url.protocol) ||
+      url.origin !== baseUrl.origin ||
+      url.username || url.password ||
+      /%2f|%5c/i.test(url.pathname) ||
+      (basePath && url.pathname !== basePath && !url.pathname.startsWith(`${basePath}/`))
+    ) {
+      throw new Error("Attachment URL does not match the Redmine server");
+    }
     const dispatcher = await this.getDispatcher();
     const init: RequestInit & { dispatcher?: unknown } = {
       headers: {
         "X-Redmine-API-Key": this.apiKey,
       },
       cache: "no-store",
+      redirect: "error",
       ...(dispatcher ? { dispatcher } : {}),
     };
-    const res = await fetch(url, init);
+    const res = await fetch(url.toString(), init);
     if (!res.ok) {
       const body = await res.text();
       throw new RedmineError(res.status, body, parseRedmineErrors(body));
