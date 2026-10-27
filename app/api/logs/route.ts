@@ -1,5 +1,6 @@
 import { prisma } from "@/src/lib/db";
 import { requireCurrentUser } from "@/src/lib/auth";
+import { hasPermission } from "@/src/lib/rbac";
 
 export const runtime = "nodejs";
 
@@ -41,13 +42,14 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    await requireCurrentUser();
+    const user = await requireCurrentUser();
+    const canViewAllLogs = await hasPermission(user.id, "ops:view");
     const { searchParams } = new URL(request.url);
     const level = searchParams.get("level");
     const source = searchParams.get("source");
     const limit = Math.min(Number(searchParams.get("limit")) || 100, 500);
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = canViewAllLogs ? {} : { userId: user.id };
     if (level) where.level = level;
     if (source) where.source = source;
 
@@ -73,11 +75,12 @@ export async function GET(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    await requireCurrentUser();
+    const user = await requireCurrentUser();
+    const canDeleteAllLogs = await hasPermission(user.id, "users:manage");
     const { searchParams } = new URL(request.url);
     const olderThan = searchParams.get("olderThan");
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = canDeleteAllLogs ? {} : { userId: user.id };
     if (olderThan) {
       where.createdAt = { lte: new Date(olderThan) };
     }
