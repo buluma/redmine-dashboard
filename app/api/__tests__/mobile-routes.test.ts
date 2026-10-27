@@ -13,6 +13,7 @@ const {
   mockIssueFindMany,
   mockIssueFindFirst,
   mockTokenFindUnique,
+  mockCredentialFindUnique,
 } = vi.hoisted(() => ({
   mockConnectRedmineAccount: vi.fn(),
   mockCreateMobileToken: vi.fn(),
@@ -25,6 +26,7 @@ const {
   mockIssueFindMany: vi.fn(),
   mockIssueFindFirst: vi.fn(),
   mockTokenFindUnique: vi.fn(),
+  mockCredentialFindUnique: vi.fn(),
 }));
 
 vi.mock("@/src/lib/mobile-api", () => ({
@@ -62,6 +64,9 @@ vi.mock("@/src/lib/db", () => ({
     mobileApiToken: {
       findUnique: mockTokenFindUnique,
     },
+    userRedmineCredential: {
+      findUnique: mockCredentialFindUnique,
+    },
   },
 }));
 
@@ -69,6 +74,7 @@ describe("mobile v1 routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearRateLimitState();
+    mockCredentialFindUnique.mockResolvedValue({ baseUrl: "https://redmine.example.com" });
   });
 
   it("pairs device and returns mobile token", async () => {
@@ -149,7 +155,7 @@ describe("mobile v1 routes", () => {
       user: { id: "u1", emailOrUsername: "alice", displayName: "Alice" },
       tokenRecordId: "mt1",
     });
-    mockRequireRedmineClientForUser.mockResolvedValue({ client });
+    mockRequireRedmineClientForUser.mockResolvedValue({ client, cred: { baseUrl: "https://redmine.example.com" } });
     mockSyncSingleIssue.mockResolvedValue({ id: "i999" });
 
     const { POST } = await import("@/app/api/mobile/v1/issues/route");
@@ -211,7 +217,7 @@ describe("mobile v1 routes", () => {
       user: { id: "u1", emailOrUsername: "alice", displayName: "Alice" },
       tokenRecordId: "mt1",
     });
-    mockRequireRedmineClientForUser.mockResolvedValue({ client });
+    mockRequireRedmineClientForUser.mockResolvedValue({ client, cred: { baseUrl: "https://redmine.example.com" } });
     mockIssueCount.mockResolvedValue(1);
     mockIssueFindMany.mockResolvedValueOnce([localIssue]).mockResolvedValueOnce([remoteIssue]);
     mockSyncSingleIssue.mockResolvedValue({ id: "i-remote" });
@@ -240,7 +246,10 @@ describe("mobile v1 routes", () => {
       user: { id: "u1", emailOrUsername: "alice", displayName: "Alice" },
       tokenRecordId: "mt1",
     });
-    mockRequireRedmineClientForUser.mockResolvedValue({ client });
+    mockRequireRedmineClientForUser.mockResolvedValue({
+      client,
+      cred: { baseUrl: "https://redmine.example.com" },
+    });
     mockSyncSingleIssue.mockResolvedValue({ id: "i1" });
 
     const { POST } = await import("@/app/api/mobile/v1/issues/[id]/comment/route");

@@ -33,6 +33,7 @@ import com.converge.mobile.data.SearchResult
 import com.converge.mobile.data.TimeEntry
 import com.converge.mobile.data.NotificationItem
 import com.converge.mobile.data.SavedIssueView
+import com.converge.mobile.data.OfflineActionScope
 import com.converge.mobile.data.SecureTokenStore
 import com.converge.mobile.data.offline.CachedIssueEntity
 import com.converge.mobile.data.offline.ConvergeDatabase
@@ -69,6 +70,7 @@ enum class SearchMode(val label: String, val apiValue: String) {
 
 data class MainUiState(
     val serverUrl: String = BuildConfig.DEFAULT_SERVER_URL,
+    val accountId: String = "",
     val redmineBaseUrl: String = "",
     val redmineApiKey: String = "",
     val deviceName: String = "Converge-Compose",
@@ -173,6 +175,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var state = androidx.compose.runtime.mutableStateOf(
         MainUiState(
             serverUrl = repository.savedServerUrl(BuildConfig.DEFAULT_SERVER_URL),
+            accountId = repository.currentAccountId().orEmpty(),
+            redmineBaseUrl = repository.currentRedmineBaseUrl().orEmpty(),
             isPaired = repository.hasToken(),
             savedViews = repository.savedIssueViews(),
         ),
@@ -181,7 +185,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         if (state.value.isPaired) {
-            loadIssues()
+            viewModelScope.launch {
+                runCatching { repository.refreshAccountScope(state.value.serverUrl) }
+                    .onSuccess { (accountId, redmineBaseUrl) ->
+                        if (!accountId.isNullOrBlank() && !redmineBaseUrl.isNullOrBlank()) {
+                            update { copy(accountId = accountId, redmineBaseUrl = redmineBaseUrl) }
+                        }
+                    }
+                    .onFailure {
+                        if (repository.currentAccountId().isNullOrBlank()) {
+                            update { copy(accountId = "", redmineBaseUrl = "", isPaired = false) }
+                        }
+                    }
+                loadIssues()
+            }
         }
     }
 
@@ -248,13 +265,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun scheduleOfflineSync() {
-        val userId = state.value.serverUrl
+        val current = state.value
+        if (current.accountId.isBlank() || current.redmineBaseUrl.isBlank()) return
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
         val request = OneTimeWorkRequestBuilder<OfflineSyncWorker>()
             .setConstraints(constraints)
-            .setInputData(workDataOf(OfflineSyncWorker.KEY_USER_ID to userId))
+            .setInputData(workDataOf(
+                OfflineSyncWorker.KEY_USER_ID to current.accountId,
+                OfflineSyncWorker.KEY_SERVER_URL to current.serverUrl,
+                OfflineSyncWorker.KEY_REDMINE_BASE_URL to current.redmineBaseUrl,
+            ))
             .build()
         WorkManager.getInstance(getApplication()).enqueue(request)
     }
@@ -327,6 +349,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 update {
                     copy(
                         isPaired = true,
+                        accountId = repository.currentAccountId().orEmpty(),
+                        redmineBaseUrl = repository.currentRedmineBaseUrl().orEmpty(),
                         redmineApiKey = "",
                         issues = emptyList(),
                         selectedIssue = null,
@@ -334,6 +358,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 registerFcmToken()
                 loadIssues()
+                scheduleOfflineSync()
             }
         }
     }
@@ -744,8 +769,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val redmineIssueId = state.value.selectedIssue?.redmineIssueId ?: return
         if (state.value.isOffline) {
             viewModelScope.launch {
-                enqueueOfflineAction(OfflineActionType.FAVORITE, redmineIssueId, emptyMap())
-                update { copy(actionMessage = "Favorite change queued for sync") }
+                if (enqueueOfflineAction(OfflineActionType.FAVORITE, redmineIssueId, emptyMap())) {
+                    update { copy(actionMessage = "Favorite change queued for sync") }
+                }
             }
             return
         }
@@ -847,8 +873,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         state.value.timeComment.trim().takeIf { it.isNotEmpty() }?.let { put("comment", it) }
                         state.value.timeSpentOn.trim().takeIf { it.isNotEmpty() }?.let { put("spentOn", it) }
                     }
-                    enqueueOfflineAction(OfflineActionType.TIME_ENTRY, redmineIssueId, payload)
-                    update { copy(showTimeDialog = false, editingTimeEntryId = null, timeHours = "", timeComment = "", actionMessage = "Time entry queued for sync") }
+                    if (enqueueOfflineAction(OfflineActionType.TIME_ENTRY, redmineIssueId, payload)) {
+                        update { copy(showTimeDialog = false, editingTimeEntryId = null, timeHours = "", timeComment = "", actionMessage = "Time entry queued for sync") }
+                    }
                     return@runBusy
                 }
                 if (editingId == null) {
@@ -1164,8 +1191,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (state.value.isOffline && issue.source != "local") {
             val redmineIssueId = issue.redmineIssueId ?: return
             viewModelScope.launch {
-                enqueueOfflineAction(OfflineActionType.COMMENT, redmineIssueId, mapOf("comment" to comment))
-                update { copy(commentDraft = "", actionMessage = "Comment queued for sync") }
+                if (enqueueOfflineAction(OfflineActionType.COMMENT, redmineIssueId, mapOf("comment" to comment))) {
+                    update { copy(commentDraft = "", actionMessage = "Comment queued for sync") }
+                }
             }
             return
         }
@@ -1216,8 +1244,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         if (state.value.isOffline) {
             viewModelScope.launch {
-                enqueueOfflineAction(OfflineActionType.STATUS, redmineIssueId, mapOf("statusId" to statusId))
-                update { copy(actionMessage = "Status change queued for sync") }
+                if (enqueueOfflineAction(OfflineActionType.STATUS, redmineIssueId, mapOf("statusId" to statusId))) {
+                    update { copy(actionMessage = "Status change queued for sync") }
+                }
             }
             return
         }
@@ -1237,6 +1266,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 update {
                     copy(
                         isPaired = false,
+                        accountId = "",
+                        redmineBaseUrl = "",
                         issues = emptyList(),
                         localIssues = emptyList(),
                         selectedIssue = null,
@@ -1292,24 +1323,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         update { copy(selectedIssue = enriched, internalNotes = notes, journals = journals, commentDraft = "", aiSummary = null, aiCategorization = null) }
     }
 
-    private suspend fun enqueueOfflineAction(type: OfflineActionType, redmineIssueId: Int, payload: Map<String, Any>) {
-        val userId = state.value.serverUrl
+    private suspend fun enqueueOfflineAction(type: OfflineActionType, redmineIssueId: Int, payload: Map<String, Any>): Boolean {
+        val current = state.value
+        val accountId = current.accountId
+        val redmineBaseUrl = current.redmineBaseUrl.trim().trimEnd('/')
+        val serverUrl = current.serverUrl.trim().trimEnd('/')
+        if (accountId.isBlank() || redmineBaseUrl.isBlank() || serverUrl.isBlank()) {
+            update { copy(errorMessage = "Pair this account online before queueing offline changes.") }
+            return false
+        }
         val json = JSONObject().apply { payload.forEach { (k, v) -> put(k, v) } }
         db.offlineActionDao().insert(
             OfflineActionEntity(
-                userId = userId,
+                userId = accountId,
+                serverUrl = serverUrl,
+                redmineBaseUrl = redmineBaseUrl,
                 type = type.name,
                 redmineIssueId = redmineIssueId,
                 payloadJson = json.toString(),
             )
         )
-        val count = db.offlineActionDao().pendingCount(userId)
+        val count = db.offlineActionDao().pendingCount(accountId, serverUrl, redmineBaseUrl)
         update { copy(pendingActionsCount = count) }
+        return true
     }
 
     private suspend fun loadIssuesFromCache() {
-        val userId = state.value.serverUrl
-        val cached = db.cachedIssueDao().getAll(userId)
+        val scope = currentCacheScope()
+        if (scope == null) {
+            update { copy(errorMessage = "Pair this account online before loading its offline cache.") }
+            return
+        }
+        val cached = db.cachedIssueDao().getAll(scope)
         if (cached.isEmpty()) {
             update { copy(errorMessage = "No cached issues available offline.") }
             return
@@ -1320,17 +1365,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun cacheIssues(issues: List<Issue>) {
-        val userId = state.value.serverUrl
+        val scope = currentCacheScope() ?: return
         val adapter = moshi.adapter(Issue::class.java)
         val entities = issues.mapNotNull { issue ->
             val rid = issue.redmineIssueId ?: return@mapNotNull null
             val json = runCatching { adapter.toJson(issue) }.getOrNull() ?: return@mapNotNull null
-            CachedIssueEntity(id = "${userId}_$rid", userId = userId, redmineIssueId = rid, issueJson = json)
+            CachedIssueEntity(id = "${scope}_$rid", userId = scope, redmineIssueId = rid, issueJson = json)
         }
         if (entities.isNotEmpty()) {
             db.cachedIssueDao().upsertAll(entities)
-            db.cachedIssueDao().evictOlderThan(userId, System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000L)
+            db.cachedIssueDao().evictOlderThan(scope, System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000L)
         }
+    }
+
+    private fun currentCacheScope(): String? {
+        val current = state.value
+        if (current.accountId.isBlank() || current.redmineBaseUrl.isBlank()) return null
+        return JSONObject()
+            .put("accountId", current.accountId)
+            .put("redmineBaseUrl", current.redmineBaseUrl.trim().trimEnd('/'))
+            .toString()
     }
 
     private suspend fun runBusy(block: suspend () -> Unit) {

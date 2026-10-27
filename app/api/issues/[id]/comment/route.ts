@@ -5,6 +5,7 @@ import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmi
 import { commentSchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
 import { trackFailure, trackInfo, trackSuccess } from "@/src/lib/telemetry";
+import { offlineActionScopeError } from "@/src/lib/redmine-scope";
 
 function parseIssueId(id: string): number {
   const n = Number(id);
@@ -24,7 +25,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const { id } = await context.params;
     const issueId = parseIssueId(id);
     const body = await parseJson(request, commentSchema);
-    const { user, client } = await requireRedmineClient();
+    const { user, cred, client } = await requireRedmineClient();
+    const scopeError = offlineActionScopeError(request, user.id, cred.baseUrl);
+    if (scopeError) return scopeError;
     trackInfo("issue.comment.post.requested", {
       userId: user.id,
       issueId,

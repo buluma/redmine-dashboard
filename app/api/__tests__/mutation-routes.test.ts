@@ -34,7 +34,11 @@ describe("API mutation routes", () => {
       }),
     };
 
-    mockRequireRedmineClient.mockResolvedValue({ user: { id: "u1" }, client });
+    mockRequireRedmineClient.mockResolvedValue({
+      user: { id: "u1" },
+      cred: { baseUrl: "https://redmine.example.com" },
+      client,
+    });
 
     const { GET } = await import("@/app/api/issues/[id]/status/route");
     const response = await GET(new Request("http://localhost"), {
@@ -56,7 +60,11 @@ describe("API mutation routes", () => {
       updateIssueStatus: vi.fn(),
     };
 
-    mockRequireRedmineClient.mockResolvedValue({ user: { id: "u1" }, client });
+    mockRequireRedmineClient.mockResolvedValue({
+      user: { id: "u1" },
+      cred: { baseUrl: "https://redmine.example.com" },
+      client,
+    });
 
     const { POST } = await import("@/app/api/issues/[id]/status/route");
     const response = await POST(
@@ -82,7 +90,11 @@ describe("API mutation routes", () => {
       updateIssueStatus: vi.fn().mockResolvedValue(undefined),
     };
 
-    mockRequireRedmineClient.mockResolvedValue({ user: { id: "u1" }, client });
+    mockRequireRedmineClient.mockResolvedValue({
+      user: { id: "u1" },
+      cred: { baseUrl: "https://redmine.example.com" },
+      client,
+    });
     mockSyncSingleIssue.mockResolvedValue({ id: "i1" });
 
     const { POST } = await import("@/app/api/issues/bulk-status/route");
@@ -107,7 +119,11 @@ describe("API mutation routes", () => {
       addComment: vi.fn().mockResolvedValue(undefined),
     };
 
-    mockRequireRedmineClient.mockResolvedValue({ user: { id: "u1" }, client });
+    mockRequireRedmineClient.mockResolvedValue({
+      user: { id: "u1" },
+      cred: { baseUrl: "https://redmine.example.com" },
+      client,
+    });
     mockSyncSingleIssue.mockResolvedValue({ id: "i1" });
 
     const { POST } = await import("@/app/api/issues/[id]/comment/route");
@@ -130,7 +146,11 @@ describe("API mutation routes", () => {
       addTimeEntry: vi.fn().mockResolvedValue({ time_entry: { id: 999 } }),
     };
 
-    mockRequireRedmineClient.mockResolvedValue({ user: { id: "u1" }, client });
+    mockRequireRedmineClient.mockResolvedValue({
+      user: { id: "u1" },
+      cred: { baseUrl: "https://redmine.example.com" },
+      client,
+    });
     mockSyncSingleIssue.mockResolvedValue({ id: "local-issue-1" });
 
     const { POST } = await import("@/app/api/issues/[id]/timelog/route");

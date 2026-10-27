@@ -7,17 +7,23 @@ export async function GET(request: Request) {
   try {
     assertMobileApiEnabled();
     const { user, tokenRecordId } = await requireMobileUser(request);
-    const token = await prisma.mobileApiToken.findUnique({
-      where: { id: tokenRecordId },
-      select: {
-        id: true,
-        name: true,
-        tokenPrefix: true,
-        lastUsedAt: true,
-        createdAt: true,
-        expiresAt: true,
-      },
-    });
+    const [token, credential] = await Promise.all([
+      prisma.mobileApiToken.findUnique({
+        where: { id: tokenRecordId },
+        select: {
+          id: true,
+          name: true,
+          tokenPrefix: true,
+          lastUsedAt: true,
+          createdAt: true,
+          expiresAt: true,
+        },
+      }),
+      prisma.userRedmineCredential.findUnique({
+        where: { userId: user.id },
+        select: { baseUrl: true, isActive: true },
+      }),
+    ]);
 
     return Response.json({
       user: {
@@ -25,6 +31,7 @@ export async function GET(request: Request) {
         username: user.emailOrUsername,
         displayName: user.displayName,
       },
+      redmineBaseUrl: credential?.isActive ? credential.baseUrl : null,
       token,
     });
   } catch (error) {

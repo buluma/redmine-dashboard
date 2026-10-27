@@ -33,12 +33,19 @@ export interface SyncQueueItem {
   payload: Record<string, unknown>;
   createdAt: string;
   retries: number;
+  accountId?: string;
+  redmineBaseUrl?: string;
+}
+
+export interface SyncQueueScope {
+  accountId: string;
+  redmineBaseUrl: string;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────
 
 const DB_NAME = "converge-offline";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const MAX_CACHED_ISSUES = 500;
 
 // ─── Database ────────────────────────────────────────────────────────────
@@ -48,7 +55,7 @@ let dbPromise: Promise<IDBPDatabase> | null = null;
 function getDB(): Promise<IDBPDatabase> {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
-      upgrade(db) {
+    upgrade(db, _oldVersion, _newVersion, transaction) {
         if (!db.objectStoreNames.contains("issues")) {
           const store = db.createObjectStore("issues", { keyPath: "id" });
           store.createIndex("userId", "userId");
@@ -63,6 +70,13 @@ function getDB(): Promise<IDBPDatabase> {
           });
           store.createIndex("issueId", "issueId");
           store.createIndex("createdAt", "createdAt");
+        }
+        const queue = transaction.objectStore("syncQueue");
+        if (queue && !queue.indexNames.contains("accountId")) {
+          queue.createIndex("accountId", "accountId");
+        }
+        if (queue && !queue.indexNames.contains("redmineBaseUrl")) {
+          queue.createIndex("redmineBaseUrl", "redmineBaseUrl");
         }
       },
     });
@@ -127,6 +141,7 @@ export async function enqueueSync(
   issueId: string,
   type: SyncQueueItem["type"],
   payload: Record<string, unknown>,
+  scope: SyncQueueScope,
 ): Promise<void> {
   const db = await getDB();
   await db.add("syncQueue", {
@@ -135,6 +150,8 @@ export async function enqueueSync(
     payload,
     createdAt: new Date().toISOString(),
     retries: 0,
+    accountId: scope.accountId,
+    redmineBaseUrl: scope.redmineBaseUrl,
   });
 
   // Try to trigger background sync if supported

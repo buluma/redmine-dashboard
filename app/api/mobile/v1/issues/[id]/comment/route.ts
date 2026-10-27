@@ -6,6 +6,7 @@ import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmi
 import { commentSchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
 import { trackFailure, trackInfo, trackSuccess } from "@/src/lib/telemetry";
+import { offlineActionScopeError } from "@/src/lib/redmine-scope";
 
 function parseIssueId(id: string): number {
   const n = Number(id);
@@ -27,7 +28,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const issueId = parseIssueId(id);
     const body = await parseJson(request, commentSchema);
     const { user } = await requireMobileUser(request);
-    const { client } = await requireRedmineClientForUser(user.id);
+    const { cred, client } = await requireRedmineClientForUser(user.id);
+    const scopeError = offlineActionScopeError(request, user.id, cred.baseUrl);
+    if (scopeError) return scopeError;
     trackInfo("mobile.issue.comment.requested", {
       userId: user.id,
       issueId,

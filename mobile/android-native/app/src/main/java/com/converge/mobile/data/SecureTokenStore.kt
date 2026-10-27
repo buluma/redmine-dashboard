@@ -28,12 +28,25 @@ class SecureTokenStore(private val context: Context) {
 
     fun serverUrl(defaultUrl: String): String = prefs.getString(KEY_SERVER_URL, defaultUrl) ?: defaultUrl
 
+    fun accountId(): String? = prefs.getString(KEY_ACCOUNT_ID, null)
+
+    fun redmineBaseUrl(): String? = prefs.getString(KEY_REDMINE_BASE_URL, null)
+
     fun savedViewsJson(): String? = prefs.getString(KEY_SAVED_VIEWS, null)
 
-    fun saveSession(serverUrl: String, token: String) {
+    fun saveSession(serverUrl: String, token: String, accountId: String, redmineBaseUrl: String) {
         prefs.edit {
             putString(KEY_SERVER_URL, serverUrl.trimEnd('/'))
             putString(KEY_TOKEN, token)
+            putString(KEY_ACCOUNT_ID, accountId)
+            putString(KEY_REDMINE_BASE_URL, redmineBaseUrl.trimEnd('/'))
+        }
+    }
+
+    fun saveAccountScope(accountId: String, redmineBaseUrl: String) {
+        prefs.edit {
+            putString(KEY_ACCOUNT_ID, accountId)
+            putString(KEY_REDMINE_BASE_URL, redmineBaseUrl.trimEnd('/'))
         }
     }
 
@@ -52,12 +65,16 @@ class SecureTokenStore(private val context: Context) {
     fun clear() {
         prefs.edit {
             remove(KEY_TOKEN)
+            remove(KEY_ACCOUNT_ID)
+            remove(KEY_REDMINE_BASE_URL)
         }
     }
 
     companion object {
         private const val KEY_SERVER_URL = "server_url"
         private const val KEY_TOKEN = "token"
+        private const val KEY_ACCOUNT_ID = "account_id"
+        private const val KEY_REDMINE_BASE_URL = "redmine_base_url"
         private const val KEY_SAVED_VIEWS = "saved_issue_views"
     }
 }

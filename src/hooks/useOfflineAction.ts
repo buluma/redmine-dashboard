@@ -3,10 +3,12 @@
 import { useCallback, useState } from "react";
 import { enqueueSync } from "@/lib/offline-db";
 import { useToast } from "@/src/components/ToastProvider";
+import { useOfflineAccountId } from "@/src/components/OfflineAccountProvider";
 
 interface OfflineActionOptions {
   type: "update_status" | "assign" | "comment" | "log_time";
   issueId: string;
+  redmineBaseUrl: string | null;
   payload: Record<string, unknown>;
   onSuccess?: () => void;
   onError?: (error: Error) => void;
@@ -15,15 +17,19 @@ interface OfflineActionOptions {
 
 export function useOfflineAction() {
   const { show: showToast } = useToast();
+  const accountId = useOfflineAccountId();
   const [isBusy, setIsBusy] = useState(false);
 
   const performAction = useCallback(async (options: OfflineActionOptions) => {
-    const { type, issueId, payload, onSuccess, onError, successMessage } = options;
+    const { type, issueId, redmineBaseUrl, payload, onSuccess, onError, successMessage } = options;
 
     // Check online status
     if (typeof window !== "undefined" && !navigator.onLine) {
       try {
-        await enqueueSync(issueId, type, payload);
+        if (!accountId || !redmineBaseUrl) {
+          throw new Error("Cannot queue this action without its Redmine account and server.");
+        }
+        await enqueueSync(issueId, type, payload, { accountId, redmineBaseUrl });
         showToast(
           "Action queued offline. It will sync automatically when you are back online.",
           "info"
@@ -80,7 +86,7 @@ export function useOfflineAction() {
     } finally {
       setIsBusy(false);
     }
-  }, [showToast]);
+  }, [accountId, showToast]);
 
   return { performAction, isBusy };
 }

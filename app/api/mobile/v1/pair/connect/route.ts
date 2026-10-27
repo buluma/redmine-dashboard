@@ -29,6 +29,7 @@ export async function POST(request: Request) {
     return Response.json({
       token: token.token,
       expiresAt: token.expiresAt,
+      redmineBaseUrl: payload.baseUrl.replace(/\/$/, ""),
       user: {
         id: user.id,
         username: user.emailOrUsername,

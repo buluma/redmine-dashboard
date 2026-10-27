@@ -1,12 +1,14 @@
 import { requireRedmineClient } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
+import { redmineCatalogScope } from "@/src/lib/redmine-scope";
 
 export async function GET() {
   try {
-    const { client } = await requireRedmineClient();
+    const { user, cred, client } = await requireRedmineClient();
+    const scope = redmineCatalogScope(user.id, cred.baseUrl);
 
     const cached = await prisma.enumerationCatalog.findMany({
-      where: { kind: "time_entry_activity", isActive: true },
+      where: { scope, kind: "time_entry_activity", isActive: true },
       orderBy: [{ position: "asc" }, { name: "asc" }],
       select: { remoteId: true, name: true },
     });

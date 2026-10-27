@@ -4,6 +4,7 @@ import { jsonError, parseJson } from "@/src/lib/http";
 import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
 import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
 import { syncSingleIssue } from "@/src/lib/sync";
+import { offlineActionScopeError } from "@/src/lib/redmine-scope";
 import { z } from "zod";
 
 const statusSchema = z.object({ statusId: z.number().int().positive() });
@@ -23,7 +24,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const issueId = parseIssueId(id);
     const body = await parseJson(request, statusSchema);
     const { user } = await requireMobileUser(request);
-    const { client } = await requireRedmineClientForUser(user.id);
+    const { cred, client } = await requireRedmineClientForUser(user.id);
+    const scopeError = offlineActionScopeError(request, user.id, cred.baseUrl);
+    if (scopeError) return scopeError;
 
     const issue = await prisma.issue.findFirst({
       where: { userId: user.id, redmineIssueId: issueId },

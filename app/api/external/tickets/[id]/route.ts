@@ -9,6 +9,7 @@ import {
 } from "@/src/lib/external-auth";
 import { syncSingleIssue } from "@/src/lib/sync";
 import { trackFailure, trackInfo } from "@/src/lib/telemetry";
+import { getRedmineCatalogScopeForUser, redmineCatalogScope } from "@/src/lib/redmine-scope";
 
 export const runtime = "nodejs";
 
@@ -106,16 +107,17 @@ async function patchLocalIssue(issue: LocalIssue, body: Record<string, unknown>)
   if (typeof body.projectName === "string") data.projectName = body.projectName;
 
   if (typeof body.statusId === "number" || typeof body.status === "string") {
+    const catalogScope = await getRedmineCatalogScopeForUser(issue.userId);
     let statusId: number | undefined;
     let statusName: string | undefined;
     if (typeof body.status === "string") {
-      const catalog = await prisma.statusCatalog.findFirst({ where: { name: { equals: body.status as string } } });
+      const catalog = catalogScope ? await prisma.statusCatalog.findFirst({ where: { scope: catalogScope, name: { equals: body.status as string } } }) : null;
       if (!catalog) return NextResponse.json({ error: `Unknown status: ${body.status}` }, { status: 400 });
       statusId = catalog.id;
       statusName = catalog.name;
     } else {
       statusId = body.statusId as number;
-      const catalog = await prisma.statusCatalog.findUnique({ where: { id: statusId } });
+      const catalog = catalogScope ? await prisma.statusCatalog.findFirst({ where: { scope: catalogScope, id: statusId } }) : null;
       statusName = catalog?.name ?? issue.statusName;
     }
     if (statusName !== issue.statusName) {
@@ -227,13 +229,14 @@ export async function PATCH(
       return NextResponse.json({ error: "No user for this ticket" }, { status: 503 });
     }
 
-    const { client } = await requireRedmineClientForUser(user.id);
+    const { cred, client } = await requireRedmineClientForUser(user.id);
+    const catalogScope = redmineCatalogScope(user.id, cred.baseUrl);
 
     const updates: Record<string, unknown> = {};
     if (typeof body.statusId === "number") updates.statusId = body.statusId;
     if (typeof body.status === "string") {
       const catalog = await prisma.statusCatalog.findFirst({
-        where: { name: { equals: body.status as string } },
+        where: { scope: catalogScope, name: { equals: body.status as string } },
       });
       if (!catalog) {
         return NextResponse.json({ error: `Unknown status: ${body.status}` }, { status: 400 });

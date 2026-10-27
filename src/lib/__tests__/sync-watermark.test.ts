@@ -65,6 +65,7 @@ const getIssueMock = vi.fn();
 vi.mock("@/src/lib/redmine", () => ({
   RedmineClient: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
     this.normalizedBaseUrl = "https://redmine.example.com";
+    this.baseUrl = "https://redmine.example.com";
     this.getIssueStatuses = vi.fn().mockResolvedValue([]);
     this.getTimeEntryActivities = vi.fn().mockResolvedValue([]);
     this.getIssuePriorities = vi.fn().mockResolvedValue([]);

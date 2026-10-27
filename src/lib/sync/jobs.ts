@@ -291,8 +291,8 @@ export async function executeSyncJob(jobId: string): Promise<void> {
     const { decryptText } = await import("@/src/lib/crypto");
     const client = new RedmineClient(cred.baseUrl, decryptText(cred.apiKeyEncrypted, cred.apiKeyIv));
 
-    await syncStatusCatalog(client);
-    await syncEnumerationCatalog(client);
+    await syncStatusCatalog(job.userId, client);
+    await syncEnumerationCatalog(job.userId, client);
 
     const syncState = await prisma.syncState.findUnique({ where: { userId: job.userId } });
 
