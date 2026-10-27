@@ -26,6 +26,7 @@ export async function GET(
 ) {
   const { id } = await params;
   const apiKey = getExternalApiKey(request);
+  let sessionUserId: string | null = null;
 
   // Require a valid API key, or fall back to a logged-in session
   if (apiKey) {
@@ -39,6 +40,7 @@ export async function GET(
       if (!userId) {
         return NextResponse.json({ error: "API key required" }, { status: 401 });
       }
+      sessionUserId = userId;
     } catch {
       return NextResponse.json({ error: "API key required" }, { status: 401 });
     }
@@ -49,6 +51,7 @@ export async function GET(
     const localMatch = id.match(/^[Ll]-?(\d+)$/);
     const issue = await prisma.issue.findFirst({
       where: {
+        ...(sessionUserId ? { userId: sessionUserId } : {}),
         OR: [
           { id: id },
           ...(id.match(/^\d+$/) ? [{ redmineIssueId: parseInt(id) }] : []),
