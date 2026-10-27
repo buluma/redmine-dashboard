@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
   const offset = parseInt(searchParams.get("offset") || "0");
 
   const apiKey = getExternalApiKey(request);
+  let sessionUserId: string | null = null;
 
   const aiKey = process.env.AI_SUMMARY_API_KEY;
   const isValidAiSearchKey = Boolean(
@@ -80,6 +81,7 @@ export async function GET(request: NextRequest) {
       if (!userId) {
         return NextResponse.json({ error: "API key required" }, { status: 401 });
       }
+      sessionUserId = userId;
     } catch {
       return NextResponse.json({ error: "API key required" }, { status: 401 });
     }
@@ -91,6 +93,7 @@ export async function GET(request: NextRequest) {
       const issue = await prisma.issue.findFirst({
         where: {
           redmineIssueId: parseInt(redmineId),
+          ...(sessionUserId ? { userId: sessionUserId } : {}),
         },
       });
 
@@ -109,6 +112,7 @@ export async function GET(request: NextRequest) {
       // Use full-text search
       const issues = await prisma.issue.findMany({
         where: {
+          ...(sessionUserId ? { userId: sessionUserId } : {}),
           OR: [
             { subject: { contains: search } },
             { description: { contains: search } },
@@ -124,6 +128,7 @@ export async function GET(request: NextRequest) {
 
       const total = await prisma.issue.count({
         where: {
+          ...(sessionUserId ? { userId: sessionUserId } : {}),
           OR: [
             { subject: { contains: search } },
             { description: { contains: search } },
@@ -141,6 +146,7 @@ export async function GET(request: NextRequest) {
 
     // Regular list with filters
     const where: Prisma.IssueWhereInput = {};
+    if (sessionUserId) where.userId = sessionUserId;
     
     if (status) {
       where.statusName = { equals: status };
