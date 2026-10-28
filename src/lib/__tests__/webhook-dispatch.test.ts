@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { dispatchWebhook, processWebhookDeliveries } from '../webhook-subscription';
 import type { WebhookPayload } from '../webhook-subscription';
+import { InvalidWebhookDestinationError } from '../webhook-url';
 
 const { mockPrisma, mockSendWebhookRequest } = vi.hoisted(() => ({
   mockSendWebhookRequest: vi.fn(),
@@ -22,7 +23,7 @@ const { mockPrisma, mockSendWebhookRequest } = vi.hoisted(() => ({
 
 vi.mock('@/src/lib/db', () => ({ prisma: mockPrisma }));
 vi.mock('../webhook-url', () => ({
-  validateWebhookUrl: vi.fn().mockResolvedValue({ valid: true }),
+  InvalidWebhookDestinationError: class InvalidWebhookDestinationError extends Error {},
   sendWebhookRequest: mockSendWebhookRequest,
 }));
 
@@ -108,6 +109,28 @@ describe('Webhook delivery queue', () => {
       data: expect.objectContaining({ status: 'pending', attempt: 1, error: expect.stringContaining('503') }),
     }));
     expect(mockPrisma.webhookSubscription.update).not.toHaveBeenCalled();
+  });
+
+  it('fails a delivery without retrying when the destination becomes private at connection time', async () => {
+    mockPrisma.webhookDelivery.findMany.mockResolvedValue([{
+      id: 'delivery-1',
+      subscriptionId: subscription.id,
+      event: 'ticket.created',
+      payload: mockPayload,
+      attempt: 0,
+    }]);
+    mockPrisma.webhookSubscription.findUnique.mockResolvedValue(subscription);
+    mockSendWebhookRequest.mockRejectedValueOnce(new InvalidWebhookDestinationError('Private destination rejected'));
+
+    await processWebhookDeliveries();
+
+    expect(mockPrisma.webhookDelivery.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'delivery-1' },
+      data: expect.objectContaining({ status: 'failed', attempt: 1, error: 'Private destination rejected' }),
+    }));
+    expect(mockPrisma.webhookDelivery.update).not.toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'pending' }),
+    }));
   });
 
   it('skips a delivery claimed by another worker instance', async () => {
