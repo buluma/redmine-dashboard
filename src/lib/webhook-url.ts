@@ -74,21 +74,21 @@ type AddressResolver = (hostname: string, options: { all: true; verbatim: true }
 async function resolveWebhookAddresses(
   hostname: string,
   resolveAddresses: AddressResolver
-): Promise<{ addresses: Array<{ address: string; family?: number }> } | { error: string }> {
+): Promise<{ addresses: Array<{ address: string; family?: number }> } | { error: string; permanent: boolean }> {
   try {
     const addresses = isIP(hostname)
       ? [{ address: hostname }]
       : await resolveAddresses(hostname, { all: true, verbatim: true });
-    if (addresses.length === 0) return { error: 'The webhook host did not resolve.' };
+    if (addresses.length === 0) return { error: 'The webhook host did not resolve.', permanent: false };
     if (addresses.some(({ address }) => isIP(address) === 0)) {
-      return { error: 'The webhook host returned an invalid address.' };
+      return { error: 'The webhook host returned an invalid address.', permanent: true };
     }
     if (addresses.some(({ address }) => isPrivateAddress(address)) && !trustedPrivateHost(hostname)) {
-      return { error: 'Private network destinations require adding the host to WEBHOOK_ALLOWED_HOSTS.' };
+      return { error: 'Private network destinations require adding the host to WEBHOOK_ALLOWED_HOSTS.', permanent: true };
     }
     return { addresses };
   } catch {
-    return { error: 'The webhook host could not be resolved.' };
+    return { error: 'The webhook host could not be resolved.', permanent: false };
   }
 }
 
@@ -97,13 +97,16 @@ function createWebhookAgent(url: URL, resolveAddresses: AddressResolver): BaseHt
   const expectedHostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
   const lookupAtConnect: LookupFunction = (hostname, options, callback) => {
     if (hostname.toLowerCase().replace(/^\[|\]$/g, '') !== expectedHostname) {
-      callback(Object.assign(new Error('Webhook connection host did not match the validated URL.'), { code: 'ENOTFOUND' }), '', 0);
+      callback(Object.assign(new InvalidWebhookDestinationError('Webhook connection host did not match the validated URL.'), { code: 'ENOTFOUND' }), '', 0);
       return;
     }
 
     void resolveWebhookAddresses(hostname, resolveAddresses).then((result) => {
       if ('error' in result) {
-        const error = Object.assign(new Error(result.error), { code: 'ENOTFOUND' });
+        const error = Object.assign(
+          result.permanent ? new InvalidWebhookDestinationError(result.error) : new Error(result.error),
+          { code: 'ENOTFOUND' }
+        );
         callback(error, '', 0);
         return;
       }
@@ -170,6 +173,11 @@ export async function sendWebhookRequest(
   headers: OutgoingHttpHeaders,
   resolveAddresses: AddressResolver = lookup
 ): Promise<{ status: number; responseBody: string }> {
+  const destination = await validateWebhookUrl(rawUrl, resolveAddresses);
+  if (!destination.valid) {
+    throw new InvalidWebhookDestinationError(destination.error);
+  }
+
   const url = new URL(rawUrl);
   const agent = createWebhookAgent(url, resolveAddresses);
   const request = (url.protocol === 'https:' ? httpsRequest : httpRequest) as typeof httpRequest;
@@ -199,5 +207,13 @@ export async function sendWebhookRequest(
     });
   } finally {
     agent.destroy();
+  }
+}
+
+/** Indicates that a webhook URL failed destination policy checks before delivery. */
+export class InvalidWebhookDestinationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidWebhookDestinationError';
   }
 }
