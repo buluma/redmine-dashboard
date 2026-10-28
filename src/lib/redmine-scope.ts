@@ -29,6 +29,22 @@ export async function getRedmineCatalogScopeForUser(userId: string): Promise<str
   return redmineCatalogScope(userId, credential.baseUrl);
 }
 
+export function hasOfflineActionScopeHeaders(request: Request): boolean {
+  return request.headers.has(OFFLINE_ACCOUNT_HEADER) || request.headers.has(OFFLINE_REDMINE_BASE_URL_HEADER);
+}
+
+export async function offlineActionScopeErrorForUser(
+  request: Request,
+  userId: string,
+): Promise<Response | null> {
+  if (!hasOfflineActionScopeHeaders(request)) return null;
+  const credential = await prisma.userRedmineCredential.findUnique({
+    where: { userId },
+    select: { baseUrl: true, isActive: true },
+  });
+  return offlineActionScopeError(request, userId, credential?.isActive ? credential.baseUrl : null);
+}
+
 export function offlineActionScopeError(
   request: Request,
   userId: string,

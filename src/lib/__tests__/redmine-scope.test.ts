@@ -9,6 +9,7 @@ vi.mock("@/src/lib/db", () => ({
 import {
   getRedmineCatalogScopeForUser,
   offlineActionScopeError,
+  offlineActionScopeErrorForUser,
   redmineCatalogScope,
 } from "@/src/lib/redmine-scope";
 
@@ -54,5 +55,20 @@ describe("Redmine account scope", () => {
   it("keeps ordinary online mutations compatible when they have no queue scope", () => {
     const request = new Request("https://dashboard.test/api/issues/1/comment");
     expect(offlineActionScopeError(request, "user-a", "https://redmine.example.test/root")).toBeNull();
+  });
+
+  it("defers a scoped action when its active Redmine credential is missing", async () => {
+    findCredential.mockResolvedValue(null);
+    const request = new Request("https://dashboard.test/api/issues/1/comment", {
+      headers: {
+        "x-converge-offline-account-id": "user-a",
+        "x-converge-offline-redmine-base-url": "https://redmine.example.test",
+      },
+    });
+
+    const response = await offlineActionScopeErrorForUser(request, "user-a");
+
+    expect(response?.status).toBe(409);
+    expect(response?.headers.get("x-converge-offline-scope-mismatch")).toBe("true");
   });
 });

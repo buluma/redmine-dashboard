@@ -4,7 +4,7 @@ import { jsonError, parseJson } from "@/src/lib/http";
 import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
 import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
 import { syncSingleIssue } from "@/src/lib/sync";
-import { offlineActionScopeError } from "@/src/lib/redmine-scope";
+import { offlineActionScopeError, offlineActionScopeErrorForUser } from "@/src/lib/redmine-scope";
 import { z } from "zod";
 
 function parseIssueId(id: string): number {
@@ -74,6 +74,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const issueId = parseIssueId(id);
     const body = await parseJson(request, createTimeEntrySchema);
     const { user } = await requireMobileUser(request);
+    const queuedScopeError = await offlineActionScopeErrorForUser(request, user.id);
+    if (queuedScopeError) return queuedScopeError;
     const { cred, client } = await requireRedmineClientForUser(user.id);
     const scopeError = offlineActionScopeError(request, user.id, cred.baseUrl);
     if (scopeError) return scopeError;

@@ -29,7 +29,7 @@ class OfflineSyncWorker(
         val accountId = store.accountId()?.takeIf { it.isNotBlank() } ?: return Result.success()
         val redmineBaseUrl = store.redmineBaseUrl()?.trimEnd('/')?.takeIf { it.isNotBlank() } ?: return Result.success()
         val requestedAccountId = inputData.getString(KEY_USER_ID) ?: return Result.success()
-        val requestedServerUrl = inputData.getString(KEY_SERVER_URL)?.trimEnd('/') ?: return Result.success()
+        val requestedServerUrl = inputData.getString(KEY_SERVER_URL)?.let(repo::normalizeServerUrl) ?: return Result.success()
         val requestedRedmineBaseUrl = inputData.getString(KEY_REDMINE_BASE_URL)?.trimEnd('/') ?: return Result.success()
         if (accountId != requestedAccountId || serverUrl != requestedServerUrl || redmineBaseUrl != requestedRedmineBaseUrl) {
             return Result.success()

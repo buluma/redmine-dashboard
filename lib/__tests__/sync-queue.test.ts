@@ -120,6 +120,21 @@ describe("processSyncQueue log_time", () => {
     expect(mockClearSyncItems).not.toHaveBeenCalled();
   });
 
+  it("defers an unauthorized replay without consuming a retry", async () => {
+    mockGetPendingSyncItems.mockResolvedValue([item({ retries: 3 })]);
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 401,
+      headers: new Headers(),
+    });
+
+    const result = await processSyncQueue();
+
+    expect(result).toEqual({ synced: 0, failed: 0 });
+    expect(mockIncrementSyncRetries).not.toHaveBeenCalled();
+    expect(mockClearSyncItems).not.toHaveBeenCalled();
+  });
+
   it("discards legacy queue entries without an account/server scope", async () => {
     mockGetPendingSyncItems.mockResolvedValue([item({ accountId: undefined, redmineBaseUrl: undefined })]);
     mockClearSyncItems.mockResolvedValue(undefined);

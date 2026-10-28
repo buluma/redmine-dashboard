@@ -267,6 +267,32 @@ describe("mobile v1 routes", () => {
     expect(mockSyncSingleIssue).toHaveBeenCalledWith("u1", client, 123);
   });
 
+  it("defers an offline comment when the account has no active Redmine credential", async () => {
+    mockRequireMobileUser.mockResolvedValue({
+      user: { id: "u1", emailOrUsername: "alice", displayName: "Alice" },
+      tokenRecordId: "mt1",
+    });
+    mockCredentialFindUnique.mockResolvedValue(null);
+
+    const { POST } = await import("@/app/api/mobile/v1/issues/[id]/comment/route");
+    const response = await POST(
+      new Request("http://localhost", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-converge-offline-account-id": "u1",
+          "x-converge-offline-redmine-base-url": "https://redmine.example.com",
+        },
+        body: JSON.stringify({ comment: "From offline queue" }),
+      }),
+      { params: Promise.resolve({ id: "123" }) },
+    );
+
+    expect(response.status).toBe(409);
+    expect(response.headers.get("x-converge-offline-scope-mismatch")).toBe("true");
+    expect(mockRequireRedmineClientForUser).not.toHaveBeenCalled();
+  });
+
   it("rotates current token", async () => {
     mockRequireMobileUser.mockResolvedValue({
       user: { id: "u1", emailOrUsername: "alice", displayName: "Alice" },

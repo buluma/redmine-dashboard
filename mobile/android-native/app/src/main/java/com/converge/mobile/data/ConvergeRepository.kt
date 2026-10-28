@@ -73,12 +73,14 @@ class ConvergeRepository(
 
     fun currentRedmineBaseUrl(): String? = tokenStore.redmineBaseUrl()
 
+    fun normalizeServerUrl(serverUrl: String): String = normalizeBaseUrl(serverUrl)
+
     suspend fun refreshAccountScope(serverUrl: String) = call {
         val response = api(serverUrl).getMe()
         val accountId = response.user.id.takeIf { it.isNotBlank() }
         val redmineBaseUrl = response.redmineBaseUrl?.takeIf { it.isNotBlank() }
-        if (accountId != null && redmineBaseUrl != null) {
-            tokenStore.saveAccountScope(accountId, normalizeBaseUrl(redmineBaseUrl))
+        if (accountId != null) {
+            tokenStore.saveAccountScope(accountId, redmineBaseUrl?.takeIf { it.isNotBlank() }?.let(::normalizeBaseUrl))
         }
         accountId to redmineBaseUrl
     }

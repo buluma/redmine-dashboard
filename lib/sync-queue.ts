@@ -34,7 +34,7 @@ async function processSyncItem(item: SyncQueueItem): Promise<boolean | "deferred
           headers,
           body: JSON.stringify(item.payload),
         });
-        if (res.headers.get(OFFLINE_SCOPE_MISMATCH_HEADER) === "true") return "deferred";
+        if (res.status === 401 || res.headers.get(OFFLINE_SCOPE_MISMATCH_HEADER) === "true") return "deferred";
         if (!res.ok) throw new Error(`Status update failed: ${res.status}`);
         return true;
       }
@@ -45,7 +45,7 @@ async function processSyncItem(item: SyncQueueItem): Promise<boolean | "deferred
           headers,
           body: JSON.stringify(item.payload),
         });
-        if (res.headers.get(OFFLINE_SCOPE_MISMATCH_HEADER) === "true") return "deferred";
+        if (res.status === 401 || res.headers.get(OFFLINE_SCOPE_MISMATCH_HEADER) === "true") return "deferred";
         if (!res.ok) throw new Error(`Assign failed: ${res.status}`);
         return true;
       }
@@ -56,7 +56,7 @@ async function processSyncItem(item: SyncQueueItem): Promise<boolean | "deferred
           headers,
           body: JSON.stringify(item.payload),
         });
-        if (res.headers.get(OFFLINE_SCOPE_MISMATCH_HEADER) === "true") return "deferred";
+        if (res.status === 401 || res.headers.get(OFFLINE_SCOPE_MISMATCH_HEADER) === "true") return "deferred";
         if (!res.ok) throw new Error(`Comment failed: ${res.status}`);
         return true;
       }
@@ -80,7 +80,7 @@ async function processSyncItem(item: SyncQueueItem): Promise<boolean | "deferred
           headers,
           body: JSON.stringify(normalizedPayload),
         });
-        if (res.headers.get(OFFLINE_SCOPE_MISMATCH_HEADER) === "true") return "deferred";
+        if (res.status === 401 || res.headers.get(OFFLINE_SCOPE_MISMATCH_HEADER) === "true") return "deferred";
         if (!res.ok) throw new Error(`Time log failed: ${res.status}`);
         return true;
       }

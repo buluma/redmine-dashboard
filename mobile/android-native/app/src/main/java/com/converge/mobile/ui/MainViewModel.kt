@@ -188,8 +188,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch {
                 runCatching { repository.refreshAccountScope(state.value.serverUrl) }
                     .onSuccess { (accountId, redmineBaseUrl) ->
-                        if (!accountId.isNullOrBlank() && !redmineBaseUrl.isNullOrBlank()) {
-                            update { copy(accountId = accountId, redmineBaseUrl = redmineBaseUrl) }
+                        if (!accountId.isNullOrBlank()) {
+                            update {
+                                copy(
+                                    accountId = accountId,
+                                    redmineBaseUrl = redmineBaseUrl?.takeIf { it.isNotBlank() }.orEmpty(),
+                                )
+                            }
                         }
                     }
                     .onFailure {
@@ -274,7 +279,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .setConstraints(constraints)
             .setInputData(workDataOf(
                 OfflineSyncWorker.KEY_USER_ID to current.accountId,
-                OfflineSyncWorker.KEY_SERVER_URL to current.serverUrl,
+                OfflineSyncWorker.KEY_SERVER_URL to repository.normalizeServerUrl(current.serverUrl),
                 OfflineSyncWorker.KEY_REDMINE_BASE_URL to current.redmineBaseUrl,
             ))
             .build()
@@ -349,6 +354,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 update {
                     copy(
                         isPaired = true,
+                        serverUrl = repository.savedServerUrl(BuildConfig.DEFAULT_SERVER_URL),
                         accountId = repository.currentAccountId().orEmpty(),
                         redmineBaseUrl = repository.currentRedmineBaseUrl().orEmpty(),
                         redmineApiKey = "",
@@ -1327,7 +1333,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val current = state.value
         val accountId = current.accountId
         val redmineBaseUrl = current.redmineBaseUrl.trim().trimEnd('/')
-        val serverUrl = current.serverUrl.trim().trimEnd('/')
+        val serverUrl = repository.normalizeServerUrl(current.serverUrl)
         if (accountId.isBlank() || redmineBaseUrl.isBlank() || serverUrl.isBlank()) {
             update { copy(errorMessage = "Pair this account online before queueing offline changes.") }
             return false
@@ -1384,6 +1390,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return JSONObject()
             .put("accountId", current.accountId)
             .put("redmineBaseUrl", current.redmineBaseUrl.trim().trimEnd('/'))
+            .put("serverUrl", repository.normalizeServerUrl(current.serverUrl))
             .toString()
     }
 

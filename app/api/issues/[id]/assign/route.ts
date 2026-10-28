@@ -1,11 +1,11 @@
-import { requireRedmineClient } from "@/src/lib/auth";
+import { requireCurrentUser, requireRedmineClient } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError, parseJson } from "@/src/lib/http";
 import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
 import { syncSingleIssue } from "@/src/lib/sync";
 import { trackFailure, trackSuccess } from "@/src/lib/telemetry";
 import { z } from "zod";
-import { offlineActionScopeError } from "@/src/lib/redmine-scope";
+import { hasOfflineActionScopeHeaders, offlineActionScopeError, offlineActionScopeErrorForUser } from "@/src/lib/redmine-scope";
 
 const assignSchema = z.object({
   userId: z.number().int().positive(),
@@ -25,6 +25,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const { id } = await context.params;
     const issueId = parseIssueId(id);
     const body = await parseJson(request, assignSchema);
+    if (hasOfflineActionScopeHeaders(request)) {
+      const currentUser = await requireCurrentUser();
+      const queuedScopeError = await offlineActionScopeErrorForUser(request, currentUser.id);
+      if (queuedScopeError) return queuedScopeError;
+    }
     const { user, cred, client } = await requireRedmineClient();
     const scopeError = offlineActionScopeError(request, user.id, cred.baseUrl);
     if (scopeError) return scopeError;

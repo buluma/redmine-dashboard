@@ -43,10 +43,14 @@ class SecureTokenStore(private val context: Context) {
         }
     }
 
-    fun saveAccountScope(accountId: String, redmineBaseUrl: String) {
+    fun saveAccountScope(accountId: String, redmineBaseUrl: String?) {
         prefs.edit {
             putString(KEY_ACCOUNT_ID, accountId)
-            putString(KEY_REDMINE_BASE_URL, redmineBaseUrl.trimEnd('/'))
+            if (redmineBaseUrl.isNullOrBlank()) {
+                remove(KEY_REDMINE_BASE_URL)
+            } else {
+                putString(KEY_REDMINE_BASE_URL, redmineBaseUrl.trimEnd('/'))
+            }
         }
     }
 

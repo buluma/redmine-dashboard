@@ -118,7 +118,8 @@ async function patchLocalIssue(issue: LocalIssue, body: Record<string, unknown>)
     } else {
       statusId = body.statusId as number;
       const catalog = catalogScope ? await prisma.statusCatalog.findFirst({ where: { scope: catalogScope, id: statusId } }) : null;
-      statusName = catalog?.name ?? issue.statusName;
+      if (!catalog) return NextResponse.json({ error: `Unknown statusId: ${statusId}` }, { status: 400 });
+      statusName = catalog.name;
     }
     if (statusName !== issue.statusName) {
       details.push({ property: "attr", name: "status", old_value: issue.statusName, new_value: statusName });

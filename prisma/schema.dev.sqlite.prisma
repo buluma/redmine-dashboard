@@ -377,7 +377,7 @@ model SyncJob {
 
 model StatusCatalog {
   id        Int
-  scope     String
+  scope     String   @default("")
   name      String
   isClosed  Boolean
   updatedAt DateTime @updatedAt
@@ -387,7 +387,7 @@ model StatusCatalog {
 
 model EnumerationCatalog {
   key       String   @id
-  scope     String
+  scope     String   @default("")
   remoteId  Int
   kind      String
   name      String

@@ -19,7 +19,8 @@ Redmine base URL active when it was created. Replay sends that scope to the API,
 which rejects a different account or server with `409`; the item stays queued
 until its original scope is active again. Legacy browser queue entries without
 a saved scope are discarded on the first flush after upgrade, because their
-owner cannot be established safely.
+owner cannot be established safely. Unauthorized browser replays are also
+deferred without consuming retries, so logging back in can resume the queue.
 
 There is no server-side sync-queue API — the whole queue lives in the browser. A
 flushed item posts directly to the same route an online client would call.
@@ -283,7 +284,9 @@ Room stores each queued mutation with the authenticated account ID, Converge
 server URL, and Redmine base URL. A worker drains only rows matching all three
 values and sends the account/server binding with the mutation request. Account
 or server changes leave old rows pending for their original scope. Rows created
-before the scoped schema have empty server fields and are not replayed.
+before the scoped schema are deleted during migration because their original
+account and server cannot be established. Version 2 rows have their server URL
+normalized during migration so already queued actions remain replayable.
 
 ## Performance Considerations
 
