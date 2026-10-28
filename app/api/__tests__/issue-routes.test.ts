@@ -179,6 +179,7 @@ describe("issue assign route", () => {
     it("returns 404 when issue not found", async () => {
       mockRequireRedmineClient.mockResolvedValue({
         user: { id: "user_1" },
+        cred: { baseUrl: "https://redmine.example.com" },
         client: { updateIssue: vi.fn() },
       });
       mockPrisma.issue.findFirst.mockResolvedValue(null);
@@ -197,6 +198,7 @@ describe("issue assign route", () => {
       const mockUpdateIssue = vi.fn().mockResolvedValue(undefined);
       mockRequireRedmineClient.mockResolvedValue({
         user: { id: "user_1" },
+        cred: { baseUrl: "https://redmine.example.com" },
         client: { updateIssue: mockUpdateIssue },
       });
       mockPrisma.issue.findFirst.mockResolvedValue({ id: "issue_1" });

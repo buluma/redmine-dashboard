@@ -85,6 +85,7 @@ vi.mock('@/src/lib/db', () => ({
 
 function makeClient(overrides: Record<string, unknown> = {}) {
   return {
+    baseUrl: 'https://redmine.example.com',
     getIssue: vi.fn().mockResolvedValue({
       issue: {
         subject: 'Remote Issue',

@@ -376,14 +376,18 @@ model SyncJob {
 }
 
 model StatusCatalog {
-  id        Int      @id
+  id        Int
+  scope     String   @default("")
   name      String
   isClosed  Boolean
   updatedAt DateTime @updatedAt
+
+  @@id([scope, id])
 }
 
 model EnumerationCatalog {
   key       String   @id
+  scope     String   @default("")
   remoteId  Int
   kind      String
   name      String
@@ -392,8 +396,8 @@ model EnumerationCatalog {
   position  Int?
   updatedAt DateTime @updatedAt
 
-  @@index([kind, remoteId])
-  @@index([kind, isActive])
+  @@index([scope, kind, remoteId])
+  @@index([scope, kind, isActive])
 }
 
 model LeaderLock {

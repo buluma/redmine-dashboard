@@ -23,6 +23,8 @@ function item(overrides: Partial<SyncQueueItem> = {}): SyncQueueItem {
     payload: { hours: 1.5, activityId: 31, comment: "test" },
     createdAt: new Date().toISOString(),
     retries: 0,
+    accountId: "user-1",
+    redmineBaseUrl: "https://redmine.example.com",
     ...overrides,
   };
 }
@@ -40,13 +42,19 @@ describe("processSyncQueue log_time", () => {
   it("posts to /api/issues/[id]/timelog, not /api/time-entries", async () => {
     mockGetPendingSyncItems.mockResolvedValue([item()]);
     mockClearSyncItems.mockResolvedValue(undefined);
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true });
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, headers: new Headers() });
 
     const result = await processSyncQueue();
 
     expect(global.fetch).toHaveBeenCalledWith(
       "/api/issues/issue-1/timelog",
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "x-converge-offline-account-id": "user-1",
+          "x-converge-offline-redmine-base-url": "https://redmine.example.com",
+        }),
+      }),
     );
     expect(global.fetch).not.toHaveBeenCalledWith("/api/time-entries", expect.anything());
     expect(result).toEqual({ synced: 1, failed: 0 });
@@ -74,7 +82,7 @@ describe("processSyncQueue log_time", () => {
       item({ payload: { hours: 2, comments: "legacy note" } }),
     ]);
     mockClearSyncItems.mockResolvedValue(undefined);
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true });
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, headers: new Headers() });
 
     await processSyncQueue();
 
@@ -88,12 +96,53 @@ describe("processSyncQueue log_time", () => {
       item({ payload: { hours: 1, activityId: 9, comment: "current" } }),
     ]);
     mockClearSyncItems.mockResolvedValue(undefined);
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true });
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, headers: new Headers() });
 
     await processSyncQueue();
 
     const [, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     const body = JSON.parse(options.body);
     expect(body).toEqual({ hours: 1, activityId: 9, comment: "current" });
+  });
+
+  it("leaves an item queued when the active account does not match its saved scope", async () => {
+    mockGetPendingSyncItems.mockResolvedValue([item()]);
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 409,
+      headers: new Headers({ "x-converge-offline-scope-mismatch": "true" }),
+    });
+
+    const result = await processSyncQueue();
+
+    expect(result).toEqual({ synced: 0, failed: 0 });
+    expect(mockIncrementSyncRetries).not.toHaveBeenCalled();
+    expect(mockClearSyncItems).not.toHaveBeenCalled();
+  });
+
+  it("defers an unauthorized replay without consuming a retry", async () => {
+    mockGetPendingSyncItems.mockResolvedValue([item({ retries: 3 })]);
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 401,
+      headers: new Headers(),
+    });
+
+    const result = await processSyncQueue();
+
+    expect(result).toEqual({ synced: 0, failed: 0 });
+    expect(mockIncrementSyncRetries).not.toHaveBeenCalled();
+    expect(mockClearSyncItems).not.toHaveBeenCalled();
+  });
+
+  it("discards legacy queue entries without an account/server scope", async () => {
+    mockGetPendingSyncItems.mockResolvedValue([item({ accountId: undefined, redmineBaseUrl: undefined })]);
+    mockClearSyncItems.mockResolvedValue(undefined);
+
+    const result = await processSyncQueue();
+
+    expect(result).toEqual({ synced: 0, failed: 0 });
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(mockClearSyncItems).toHaveBeenCalledWith([1]);
   });
 });

@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 class ApiException(message: String) : Exception(message)
+class OfflineActionScopeMismatchException : Exception("Queued action is waiting for its original Redmine account.")
 
 class ConvergeRepository(
     private val tokenStore: SecureTokenStore,
@@ -57,11 +58,32 @@ class ConvergeRepository(
         if (response.token.isBlank()) {
             throw ApiException("Pairing succeeded without a token.")
         }
-        tokenStore.saveSession(cleanServerUrl, response.token)
+        tokenStore.saveSession(
+            cleanServerUrl,
+            response.token,
+            response.user.id,
+            normalizeBaseUrl(response.redmineBaseUrl?.takeIf { it.isNotBlank() } ?: redmineBaseUrl),
+        )
         clients.remove(cleanServerUrl)
     }
 
     fun currentToken(): String? = tokenStore.token()
+
+    fun currentAccountId(): String? = tokenStore.accountId()
+
+    fun currentRedmineBaseUrl(): String? = tokenStore.redmineBaseUrl()
+
+    fun normalizeServerUrl(serverUrl: String): String = normalizeBaseUrl(serverUrl)
+
+    suspend fun refreshAccountScope(serverUrl: String) = call {
+        val response = api(serverUrl).getMe()
+        val accountId = response.user.id.takeIf { it.isNotBlank() }
+        val redmineBaseUrl = response.redmineBaseUrl?.takeIf { it.isNotBlank() }
+        if (accountId != null) {
+            tokenStore.saveAccountScope(accountId, redmineBaseUrl?.takeIf { it.isNotBlank() }?.let(::normalizeBaseUrl))
+        }
+        accountId to redmineBaseUrl
+    }
 
     suspend fun listIssues(
         serverUrl: String,
@@ -181,12 +203,22 @@ class ConvergeRepository(
         api(serverUrl).deleteLocalIssue(issueId)
     }
 
-    suspend fun postComment(serverUrl: String, issueId: String, comment: String) = call {
-        api(serverUrl).postComment(issueId, CommentRequest(comment.trim()))
+    suspend fun postComment(serverUrl: String, issueId: String, comment: String, offlineScope: OfflineActionScope? = null) = call {
+        api(serverUrl).postComment(
+            issueId,
+            CommentRequest(comment.trim()),
+            offlineScope?.accountId,
+            offlineScope?.redmineBaseUrl,
+        )
     }
 
-    suspend fun updateStatus(serverUrl: String, redmineIssueId: Int, statusId: Int) = call {
-        api(serverUrl).updateStatus(redmineIssueId.toString(), StatusRequest(statusId))
+    suspend fun updateStatus(serverUrl: String, redmineIssueId: Int, statusId: Int, offlineScope: OfflineActionScope? = null) = call {
+        api(serverUrl).updateStatus(
+            redmineIssueId.toString(),
+            StatusRequest(statusId),
+            offlineScope?.accountId,
+            offlineScope?.redmineBaseUrl,
+        )
     }
 
     suspend fun assignIssue(serverUrl: String, redmineIssueId: Int, userId: Int) = call {
@@ -205,8 +237,12 @@ class ConvergeRepository(
         api(serverUrl).listNotifications()
     }
 
-    suspend fun toggleFavorite(serverUrl: String, redmineIssueId: Int): Boolean = call {
-        api(serverUrl).toggleFavorite(redmineIssueId.toString()).favorited
+    suspend fun toggleFavorite(serverUrl: String, redmineIssueId: Int, offlineScope: OfflineActionScope? = null): Boolean = call {
+        api(serverUrl).toggleFavorite(
+            redmineIssueId.toString(),
+            offlineScope?.accountId,
+            offlineScope?.redmineBaseUrl,
+        ).favorited
     }
 
     suspend fun editIssue(
@@ -251,6 +287,7 @@ class ConvergeRepository(
         activityId: Int,
         comment: String?,
         spentOn: String?,
+        offlineScope: OfflineActionScope? = null,
     ) = call {
         api(serverUrl).createTimeEntry(
             redmineIssueId.toString(),
@@ -260,6 +297,8 @@ class ConvergeRepository(
                 comment = comment?.trim()?.takeIf { it.isNotEmpty() },
                 spentOn = spentOn?.trim()?.takeIf { it.isNotEmpty() },
             ),
+            offlineScope?.accountId,
+            offlineScope?.redmineBaseUrl,
         )
     }
 
@@ -450,6 +489,9 @@ class ConvergeRepository(
         try {
             return block()
         } catch (error: HttpException) {
+            if (error.response()?.headers()?.get("X-Converge-Offline-Scope-Mismatch") == "true") {
+                throw OfflineActionScopeMismatchException()
+            }
             if (error.code() == 401) {
                 tokenStore.clear()
                 throw ApiException("Session expired. Pair this device again.")

@@ -11,6 +11,8 @@ import androidx.room.PrimaryKey
 data class OfflineActionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val userId: String,
+    val serverUrl: String,
+    val redmineBaseUrl: String,
     val type: String,
     val redmineIssueId: Int,
     val payloadJson: String,

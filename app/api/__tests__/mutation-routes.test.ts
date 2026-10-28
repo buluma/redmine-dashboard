@@ -5,10 +5,15 @@ const mockRequireRedmineClient = vi.fn();
 const mockRequireCurrentUser = vi.fn();
 const mockSyncSingleIssue = vi.fn();
 const mockRunSyncJob = vi.fn();
+const { mockCredentialFindUnique } = vi.hoisted(() => ({ mockCredentialFindUnique: vi.fn() }));
 
 vi.mock("@/src/lib/auth", () => ({
   requireRedmineClient: mockRequireRedmineClient,
   requireCurrentUser: mockRequireCurrentUser,
+}));
+
+vi.mock("@/src/lib/db", () => ({
+  prisma: { userRedmineCredential: { findUnique: mockCredentialFindUnique } },
 }));
 
 vi.mock("@/src/lib/sync", () => ({
@@ -34,7 +39,11 @@ describe("API mutation routes", () => {
       }),
     };
 
-    mockRequireRedmineClient.mockResolvedValue({ user: { id: "u1" }, client });
+    mockRequireRedmineClient.mockResolvedValue({
+      user: { id: "u1" },
+      cred: { baseUrl: "https://redmine.example.com" },
+      client,
+    });
 
     const { GET } = await import("@/app/api/issues/[id]/status/route");
     const response = await GET(new Request("http://localhost"), {
@@ -56,7 +65,11 @@ describe("API mutation routes", () => {
       updateIssueStatus: vi.fn(),
     };
 
-    mockRequireRedmineClient.mockResolvedValue({ user: { id: "u1" }, client });
+    mockRequireRedmineClient.mockResolvedValue({
+      user: { id: "u1" },
+      cred: { baseUrl: "https://redmine.example.com" },
+      client,
+    });
 
     const { POST } = await import("@/app/api/issues/[id]/status/route");
     const response = await POST(
@@ -82,7 +95,11 @@ describe("API mutation routes", () => {
       updateIssueStatus: vi.fn().mockResolvedValue(undefined),
     };
 
-    mockRequireRedmineClient.mockResolvedValue({ user: { id: "u1" }, client });
+    mockRequireRedmineClient.mockResolvedValue({
+      user: { id: "u1" },
+      cred: { baseUrl: "https://redmine.example.com" },
+      client,
+    });
     mockSyncSingleIssue.mockResolvedValue({ id: "i1" });
 
     const { POST } = await import("@/app/api/issues/bulk-status/route");
@@ -107,7 +124,11 @@ describe("API mutation routes", () => {
       addComment: vi.fn().mockResolvedValue(undefined),
     };
 
-    mockRequireRedmineClient.mockResolvedValue({ user: { id: "u1" }, client });
+    mockRequireRedmineClient.mockResolvedValue({
+      user: { id: "u1" },
+      cred: { baseUrl: "https://redmine.example.com" },
+      client,
+    });
     mockSyncSingleIssue.mockResolvedValue({ id: "i1" });
 
     const { POST } = await import("@/app/api/issues/[id]/comment/route");
@@ -125,12 +146,39 @@ describe("API mutation routes", () => {
     expect(mockSyncSingleIssue).toHaveBeenCalled();
   });
 
+  it("defers a queued comment when the current account has no Redmine credential", async () => {
+    mockRequireCurrentUser.mockResolvedValue({ id: "u1" });
+    mockCredentialFindUnique.mockResolvedValue(null);
+
+    const { POST } = await import("@/app/api/issues/[id]/comment/route");
+    const response = await POST(
+      new Request("http://localhost", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-converge-offline-account-id": "u1",
+          "x-converge-offline-redmine-base-url": "https://redmine.example.com",
+        },
+        body: JSON.stringify({ comment: "From offline queue" }),
+      }),
+      { params: Promise.resolve({ id: "123" }) },
+    );
+
+    expect(response.status).toBe(409);
+    expect(response.headers.get("x-converge-offline-scope-mismatch")).toBe("true");
+    expect(mockRequireRedmineClient).not.toHaveBeenCalled();
+  });
+
   it("adds timelog and triggers issue resync", async () => {
     const client = {
       addTimeEntry: vi.fn().mockResolvedValue({ time_entry: { id: 999 } }),
     };
 
-    mockRequireRedmineClient.mockResolvedValue({ user: { id: "u1" }, client });
+    mockRequireRedmineClient.mockResolvedValue({
+      user: { id: "u1" },
+      cred: { baseUrl: "https://redmine.example.com" },
+      client,
+    });
     mockSyncSingleIssue.mockResolvedValue({ id: "local-issue-1" });
 
     const { POST } = await import("@/app/api/issues/[id]/timelog/route");

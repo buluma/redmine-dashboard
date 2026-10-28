@@ -15,6 +15,7 @@ import { AppNav } from "@/src/components/AppNav";
 import { NotificationsPanel } from "@/src/components/NotificationsPanel";
 import { ToastProvider } from "@/src/components/ToastProvider";
 import { I18nProvider } from "@/src/components/I18nProvider";
+import { OfflineAccountProvider } from "@/src/components/OfflineAccountProvider";
 import { ThemeProvider } from "@/src/components/ThemeProvider";
 import { ConstellationBackground } from "@/src/components/ConstellationBackground";
 import React from 'react';
@@ -76,20 +77,22 @@ export default async function RootLayout({
           <ThemeProvider>
           <ConstellationBackground />
           <ToastProvider>
-            <I18nProvider>
-              <OfflineBanner />
-              <SyncQueueInitializer />
-              <ServiceWorkerRegistrar />
-              {isAuthenticated && <AppNav />}
-              {isAuthenticated && (
-                <div className="global-notif-shell">
-                  <NotificationsPanel />
+            <OfflineAccountProvider userId={userId}>
+              <I18nProvider>
+                <OfflineBanner />
+                <SyncQueueInitializer />
+                <ServiceWorkerRegistrar />
+                {isAuthenticated && <AppNav />}
+                {isAuthenticated && (
+                  <div className="global-notif-shell">
+                    <NotificationsPanel />
+                  </div>
+                )}
+                <div className={isAuthenticated ? "main-content" : "main-content main-content--full"}>
+                  {children}
                 </div>
-              )}
-              <div className={isAuthenticated ? "main-content" : "main-content main-content--full"}>
-                {children}
-              </div>
-            </I18nProvider>
+              </I18nProvider>
+            </OfflineAccountProvider>
           </ToastProvider>
           </ThemeProvider>
         </ErrorLoggerProvider>

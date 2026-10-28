@@ -1,6 +1,7 @@
 import type { RedmineClient } from '@/src/lib/redmine';
 import { prisma } from '@/src/lib/db';
 import { localTouch, parseIssueRef, requireLocalIssue, writeLocalJournal } from '@/src/lib/ai-tools/issue-ref';
+import { redmineCatalogScope } from '@/src/lib/redmine-scope';
 
 // ---------------------------------------------------------------------------
 // Individual tool handlers — mutating (require confirmation)
@@ -21,7 +22,9 @@ export async function handleUpdateStatus(
 
   if (ref.kind === 'local') {
     const issue = await requireLocalIssue(ref, userId);
-    const catalog = await prisma.statusCatalog.findMany();
+    const catalog = await prisma.statusCatalog.findMany({
+      where: { scope: redmineCatalogScope(userId, client.baseUrl) },
+    });
     const status = catalog.find((s) => s.id === statusId);
     if (!status) {
       throw new Error(`Unknown status_id ${statusId} (use list_statuses)`);
@@ -130,7 +133,9 @@ export async function handleCloseIssue(
 
   if (ref.kind === 'local') {
     const issue = await requireLocalIssue(ref, userId);
-    const catalog = await prisma.statusCatalog.findMany();
+    const catalog = await prisma.statusCatalog.findMany({
+      where: { scope: redmineCatalogScope(userId, client.baseUrl) },
+    });
     const closed = catalog.find((s) => s.name.toLowerCase() === 'closed') ?? catalog.find((s) => s.isClosed);
     if (!closed) {
       throw new Error('No closed status found in the status catalog. Use update_status with a specific status ID instead.');

@@ -3,6 +3,7 @@ import { prisma } from "@/src/lib/db";
 import { toIssueView } from "@/src/lib/issue-shape";
 import { buildBreadcrumbChain, syncSingleIssue } from "@/src/lib/sync";
 import { requireRedmineClient } from "@/src/lib/auth";
+import { getRedmineCatalogScopeForUser } from "@/src/lib/redmine-scope";
 
 const ISSUE_DETAIL_CACHE_TTL_MS = 90_000;
 const ISSUE_DETAIL_CACHE_LIMIT = 1000;
@@ -34,7 +35,8 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   try {
     const user = await requireCurrentUser();
     const { id } = await context.params;
-    const cacheKey = `${user.id}:${id}`;
+    const catalogScope = await getRedmineCatalogScopeForUser(user.id);
+    const cacheKey = `${user.id}:${catalogScope ?? "no-redmine"}:${id}`;
     const nowMs = Date.now();
     const forceFresh = new URL(request.url).searchParams.get("fresh") === "1";
 
@@ -78,7 +80,9 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
     const [initialIssue, statuses] = await Promise.all([
       readIssue(),
-      prisma.statusCatalog.findMany({ orderBy: { name: "asc" } }),
+      catalogScope
+        ? prisma.statusCatalog.findMany({ where: { scope: catalogScope }, orderBy: { name: "asc" } })
+        : Promise.resolve([]),
     ]);
 
     let issue = initialIssue;

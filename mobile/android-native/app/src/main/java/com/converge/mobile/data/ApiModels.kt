@@ -10,6 +10,16 @@ data class MobileUser(
     val displayName: String = "",
 )
 
+data class MobileSessionResponse(
+    val user: MobileUser = MobileUser(),
+    val redmineBaseUrl: String? = null,
+)
+
+data class OfflineActionScope(
+    val accountId: String,
+    val redmineBaseUrl: String,
+)
+
 data class PairConnectRequest(
     @param:Json(name = "baseUrl") val redmineBaseUrl: String,
     @param:Json(name = "apiKey") val redmineApiKey: String,
@@ -19,6 +29,7 @@ data class PairConnectRequest(
 data class PairConnectResponse(
     val token: String = "",
     val expiresAt: String? = null,
+    val redmineBaseUrl: String? = null,
     val user: MobileUser = MobileUser(),
     val syncJobId: String? = null,
 )

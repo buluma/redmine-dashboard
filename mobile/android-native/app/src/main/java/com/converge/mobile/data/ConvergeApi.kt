@@ -3,6 +3,7 @@ package com.converge.mobile.data
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -10,6 +11,9 @@ import retrofit2.http.PUT
 import retrofit2.http.Query
 
 interface ConvergeApi {
+    @GET("api/mobile/v1/me")
+    suspend fun getMe(): MobileSessionResponse
+
     @POST("api/mobile/v1/pair/connect")
     suspend fun pairConnect(@Body body: PairConnectRequest): PairConnectResponse
 
@@ -54,12 +58,16 @@ interface ConvergeApi {
     suspend fun postComment(
         @Path("id") issueId: String,
         @Body body: CommentRequest,
+        @Header("X-Converge-Offline-Account-Id") offlineAccountId: String? = null,
+        @Header("X-Converge-Offline-Redmine-Base-Url") offlineRedmineBaseUrl: String? = null,
     )
 
     @POST("api/mobile/v1/issues/{id}/status")
     suspend fun updateStatus(
         @Path("id") issueId: String,
         @Body body: StatusRequest,
+        @Header("X-Converge-Offline-Account-Id") offlineAccountId: String? = null,
+        @Header("X-Converge-Offline-Redmine-Base-Url") offlineRedmineBaseUrl: String? = null,
     )
 
     @POST("api/mobile/v1/issues/{id}/assign")
@@ -78,7 +86,11 @@ interface ConvergeApi {
     suspend fun listNotifications(): NotificationsResponse
 
     @POST("api/mobile/v1/issues/{id}/favorite")
-    suspend fun toggleFavorite(@Path("id") issueId: String): FavoriteResponse
+    suspend fun toggleFavorite(
+        @Path("id") issueId: String,
+        @Header("X-Converge-Offline-Account-Id") offlineAccountId: String? = null,
+        @Header("X-Converge-Offline-Redmine-Base-Url") offlineRedmineBaseUrl: String? = null,
+    ): FavoriteResponse
 
     @PUT("api/mobile/v1/issues/{id}/edit")
     suspend fun editIssue(
@@ -93,6 +105,8 @@ interface ConvergeApi {
     suspend fun createTimeEntry(
         @Path("id") issueId: String,
         @Body body: TimeEntryRequest,
+        @Header("X-Converge-Offline-Account-Id") offlineAccountId: String? = null,
+        @Header("X-Converge-Offline-Redmine-Base-Url") offlineRedmineBaseUrl: String? = null,
     )
 
     @PATCH("api/mobile/v1/time-entries/{id}")

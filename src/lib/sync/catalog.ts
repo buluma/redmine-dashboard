@@ -3,17 +3,20 @@
 
 import { prisma } from "@/src/lib/db";
 import { RedmineClient } from "@/src/lib/redmine";
+import { redmineCatalogScope } from "@/src/lib/redmine-scope";
 
-export async function syncStatusCatalog(client: RedmineClient): Promise<void> {
+export async function syncStatusCatalog(userId: string, client: RedmineClient): Promise<void> {
+  const scope = redmineCatalogScope(userId, client.baseUrl);
   const statuses = await client.getIssueStatuses();
   for (const status of statuses) {
     await prisma.statusCatalog.upsert({
-      where: { id: status.id },
+      where: { scope_id: { scope, id: status.id } },
       update: {
         name: status.name,
         isClosed: Boolean(status.is_closed),
       },
       create: {
+        scope,
         id: status.id,
         name: status.name,
         isClosed: Boolean(status.is_closed),
@@ -22,7 +25,8 @@ export async function syncStatusCatalog(client: RedmineClient): Promise<void> {
   }
 }
 
-export async function syncEnumerationCatalog(client: RedmineClient): Promise<void> {
+export async function syncEnumerationCatalog(userId: string, client: RedmineClient): Promise<void> {
+  const scope = redmineCatalogScope(userId, client.baseUrl);
   const [activities, priorities] = await Promise.all([
     client.getTimeEntryActivities(),
     client.getIssuePriorities(),
@@ -30,7 +34,7 @@ export async function syncEnumerationCatalog(client: RedmineClient): Promise<voi
 
   for (const activity of activities) {
     await prisma.enumerationCatalog.upsert({
-      where: { key: `time_entry_activity:${activity.id}` },
+      where: { key: `${scope}:time_entry_activity:${activity.id}` },
       update: {
         remoteId: activity.id,
         kind: "time_entry_activity",
@@ -40,7 +44,8 @@ export async function syncEnumerationCatalog(client: RedmineClient): Promise<voi
         position: null,
       },
       create: {
-        key: `time_entry_activity:${activity.id}`,
+        key: `${scope}:time_entry_activity:${activity.id}`,
+        scope,
         remoteId: activity.id,
         kind: "time_entry_activity",
         name: activity.name,
@@ -53,7 +58,7 @@ export async function syncEnumerationCatalog(client: RedmineClient): Promise<voi
 
   for (const priority of priorities) {
     await prisma.enumerationCatalog.upsert({
-      where: { key: `issue_priority:${priority.id}` },
+      where: { key: `${scope}:issue_priority:${priority.id}` },
       update: {
         remoteId: priority.id,
         kind: "issue_priority",
@@ -63,7 +68,8 @@ export async function syncEnumerationCatalog(client: RedmineClient): Promise<voi
         position: priority.position ?? null,
       },
       create: {
-        key: `issue_priority:${priority.id}`,
+        key: `${scope}:issue_priority:${priority.id}`,
+        scope,
         remoteId: priority.id,
         kind: "issue_priority",
         name: priority.name,

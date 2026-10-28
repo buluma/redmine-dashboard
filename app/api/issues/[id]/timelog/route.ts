@@ -1,10 +1,11 @@
-import { requireRedmineClient } from "@/src/lib/auth";
+import { requireCurrentUser, requireRedmineClient } from "@/src/lib/auth";
 import { jsonError, parseJson } from "@/src/lib/http";
 import { isRateLimited, rateLimitHeaders } from "@/src/lib/rate-limit";
 import { redmineMessageFromError, redmineStatusFromError } from "@/src/lib/redmine";
 import { timeLogSchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
 import { trackFailure, trackInfo, trackSuccess } from "@/src/lib/telemetry";
+import { hasOfflineActionScopeHeaders, offlineActionScopeError, offlineActionScopeErrorForUser } from "@/src/lib/redmine-scope";
 
 function parseIssueId(id: string): number {
   const n = Number(id);
@@ -24,7 +25,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const { id } = await context.params;
     const issueId = parseIssueId(id);
     const body = await parseJson(request, timeLogSchema);
-    const { user, client } = await requireRedmineClient();
+    if (hasOfflineActionScopeHeaders(request)) {
+      const currentUser = await requireCurrentUser();
+      const queuedScopeError = await offlineActionScopeErrorForUser(request, currentUser.id);
+      if (queuedScopeError) return queuedScopeError;
+    }
+    const { user, cred, client } = await requireRedmineClient();
+    const scopeError = offlineActionScopeError(request, user.id, cred.baseUrl);
+    if (scopeError) return scopeError;
     trackInfo("issue.timelog.add.requested", {
       userId: user.id,
       issueId,

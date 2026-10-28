@@ -1,16 +1,18 @@
 import { prisma } from "@/src/lib/db";
 import { requireCurrentUser } from "@/src/lib/auth";
+import { getRedmineCatalogScopeForUser } from "@/src/lib/redmine-scope";
 
 export async function GET(request: Request) {
   try {
-    await requireCurrentUser();
+    const user = await requireCurrentUser();
     const { searchParams } = new URL(request.url);
     const kind = searchParams.get("kind") || "issue_priority";
+    const scope = await getRedmineCatalogScopeForUser(user.id);
     
-    const items = await prisma.enumerationCatalog.findMany({
-      where: { kind, isActive: true },
+    const items = scope ? await prisma.enumerationCatalog.findMany({
+      where: { scope, kind, isActive: true },
       orderBy: [{ position: "asc" }, { name: "asc" }],
-    });
+    }) : [];
     
     return Response.json({ items });
   } catch (error) {

@@ -4,6 +4,11 @@ import {
   incrementSyncRetries,
   type SyncQueueItem,
 } from "@/lib/offline-db";
+import {
+  OFFLINE_ACCOUNT_HEADER,
+  OFFLINE_REDMINE_BASE_URL_HEADER,
+  OFFLINE_SCOPE_MISMATCH_HEADER,
+} from "@/src/lib/offline-scope-headers";
 
 const MAX_RETRIES = 3;
 
@@ -11,15 +16,25 @@ const MAX_RETRIES = 3;
 // (app/issues/[id]/page.tsx) and the local-issue timelog route.
 const DEFAULT_LOG_TIME_ACTIVITY_ID = 31;
 
-async function processSyncItem(item: SyncQueueItem): Promise<boolean> {
+async function processSyncItem(item: SyncQueueItem): Promise<boolean | "deferred"> {
   try {
+    if (!item.accountId || !item.redmineBaseUrl) {
+      console.warn(`[SyncQueue] Ignoring unscoped legacy item ${item.id ?? "unknown"}`);
+      return true;
+    }
+    const headers = {
+      "Content-Type": "application/json",
+      [OFFLINE_ACCOUNT_HEADER]: item.accountId,
+      [OFFLINE_REDMINE_BASE_URL_HEADER]: item.redmineBaseUrl,
+    };
     switch (item.type) {
       case "update_status": {
         const res = await fetch(`/api/issues/${item.issueId}/status`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify(item.payload),
         });
+        if (res.status === 401 || res.headers.get(OFFLINE_SCOPE_MISMATCH_HEADER) === "true") return "deferred";
         if (!res.ok) throw new Error(`Status update failed: ${res.status}`);
         return true;
       }
@@ -27,9 +42,10 @@ async function processSyncItem(item: SyncQueueItem): Promise<boolean> {
       case "assign": {
         const res = await fetch(`/api/issues/${item.issueId}/assign`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify(item.payload),
         });
+        if (res.status === 401 || res.headers.get(OFFLINE_SCOPE_MISMATCH_HEADER) === "true") return "deferred";
         if (!res.ok) throw new Error(`Assign failed: ${res.status}`);
         return true;
       }
@@ -37,9 +53,10 @@ async function processSyncItem(item: SyncQueueItem): Promise<boolean> {
       case "comment": {
         const res = await fetch(`/api/issues/${item.issueId}/comment`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify(item.payload),
         });
+        if (res.status === 401 || res.headers.get(OFFLINE_SCOPE_MISMATCH_HEADER) === "true") return "deferred";
         if (!res.ok) throw new Error(`Comment failed: ${res.status}`);
         return true;
       }
@@ -60,9 +77,10 @@ async function processSyncItem(item: SyncQueueItem): Promise<boolean> {
 
         const res = await fetch(`/api/issues/${item.issueId}/timelog`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify(normalizedPayload),
         });
+        if (res.status === 401 || res.headers.get(OFFLINE_SCOPE_MISMATCH_HEADER) === "true") return "deferred";
         if (!res.ok) throw new Error(`Time log failed: ${res.status}`);
         return true;
       }
@@ -84,17 +102,30 @@ export async function processSyncQueue(): Promise<{
   const items = await getPendingSyncItems();
   if (items.length === 0) return { synced: 0, failed: 0 };
 
-  console.log(`[SyncQueue] Processing ${items.length} pending items...`);
+  const legacyIds = items
+    .filter((item) => !item.accountId || !item.redmineBaseUrl)
+    .map((item) => item.id)
+    .filter((id): id is number => typeof id === "number");
+  if (legacyIds.length > 0) {
+    console.warn(`[SyncQueue] Removing ${legacyIds.length} unscoped legacy item(s) to prevent cross-account replay`);
+    await clearSyncItems(legacyIds);
+  }
+  const scopedItems = items.filter((item) => Boolean(item.accountId && item.redmineBaseUrl));
+  if (scopedItems.length === 0) return { synced: 0, failed: 0 };
+
+  console.log(`[SyncQueue] Processing ${scopedItems.length} pending items...`);
 
   let synced = 0;
   let failed = 0;
   const successIds: number[] = [];
 
-  for (const item of items) {
+  for (const item of scopedItems) {
     const id = item.id ?? 0;
-    const ok = await processSyncItem(item);
+    const result = await processSyncItem(item);
 
-    if (ok) {
+    if (result === "deferred") continue;
+
+    if (result) {
       synced++;
       successIds.push(id);
     } else {

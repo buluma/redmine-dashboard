@@ -2,18 +2,20 @@ import { requireMobileUser, requireRedmineClientForUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
+import { redmineCatalogScope } from "@/src/lib/redmine-scope";
 
 export async function GET(request: Request) {
   try {
     assertMobileApiEnabled();
     const { user } = await requireMobileUser(request);
 
-    const { client } = await requireRedmineClientForUser(user.id);
+    const { cred, client } = await requireRedmineClientForUser(user.id);
+    const scope = redmineCatalogScope(user.id, cred.baseUrl);
 
     const [statuses, priorities, trackers, projects] = await Promise.all([
-      prisma.statusCatalog.findMany({ orderBy: { id: "asc" } }),
+      prisma.statusCatalog.findMany({ where: { scope }, orderBy: { id: "asc" } }),
       prisma.enumerationCatalog.findMany({
-        where: { kind: "issue_priority", isActive: true },
+        where: { scope, kind: "issue_priority", isActive: true },
         orderBy: { position: "asc" },
       }),
       client.listTrackers(),

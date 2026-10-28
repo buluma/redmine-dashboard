@@ -4,6 +4,7 @@ import { prisma } from "@/src/lib/db";
 import { z } from "zod";
 import { Prisma } from "@/src/generated/prisma/client";
 import { trackFailure } from "@/src/lib/telemetry";
+import { getRedmineCatalogScopeForUser } from "@/src/lib/redmine-scope";
 
 const createLocalIssueSchema = z.object({
   subject: z.string().min(1).max(500),
@@ -47,7 +48,10 @@ export async function POST(request: Request) {
     const data = parsed.data;
 
     if (data.allowedStatusesJson === undefined || data.allowedStatusesJson === null) {
-      const catalog = await prisma.statusCatalog.findMany({ orderBy: { id: "asc" } });
+      const catalogScope = await getRedmineCatalogScopeForUser(user.id);
+      const catalog = catalogScope
+        ? await prisma.statusCatalog.findMany({ where: { scope: catalogScope }, orderBy: { id: "asc" } })
+        : [];
       data.allowedStatusesJson = catalog.length > 0
         ? catalog.map((s) => ({ id: s.id, name: s.name, isClosed: s.isClosed }))
         : [{ id: 1, name: "New" }, { id: 2, name: "In Progress" }, { id: 4, name: "Feedback" }, { id: 3, name: "Resolved" }, { id: 5, name: "Closed" }, { id: 6, name: "Pause" }, { id: 7, name: "Hold" }];

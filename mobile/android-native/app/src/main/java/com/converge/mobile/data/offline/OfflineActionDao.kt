@@ -10,8 +10,8 @@ interface OfflineActionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(action: OfflineActionEntity): Long
 
-    @Query("SELECT * FROM offline_actions WHERE userId = :userId AND status = 'pending' ORDER BY createdAt ASC")
-    suspend fun getPending(userId: String): List<OfflineActionEntity>
+    @Query("SELECT * FROM offline_actions WHERE userId = :userId AND serverUrl = :serverUrl AND redmineBaseUrl = :redmineBaseUrl AND status = 'pending' ORDER BY createdAt ASC")
+    suspend fun getPending(userId: String, serverUrl: String, redmineBaseUrl: String): List<OfflineActionEntity>
 
     @Query("UPDATE offline_actions SET status = 'done' WHERE id = :id")
     suspend fun markDone(id: Long)
@@ -22,8 +22,8 @@ interface OfflineActionDao {
     @Query("UPDATE offline_actions SET status = 'failed' WHERE id = :id")
     suspend fun markFailed(id: Long)
 
-    @Query("SELECT COUNT(*) FROM offline_actions WHERE userId = :userId AND status = 'pending'")
-    suspend fun pendingCount(userId: String): Int
+    @Query("SELECT COUNT(*) FROM offline_actions WHERE userId = :userId AND serverUrl = :serverUrl AND redmineBaseUrl = :redmineBaseUrl AND status = 'pending'")
+    suspend fun pendingCount(userId: String, serverUrl: String, redmineBaseUrl: String): Int
 
     @Query("DELETE FROM offline_actions WHERE status = 'done'")
     suspend fun clearDone()

@@ -14,6 +14,14 @@ The offline sync queue enables:
 - **Retry Logic**: a failed item is retried on the next flush, up to a fixed
   retry cap
 
+Each queued action is bound to the authenticated dashboard account and the
+Redmine base URL active when it was created. Replay sends that scope to the API,
+which rejects a different account or server with `409`; the item stays queued
+until its original scope is active again. Legacy browser queue entries without
+a saved scope are discarded on the first flush after upgrade, because their
+owner cannot be established safely. Unauthorized browser replays are also
+deferred without consuming retries, so logging back in can resume the queue.
+
 There is no server-side sync-queue API — the whole queue lives in the browser. A
 flushed item posts directly to the same route an online client would call.
 
@@ -67,6 +75,8 @@ export interface SyncQueueItem {
   payload: Record<string, unknown>;
   createdAt: string; // ISO timestamp
   retries: number;
+  accountId: string;
+  redmineBaseUrl: string;
 }
 ```
 
@@ -81,8 +91,9 @@ item is deleted from it.
 ```typescript
 import { enqueueSync } from "@/lib/offline-db";
 
-// enqueueSync(issueId, type, payload) — three arguments
-await enqueueSync(issueId, "update_status", { statusId });
+// enqueueSync(issueId, type, payload, scope) — scope captures the account
+// and Redmine base URL that own the queued action.
+await enqueueSync(issueId, "update_status", { statusId }, scope);
 ```
 
 `useOfflineAction()` (`src/hooks/useOfflineAction.ts`) wraps this: when
@@ -266,6 +277,16 @@ await db.clear("syncQueue");
 3. Perform actions
 4. Go online
 5. Check Network tab for the direct API calls `processSyncItem` makes
+
+## Android native queue
+
+Room stores each queued mutation with the authenticated account ID, Converge
+server URL, and Redmine base URL. A worker drains only rows matching all three
+values and sends the account/server binding with the mutation request. Account
+or server changes leave old rows pending for their original scope. Rows created
+before the scoped schema are deleted during migration because their original
+account and server cannot be established. Version 2 rows have their server URL
+normalized during migration so already queued actions remain replayable.
 
 ## Performance Considerations
 

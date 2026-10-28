@@ -2,6 +2,7 @@ import { requireMobileUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
 import { assertMobileApiEnabled } from "@/src/lib/mobile-api";
+import { offlineActionScopeError } from "@/src/lib/redmine-scope";
 
 function parseIssueId(id: string): number {
   const n = Number(id);
@@ -15,6 +16,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   try {
     assertMobileApiEnabled();
     const { user } = await requireMobileUser(request);
+    let redmineBaseUrl: string | null = null;
+    if (request.headers.has("x-converge-offline-account-id") || request.headers.has("x-converge-offline-redmine-base-url")) {
+      const credential = await prisma.userRedmineCredential.findUnique({
+        where: { userId: user.id },
+        select: { baseUrl: true, isActive: true },
+      });
+      redmineBaseUrl = credential?.isActive ? credential.baseUrl : null;
+      const scopeError = offlineActionScopeError(request, user.id, redmineBaseUrl);
+      if (scopeError) return scopeError;
+    }
     const { id } = await context.params;
     const issueId = parseIssueId(id);
 

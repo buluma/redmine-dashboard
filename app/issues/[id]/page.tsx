@@ -557,6 +557,7 @@ export default function IssueDetailPage() {
               await performAction({
                 type: "update_status",
                 issueId,
+                redmineBaseUrl: issue.redmineBaseUrl,
                 payload: { statusId },
                 onSuccess: reloadIssue,
                 successMessage: t("issues.messages.statusUpdated"),
@@ -578,6 +579,7 @@ export default function IssueDetailPage() {
               await performAction({
                 type: "assign",
                 issueId,
+                redmineBaseUrl: issue.redmineBaseUrl,
                 payload: { userId },
                 onSuccess: reloadIssue,
                 successMessage: t("issues.messages.assigned"),
@@ -601,6 +603,7 @@ export default function IssueDetailPage() {
               await performAction({
                 type: "log_time",
                 issueId,
+                redmineBaseUrl: issue.redmineBaseUrl,
                 // timeLogSchema (POST /api/issues/[id]/timelog) requires
                 // activityId and a singular `comment` — 31 is the known-active
                 // Development activity for manual and WakaTime-derived entries.
@@ -893,6 +896,7 @@ export default function IssueDetailPage() {
             await performAction({
               type: "comment",
               issueId,
+              redmineBaseUrl: issue.redmineBaseUrl,
               payload: { notes: comment },
               onSuccess: () => {
                 setComment("");
@@ -922,6 +926,7 @@ export default function IssueDetailPage() {
             await performAction({
               type: "log_time",
               issueId,
+              redmineBaseUrl: issue.redmineBaseUrl,
               // timeLogSchema expects `comment` (singular), not `comments`.
               payload: { hours, activityId, comment: comments, spentOn },
               onSuccess: reloadIssue,

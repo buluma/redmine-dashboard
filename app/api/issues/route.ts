@@ -5,6 +5,7 @@ import { toIssueView } from "@/src/lib/issue-shape";
 import { issueQuerySchema } from "@/src/lib/schemas";
 import { syncSingleIssue } from "@/src/lib/sync";
 import { trackFailure } from "@/src/lib/telemetry";
+import { getRedmineCatalogScopeForUser } from "@/src/lib/redmine-scope";
 
 type SortMode = "updated_desc" | "updated_asc" | "priority" | "due_date";
 const RELATION_PREVIEW_LIMIT = 5;
@@ -51,6 +52,7 @@ function compareIssuesBySort(
 export async function GET(request: Request) {
   try {
     const user = await requireCurrentUser();
+    const catalogScope = await getRedmineCatalogScopeForUser(user.id);
     const { searchParams } = new URL(request.url);
     const parsed = issueQuerySchema.safeParse(Object.fromEntries(searchParams.entries()));
 
@@ -117,11 +119,13 @@ export async function GET(request: Request) {
           },
         },
       }),
-      prisma.statusCatalog.findMany({ orderBy: { name: "asc" } }),
-      prisma.enumerationCatalog.findMany({
-        where: { kind: "issue_priority", isActive: true },
+      catalogScope
+        ? prisma.statusCatalog.findMany({ where: { scope: catalogScope }, orderBy: { name: "asc" } })
+        : Promise.resolve([]),
+      catalogScope ? prisma.enumerationCatalog.findMany({
+        where: { scope: catalogScope, kind: "issue_priority", isActive: true },
         orderBy: [{ position: "asc" }, { name: "asc" }],
-      }),
+      }) : Promise.resolve([]),
       prisma.issue.findMany({
         where: { userId: user.id },
         distinct: ["priority"],
