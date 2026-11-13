@@ -160,6 +160,11 @@ function statusChipClass(status: string): string {
   }
 }
 
+// finalHoursApplied is a summed float, so it can carry noise like 0.5800000000000001.
+function formatHours(hours: number): string {
+  return String(Math.round(hours * 100) / 100);
+}
+
 export function RecurringTicketsClient({
   initialSeries,
   initialInstances,
@@ -580,7 +585,7 @@ export function RecurringTicketsClient({
           <p className="muted">{t("recurringTickets.seriesCount", { count: series.length })}</p>
         </div>
         <div className="drill-table-wrap">
-          <table className="issues-table">
+          <table className="issues-table rt-table">
             <thead>
               <tr>
                 <th>{t("recurringTickets.colKey")}</th>
@@ -624,7 +629,7 @@ export function RecurringTicketsClient({
                     </span>
                   </td>
                   <td>
-                    <div className="row-actions">
+                    <div className="row-actions rt-row-actions">
                       <button type="button" className="secondary-button" onClick={() => startEdit(s)}>
                         {t("recurringTickets.edit")}
                       </button>
@@ -655,7 +660,7 @@ export function RecurringTicketsClient({
           <p className="muted">{t("recurringTickets.historyCount", { count: instances.length })}</p>
         </div>
         <div className="drill-table-wrap">
-          <table className="issues-table">
+          <table className="issues-table rt-table">
             <thead>
               <tr>
                 <th>{t("recurringTickets.colSeries")}</th>
@@ -686,7 +691,7 @@ export function RecurringTicketsClient({
                   <td>
                     <span className={`status-chip ${statusChipClass(row.status)}`}>{row.status}</span>
                   </td>
-                  <td>{row.finalHoursApplied ?? "-"}</td>
+                  <td>{row.finalHoursApplied == null ? "-" : formatHours(row.finalHoursApplied)}</td>
                   <td>{row.closeAttempts}</td>
                   <td className="muted">{formatDate(row.scheduledCloseDate)}</td>
                   <td className="muted">{row.lastError ? row.lastError.slice(0, 140) : "-"}</td>
