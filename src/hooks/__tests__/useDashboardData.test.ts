@@ -242,6 +242,65 @@ describe("useDashboardData", () => {
       });
       expect(issuesCalls).toBe(callsBefore + 1);
     });
+
+    it("refreshes on SSE events without flipping loading (no metric-card pulse)", async () => {
+      let resolveIssues: ((value: Response) => void) | null = null;
+      let issuesCalls = 0;
+      vi.mocked(fetch).mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.includes("/api/session/me")) return jsonResponse({ user: { id: "u1", username: "a", displayName: "A" } });
+        if (url.includes("/api/issues?")) {
+          issuesCalls += 1;
+          if (issuesCalls === 1) return jsonResponse({ items: [], total: 0, filters: {} });
+          return new Promise<Response>((resolve) => { resolveIssues = resolve; });
+        }
+        return jsonResponse({ state: null, activities: [], favorites: [] });
+      });
+      const { result } = renderData();
+      await waitFor(() => expect(result.current.user).not.toBeNull());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      const last = eventStreamCalls[eventStreamCalls.length - 1] as { handlers: Record<string, (data: unknown) => void> };
+      act(() => {
+        last.handlers["sync.tick.completed"]?.({ durationMs: 4000, issueCount: 1 });
+      });
+      await waitFor(() => expect(issuesCalls).toBe(2));
+
+      // Background refresh in flight: loading must stay false.
+      expect(result.current.loading).toBe(false);
+
+      await act(async () => {
+        resolveIssues?.(jsonResponse({ items: [{ id: "2" }], total: 1, filters: {} }));
+      });
+      await waitFor(() => expect(result.current.issues).toHaveLength(1));
+      expect(result.current.loading).toBe(false);
+    });
+
+    it("ignores per-issue SSE events while a sync is running and waits for sync.tick.completed", async () => {
+      let issuesCalls = 0;
+      vi.mocked(fetch).mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.includes("/api/session/me")) return jsonResponse({ user: { id: "u1", username: "a", displayName: "A" } });
+        if (url.includes("/api/issues?")) { issuesCalls += 1; return jsonResponse({ items: [], total: 0, filters: {} }); }
+        if (url.includes("/api/sync/status")) return jsonResponse({ state: { lastSyncStatus: "running" } });
+        return jsonResponse({ activities: [], favorites: [] });
+      });
+      const { result } = renderData();
+      await waitFor(() => expect(result.current.syncState?.lastSyncStatus).toBe("running"));
+      const callsBefore = issuesCalls;
+
+      const last = eventStreamCalls[eventStreamCalls.length - 1] as { handlers: Record<string, (data: unknown) => void> };
+      for (let i = 0; i < 6; i += 1) {
+        act(() => { last.handlers["issue.updated"]?.({ redmineIssueId: i }); });
+        await act(async () => { await vi.advanceTimersByTimeAsync(1_500); });
+      }
+      expect(issuesCalls).toBe(callsBefore);
+
+      act(() => {
+        last.handlers["sync.tick.completed"]?.({ durationMs: 9000, issueCount: 6 });
+      });
+      await waitFor(() => expect(issuesCalls).toBe(callsBefore + 1));
+    });
   });
 
   it("refreshAll toasts an error and clears loading when a loader throws", async () => {
