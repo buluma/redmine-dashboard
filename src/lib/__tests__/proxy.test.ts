@@ -61,3 +61,20 @@ describe("proxy CSRF guard for /api mutations", () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe("proxy page auth", () => {
+  it("redirects an anonymous page request to /login", () => {
+    const res = proxy(req({ method: "GET", path: "/" }));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("https://dash.example.com/login");
+  });
+
+  // The service worker precaches /~offline as its navigation fallback. If it
+  // redirects, the cached entry is a redirect/login page and the fallback
+  // fails with Serwist "no-response" instead of rendering.
+  it("serves the /~offline fallback page without a session", () => {
+    const res = proxy(req({ method: "GET", path: "/~offline" }));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
+  });
+});

@@ -4,7 +4,9 @@ import type { NextRequest } from "next/server";
 const SESSION_COOKIE = "rd_session";
 
 const PUBLIC_PREFIXES = ["/login", "/api/", "/_next/", "/icons/", "/scripts/", "/monitoring"];
-const PUBLIC_FILES = ["/favicon.ico", "/manifest.json", "/sw.js"];
+// /~offline is the service worker's precached navigation fallback; it must
+// not redirect to /login or the fallback breaks.
+const PUBLIC_FILES = ["/favicon.ico", "/manifest.json", "/sw.js", "/~offline"];
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
