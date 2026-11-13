@@ -2022,3 +2022,40 @@
 .rt-checkbox input[type="checkbox"] {
   width: auto;
 }
+
+/* The shared .issues-table is sized for the dashboard issue list: a 1080px
+   minimum width, a 42px checkbox first column, a second column pinned at
+   left: 42px, and a 42vw / 26rem Subject fourth column (dashboard-detail.css,
+   globals.css, issue-ui.css). None of that matches the recurring-tickets
+   tables, so release those sizes and let the columns fit their content. */
+.issues-table.rt-table {
+  min-width: 0;
+}
+
+.issues-table.rt-table th:first-child,
+.issues-table.rt-table td:first-child {
+  width: auto;
+  min-width: 11rem;
+}
+
+.issues-table.rt-table th:nth-child(2),
+.issues-table.rt-table td:nth-child(2) {
+  left: auto;
+}
+
+.issues-table.rt-table th:nth-child(4),
+.issues-table.rt-table td:nth-child(4) {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+}
+
+.rt-row-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+}
+
+.rt-row-actions button {
+  white-space: nowrap;
+}
