@@ -54,7 +54,7 @@
     "@tanstack/react-virtual": "^3.13.24",
     "@upstash/redis": "^1.37.0",
     "chart.js": "^4.5.1",
-    "dotenv": "^18.0.7",
+    "dotenv": "^18.0.10",
     "idb": "^8.0.4",
     "next": "16.4.1",
     "prisma": "^7.10.0",
