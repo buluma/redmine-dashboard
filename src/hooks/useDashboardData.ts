@@ -16,7 +16,7 @@ import type {
 const POLL_INTERVAL_MS = 90_000;
 const FETCH_PAGE_SIZE = 200;
 // A sync run emits one issue.created/issue.updated SSE event per issue
-// touched. Coalesce a fast burst into a single refreshAll() after the
+// touched. Coalesce a fast burst into a single background refresh after the
 // stream goes quiet for this long...
 const SSE_REFRESH_DEBOUNCE_MS = 1_000;
 // ...but a slow sync (Redmine round-trips spaced seconds apart) never goes
@@ -245,11 +245,19 @@ export function useDashboardData({
     sseMaxWaitTimerRef.current = null;
   };
   useEffect(() => clearSseTimers, []);
+  // Background refresh: goes through refreshData, not refreshAll, so it never
+  // sets `loading` — otherwise every live update restarts the metric-card
+  // pulse animation and the dashboard visibly flickers during a sync.
   const fireSseRefresh = () => {
     clearSseTimers();
-    void refreshAll();
+    void refreshData(scopeRef.current?.signal);
   };
   const scheduleSseRefresh = () => {
+    // During a sync run, per-issue events arrive every second or two and
+    // would refetch the full issue page each time. sync.tick.completed
+    // refreshes once the batch is done, so skip the trickle until then.
+    // Single-issue edits outside a sync still refresh live.
+    if (syncState?.lastSyncStatus === "running") return;
     if (sseQuietTimerRef.current) clearTimeout(sseQuietTimerRef.current);
     sseQuietTimerRef.current = setTimeout(fireSseRefresh, SSE_REFRESH_DEBOUNCE_MS);
     if (!sseMaxWaitTimerRef.current) {
