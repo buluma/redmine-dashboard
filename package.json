@@ -50,7 +50,7 @@
     "ajv": "^8.17.1",
     "@scalar/swagger-editor": "^1.0.2",
     "@serwist/next": "^9.5.7",
-    "@slack/web-api": "^8.2.0",
+    "@slack/web-api": "^8.4.0",
     "@tanstack/react-virtual": "^3.13.24",
     "@upstash/redis": "^1.37.0",
     "chart.js": "^4.5.1",
