@@ -36,7 +36,8 @@
     "js-yaml": "4.3.2",
     "mysql2": "^3.22.0",
     "zod": ">=4.6.6",
-    "follow-redirects": ">=1.16.2"
+    "follow-redirects": ">=1.16.2",
+    "effect": "^3.22.5"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.10.0",
