@@ -27,6 +27,7 @@ export async function syncSingleIssue(
     pruneAttachments?: boolean;
     pruneRelations?: boolean;
     sendNotifications?: boolean;
+    sendWebhooks?: boolean;
   },
 ) {
   // Hybrid mirror check: source:"local" rows that DO carry a real redmineIssueId
@@ -88,8 +89,8 @@ export async function syncSingleIssue(
       )?.assignedToId ?? null)
     : null;
 
-  // Track changes if notifications are enabled
-  const trackChanges = options?.sendNotifications ?? false;
+  // Track changes if notifications or webhooks need to know what changed
+  const trackChanges = Boolean(options?.sendNotifications || options?.sendWebhooks);
   const upsertResult = await upsertIssueFromRemote(
     userId,
     client.normalizedBaseUrl,
@@ -225,8 +226,12 @@ export async function syncSingleIssue(
         error: notifyError instanceof Error ? notifyError.message : "Unknown error",
       }, "error");
     }
+  }
 
-    // Send webhook notifications to external subscribers
+  // Send webhook notifications to external subscribers. Webhooks are their
+  // own integration: a subscriber must keep getting events when Slack/push
+  // notifications are switched off.
+  if (options?.sendWebhooks) {
     try {
       const { dispatchWebhook } = await import("@/src/lib/webhook-subscription");
 
