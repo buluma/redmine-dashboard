@@ -1,6 +1,6 @@
 import type { ToolDefinition } from "@/src/lib/ai-tools";
 
-export type LLMProvider = "ollama" | "openai" | "anthropic" | "openrouter" | "aperture";
+export type LLMProvider = "ollama" | "openai" | "anthropic" | "openrouter" | "aperture" | "cliproxyapi";
 
 export interface LLMModel {
   id: string;

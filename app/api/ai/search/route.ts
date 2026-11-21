@@ -1,4 +1,5 @@
 import { getOllamaClient } from "@/src/lib/ollama";
+import { getLLMProviderManager } from "@/src/lib/llm-provider";
 import { createSearchMessages, parseJsonResponse, type SearchResponse } from "@/src/lib/ai-prompt";
 import { env } from "@/src/lib/env";
 import { prisma } from "@/src/lib/db";
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const client = getOllamaClient();
+    const client = getLLMProviderManager();
     const messages = createSearchMessages(
       query,
       issues.map((issue) => ({
@@ -67,7 +68,9 @@ export async function POST(request: Request) {
     // Try primary model, fallback on error
     let result;
     try {
-      result = await client.chatWithFallback(messages, { stream: false });
+      result = client.getProvider() === "ollama"
+        ? { ...(await getOllamaClient().chatWithFallback(messages, { stream: false })), provider: "ollama" as const }
+        : await client.chat(messages, { stream: false });
     } catch (error) {
       return jsonError(
         `AI search failed: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -88,7 +91,7 @@ export async function POST(request: Request) {
         })),
         insights: "Could not parse AI response",
         modelUsed: result.model,
-        usedFallback: result.usedFallback,
+        usedFallback: ("usedFallback" in result && result.usedFallback) || (result.provider === "ollama" && client.getProvider() !== "ollama"),
         rawResponse: true,
       });
     }
@@ -114,7 +117,7 @@ export async function POST(request: Request) {
       results: enrichedResults,
       insights: parsed.insights,
       modelUsed: result.model,
-      usedFallback: result.usedFallback,
+      usedFallback: ("usedFallback" in result && result.usedFallback) || (result.provider === "ollama" && client.getProvider() !== "ollama"),
     });
   } catch (error) {
     trackFailure({ event: "ai.search.failed", error, metricName: "ai_search_failed" });

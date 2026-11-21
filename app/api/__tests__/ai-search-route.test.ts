@@ -8,7 +8,7 @@ const mockEnv = {
   enableAiFeatures: true,
   aiSearchEnabled: true,
 };
-const mockGetOllamaClient = vi.fn();
+const mockGetLLMProviderManager = vi.fn();
 
 vi.mock("@/src/lib/auth", () => ({
   getAuthenticatedUserId: mockGetAuthenticatedUserId,
@@ -22,8 +22,8 @@ vi.mock("@/src/lib/env", () => ({
   env: mockEnv,
 }));
 
-vi.mock("@/src/lib/ollama", () => ({
-  getOllamaClient: mockGetOllamaClient,
+vi.mock("@/src/lib/llm-provider", () => ({
+  getLLMProviderManager: mockGetLLMProviderManager,
 }));
 
 vi.mock("@/src/lib/http", () => ({
@@ -59,6 +59,18 @@ describe("POST /api/ai/search", () => {
     const response = await POST(request);
     expect(response.status).toBe(401);
     expect(mockPrisma.issue.findMany).not.toHaveBeenCalled();
+  });
+
+  it("routes search through the configured provider", async () => {
+    mockGetAuthenticatedUserId.mockResolvedValue("real_user");
+    mockPrisma.issue.findMany.mockResolvedValue([{ id: "1", subject: "Bug", updatedOnRemote: new Date() }]);
+    const chat = vi.fn().mockResolvedValue({ content: JSON.stringify({ results: [], insights: "done" }), model: "proxy-model", provider: "cliproxyapi" });
+    mockGetLLMProviderManager.mockReturnValue({ chat, getProvider: () => "cliproxyapi" });
+    const { POST } = await import("@/app/api/ai/search/route");
+    const response = await POST(new Request("http://localhost/api/ai/search", { method: "POST", body: JSON.stringify({ query: "bug" }) }));
+    expect(response.status).toBe(200);
+    expect(chat).toHaveBeenCalledOnce();
+    expect(await response.json()).toMatchObject({ modelUsed: "proxy-model", usedFallback: false });
   });
 
   it("scopes the issue query to the authenticated user, ignoring any body userId", async () => {

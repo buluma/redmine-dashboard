@@ -22,6 +22,9 @@ const { envState, mockOllamaChat, mockOllamaCheckHealth } = vi.hoisted(() => ({
     openrouterApiKey: 'sk-or-test' as string | undefined,
     openrouterChatModel: 'anthropic/claude-3.5-haiku',
     openrouterChatModelFallback: 'openrouter/free',
+    cliproxyapiBaseUrl: 'http://proxy.test',
+    cliproxyapiApiKey: 'test-key',
+    cliproxyapiChatModel: 'test-model',
     apertureBaseUrl: '' as string,
     apertureApiKey: 'none',
     apertureChatModel: 'gemma-4b',
@@ -94,6 +97,18 @@ describe('LLM Provider', () => {
     envState.anthropicApiKey = 'sk-ant-test';
     envState.openrouterApiKey = 'sk-or-test';
     envState.apertureBaseUrl = 'http://aperture.local';
+  });
+
+  it('routes CLIProxyAPI chat and health through the configured gateway', async () => {
+    envState.llmProvider = 'cliproxyapi';
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(jsonResponse({ data: [{ id: 'test-model' }] })).mockResolvedValueOnce(jsonResponse({ choices: [{ message: { content: 'hello' } }], model: 'test-model' }));
+    const provider = new LLMProviderManager();
+    expect((await provider.checkHealth()).provider).toBe('cliproxyapi');
+    expect(await provider.chat([{ role: 'user', content: 'hi' }])).toMatchObject({ provider: 'cliproxyapi', content: 'hello' });
+    expect(fetchMock.mock.calls[1][0]).toBe('http://proxy.test/v1/chat/completions');
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toMatchObject({ model: 'test-model', messages: [{ role: 'user', content: 'hi' }] });
+    expect((fetchMock.mock.calls[1][1]?.headers as Record<string, string>).Authorization).toBe('Bearer test-key');
+    fetchMock.mockRestore();
   });
 
   describe('Provider Selection', () => {
