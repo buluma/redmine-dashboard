@@ -47,13 +47,11 @@ Once configured, Converge will automatically use Aperture for:
 3. **Bulk Summarization** (`/api/ai/summarize-stale`) - Batch stale issue analysis
 4. **Slack Issue Creation** (`/api/slack/create-issue`) - Parse Slack → create Redmine issues
 5. **Streaming Chat** (`/api/ai/stream`) - Real-time streaming responses
-6. **Embeddings** (`generateEmbeddings`) - Semantic search support
 
 ## Fallback Behavior
 
 If Aperture is unavailable, Converge automatically falls back to Ollama (local) for:
 - Chat completions
-- Embeddings generation
 
 ## Testing
 

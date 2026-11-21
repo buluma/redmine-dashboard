@@ -4,13 +4,11 @@ import type { ToolDefinition } from "@/src/lib/ai-tools";
 import { trackWarn } from "@/src/lib/telemetry";
 import { checkApertureHealth, apertureChat } from "@/src/lib/llm-provider/aperture";
 import { checkAnthropicHealth, anthropicChat } from "@/src/lib/llm-provider/anthropic";
-import { generateEmbeddings } from "@/src/lib/llm-provider/embeddings";
 import { checkOllamaHealth, ollamaChat } from "@/src/lib/llm-provider/ollama";
 import { checkOpenAIHealth, openaiChat } from "@/src/lib/llm-provider/openai";
 import { checkOpenRouterHealth, openrouterChat } from "@/src/lib/llm-provider/openrouter";
 import type {
   LLMChatMessage,
-  LLMEmbeddingResponse,
   LLMModel,
   LLMProvider,
   LLMResponse,
@@ -101,10 +99,6 @@ export class LLMProviderManager {
       }
       throw error;
     }
-  }
-
-  async generateEmbeddings(texts: string[]): Promise<LLMEmbeddingResponse> {
-    return generateEmbeddings(this.provider, this.ollama, texts);
   }
 }
 
