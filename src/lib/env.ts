@@ -89,11 +89,9 @@ export const env = {
   // Ollama AI Configuration
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
   ollamaChatModel: process.env.OLLAMA_CHAT_MODEL || "qwen3.5:cloud",
-  ollamaEmbedModel: process.env.OLLAMA_EMBED_MODEL || "nomic-embed-text-v2-moe:latest",
   ollamaTimeoutMs: numberFromEnv("OLLAMA_TIMEOUT_MS", 120000),
   ollamaStream: boolFromEnv("OLLAMA_STREAM", true),
   ollamaChatModelFallback: process.env.OLLAMA_CHAT_MODEL_FALLBACK || "gpt-oss:20b-cloud",
-  ollamaEmbedModelFallback: process.env.OLLAMA_EMBED_MODEL_FALLBACK || "nomic-embed-text:latest",
   enableAiFeatures: boolFromEnv("ENABLE_AI_FEATURES", true),
   aiSummarizeEnabled: boolFromEnv("AI_SUMMARIZE_ENABLED", true),
   aiSearchEnabled: boolFromEnv("AI_SEARCH_ENABLED", true),

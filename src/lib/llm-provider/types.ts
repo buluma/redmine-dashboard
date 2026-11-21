@@ -43,12 +43,6 @@ export interface LLMResponse {
   };
 }
 
-export interface LLMEmbeddingResponse {
-  embeddings: number[][];
-  model: string;
-  provider: LLMProvider;
-}
-
 export interface LLMStatus {
   available: boolean;
   provider: LLMProvider;

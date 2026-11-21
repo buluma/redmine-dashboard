@@ -36,7 +36,6 @@ export async function GET() {
       config: {
         provider: status.provider,
         primaryModel: status.primaryModel,
-        embeddingModel: env.ollamaEmbedModel,
         features: {
           summarize: env.aiSummarizeEnabled,
           search: env.aiSearchEnabled,

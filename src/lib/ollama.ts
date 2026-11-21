@@ -29,17 +29,10 @@ export interface OllamaChatResponse {
   eval_duration?: number;
 }
 
-export interface OllamaEmbeddingResponse {
-  model: string;
-  embeddings: number[][];
-}
-
 export interface OllamaStatus {
   available: boolean;
   primaryModel: string;
   fallbackModel: string;
-  embeddingModel: string;
-  embeddingModelFallback: string;
   featuresEnabled: boolean;
   usingFallback: boolean;
   error?: string;
@@ -50,8 +43,6 @@ export class OllamaClient {
   private apiKey: string | null;
   private primaryChatModel: string;
   private fallbackChatModel: string;
-  private primaryEmbedModel: string;
-  private fallbackEmbedModel: string;
   private timeoutMs: number;
   private streamEnabled: boolean;
 
@@ -60,8 +51,6 @@ export class OllamaClient {
     this.apiKey = process.env.OLLAMA_API_KEY || null;
     this.primaryChatModel = env.ollamaChatModel;
     this.fallbackChatModel = env.ollamaChatModelFallback;
-    this.primaryEmbedModel = env.ollamaEmbedModel;
-    this.fallbackEmbedModel = env.ollamaEmbedModelFallback;
     this.timeoutMs = env.ollamaTimeoutMs;
     this.streamEnabled = env.ollamaStream;
   }
@@ -141,8 +130,6 @@ export class OllamaClient {
       available: health.available,
       primaryModel: this.primaryChatModel,
       fallbackModel: this.fallbackChatModel,
-      embeddingModel: this.primaryEmbedModel,
-      embeddingModelFallback: this.fallbackEmbedModel,
       featuresEnabled: env.enableAiFeatures,
       usingFallback: health.usingFallback,
       error: health.error,
@@ -312,37 +299,6 @@ export class OllamaClient {
         `Both primary and fallback models failed. Last error: ${error instanceof Error ? error.message : error}`
       );
     }
-  }
-
-  async generateEmbeddings(
-    texts: string[],
-    options: { useFallback?: boolean } = {}
-  ): Promise<{ embeddings: number[][]; model: string }> {
-    const { useFallback = false } = options;
-    const model = useFallback ? this.fallbackEmbedModel : this.primaryEmbedModel;
-
-    const response = await this.fetchWithTimeout(`${this.baseUrl}/api/embeddings`, {
-      method: "POST",
-      body: JSON.stringify({
-        model,
-        prompt: texts[0], // Ollama embeddings API takes single prompt
-      }),
-    });
-
-    if (!response.ok) {
-      // Try fallback if primary fails
-      if (!useFallback) {
-        return this.generateEmbeddings(texts, { useFallback: true });
-      }
-      const error = await response.text();
-      throw new Error(`Ollama embeddings failed: ${response.status} - ${error}`);
-    }
-
-    const data = await response.json();
-    return {
-      embeddings: [data.embedding],
-      model: data.model,
-    };
   }
 }
 
