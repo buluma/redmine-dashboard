@@ -371,6 +371,7 @@ export async function executeSyncJob(jobId: string): Promise<void> {
           pruneAttachments: true,
           pruneRelations: true,
           sendNotifications: env.slackNotifyEnabled,
+          sendWebhooks: true,
         });
       } catch (error) {
         failedRemoteIssueIds.push(remoteId);
@@ -417,6 +418,7 @@ export async function executeSyncJob(jobId: string): Promise<void> {
                 pruneAttachments: true,
                 pruneRelations: true,
                 sendNotifications: env.slackNotifyEnabled,
+                sendWebhooks: true,
               });
             } catch (error) {
               failedRemoteIssueIds.push(remoteId);
