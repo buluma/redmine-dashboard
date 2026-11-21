@@ -2,6 +2,7 @@ import { env } from "@/src/lib/env";
 import { getOllamaClient } from "@/src/lib/ollama";
 import type { ToolDefinition } from "@/src/lib/ai-tools";
 import { trackWarn } from "@/src/lib/telemetry";
+import { checkCLIProxyAPIHealth, cliProxyAPIChat } from "@/src/lib/llm-provider/cliproxyapi";
 import { checkApertureHealth, apertureChat } from "@/src/lib/llm-provider/aperture";
 import { checkAnthropicHealth, anthropicChat } from "@/src/lib/llm-provider/anthropic";
 import { generateEmbeddings } from "@/src/lib/llm-provider/embeddings";
@@ -27,7 +28,7 @@ export class LLMProviderManager {
 
   private detectProvider(): LLMProvider {
     const configured = env.llmProvider;
-    if (configured && ["ollama", "openai", "anthropic", "openrouter", "aperture"].includes(configured)) {
+    if (configured && ["ollama", "openai", "anthropic", "openrouter", "aperture", "cliproxyapi"].includes(configured)) {
       return configured as LLMProvider;
     }
     // Check if Tailscale Aperture is available (private network)
@@ -44,7 +45,9 @@ export class LLMProviderManager {
 
   async checkHealth(): Promise<LLMStatus> {
     try {
-      if (this.provider === "ollama") {
+      if (this.provider === "cliproxyapi") {
+        return await checkCLIProxyAPIHealth();
+      } else if (this.provider === "ollama") {
         return await checkOllamaHealth(this.ollama);
       } else if (this.provider === "openai") {
         return await checkOpenAIHealth();
@@ -77,7 +80,9 @@ export class LLMProviderManager {
     const { stream = false, temperature = 0.7, maxTokens = 4096, tools } = options;
 
     try {
-      if (this.provider === "ollama") {
+      if (this.provider === "cliproxyapi") {
+        return await cliProxyAPIChat(messages, { stream, temperature, maxTokens, tools });
+      } else if (this.provider === "ollama") {
         return await ollamaChat(this.ollama, messages, { stream, temperature, maxTokens, tools });
       } else if (this.provider === "openai") {
         return await openaiChat(messages, { stream, temperature, maxTokens, tools });
