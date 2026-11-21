@@ -315,13 +315,19 @@ model IssueGithubLink {
 
 // The gr8r task a Redmine ticket was pushed to (src/lib/gr8r-task-push.ts).
 // One per issue: the row is claimed before the gr8r call so a ticket never
-// becomes two tasks, and taskKey is filled in once gr8r answers.
+// becomes two tasks, and taskKey is filled in once gr8r answers. A row left
+// without a taskKey is a failed push the poller retries (attempts, lastError).
 model Gr8rTaskLink {
   id        String   @id @default(cuid())
   issueId   String   @unique
   issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
   taskKey   String?
+  attempts  Int      @default(0)
+  lastError String?
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskKey, updatedAt])
 }
 
 model IssueJournal {
