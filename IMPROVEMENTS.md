@@ -187,7 +187,9 @@ Verification at session end: `npx tsc --noEmit` clean, `npm run lint` clean, ful
 ### 1.16 Audit log filtering and export — Low ✅ done
 - **Evidence:** `app/ops/audit-logs/audit-logs-view.tsx` (154 lines) — verify search/filter is present; otherwise add actor/action/date filters and CSV export.
 
-### 1.17 Mobile app — harden Compose client to production — High (rescoped 2026-05-17)
+### 1.17 Mobile app — harden Compose client to production — ⛔ dropped 2026-11-22
+
+> Dropped: the mobile app and `/api/mobile/v1/*` were removed in #170 (CON-17), as nothing used them. The notes below are kept for the record.
 
 Original framing ("Flutter broken, pick PWA/Capacitor/Flutter") is stale.
 The team has already shipped `mobile/android-native` — a native Kotlin +
@@ -378,7 +380,7 @@ Bonus gaps not in a–h but worth tracking:
 |-------|-------|
 | **Now (small, high payoff)** | ✅ 1.3, ✅ 1.18, ✅ 2.3, ✅ 2.4, ✅ 2.6, ✅ 2.7–2.8, ✅ 2.25 |
 | **Next (med)** | ✅ 1.4, ✅ 1.5, ✅ 1.7, ✅ 1.9, ✅ 2.1, ✅ 2.2, ✅ 2.5, ✅ 2.12, ✅ 2.18, ✅ 2.24 |
-| **After** | ✅ 1.1, ✅ 1.6, ✅ 1.8 (runbook), ⛔ 1.12 (design needed), ✅ 1.13, 1.17 (mobile strategy), ✅ 2.19 |
+| **After** | ✅ 1.1, ✅ 1.6, ✅ 1.8 (runbook), ⛔ 1.12 (design needed), ✅ 1.13, ⛔ 1.17 (dropped), ✅ 2.19 |
 | **Polish / opportunistic** | 1.11, 1.14–1.16, 1.19–1.21, ✅ 1.22, 2.9–2.11, 2.13–2.17, 2.20–2.23 |
 
 Legend: ✅ done · ⏳ partial · ⛔ blocked

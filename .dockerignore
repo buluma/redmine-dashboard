@@ -37,9 +37,6 @@ coverage
 # Debugging
 debugging/logs/*.json
 
-# Mobile
-mobile
-
 # Misc
 *.tgz
 .cache
