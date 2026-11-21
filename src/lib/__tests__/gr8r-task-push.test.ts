@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const { mockEnv, mockLinkCreate, mockLinkUpdate, mockLinkDelete, mockGithubLinkFindMany } = vi.hoisted(() => ({
+const { mockEnv, mockLinkCreate, mockLinkUpdate, mockLinkDelete, mockLinkFindMany, mockLinkUpdateMany, mockGithubLinkFindMany } = vi.hoisted(() => ({
   mockEnv: {
     gr8rUrl: "http://gr8r.test:8787" as string | undefined,
     gr8rToken: "test-token" as string | undefined,
@@ -11,13 +11,21 @@ const { mockEnv, mockLinkCreate, mockLinkUpdate, mockLinkDelete, mockGithubLinkF
   mockLinkCreate: vi.fn(),
   mockLinkUpdate: vi.fn(),
   mockLinkDelete: vi.fn(),
+  mockLinkFindMany: vi.fn(),
+  mockLinkUpdateMany: vi.fn(),
   mockGithubLinkFindMany: vi.fn(),
 }));
 
 vi.mock("@/src/lib/env", () => ({ env: mockEnv }));
 vi.mock("@/src/lib/db", () => ({
   prisma: {
-    gr8rTaskLink: { create: mockLinkCreate, update: mockLinkUpdate, delete: mockLinkDelete },
+    gr8rTaskLink: {
+      create: mockLinkCreate,
+      update: mockLinkUpdate,
+      delete: mockLinkDelete,
+      findMany: mockLinkFindMany,
+      updateMany: mockLinkUpdateMany,
+    },
     issueGithubLink: { findMany: mockGithubLinkFindMany },
   },
 }));
@@ -29,6 +37,7 @@ import {
   gr8rEstimate,
   gr8rPriority,
   pushIssueToGr8r,
+  retryFailedGr8rPushes,
   resetGr8rCurrentUserCache,
 } from "@/src/lib/gr8r-task-push";
 
@@ -236,7 +245,7 @@ describe("pushIssueToGr8r", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("releases its claim and reports, without throwing, when gr8r refuses the task", async () => {
+  it("keeps its claim with the error for a later retry, without throwing, when gr8r refuses the task", async () => {
     fetchMock.mockImplementation((url: string) =>
       url.endsWith("/api/projects") ? respond(200, { projects: PROJECTS }) : respond(400, { error: "unknown agent: Converge" }),
     );
@@ -244,8 +253,11 @@ describe("pushIssueToGr8r", () => {
     expect(result).toMatchObject({ pushed: false, reason: "failed" });
     expect((result as { error: string }).error).toContain("unknown agent: Converge");
     expect((result as { error: string }).error).not.toContain("test-token");
-    expect(mockLinkDelete).toHaveBeenCalledWith({ where: { id: "link-1" } });
-    expect(mockLinkUpdate).not.toHaveBeenCalled();
+    expect(mockLinkDelete).not.toHaveBeenCalled();
+    expect(mockLinkUpdate).toHaveBeenCalledWith({
+      where: { id: "link-1" },
+      data: { attempts: { increment: 1 }, lastError: expect.stringContaining("unknown agent: Converge") },
+    });
   });
 
   it("releases its claim when no gr8r project fits and there is no fallback", async () => {
@@ -268,5 +280,144 @@ describe("pushIssueToGr8r", () => {
     await pushIssueToGr8r({ userId: "u1", client: c, issue, wasCreated: false, previousAssignedToId: ME, now: NOW });
     await pushIssueToGr8r({ userId: "u1", client: c, issue, wasCreated: false, previousAssignedToId: ME, now: NOW });
     expect(c.getCurrentUser).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("retryFailedGr8rPushes", () => {
+  const fetchMock = vi.fn();
+  const STALE = new Date("2026-11-21T09:30:00Z");
+
+  const ticket = {
+    id: "issue-1",
+    userId: "u1",
+    redmineIssueId: 4321,
+    subject: "Fix the DRC export",
+    description: null,
+    projectName: "Streamline",
+    tracker: "Bug",
+    priority: "High",
+    statusName: "New",
+    assignedToId: ME,
+    dueDate: null,
+    startDate: null,
+    estimatedHours: null,
+    updatedOnRemote: new Date("2026-11-20T09:00:00Z"),
+  };
+
+  function failedLink(overrides: Record<string, unknown> = {}) {
+    return { id: "link-1", issueId: "issue-1", taskKey: null, attempts: 1, lastError: "HTTP 503", updatedAt: STALE, issue: ticket, ...overrides };
+  }
+
+  function client() {
+    return { normalizedBaseUrl: "https://redmine.example.com", getCurrentUser: vi.fn().mockResolvedValue({ id: ME }) };
+  }
+
+  function respond(status: number, body: unknown) {
+    return Promise.resolve(new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }));
+  }
+
+  function routes(existing: Array<{ key: string; title: string }> = []) {
+    fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (url.endsWith("/api/projects")) return respond(200, { projects: PROJECTS });
+      if (url.includes("/api/tasks?")) return respond(200, { tasks: existing });
+      if (url.endsWith("/api/tasks") && init?.method === "POST") return respond(201, { task: { key: "STR-9" } });
+      return respond(404, { error: "not found" });
+    });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetGr8rCurrentUserCache();
+    mockEnv.gr8rUrl = "http://gr8r.test:8787";
+    mockEnv.gr8rToken = "test-token";
+    mockEnv.gr8rFallbackProject = "STR";
+    mockLinkFindMany.mockResolvedValue([failedLink()]);
+    mockLinkUpdateMany.mockResolvedValue({ count: 1 });
+    mockLinkUpdate.mockResolvedValue({});
+    mockLinkDelete.mockResolvedValue({});
+    mockGithubLinkFindMany.mockResolvedValue([]);
+    routes();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("does nothing when gr8r isn't configured", async () => {
+    mockEnv.gr8rToken = undefined;
+    expect(await retryFailedGr8rPushes({ userId: "u1", client: client(), now: NOW })).toEqual({ retried: 0, pushed: 0, recovered: 0, dropped: 0, failed: 0 });
+    expect(mockLinkFindMany).not.toHaveBeenCalled();
+  });
+
+  it("only picks up this user's unfinished pushes that are old enough and still have attempts left", async () => {
+    await retryFailedGr8rPushes({ userId: "u1", client: client(), now: NOW });
+    expect(mockLinkFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          taskKey: null,
+          attempts: { lt: 5 },
+          updatedAt: { lt: new Date("2026-11-21T09:50:00Z") },
+          issue: { userId: "u1" },
+        },
+      }),
+    );
+  });
+
+  it("creates the task it failed to create before, and records the key", async () => {
+    const result = await retryFailedGr8rPushes({ userId: "u1", client: client(), now: NOW });
+    expect(result).toEqual({ retried: 1, pushed: 1, recovered: 0, dropped: 0, failed: 0 });
+    expect(mockLinkUpdateMany).toHaveBeenCalledWith({
+      where: { id: "link-1", taskKey: null, updatedAt: STALE },
+      data: { attempts: { increment: 1 } },
+    });
+    const post = fetchMock.mock.calls.find(([u, i]) => String(u).endsWith("/api/tasks") && i?.method === "POST");
+    expect(JSON.parse(post![1].body)).toMatchObject({ title: "Redmine #4321: Fix the DRC export", project: "STR" });
+    expect(mockLinkUpdate).toHaveBeenCalledWith({ where: { id: "link-1" }, data: { taskKey: "STR-9", lastError: null } });
+  });
+
+  it("adopts a task gr8r already created (a lost response) instead of making a second one", async () => {
+    routes([
+      { key: "STR-3", title: "Redmine #43210: Another ticket" },
+      { key: "STR-7", title: "Redmine #4321: Fix the DRC export" },
+    ]);
+    const result = await retryFailedGr8rPushes({ userId: "u1", client: client(), now: NOW });
+    expect(result).toMatchObject({ retried: 1, pushed: 0, recovered: 1 });
+    const search = fetchMock.mock.calls.find(([u]) => String(u).includes("/api/tasks?"));
+    expect(String(search![0])).toContain("archived=1");
+    expect(fetchMock.mock.calls.some(([u, i]) => String(u).endsWith("/api/tasks") && i?.method === "POST")).toBe(false);
+    expect(mockLinkUpdate).toHaveBeenCalledWith({ where: { id: "link-1" }, data: { taskKey: "STR-7", lastError: null } });
+  });
+
+  it("drops the push when the ticket is no longer assigned to me", async () => {
+    mockLinkFindMany.mockResolvedValue([failedLink({ issue: { ...ticket, assignedToId: 210 } })]);
+    const result = await retryFailedGr8rPushes({ userId: "u1", client: client(), now: NOW });
+    expect(result).toMatchObject({ retried: 1, dropped: 1, pushed: 0 });
+    expect(mockLinkDelete).toHaveBeenCalledWith({ where: { id: "link-1" } });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("leaves a row another run has already taken alone", async () => {
+    mockLinkUpdateMany.mockResolvedValue({ count: 0 });
+    const result = await retryFailedGr8rPushes({ userId: "u1", client: client(), now: NOW });
+    expect(result).toEqual({ retried: 0, pushed: 0, recovered: 0, dropped: 0, failed: 0 });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("records the error again when the retry fails, and never throws", async () => {
+    fetchMock.mockImplementation(() => respond(503, { error: "down" }));
+    const result = await retryFailedGr8rPushes({ userId: "u1", client: client(), now: NOW });
+    expect(result).toMatchObject({ retried: 1, failed: 1 });
+    expect(mockLinkUpdate).toHaveBeenCalledWith({
+      where: { id: "link-1" },
+      data: { lastError: expect.stringContaining("HTTP 503") },
+    });
+  });
+
+  it("gives up quietly when nothing to retry", async () => {
+    mockLinkFindMany.mockResolvedValue([]);
+    const c = client();
+    expect(await retryFailedGr8rPushes({ userId: "u1", client: c, now: NOW })).toMatchObject({ retried: 0 });
+    expect(c.getCurrentUser).not.toHaveBeenCalled();
   });
 });
