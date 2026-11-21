@@ -41,7 +41,6 @@ services:
       - POLL_INTERVAL_MS=${POLL_INTERVAL_MS:-300000}
       - LEADER_LOCK_TTL_MS=${LEADER_LOCK_TTL_MS:-90000}
       - SYNC_JOB_STALE_MS=${SYNC_JOB_STALE_MS:-600000}
-      - MOBILE_API_ENABLED=${MOBILE_API_ENABLED:-true}
       - PRISMA_SCHEMA_PATH=prisma/schema.prisma
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]

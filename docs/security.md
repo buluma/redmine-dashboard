@@ -28,7 +28,7 @@ export function createSessionToken(userId: string): string {
 
 ### CSRF Protection
 
-CSRF defense is a same-origin check, not a token, enforced centrally in `proxy.ts`'s `isCsrfBlocked` (Next 16 uses `proxy.ts`, not `middleware.ts`) — no CSRF cookie or `X-CSRF-Token` header is issued or checked. It only runs for mutating methods (`POST`, `PUT`, `PATCH`, `DELETE`) on requests that carry the `rd_session` cookie — everything else is out of scope, `Authorization` is never inspected. When both gates pass, it checks `Origin` first: if present, the request is blocked unless its host matches the request's own `Host`; only when `Origin` is absent does it fall back to checking `Referer` the same way. If neither header is present, the request is allowed through, since a real browser always sends one on a state-changing request. Mobile clients (`Authorization: Bearer {token}`) and external integrations (`X-API-Key` header or `?api_key=` query param — see [External API](external-api.md)) never carry the `rd_session` cookie, so they're allowed through regardless of `Origin`/`Referer` for the same reason: no session cookie means nothing for CSRF to protect.
+CSRF defense is a same-origin check, not a token, enforced centrally in `proxy.ts`'s `isCsrfBlocked` (Next 16 uses `proxy.ts`, not `middleware.ts`) — no CSRF cookie or `X-CSRF-Token` header is issued or checked. It only runs for mutating methods (`POST`, `PUT`, `PATCH`, `DELETE`) on requests that carry the `rd_session` cookie — everything else is out of scope, `Authorization` is never inspected. When both gates pass, it checks `Origin` first: if present, the request is blocked unless its host matches the request's own `Host`; only when `Origin` is absent does it fall back to checking `Referer` the same way. If neither header is present, the request is allowed through, since a real browser always sends one on a state-changing request. External integrations (`X-API-Key` header or `?api_key=` query param — see [External API](external-api.md)) never carry the `rd_session` cookie, so they're allowed through regardless of `Origin`/`Referer` for the same reason: no session cookie means nothing for CSRF to protect.
 
 ```typescript
 // proxy.ts
@@ -101,16 +101,6 @@ The `/api/external/tickets` endpoint requires authentication:
 - **Query**: `?api_key={key}`
 - **Keys**: Configured via `EXTERNAL_API_KEYS` environment variable (comma-separated)
 
-## Mobile API
-
-Mobile authentication uses token-based auth:
-
-- Tokens generated and stored in `MobileApiToken` table
-- `createMobileToken` sets `expiresAt: null` — tokens don't expire by default; there's no device-fingerprint field
-- Validated via `Authorization: Bearer {token}` header
-
-See [mobile/README.md](mobile/README.md) for details.
-
 ## Security Checklist
 
 - [x] Session cookies with httpOnly and SameSite=strict
@@ -119,7 +109,6 @@ See [mobile/README.md](mobile/README.md) for details.
 - [x] Rate limiting on sync and write operations
 - [x] Encrypted storage of API keys
 - [x] External API key authentication
-- [x] Mobile token-based authentication
 
 ## Environment Variables
 

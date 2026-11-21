@@ -26,7 +26,6 @@ This directory contains the core of the Next.js application, following the App R
   - `app/api/time-entries/`: Time entry list/update/delete.
   - `app/api/internal/`: Internal endpoints (`users`, `priorities`, `activities`, `enumerations`).
   - `app/api/ai/`: AI-powered search, summarize, and categorize.
-  - `app/api/mobile/v1/`: Mobile API routes (token-authenticated).
   - `app/api/sentry-*/`: Sentry test/smoke endpoints.
 - **`app/issues/[id]/page.tsx`:** Issue detail page with editing, breadcrumbs, child issues, tabs.
 - **`app/ops/`:** The UI for the sync operations page.
@@ -93,12 +92,6 @@ This directory contains reusable library code, components, and other source file
     - `IssueQueueCard.tsx`: The issue-queue card as a whole — header stats, bulk-action toolbar, quick filters, filter-presets UI,
       project/favorites/export controls, view-mode tabs, and the table/kanban/gantt + pagination rendering. Kept as one flat component (not
       decomposed further) since it was the highest-risk/densest piece of the split.
-
-### `mobile/`
-
-This directory contains the source code for the mobile application.
-
-- **`mobile/android-native/`:** A native Android application built with Kotlin and Jetpack Compose.
 
 ### `prisma/`
 

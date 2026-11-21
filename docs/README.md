@@ -7,7 +7,7 @@ Welcome to the documentation for Converge. This documentation is intended to hel
 - **[Project Overview](./project-overview.md):** A high-level overview of the project, its features, and the technology stack.
 - **[System Architecture](./system-architecture.md):** A description of the system architecture, components, and data flow.
 - **[Deployment Guide](./deployment-guide.md):** Instructions for setting up the application for local development and deployment.
-- **[API Reference](./api-reference.md):** Web and mobile API routes, request contracts, and response behavior.
+- **[API Reference](./api-reference.md):** API routes, request contracts, and response behavior.
 - **[External Tickets API](./external-api.md):** REST API for n8n, Zapier, and external integrations.
 - **[Webhooks](./webhooks.md):** Configure outgoing webhooks for external system integrations.
 - **[Slack Integration](./slack-integration.md):** Configure Slack for reading messages and sending Redmine updates.
@@ -29,7 +29,3 @@ Welcome to the documentation for Converge. This documentation is intended to hel
 ## Security & Access
 
 - **[RBAC](./rbac.md):** Role-based access control — Admin, Editor, User, Viewer roles, permission matrix, and role management.
-
-## Mobile Development
-
-- **[Android Guide](./mobile/android.md):** Guide for the checked-in native Android client.

@@ -14,8 +14,7 @@ import { describe, expect, it } from "vitest";
 const API_DIR = path.resolve(__dirname, "..");
 
 // Substrings that indicate the route consults an auth mechanism. Keep in sync
-// with src/lib/auth.ts, src/lib/rbac.ts, src/lib/external-auth.ts,
-// src/lib/mobile-auth.ts.
+// with src/lib/auth.ts, src/lib/rbac.ts, src/lib/external-auth.ts.
 const AUTH_MARKERS = [
   "requireCurrentUser",
   "getAuthenticatedUserId",
@@ -27,8 +26,6 @@ const AUTH_MARKERS = [
   "requireRedmineClientForUser",
   "requireExternalApiKey",
   "validateExternalApiKey",
-  "verifyMobileToken",
-  "requireMobileUser",
 ];
 
 // Routes that are public by design. Path is relative to app/api/.
@@ -36,7 +33,6 @@ const PUBLIC_ROUTES: Record<string, string> = {
   "health/route.ts": "Liveness/health probe — must answer without a session.",
   "redmine/connect/route.ts": "Login. Rate-limited per IP instead of session-gated.",
   "redmine/bootstrap/route.ts": "First-run only — self-gates on activeCredentials === 0.",
-  "mobile/v1/pair/connect/route.ts": "Mobile pairing (login). Rate-limited per base URL.",
   "openapi/route.ts": "Public OpenAPI spec document.",
   "ai/status/route.ts": "AI provider health + feature flags. No user data or secrets.",
   "metrics/route.ts": "Monitoring counts for scrapers that cannot send a session cookie.",

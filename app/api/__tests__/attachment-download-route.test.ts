@@ -5,7 +5,6 @@ const mocks = vi.hoisted(() => ({
   attachmentFindFirst: vi.fn(),
   downloadAttachment: vi.fn(),
   requireRedmineClient: vi.fn(),
-  requireMobileUser: vi.fn(),
   requireRedmineClientForUser: vi.fn(),
 }));
 
@@ -15,29 +14,24 @@ vi.mock("@/src/lib/db", () => ({ prisma: {
 } }));
 vi.mock("@/src/lib/auth", () => ({
   requireRedmineClient: mocks.requireRedmineClient,
-  requireMobileUser: mocks.requireMobileUser,
   requireRedmineClientForUser: mocks.requireRedmineClientForUser,
 }));
-vi.mock("@/src/lib/mobile-api", () => ({ assertMobileApiEnabled: vi.fn() }));
 vi.mock("@/src/lib/telemetry", () => ({ trackFailure: vi.fn(), trackInfo: vi.fn() }));
 
 const client = { normalizedBaseUrl: "https://current.example.test/redmine", downloadAttachment: mocks.downloadAttachment };
 const context = { params: Promise.resolve({ id: "42", attachmentId: "7" }) };
 
-describe.each(["web", "mobile"] as const)("%s attachment endpoint", (kind) => {
+describe("attachment endpoint", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.requireRedmineClient.mockResolvedValue({ user: { id: "user-1" }, client });
-    mocks.requireMobileUser.mockResolvedValue({ user: { id: "user-1" } });
     mocks.requireRedmineClientForUser.mockResolvedValue({ client });
     mocks.issueFindFirst.mockResolvedValue({ id: "issue-1" });
     mocks.attachmentFindFirst.mockResolvedValue({ downloadUrl: "/attachments/7", filename: "test.svg", contentType: null });
   });
 
   async function request() {
-    const route = kind === "web"
-      ? await import("@/app/api/issues/[id]/attachments/[attachmentId]/route")
-      : await import("@/app/api/mobile/v1/issues/[id]/attachments/[attachmentId]/route");
+    const route = await import("@/app/api/issues/[id]/attachments/[attachmentId]/route");
     return route.GET(new Request("http://localhost/attachment"), context);
   }
 

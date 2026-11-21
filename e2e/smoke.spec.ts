@@ -94,17 +94,6 @@ test.describe('Converge E2E Tests', () => {
     });
   });
 
-  test.describe('Mobile API', () => {
-    test('should reject mobile unauthenticated requests', async () => {
-      const response = await page.request.get(`${BASE_URL}/api/mobile/v1/me`);
-      expect(response.status()).toBe(401);
-    });
-
-    test('should require token for mobile endpoints', async () => {
-      const response = await page.request.get(`${BASE_URL}/api/mobile/v1/issues`);
-      expect(response.status()).toBe(401);
-    });
-  });
 });
 
 test.describe('Webhook Delivery Tests', () => {

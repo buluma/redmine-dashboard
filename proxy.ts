@@ -14,8 +14,8 @@ const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
  * CSRF defense for cookie-authenticated API mutations. Session cookies are
  * httpOnly + sameSite=strict, so a cross-site forgery cannot carry them — this
  * is the explicit second layer. Only mutating requests presenting the session
- * cookie are checked; bearer-token / API-key callers (mobile app, external
- * integrations) have no session cookie and are inherently CSRF-immune, and
+ * cookie are checked; API-key callers (external integrations) have no
+ * session cookie and are inherently CSRF-immune, and
  * anonymous requests (e.g. login) have nothing to forge against.
  */
 function isCsrfBlocked(request: NextRequest): boolean {

@@ -90,10 +90,6 @@ export const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
   "GET /api/issues/*": { windowMs: 60000, maxRequests: 100, keyType: "user" },
   "GET /api/*": { windowMs: 60000, maxRequests: 200, keyType: "user" },
   
-  // Mobile API limits (stricter)
-  "POST /api/mobile/*": { windowMs: 60000, maxRequests: 60, keyType: "user" },
-  "GET /api/mobile/*": { windowMs: 60000, maxRequests: 120, keyType: "user" },
-  
   // Auth endpoints (strict)
   "POST /api/auth/*": { windowMs: 300000, maxRequests: 10, keyType: "ip" },
   

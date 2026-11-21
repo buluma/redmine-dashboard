@@ -3,23 +3,15 @@ import { createSummarizeMessages, normalizeSummarizeResponse, parseJsonResponse 
 import { env } from "@/src/lib/env";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
-import { requireCurrentUser, requireMobileUser, requireRedmineClientForUser } from "@/src/lib/auth";
+import { requireCurrentUser, requireRedmineClientForUser } from "@/src/lib/auth";
 import { getLLMProviderManager } from "@/src/lib/llm-provider";
 import { trackFailure } from "@/src/lib/telemetry";
 
 export const runtime = "nodejs";
 
-async function resolveActorUserId(request: Request): Promise<string> {
-  try {
-    const user = await requireCurrentUser();
-    return user.id;
-  } catch (error) {
-    if (!(error instanceof Error) || error.message !== "Unauthorized") {
-      throw error;
-    }
-    const { user } = await requireMobileUser(request);
-    return user.id;
-  }
+async function resolveActorUserId(): Promise<string> {
+  const user = await requireCurrentUser();
+  return user.id;
 }
 
 export async function POST(request: Request) {
@@ -29,7 +21,7 @@ export async function POST(request: Request) {
 
   let actorUserId: string;
   try {
-    actorUserId = await resolveActorUserId(request);
+    actorUserId = await resolveActorUserId();
   } catch {
     return jsonError("Unauthorized", 401);
   }
@@ -301,7 +293,7 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const actorUserId = await resolveActorUserId(request);
+    const actorUserId = await resolveActorUserId();
     const { searchParams } = new URL(request.url);
     let issueId = searchParams.get("issueId");
 

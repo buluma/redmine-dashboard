@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockRequireCurrentUser = vi.fn();
-const mockRequireMobileUser = vi.fn();
 const mockRequireRedmineClientForUser = vi.fn();
 const mockPrisma: Record<string, Record<string, ReturnType<typeof vi.fn>>> = {
   issue: { findFirst: vi.fn() },
@@ -19,7 +18,6 @@ const mockEnv = {
 
 vi.mock("@/src/lib/auth", () => ({
   requireCurrentUser: mockRequireCurrentUser,
-  requireMobileUser: mockRequireMobileUser,
   requireRedmineClientForUser: mockRequireRedmineClientForUser,
 }));
 
@@ -64,7 +62,6 @@ describe("AI summarize route", () => {
     it("returns 401 when user is unauthorized", async () => {
       mockEnv.aiSummarizeEnabled = true;
       mockRequireCurrentUser.mockRejectedValue(new Error("Unauthorized"));
-      mockRequireMobileUser.mockRejectedValue(new Error("Unauthorized"));
 
       const { POST } = await import("@/app/api/ai/summarize/route");
       const request = new Request("http://localhost/api/ai/summarize", {

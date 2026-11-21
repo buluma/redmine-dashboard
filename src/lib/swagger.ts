@@ -5,7 +5,7 @@ const options: swaggerJsdoc.Options = {
     openapi: "3.0.3",
     info: {
       title: "Converge API",
-      description: "Converge API - Unified operations dashboard API with Redmine, Slack, AI, and mobile support.",
+      description: "Converge API - Unified operations dashboard API with Redmine, Slack and AI.",
       version: "1.0.0",
       contact: {
         name: "Converge Support",
@@ -25,7 +25,6 @@ const options: swaggerJsdoc.Options = {
       { name: "Internal", description: "Internal/Catalog endpoints" },
       { name: "Slack", description: "Slack integration endpoints" },
       { name: "AI", description: "AI/LLM integration endpoints" },
-      { name: "Mobile", description: "Mobile API endpoints" },
       { name: "Heimdall", description: "Streamline/Heimdall log endpoints" },
     ],
     paths: {
@@ -670,91 +669,11 @@ const options: swaggerJsdoc.Options = {
           },
         },
       },
-      "/mobile/v1/pair/connect": {
-        post: {
-          tags: ["Mobile"],
-          summary: "Pair mobile device",
-          requestBody: {
-            required: true,
-            content: {
-              "application/json": {
-                schema: {
-                  type: "object",
-                  properties: {
-                    code: { type: "string" },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            "200": { description: "Paired" },
-            "502": { description: "Cannot reach Redmine" },
-          },
-        },
-      },
-      "/mobile/v1/me": {
-        get: {
-          tags: ["Mobile"],
-          summary: "Get mobile user info",
-          security: [{ BearerAuth: [] }],
-          responses: {
-            "200": { description: "User info" },
-          },
-        },
-      },
-      "/mobile/v1/issues": {
-        get: {
-          tags: ["Mobile"],
-          summary: "List issues (mobile)",
-          security: [{ BearerAuth: [] }],
-          responses: {
-            "200": { description: "Issues list" },
-          },
-        },
-      },
-      "/mobile/v1/issues/{id}": {
-        get: {
-          tags: ["Mobile"],
-          summary: "Get issue detail (mobile)",
-          security: [{ BearerAuth: [] }],
-          parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
-          ],
-          responses: {
-            "200": { description: "Issue detail" },
-          },
-        },
-      },
-      "/mobile/v1/issues/{id}/comment": {
-        post: {
-          tags: ["Mobile"],
-          summary: "Add comment (mobile)",
-          security: [{ BearerAuth: [] }],
-          parameters: [
-            { name: "id", in: "path", required: true, schema: { type: "string" } },
-          ],
-          responses: {
-            "200": { description: "Comment added" },
-          },
-        },
-      },
-      "/mobile/v1/tokens/rotate": {
-        post: {
-          tags: ["Mobile"],
-          summary: "Rotate mobile token",
-          security: [{ BearerAuth: [] }],
-          responses: {
-            "200": { description: "Token rotated" },
-          },
-        },
-      },
       "/heimdall/data": {
         get: {
           tags: ["Heimdall"],
           summary: "Get all Streamline logs",
           description: "Returns MBU logs, server-side rules logs, and traces from the database",
-          security: [{ BearerAuth: [] }],
           responses: {
             "200": { description: "Logs data with stats" },
             "401": { description: "Unauthorized" },
@@ -766,21 +685,10 @@ const options: swaggerJsdoc.Options = {
           tags: ["Heimdall"],
           summary: "Refresh Streamline logs from API",
           description: "Fetches latest logs directly from Streamline API and imports to database",
-          security: [{ BearerAuth: [] }],
           responses: {
             "200": { description: "Logs refreshed" },
             "401": { description: "Unauthorized" },
           },
-        },
-      },
-    },
-    components: {
-      securitySchemes: {
-        BearerAuth: {
-          type: "http",
-          scheme: "bearer",
-          bearerFormat: "JWT",
-          description: "Mobile API token",
         },
       },
     },
