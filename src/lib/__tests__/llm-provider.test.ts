@@ -1,24 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LLMProviderManager } from '../llm-provider';
 
-const { envState, mockOllamaChat, mockOllamaCheckHealth, mockOllamaGenerateEmbeddings } = vi.hoisted(() => ({
+const { envState, mockOllamaChat, mockOllamaCheckHealth } = vi.hoisted(() => ({
   mockOllamaChat: vi.fn().mockResolvedValue({
     content: 'Test response',
     model: 'llama2',
     done: true,
   }),
   mockOllamaCheckHealth: vi.fn().mockResolvedValue({ available: true, usingFallback: false }),
-  mockOllamaGenerateEmbeddings: vi.fn().mockResolvedValue({
-    embeddings: [[0.1, 0.2]],
-    model: 'nomic-embed-text',
-  }),
   envState: {
     llmProvider: 'ollama' as string,
     ollamaBaseUrl: 'http://localhost:11434',
     ollamaChatModel: 'llama2',
     ollamaChatModelFallback: 'llama2',
-    ollamaEmbedModel: 'nomic-embed-text',
-    ollamaEmbedModelFallback: 'nomic-embed-text',
     ollamaTimeoutMs: 5000,
     ollamaStream: false,
     openaiApiKey: 'sk-test' as string | undefined,
@@ -59,7 +53,6 @@ vi.mock('../ollama', () => ({
       model: 'llama2',
       usedFallback: false,
     }),
-    generateEmbeddings: mockOllamaGenerateEmbeddings,
   }),
 }));
 
@@ -508,39 +501,4 @@ describe('LLM Provider', () => {
     });
   });
 
-  describe('Embeddings', () => {
-    it('uses the configured provider (openai) when available', async () => {
-      envState.llmProvider = 'openai';
-      manager = new LLMProviderManager();
-      global.fetch = vi.fn().mockResolvedValue(jsonResponse({
-        model: 'text-embedding-3-small',
-        data: [{ embedding: [0.1, 0.2, 0.3] }],
-      }));
-
-      const result = await manager.generateEmbeddings(['hello']);
-
-      expect(result.provider).toBe('openai');
-      expect(result.embeddings).toEqual([[0.1, 0.2, 0.3]]);
-    });
-
-    it('falls back to ollama when the provider request fails', async () => {
-      envState.llmProvider = 'openai';
-      manager = new LLMProviderManager();
-      global.fetch = vi.fn().mockRejectedValue(new Error('down'));
-
-      const result = await manager.generateEmbeddings(['hello']);
-
-      expect(result.provider).toBe('ollama');
-      expect(mockOllamaGenerateEmbeddings).toHaveBeenCalledWith(['hello']);
-    });
-
-    it('uses ollama directly when the provider is ollama', async () => {
-      envState.llmProvider = 'ollama';
-      manager = new LLMProviderManager();
-
-      const result = await manager.generateEmbeddings(['hello']);
-
-      expect(result.provider).toBe('ollama');
-    });
-  });
 });

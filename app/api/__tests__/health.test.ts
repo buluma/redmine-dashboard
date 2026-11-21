@@ -20,7 +20,6 @@ describe("AI Status API", () => {
     vi.doMock("@/src/lib/env", () => ({
       env: {
         ollamaBaseUrl: "http://localhost:11434",
-        ollamaEmbedModel: "nomic-embed-text",
         aiSummarizeEnabled: true,
         aiSearchEnabled: true,
         aiCategorizeEnabled: true,

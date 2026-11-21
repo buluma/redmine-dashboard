@@ -6,11 +6,9 @@ vi.mock("@/src/lib/env", () => ({
   env: {
     ollamaBaseUrl: "http://localhost:11434",
     ollamaChatModel: "qwen3.5:cloud",
-    ollamaEmbedModel: "nomic-embed-text-v2-moe:latest",
     ollamaTimeoutMs: 120000,
     ollamaStream: false,
     ollamaChatModelFallback: "gpt-oss:20b-cloud",
-    ollamaEmbedModelFallback: "nomic-embed-text:latest",
     enableAiFeatures: true,
     aiSummarizeEnabled: true,
     aiSearchEnabled: true,

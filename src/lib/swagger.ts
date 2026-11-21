@@ -627,7 +627,7 @@ const options: swaggerJsdoc.Options = {
         post: {
           tags: ["AI"],
           summary: "Semantic search for issues",
-          description: "Uses AI embeddings to find semantically similar issues",
+          description: "Uses an AI chat model to rank recent issues by relevance",
           requestBody: {
             required: true,
             content: {
