@@ -14,12 +14,8 @@ This document provides a high-level overview of the system architecture for Conv
                  ┌───────────────────┐
                  │   User's Browser  │
                  └─────────┬─────────┘
-                           │
-                    ┌────────────────┐
-                    │ Android Client │
-                    └───────┬────────┘
-                            │ (HTTPS, /api/mobile/v1/*)
-                            ▼
+                           │ (HTTPS)
+                           ▼
 ┌─────────────────────────────────────────────┐
 │                Next.js Server               │
 │                                             │
@@ -62,30 +58,23 @@ This document provides a high-level overview of the system architecture for Conv
 - **Rendering:** Uses React Server Components for rendering the UI.
 - **Functionality:** Provides the user interface for viewing and interacting with Redmine issues.
 
-### 2. Mobile Clients
-
-- **Native Android:** The checked-in Android application is built with Kotlin and Jetpack Compose.
-- **Functionality:** It provides a mobile-friendly interface for managing Redmine issues, including viewing issues, allowed transitions,
-  comments, attachments, relations, and GitHub links. They interact with the backend via a dedicated set of mobile API endpoints.
-
-### 3. API Routes
+### 2. API Routes
 
 - **Framework:** Next.js API Routes.
 - **Functionality:**
   - Exposes endpoints for session management, issue data, mutations, synchronization, time-entry lifecycle operations, attachments, and
     relations.
   - **AI Tool Calls:** Provides endpoints for LLM-driven actions (`/api/chat`, `/api/chat/execute-tools`) with a multi-step confirmation loop.
-  - Provides a dedicated set of token-authenticated endpoints for mobile clients under `/api/mobile/v1/*`.
   - Enforces rate limiting on mutation endpoints.
 - **Validation:** Zod schemas are used to validate incoming request data.
 
-### 4. Database
+### 3. Database
 
 - **Engine:** PostgreSQL (production) / SQLite (local development).
 - **ORM:** [Prisma](https://www.prisma.io/) is used for database access.
 - **Purpose:** Acts as an operational cache for Redmine data to provide fast reads for the user. It is not the source of truth.
 
-### 5. Synchronization Service
+### 4. Synchronization Service
 
 - **Implementation:** An in-process poller that runs within the Next.js server.
 - **Polling:** Periodically fetches data from the Redmine API to keep the local cache up to date. The default polling interval is 5 minutes.
@@ -99,7 +88,7 @@ This document provides a high-level overview of the system architecture for Conv
 - **Event Bus:** Dashboard refreshes on a single `sync.tick.completed` event-bus signal rather than per-issue update events, avoiding UI thrash during large
   sync runs.
 
-### 6. Streamline Log Poller
+### 5. Streamline Log Poller
 
 - **Implementation:** A dedicated in-process poller for auto-fetching logs from the Streamline API.
 - **Polling:** Periodically fetches MBU logs, Server Side Rules logs, and Traces from Streamline. Default interval is 5 minutes.
@@ -108,14 +97,14 @@ This document provides a high-level overview of the system architecture for Conv
 - **Tables populated:** `MbuLog`, `ServerSideRulesLog`, `Trace`.
 - **Viewing logs:** Available in the `/heimdall` dashboard.
 
-### 7. PWA Sync Queue
+### 6. PWA Sync Queue
 
 - **Implementation:** Client-side persistence using IndexedDB (via `idb` library).
 - **Queuing:** All mutations (status, time, comments) check `navigator.onLine`. If offline, they are enqueued with type/payload/timestamp.
 - **Service Worker:** Listens for `sync` events (Background Sync API). When triggered, it flushes the IndexedDB queue to the backend.
 - **Fallbacks:** The UI also attempts to flush the queue on manual "online" events or periodic check intervals.
 
-### 8. Push Notification Service
+### 7. Push Notification Service
 
 - **Lifecycle:** Users subscribe via browser prompts; VAPID tokens are stored in the `PushSubscription` table.
 - **Server:** A `web-push` utility handles payload encryption and delivery to browser push services (FCM, Autopush, etc.).

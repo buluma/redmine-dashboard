@@ -91,7 +91,6 @@ export const env = {
   gr8rAssignee: process.env.GR8R_ASSIGNEE || undefined,
   gr8rFallbackProject: process.env.GR8R_FALLBACK_PROJECT || undefined,
   redmineSyncIssueScope: syncIssueScopeFromEnv(),
-  mobileApiEnabled: boolFromEnv("MOBILE_API_ENABLED", true),
   // Ollama AI Configuration
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
   ollamaChatModel: process.env.OLLAMA_CHAT_MODEL || "qwen3.5:cloud",

@@ -17,7 +17,6 @@ export type Permission =
   | "sync:trigger" | "sync:view"
   | "users:manage" | "users:view"
   | "audit:view" | "ops:view"
-  | "mobile:api"
   | "slack:manage";
 
 // Role to permissions mapping
@@ -29,7 +28,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "sync:trigger", "sync:view",
     "users:manage", "users:view",
     "audit:view", "ops:view",
-    "mobile:api", "slack:manage",
+    "slack:manage",
   ],
   EDITOR: [
     "issues:read", "issues:write",
@@ -38,7 +37,6 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "sync:trigger", "sync:view",
     "users:view",
     "audit:view", "ops:view",
-    "mobile:api",
   ],
   USER: [
     "issues:read", "issues:write",
@@ -46,7 +44,6 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "time_entries:read", "time_entries:write",
     "sync:view",
     "audit:view",
-    "mobile:api",
   ],
   VIEWER: [
     "issues:read",
@@ -178,7 +175,6 @@ export async function isFeatureEnabled(userId: string, feature: string): Promise
     "ai-summarize": ["issues:read"],
     "ai-chat": ["issues:read"],
     "slack-integration": ["issues:read", "slack:manage"],
-    "mobile-api": ["mobile:api"],
     "internal-notes": ["notes:read"],
     "time-tracking": ["time_entries:read"],
     "github-links": ["issues:write"],

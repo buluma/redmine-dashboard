@@ -113,8 +113,7 @@ These routes already follow this standard:
 
 - Manual sync mutation routes
 - Issue mutation routes (status, comment, timelog, bulk status)
-- Issue GitHub link mutation routes (web and mobile)
-- Mobile Issue Creation routes (`/api/mobile/v1/issues` POST)
+- Issue GitHub link mutation routes
 - Push Notification subscription routes (`/api/push/subscribe`)
 
 When adding a new mutation route, follow the same pattern from the start. The client-side offline sync queue (`lib/sync-queue.ts`) doesn't post through a dedicated server route — its telemetry, where added, should live on the same routes it calls (`/api/issues/[id]/status`, etc.), not a separate `sync.queue.*` domain that implies a server-side queue endpoint.
