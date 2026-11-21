@@ -75,7 +75,6 @@ Add an optional `expectedUpdatedAt: string` (ISO-8601) to every write-side reque
 - `POST /api/issues/[id]/timelog`
 - `POST /api/issues/[id]/assign`
 - `POST /api/issues/bulk-status`, `POST /api/issues/bulk-update`
-- mobile equivalents under `/api/mobile/v1/*`
 
 When `expectedUpdatedAt` is present and does not match the current row, return:
 
@@ -89,7 +88,7 @@ HTTP/1.1 409 Conflict
 }
 ```
 
-If `expectedUpdatedAt` is absent, behave exactly as today (last-writer-wins). Mobile/web are free to roll out incrementally.
+If `expectedUpdatedAt` is absent, behave exactly as today (last-writer-wins). Clients are free to roll out incrementally.
 
 Telemetry: emit `issue.write.stale_write` with `entityId`, `userId`, `field` so dashboards can show how often this happens before
 the UI is finished.
@@ -313,6 +312,3 @@ the new delivery row.
 
 All three items emit new telemetry events. Add them to `src/lib/telemetry.ts` callsite docs and the Prometheus exporter
 allow-list at the same time so ops dashboards pick them up without an ad-hoc change.
-
-Where these features touch the mobile client, ensure 1.17g (offline conflict mirroring) and the future push-prefs surface on Settings get
-booked as follow-ups before merging the web side.
