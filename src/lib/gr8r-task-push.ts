@@ -195,9 +195,52 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 /**
+ * Pick the ticket's gr8r project and create its task. Returns null, having
+ * released the claim, when no project fits (retrying would not help).
+ */
+async function routeAndCreateTask(
+  claimId: string,
+  issue: Gr8rIssue,
+  redmineBaseUrl: string,
+): Promise<{ taskKey: string; project: string; via: Gr8rRoute } | null> {
+  const [{ projects }, links] = await Promise.all([
+    gr8rRequest<{ projects: Gr8rProject[] }>("GET", "/api/projects"),
+    prisma.issueGithubLink.findMany({ where: { issueId: issue.id }, select: { repositoryFullName: true } }),
+  ]);
+  const route = resolveGr8rProject(
+    { repos: links.map((l) => l.repositoryFullName), redmineProjectName: issue.projectName },
+    projects,
+    env.gr8rFallbackProject,
+  );
+  if (!route) {
+    await prisma.gr8rTaskLink.delete({ where: { id: claimId } });
+    trackInfo("gr8r.task_push.no_project", { redmineIssueId: issue.redmineIssueId, projectName: issue.projectName });
+    return null;
+  }
+
+  const { task } = await gr8rRequest<{ task: { key: string } }>(
+    "POST",
+    "/api/tasks",
+    buildTaskPayload(issue, redmineBaseUrl, route.key),
+  );
+  trackSuccess({
+    event: "gr8r.task_push.succeeded",
+    metricName: "gr8r_task_push_succeeded",
+    metricTags: { via: route.via },
+    data: { redmineIssueId: issue.redmineIssueId, taskKey: task.key },
+  });
+  return { taskKey: task.key, project: route.key, via: route.via };
+}
+
+function errorMessage(error: unknown): string {
+  return (error instanceof Error ? error.message : String(error)).slice(0, 500);
+}
+
+/**
  * Create a gr8r task for a ticket newly assigned to the user. Never throws:
- * a gr8r outage must not fail the Redmine sync. A failed push is logged and
- * not retried, since the ticket is no longer "newly" assigned on later polls.
+ * a gr8r outage must not fail the Redmine sync. A failed push keeps its claim
+ * with the error, and retryFailedGr8rPushes picks it up on a later poll, since
+ * the ticket is no longer "newly" assigned by then.
  */
 export async function pushIssueToGr8r(input: {
   userId: string;
@@ -234,39 +277,17 @@ export async function pushIssueToGr8r(input: {
       throw error;
     }
 
-    const [{ projects }, links] = await Promise.all([
-      gr8rRequest<{ projects: Gr8rProject[] }>("GET", "/api/projects"),
-      prisma.issueGithubLink.findMany({ where: { issueId: issue.id }, select: { repositoryFullName: true } }),
-    ]);
-    const route = resolveGr8rProject(
-      { repos: links.map((l) => l.repositoryFullName), redmineProjectName: issue.projectName },
-      projects,
-      env.gr8rFallbackProject,
-    );
-    if (!route) {
-      await prisma.gr8rTaskLink.delete({ where: { id: claimId } });
-      trackInfo("gr8r.task_push.no_project", { redmineIssueId: issue.redmineIssueId, projectName: issue.projectName });
-      return { pushed: false, reason: "no-project" };
-    }
-
-    const { task } = await gr8rRequest<{ task: { key: string } }>(
-      "POST",
-      "/api/tasks",
-      buildTaskPayload(issue, client.normalizedBaseUrl, route.key),
-    );
-    await prisma.gr8rTaskLink.update({ where: { id: claimId }, data: { taskKey: task.key } });
-    trackSuccess({
-      event: "gr8r.task_push.succeeded",
-      metricName: "gr8r_task_push_succeeded",
-      metricTags: { via: route.via },
-      data: { redmineIssueId: issue.redmineIssueId, taskKey: task.key },
-    });
-    return { pushed: true, taskKey: task.key, project: route.key, via: route.via };
+    const created = await routeAndCreateTask(claimId, issue, client.normalizedBaseUrl);
+    if (!created) return { pushed: false, reason: "no-project" };
+    await prisma.gr8rTaskLink.update({ where: { id: claimId }, data: { taskKey: created.taskKey } });
+    return { pushed: true, ...created };
   } catch (error) {
+    const message = errorMessage(error);
     if (claimId) {
-      await prisma.gr8rTaskLink.delete({ where: { id: claimId } }).catch(() => undefined);
+      await prisma.gr8rTaskLink
+        .update({ where: { id: claimId }, data: { attempts: { increment: 1 }, lastError: message } })
+        .catch(() => undefined);
     }
-    const message = error instanceof Error ? error.message : String(error);
     trackFailure({
       event: "gr8r.task_push.failed",
       error,
@@ -275,4 +296,99 @@ export async function pushIssueToGr8r(input: {
     });
     return { pushed: false, reason: "failed", error: message };
   }
+}
+
+// A claim this old with no taskKey is a failed or interrupted push, not one
+// still in flight (a push takes seconds). Retries stop after MAX_PUSH_ATTEMPTS.
+const RETRY_AFTER_MS = 10 * 60 * 1000;
+const MAX_PUSH_ATTEMPTS = 5;
+const RETRY_BATCH = 20;
+
+/** gr8r's task for this ticket, if one already exists (archived ones too). */
+async function findExistingTaskKey(redmineIssueId: number): Promise<string | null> {
+  const prefix = `Redmine #${redmineIssueId}:`;
+  const { tasks } = await gr8rRequest<{ tasks: Array<{ key: string; title: string }> }>(
+    "GET",
+    `/api/tasks?archived=1&q=${encodeURIComponent(prefix)}`,
+  );
+  return tasks.find((t) => t.title.startsWith(prefix))?.key ?? null;
+}
+
+export type Gr8rRetrySummary = { retried: number; pushed: number; recovered: number; dropped: number; failed: number };
+
+/**
+ * Retry this user's gr8r pushes that failed or were interrupted. Before
+ * creating anything it looks for a task gr8r may already have made (a push
+ * whose response was lost), so a retry never makes a second task. A ticket no
+ * longer assigned to the user is dropped. Never throws.
+ */
+export async function retryFailedGr8rPushes(input: {
+  userId: string;
+  client: Gr8rClient;
+  now?: Date;
+}): Promise<Gr8rRetrySummary> {
+  const summary: Gr8rRetrySummary = { retried: 0, pushed: 0, recovered: 0, dropped: 0, failed: 0 };
+  if (!env.gr8rUrl || !env.gr8rToken) return summary;
+  const now = input.now ?? new Date();
+
+  try {
+    const links = await prisma.gr8rTaskLink.findMany({
+      where: {
+        taskKey: null,
+        attempts: { lt: MAX_PUSH_ATTEMPTS },
+        updatedAt: { lt: new Date(now.getTime() - RETRY_AFTER_MS) },
+        issue: { userId: input.userId },
+      },
+      include: { issue: true },
+      orderBy: { updatedAt: "asc" },
+      take: RETRY_BATCH,
+    });
+    if (links.length === 0) return summary;
+    const meId = await currentRedmineUserId(input.userId, input.client, now);
+
+    for (const link of links) {
+      // Take the row only if nobody else changed it since it was read.
+      const { count } = await prisma.gr8rTaskLink.updateMany({
+        where: { id: link.id, taskKey: null, updatedAt: link.updatedAt },
+        data: { attempts: { increment: 1 } },
+      });
+      if (count === 0) continue;
+      summary.retried += 1;
+
+      const issue = link.issue;
+      if (issue.assignedToId !== meId || issue.redmineIssueId == null) {
+        await prisma.gr8rTaskLink.delete({ where: { id: link.id } });
+        summary.dropped += 1;
+        continue;
+      }
+
+      try {
+        const existing = await findExistingTaskKey(issue.redmineIssueId);
+        if (existing) {
+          await prisma.gr8rTaskLink.update({ where: { id: link.id }, data: { taskKey: existing, lastError: null } });
+          summary.recovered += 1;
+          continue;
+        }
+        const created = await routeAndCreateTask(link.id, issue, input.client.normalizedBaseUrl);
+        if (!created) {
+          summary.dropped += 1;
+          continue;
+        }
+        await prisma.gr8rTaskLink.update({ where: { id: link.id }, data: { taskKey: created.taskKey, lastError: null } });
+        summary.pushed += 1;
+      } catch (error) {
+        summary.failed += 1;
+        await prisma.gr8rTaskLink.update({ where: { id: link.id }, data: { lastError: errorMessage(error) } }).catch(() => undefined);
+        trackFailure({
+          event: link.attempts + 1 >= MAX_PUSH_ATTEMPTS ? "gr8r.task_push.abandoned" : "gr8r.task_push.retry_failed",
+          error,
+          metricName: "gr8r_task_push_retry_failed",
+          data: { redmineIssueId: issue.redmineIssueId, attempts: link.attempts + 1 },
+        });
+      }
+    }
+  } catch (error) {
+    trackFailure({ event: "gr8r.task_push.retry_sweep_failed", error, metricName: "gr8r_task_push_retry_sweep_failed" });
+  }
+  return summary;
 }

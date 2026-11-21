@@ -440,6 +440,16 @@ export async function executeSyncJob(jobId: string): Promise<void> {
       }
     }
 
+    // Retry gr8r task pushes an earlier run couldn't complete (gr8r down or
+    // refusing). Never throws, like the push itself.
+    if (env.gr8rUrl && env.gr8rToken) {
+      const { retryFailedGr8rPushes } = await import("@/src/lib/gr8r-task-push");
+      const retry = await retryFailedGr8rPushes({ userId: job.userId, client });
+      if (retry.retried > 0) {
+        logEvent("sync.job.gr8r_retry", { userId: job.userId, jobId, ...retry });
+      }
+    }
+
     // SAFETY: Do NOT delete issues that weren't seen during sync.
     // The sync may not fetch ALL issues (pagination limits, rate limiting,
     // interrupted jobs, or scoped queries like assigned/open).
