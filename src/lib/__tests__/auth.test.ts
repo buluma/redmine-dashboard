@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockFindUnique = vi.fn();
 const mockDecryptText = vi.fn();
-const mockVerifyMobileToken = vi.fn();
 const mockGetSessionUserId = vi.fn();
 const mockHeadersGet = vi.fn();
 
@@ -19,10 +18,6 @@ vi.mock("@/src/lib/db", () => ({
 
 vi.mock("@/src/lib/crypto", () => ({
   decryptText: mockDecryptText,
-}));
-
-vi.mock("@/src/lib/mobile-auth", () => ({
-  verifyMobileToken: mockVerifyMobileToken,
 }));
 
 vi.mock("@/src/lib/session", () => ({
@@ -101,34 +96,11 @@ describe("getAuthenticatedUserId", () => {
     const result = await getAuthenticatedUserId();
 
     expect(result).toBe("user_123");
-    expect(mockVerifyMobileToken).not.toHaveBeenCalled();
   });
 
-  it("returns userId from Bearer token when no cookie", async () => {
+  it("returns null when no cookie, even with a Bearer token (mobile tokens were removed)", async () => {
     mockGetSessionUserId.mockResolvedValue(null);
     mockHeadersGet.mockReturnValue("Bearer mrt_test");
-    mockVerifyMobileToken.mockResolvedValue({ userId: "user_456", tokenRecordId: "t1" });
-
-    const { getAuthenticatedUserId } = await import("@/src/lib/auth");
-    const result = await getAuthenticatedUserId();
-
-    expect(result).toBe("user_456");
-  });
-
-  it("returns null when no cookie and no Bearer token", async () => {
-    mockGetSessionUserId.mockResolvedValue(null);
-    mockHeadersGet.mockReturnValue(null);
-
-    const { getAuthenticatedUserId } = await import("@/src/lib/auth");
-    const result = await getAuthenticatedUserId();
-
-    expect(result).toBeNull();
-  });
-
-  it("returns null when Bearer token is invalid", async () => {
-    mockGetSessionUserId.mockResolvedValue(null);
-    mockHeadersGet.mockReturnValue("Bearer mrt_bad");
-    mockVerifyMobileToken.mockResolvedValue(null);
 
     const { getAuthenticatedUserId } = await import("@/src/lib/auth");
     const result = await getAuthenticatedUserId();
@@ -137,79 +109,30 @@ describe("getAuthenticatedUserId", () => {
   });
 });
 
-describe("requireCurrentUser Bearer token fallback", () => {
+describe("requireCurrentUser ignores Bearer tokens", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("authenticates via Bearer token when no session cookie", async () => {
+  it("throws Unauthorized when there is only a Bearer token", async () => {
     mockGetSessionUserId.mockResolvedValue(null);
     mockHeadersGet.mockReturnValue("Bearer mrt_testtoken123");
-    mockVerifyMobileToken.mockResolvedValue({
-      userId: "user_456",
-      tokenRecordId: "tok_rec_1",
-    });
-    mockFindUnique.mockResolvedValue({
-      id: "user_456",
-      emailOrUsername: "cli_user",
-      displayName: "CLI User",
-    });
-
-    const { requireCurrentUser } = await import("@/src/lib/auth");
-    const result = await requireCurrentUser();
-
-    expect(mockVerifyMobileToken).toHaveBeenCalledWith("Bearer mrt_testtoken123");
-    expect(result).toEqual({
-      id: "user_456",
-      emailOrUsername: "cli_user",
-      displayName: "CLI User",
-    });
-  });
-
-  it("throws Unauthorized when no cookie and invalid Bearer token", async () => {
-    mockGetSessionUserId.mockResolvedValue(null);
-    mockHeadersGet.mockReturnValue("Bearer mrt_garbage");
-    mockVerifyMobileToken.mockResolvedValue(null);
+    mockFindUnique.mockResolvedValue({ id: "user_456", emailOrUsername: "cli_user", displayName: "CLI User" });
 
     const { requireCurrentUser } = await import("@/src/lib/auth");
     await expect(requireCurrentUser()).rejects.toThrow("Unauthorized");
+    expect(mockFindUnique).not.toHaveBeenCalled();
   });
 
-  it("throws Unauthorized when no cookie and no Authorization header", async () => {
-    mockGetSessionUserId.mockResolvedValue(null);
-    mockHeadersGet.mockReturnValue(null);
-
-    const { requireCurrentUser } = await import("@/src/lib/auth");
-    await expect(requireCurrentUser()).rejects.toThrow("Unauthorized");
-  });
-
-  it("prefers cookie session over Bearer token when both present", async () => {
+  it("uses the cookie session when a Bearer token is also present", async () => {
     mockGetSessionUserId.mockResolvedValue("user_123");
     mockHeadersGet.mockReturnValue("Bearer mrt_sometoken");
-    mockFindUnique.mockResolvedValue({
-      id: "user_123",
-      emailOrUsername: "cookie_user",
-      displayName: "Cookie User",
-    });
+    mockFindUnique.mockResolvedValue({ id: "user_123", emailOrUsername: "cookie_user", displayName: "Cookie User" });
 
     const { requireCurrentUser } = await import("@/src/lib/auth");
     const result = await requireCurrentUser();
 
     expect(result.id).toBe("user_123");
-    expect(mockVerifyMobileToken).not.toHaveBeenCalled();
-  });
-
-  it("throws Unauthorized when Bearer user not found in database", async () => {
-    mockGetSessionUserId.mockResolvedValue(null);
-    mockHeadersGet.mockReturnValue("Bearer mrt_validtoken");
-    mockVerifyMobileToken.mockResolvedValue({
-      userId: "user_gone",
-      tokenRecordId: "tok_rec_2",
-    });
-    mockFindUnique.mockResolvedValue(null);
-
-    const { requireCurrentUser } = await import("@/src/lib/auth");
-    await expect(requireCurrentUser()).rejects.toThrow("Unauthorized");
   });
 });
 
@@ -292,80 +215,5 @@ describe("requireRedmineClient", () => {
     expect(result.user.id).toBe("user_123");
     expect(result.cred.isActive).toBe(true);
     expect(result.client).toBeDefined();
-  });
-});
-
-describe("requireMobileUser", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("returns user and token record when token is valid", async () => {
-    mockVerifyMobileToken.mockResolvedValue({
-      userId: "user_123",
-      tokenRecordId: "token_456",
-    });
-    mockFindUnique.mockResolvedValue({
-      id: "user_123",
-      emailOrUsername: "mobile_user",
-      displayName: "Mobile User",
-    });
-
-    const { requireMobileUser } = await import("@/src/lib/auth");
-    const mockRequest = {
-      headers: {
-        get: vi.fn().mockReturnValue("Bearer mrt_token"),
-      },
-    };
-    const result = await requireMobileUser(mockRequest as unknown as Request);
-
-    expect(result.user.id).toBe("user_123");
-    expect(result.tokenRecordId).toBe("token_456");
-  });
-
-  it("throws when token verification fails", async () => {
-    mockVerifyMobileToken.mockResolvedValue(null);
-
-    const { requireMobileUser } = await import("@/src/lib/auth");
-    const mockRequest = {
-      headers: {
-        get: vi.fn().mockReturnValue("Bearer invalid_token"),
-      },
-    };
-    await expect(requireMobileUser(mockRequest as unknown as Request)).rejects.toThrow(
-      "Unauthorized"
-    );
-  });
-
-  it("throws when user not found after token verification", async () => {
-    mockVerifyMobileToken.mockResolvedValue({
-      userId: "user_123",
-      tokenRecordId: "token_456",
-    });
-    mockFindUnique.mockResolvedValue(null);
-
-    const { requireMobileUser } = await import("@/src/lib/auth");
-    const mockRequest = {
-      headers: {
-        get: vi.fn().mockReturnValue("Bearer mrt_valid_token"),
-      },
-    };
-    await expect(requireMobileUser(mockRequest as unknown as Request)).rejects.toThrow(
-      "Unauthorized"
-    );
-  });
-
-  it("throws when no authorization header provided", async () => {
-    mockVerifyMobileToken.mockResolvedValue(null);
-
-    const { requireMobileUser } = await import("@/src/lib/auth");
-    const mockRequest = {
-      headers: {
-        get: vi.fn().mockReturnValue(null),
-      },
-    };
-    await expect(requireMobileUser(mockRequest as unknown as Request)).rejects.toThrow(
-      "Unauthorized"
-    );
   });
 });

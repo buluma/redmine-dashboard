@@ -29,15 +29,6 @@ type SyncJob = {
   durationMs: number | null;
 };
 
-type MobileToken = {
-  id: string;
-  name: string | null;
-  tokenPrefix: string;
-  lastUsedAt: string | null;
-  expiresAt: string | null;
-  createdAt: string;
-};
-
 type WebLog = {
   id: string;
   userId: string | null;
@@ -130,12 +121,10 @@ export default function OpsPage() {
   const [latestJob, setLatestJob] = useState<SyncJob | null>(null);
   const [jobs, setJobs] = useState<SyncJob[]>([]);
   const [health, setHealth] = useState<HealthPayload | null>(null);
-  const [mobileTokens, setMobileTokens] = useState<MobileToken[]>([]);
   const [logs, setLogs] = useState<WebLog[]>([]);
   const [logFilter, setLogFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
-  const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [restarting, setRestarting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -156,15 +145,13 @@ export default function OpsPage() {
       setLatestJob(null);
       setJobs([]);
       setHealth(null);
-      setMobileTokens([]);
       return;
     }
 
-    const [statusRes, jobsRes, healthRes, tokensRes, logsRes] = await Promise.all([
+    const [statusRes, jobsRes, healthRes, logsRes] = await Promise.all([
       fetch("/api/sync/status", { cache: "no-store" }),
       fetch("/api/sync/jobs?limit=10", { cache: "no-store" }),
       fetch("/api/health", { cache: "no-store" }),
-      fetch("/api/mobile/tokens", { cache: "no-store" }),
       fetch("/api/logs?limit=100", { cache: "no-store" }),
     ]);
 
@@ -186,13 +173,6 @@ export default function OpsPage() {
 
     const healthData = await healthRes.json();
     setHealth(healthData);
-
-    if (!tokensRes.ok) {
-      const data = await tokensRes.json();
-      throw new Error(data.error ?? "Failed to load mobile tokens");
-    }
-    const tokensData = await tokensRes.json();
-    setMobileTokens(tokensData.items ?? []);
 
     if (logsRes.ok) {
       const logsData = await logsRes.json();
@@ -234,27 +214,6 @@ export default function OpsPage() {
       setError(e instanceof Error ? e.message : "Manual sync failed");
     } finally {
       setRetrying(false);
-    }
-  }
-
-  async function revokeToken(tokenId: string) {
-    setRevokingTokenId(tokenId);
-    setError(null);
-    setInfo(null);
-    try {
-      const res = await fetch(`/api/mobile/tokens/${tokenId}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? "Failed to revoke token");
-      }
-      setInfo(t("ops.tokenRevoked"));
-      await loadData();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to revoke token");
-    } finally {
-      setRevokingTokenId(null);
     }
   }
 
@@ -612,52 +571,6 @@ export default function OpsPage() {
             </div>
           </section>
 
-          <section className="card">
-            <div className="table-toolbar">
-              <h2>{t("ops.mobileTokens")}</h2>
-              <p className="muted">{t("ops.activeCount", { count: mobileTokens.length })}</p>
-            </div>
-            <div className="drill-table-wrap">
-              <table className="issues-table">
-                <thead>
-                  <tr>
-                    <th>{t("ops.colName")}</th>
-                    <th>{t("ops.colPrefix")}</th>
-                    <th>{t("ops.colStarted")}</th>
-                    <th>{t("common.updated") || "Updated"}</th>
-                    <th>{t("ops.colDuration")}</th>
-                    <th>{t("ops.colActions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mobileTokens.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="muted">{t("ops.noActiveMobileTokens")}</td>
-                    </tr>
-                  )}
-                  {mobileTokens.map((token) => (
-                    <tr key={token.id}>
-                      <td>{token.name ?? "-"}</td>
-                      <td>{token.tokenPrefix}</td>
-                      <td>{formatDateTime(token.createdAt, locale)}</td>
-                      <td>{formatDateTime(token.lastUsedAt, locale)}</td>
-                      <td>{formatDateTime(token.expiresAt, locale)}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="secondary-button"
-                          disabled={revokingTokenId === token.id}
-                          onClick={() => void revokeToken(token.id)}
-                        >
-                          {revokingTokenId === token.id ? t("ops.revoking") : t("ops.revoke")}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
         </>
       )}
     </main>

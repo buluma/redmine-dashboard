@@ -15,7 +15,6 @@ Originally built as a Redmine command center, Converge has evolved into a powerf
 - **Navigation Shortcuts** — High-efficiency shortcuts (e.g., `Alt+1-4` for panels, `a` for AI search)
 - **RBAC** — Role-based access control (Admin, Editor, User, Viewer)
 - **Audit Logging** — Track user actions, role changes, and internal notes
-- **Mobile Support** — Token-authenticated mobile API (v1) with **Issue Creation** support
 - **PWA / Offline** — Installable app with IndexedDB cache, offline viewing, mutation queuing, and **Background Sync**
 - **Push Notifications** — Native OS alerts for issue assignments and critical updates
 - **Docker Production** — Multi-stage build, healthchecks, backup/restore scripts
@@ -40,8 +39,6 @@ The documentation includes:
 - **[Codebase Summary](./docs/codebase-summary.md)**
 - **[Design Guidelines](./docs/design-guidelines.md)**
 - **[Debugging & Streamline Logs](./debugging/README.md)** — Fetch Streamline application logs and import them into Supabase for troubleshooting.
-
-Mobile/Android integration is available through token-authenticated endpoints under `/api/mobile/v1/*`.
 
 ## Quick Start
 
@@ -118,8 +115,8 @@ The project uses **Vitest** with `jsdom` environment for React component testing
 
 | Category | Coverage |
 |----------|----------|
-| Library utilities | auth, crypto, db, rate-limit, session, mobile-auth, sync, schemas, redmine-text-format |
-| API routes | health, AI (summarize/categorize/chat), issues (assign/favorite), Slack (notify/thread/test), mobile v1, mutations, sync jobs, GitHub links |
+| Library utilities | auth, crypto, db, rate-limit, session, sync, schemas, redmine-text-format |
+| API routes | health, AI (summarize/categorize/chat), issues (assign/favorite), Slack (notify/thread/test), mutations, sync jobs, GitHub links |
 | React components | ChatFab, AiSearchBar, AiButton, ErrorBoundary, ThemeProvider, ThemeToggle |
 | Dashboard hooks/components (`src/hooks/`, `src/components/dashboard/`) | Everything `app/page.tsx` was split into 2026-07-11 — filtering/summary aggregation, bulk actions, keyboard shortcuts, hover preview, filter presets, all server-state loading, and every extracted UI panel |
 

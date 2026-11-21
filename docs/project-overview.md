@@ -1,7 +1,7 @@
 # Project Overview
 
 Converge is a unified operations dashboard designed to connect your tools and workflows into one cohesive platform. Originally built as a Redmine command
-center, it has evolved to support Slack integration, AI insights, mobile access, and more.
+center, it has evolved to support Slack integration, AI insights, and more.
 
 The system works by syncing Redmine issues to a local database, providing fast local reads from this cache. For Redmine-backed issues, state changes are ultimately persisted back to Redmine, which remains the single source of truth for them. Local-only issues (`source: "local"`, `redmineIssueId: null`) have no Redmine counterpart to sync to — the local database is authoritative for those.
 
@@ -92,14 +92,8 @@ Converge syncs and caches the following Redmine entities in the local database (
 | `AiChatMessage`                         | AI chat                    | Chat history with token usage tracking                                                         |
 | `MbuLog`, `ServerSideRulesLog`, `Trace` | Streamline API             | Application logs from Streamline                                                               |
 
-## Mobile Support
+## PWA
 
-Converge provides support for mobile clients, allowing users to manage their Redmine issues on the go.
-
-- **Client:** The project includes a ready-to-build [native Android application](../mobile/android-native) built with Kotlin and Jetpack Compose.
-- **Secure Pairing:** Mobile clients can be paired securely using a token-based authentication system, avoiding the need for browser cookies.
-- **Mobile-Specific API:** A dedicated set of endpoints under `/api/mobile/v1/` is available for mobile clients, now supporting **issue creation**.
-- **Core Functionality:** Mobile users can search, post comments, manage GitHub links, and use attachments/relations through token-authenticated APIs.
 - **Offline Experience:** Fully integrated Sync Queue captures actions while offline and flushes them when connectivity returns.
 - **Push Notifications:** Native OS notifications for important ticket events.
 

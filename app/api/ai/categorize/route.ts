@@ -3,22 +3,14 @@ import { createCategorizeMessages, parseJsonResponse, type CategorizeResponse } 
 import { env } from "@/src/lib/env";
 import { prisma } from "@/src/lib/db";
 import { jsonError } from "@/src/lib/http";
-import { requireCurrentUser, requireMobileUser } from "@/src/lib/auth";
+import { requireCurrentUser } from "@/src/lib/auth";
 import { trackFailure } from "@/src/lib/telemetry";
 
 export const runtime = "nodejs";
 
-async function resolveActorUserId(request: Request): Promise<string> {
-  try {
-    const user = await requireCurrentUser();
-    return user.id;
-  } catch (error) {
-    if (!(error instanceof Error) || error.message !== "Unauthorized") {
-      throw error;
-    }
-    const { user } = await requireMobileUser(request);
-    return user.id;
-  }
+async function resolveActorUserId(): Promise<string> {
+  const user = await requireCurrentUser();
+  return user.id;
 }
 
 export async function POST(request: Request) {
@@ -28,7 +20,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const actorUserId = await resolveActorUserId(request);
+    const actorUserId = await resolveActorUserId();
     let issueId = body.issueId as string | undefined;
 
     // If issueId looks like a number, treat it as redmineIssueId
