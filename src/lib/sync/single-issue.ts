@@ -2,6 +2,7 @@
 // fans out push/Slack/webhook notifications for what changed.
 
 import { prisma } from "@/src/lib/db";
+import { env } from "@/src/lib/env";
 import { emitEvent } from "@/src/lib/event-bus";
 import { logEvent } from "@/src/lib/log";
 import { trackFailure } from "@/src/lib/telemetry";
@@ -67,6 +68,25 @@ export async function syncSingleIssue(
   if (Array.isArray(detail.issue.children) && (detail.issue.children as unknown[]).length > 0) {
     detail.issue.children = await client.listChildIssues(remoteIssueId);
   }
+
+  // The gr8r push (src/lib/gr8r-task-push.ts) needs who the ticket was
+  // assigned to before this sync, to tell a new assignment from an ordinary
+  // update. Hybrid mirrors are the user's own recurring tickets, not new work.
+  const gr8rPushEnabled = Boolean(env.gr8rUrl && env.gr8rToken) && !hybridMirror;
+  const previousAssignedToId = gr8rPushEnabled
+    ? ((
+        await prisma.issue.findUnique({
+          where: {
+            userId_redmineBaseUrl_redmineIssueId: {
+              userId,
+              redmineBaseUrl: client.normalizedBaseUrl,
+              redmineIssueId: remoteIssueId,
+            },
+          },
+          select: { assignedToId: true },
+        })
+      )?.assignedToId ?? null)
+    : null;
 
   // Track changes if notifications are enabled
   const trackChanges = options?.sendNotifications ?? false;
@@ -293,6 +313,13 @@ export async function syncSingleIssue(
         error: webhookError instanceof Error ? webhookError.message : "Unknown error",
       }, "warn");
     }
+  }
+
+  // Not gated on sendNotifications: the gr8r push is its own integration and
+  // must not stop when Slack notifications are switched off. Never throws.
+  if (gr8rPushEnabled) {
+    const { pushIssueToGr8r } = await import("@/src/lib/gr8r-task-push");
+    await pushIssueToGr8r({ userId, client, issue, wasCreated: upsertResult.wasCreated, previousAssignedToId });
   }
 
   return {

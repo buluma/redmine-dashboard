@@ -84,6 +84,12 @@ export const env = {
   redmineInsecureTlsHosts: csvFromEnv("REDMINE_INSECURE_TLS_HOSTS"),
   // Private webhook destinations are permitted only when their exact hostname or IP is trusted here.
   webhookAllowedHosts: csvFromEnv("WEBHOOK_ALLOWED_HOSTS"),
+  // gr8r task push (src/lib/gr8r-task-push.ts): off unless URL and token are both set.
+  gr8rUrl: process.env.GR8R_URL || undefined,
+  gr8rToken: process.env.GR8R_TOKEN || undefined,
+  gr8rAgent: process.env.GR8R_AGENT || "Converge",
+  gr8rAssignee: process.env.GR8R_ASSIGNEE || undefined,
+  gr8rFallbackProject: process.env.GR8R_FALLBACK_PROJECT || undefined,
   redmineSyncIssueScope: syncIssueScopeFromEnv(),
   mobileApiEnabled: boolFromEnv("MOBILE_API_ENABLED", true),
   // Ollama AI Configuration
