@@ -105,7 +105,7 @@ export const env = {
   aiSearchEnabled: boolFromEnv("AI_SEARCH_ENABLED", true),
   aiCategorizeEnabled: boolFromEnv("AI_CATEGORIZE_ENABLED", true),
   // LLM Provider Configuration
-  llmProvider: oneOfFromEnv("LLM_PROVIDER", ["ollama", "openai", "anthropic", "openrouter", "aperture"] as const, "ollama"),
+  llmProvider: oneOfFromEnv("LLM_PROVIDER", ["ollama", "openai", "anthropic", "openrouter", "aperture", "cliproxyapi"] as const, "ollama"),
   // OpenAI Configuration (alternative to Ollama)
   openaiApiKey: process.env.OPENAI_API_KEY,
   openaiChatModel: process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini",
@@ -116,6 +116,10 @@ export const env = {
   openrouterApiKey: process.env.OPENROUTER_API_KEY,
   openrouterChatModel: process.env.OPENROUTER_CHAT_MODEL || "anthropic/claude-3.5-haiku",
   openrouterChatModelFallback: process.env.OPENROUTER_CHAT_MODEL_FALLBACK || "openrouter/free",
+  // CLIProxyAPI Configuration
+  cliproxyapiBaseUrl: process.env.CLIPROXYAPI_BASE_URL || "http://localhost:8317",
+  cliproxyapiApiKey: process.env.CLIPROXYAPI_API_KEY || "none",
+  cliproxyapiChatModel: process.env.CLIPROXYAPI_CHAT_MODEL || "",
   // Tailscale Aperture Configuration (private LLM gateway)
   apertureBaseUrl: process.env.APERTURE_BASE_URL || "http://100.108.133.39",
   apertureApiKey: process.env.APERTURE_API_KEY || "none",  // Usually not required for internal Tailscale
