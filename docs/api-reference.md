@@ -1,6 +1,6 @@
 # API Reference
 
-This document describes the Converge backend API, including web and mobile routes.
+This document describes the Converge backend API routes.
 
 ## Auth and Redmine Connection
 
@@ -378,72 +378,6 @@ Request body:
 ## GET /api/health
 
 System health probe.
-
-## Mobile API
-
-All `/api/mobile/v1/*` routes require `Authorization: Bearer <token>` except pairing.
-
-### POST /api/mobile/v1/pair/connect
-
-Pairs mobile device and returns token.
-
-Notes:
-
-- Returns `502` when Converge cannot reach Redmine due to upstream network/TLS issues.
-
-### GET /api/mobile/v1/me
-
-Returns authenticated mobile user + token metadata.
-
-### GET /api/mobile/v1/issues
-
-Same filtering and search options as `/api/issues`.
-
-### POST /api/mobile/v1/issues
-
-Creates a new issue in Redmine from a mobile device. Requires Bearer authentication. Same request body as `/api/issues`.
-
-### GET /api/mobile/v1/issues/[id]
-
-Returns enriched issue detail including attachments, relations, allowed statuses, and children. **Note:** `[id]` accepts both **integer Redmine IDs**
-(e.g., `123`) and **string cuids** for local-only issues (e.g., `clx...`). The route resolves the correct lookup based on whether the ID is numeric.
-
-### POST /api/mobile/v1/issues/[id]/comment
-
-Posts comment and refreshes local cache for that issue.
-
-### GET /api/mobile/v1/issues/[id]/github-links
-
-### POST /api/mobile/v1/issues/[id]/github-links
-
-### DELETE /api/mobile/v1/issues/[id]/github-links/[linkId]
-
-GitHub link management for mobile.
-
-### GET /api/mobile/v1/issues/[id]/attachments
-
-### POST /api/mobile/v1/issues/[id]/attachments
-
-### GET /api/mobile/v1/issues/[id]/attachments/[attachmentId]
-
-Attachment list/upload/download proxy for mobile.
-
-### POST /api/mobile/v1/issues/[id]/relations
-
-### DELETE /api/mobile/v1/issues/[id]/relations/[relationId]
-
-Relation management for mobile.
-
-**Note:** For all mobile endpoints above, `[id]` accepts integer Redmine IDs and string cuids. Local-only issues (`source: "local"`) cannot be synced to Redmine
-— time entry updates, status changes, and comments on local issues are blocked at the route level.
-
-### POST /api/mobile/v1/tokens/rotate
-
-Rotates current mobile token.
-
-### DELETE /api/mobile/v1/tokens/current
-
-Revokes current mobile token (logout).
 
 ## Slack Integration
 

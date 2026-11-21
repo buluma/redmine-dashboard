@@ -1,10 +1,7 @@
 import { decryptText } from "@/src/lib/crypto";
 import { prisma } from "@/src/lib/db";
-import { logEvent } from "@/src/lib/log";
-import { verifyMobileToken } from "@/src/lib/mobile-auth";
 import { RedmineClient } from "@/src/lib/redmine";
 import { getSessionUserId } from "@/src/lib/session";
-import { headers } from "next/headers";
 
 /**
  * HTTP methods that require CSRF protection (mutating operations)
@@ -19,40 +16,19 @@ export function isMutatingRequest(method: string | null): boolean {
 }
 
 export async function getAuthenticatedUserId(): Promise<string | null> {
-  const sessionUserId = await getSessionUserId();
-  if (sessionUserId) return sessionUserId;
-
-  const headerStore = await headers();
-  const authHeader = headerStore.get("authorization");
-  if (!authHeader) return null;
-
-  const verified = await verifyMobileToken(authHeader);
-  return verified?.userId ?? null;
+  return getSessionUserId();
 }
 
 export async function requireCurrentUser() {
   const sessionUserId = await getSessionUserId();
-
-  if (sessionUserId) {
-    const user = await prisma.user.findUnique({ where: { id: sessionUserId } });
-    if (!user) {
-      throw new Error("Unauthorized");
-    }
-    return user;
-  }
-
-  const headerStore = await headers();
-  const authHeader = headerStore.get("authorization");
-  const verified = authHeader ? await verifyMobileToken(authHeader) : null;
-  if (!verified) {
+  if (!sessionUserId) {
     throw new Error("Unauthorized");
   }
 
-  const user = await prisma.user.findUnique({ where: { id: verified.userId } });
+  const user = await prisma.user.findUnique({ where: { id: sessionUserId } });
   if (!user) {
     throw new Error("Unauthorized");
   }
-
   return user;
 }
 
@@ -73,35 +49,4 @@ export async function requireRedmineClientForUser(userId: string) {
   const client = new RedmineClient(cred.baseUrl, apiKey);
 
   return { cred, client };
-}
-
-export async function requireMobileUser(request: Request): Promise<{
-  user: {
-    id: string;
-    emailOrUsername: string;
-    displayName: string;
-  };
-  tokenRecordId: string;
-}> {
-  const verified = await verifyMobileToken(request.headers.get("authorization"));
-  if (!verified) {
-    logEvent("mobile.auth.failed", { reason: "invalid_or_missing_token" }, "warn");
-    throw new Error("Unauthorized");
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: verified.userId },
-    select: {
-      id: true,
-      emailOrUsername: true,
-      displayName: true,
-    },
-  });
-
-  if (!user) {
-    logEvent("mobile.auth.failed", { reason: "user_not_found", userId: verified.userId }, "warn");
-    throw new Error("Unauthorized");
-  }
-
-  return { user, tokenRecordId: verified.tokenRecordId };
 }
